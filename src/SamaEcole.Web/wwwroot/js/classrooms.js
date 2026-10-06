@@ -193,15 +193,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Niveaux proposés à la création (retour utilisateur du 29/09 → 03/10/2026) : un établissement
-         * Élémentaire/Primaire n'a — par définition de son profil d'Onboarding — ni Collège ni Lycée
-         * (EstablishmentProfilePresets.cs, ApplyEstablishmentProfileCommand). Sans ce filtre, rien
-         * n'empêchait de créer une classe de Lycée sous ce profil, ce qui aurait fait apparaître le champ
-         * Série (showSeriesField, ci-dessous) — pensé pour le Lycée — sur un profil qui n'en a pas.
-         * Simplifié N'EST PAS restreint ici (écart corrigé le 03/10/2026, avait été ajouté par excès de
-         * prudence) : c'est une restriction FONCTIONNELLE (pas de Pédagogie/notes/bulletins), jamais une
-         * restriction de CYCLES — un Collège ou un Lycée peut très bien choisir Simplifié pour n'utiliser
-         * qu'Inscriptions/Caisse. Général/Franco-Arabe/Daara-Internat gardent déjà la liste complète.
+         * Niveaux proposés à la création : ceux des CYCLES GÉRÉS par l'établissement (Paramètres › Modules,
+         * SchoolSettings.ManagedCycles). Un établissement qui n'a que la Maternelle et le Primaire ne se voit
+         * proposer ni Collège ni Lycée — ce qui évite aussi le champ Série (showSeriesField, ci-dessous), pensé
+         * pour le Lycée, sur une école qui n'en a pas. Crèche et Maternelle relèvent du même cycle.
+         *
+         * Le réglage ne dépend PAS du profil : une école Élémentaire démarre sur Maternelle + Primaire (à
+         * l'Onboarding ; reprise de l'existant par migration), mais un Daara « pur » peut décocher Collège et
+         * Lycée, et un Daara mixte les garder. Confort d'affichage : le serveur ne refuse rien.
          */
         // `currentLevel` : garde le niveau déjà enregistré dans la liste même s'il est restreint pour ce
         // profil (édition d'une classe de Lycée héritée d'un profil changé depuis) — seul le choix d'un
@@ -215,9 +214,9 @@ document.addEventListener('alpine:init', () => {
                 { value: 'Lycée', label: 'Lycée' }
             ];
             const config = Alpine.store('schoolConfig');
-            const restricted = config && config.isElementaireProfile;
-            if (!restricted) return all;
-            return all.filter((o) => o.value === currentLevel || (o.value !== 'Collège' && o.value !== 'Lycée'));
+            if (!config) return all;
+            return all.filter((o) =>
+                o.value === currentLevel || config.isCycleManaged(window.managedCycles.cycleOfLevel(o.value)));
         },
 
         /**

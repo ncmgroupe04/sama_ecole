@@ -16,4 +16,11 @@ public class BusinessRuleException(string message, string? code = null) : Except
 {
     /// <summary>Code d'erreur stable destiné au client, ou <c>null</c> pour le code générique.</summary>
     public string? Code { get; } = code;
+
+    /// <summary>
+    /// Détail structuré renvoyé tel quel dans <c>details</c> de la réponse d'erreur (ex. les cycles et le nombre
+    /// de classes qui bloquent une désactivation), ou <c>null</c> — le comportement historique, inchangé. Ne doit
+    /// jamais porter de table, de contrainte ni de donnée d'un autre établissement.
+    /// </summary>
+    public object? Details { get; init; }
 }

@@ -46,6 +46,9 @@
        [AllowAnonymous] côté serveur (PublicDirectoryController) — sans jeton, window.auth se
        contente de ne poser aucun en-tête Authorization ; réécrire un fetch séparé pour cette
        seule page dupliquerait la gestion d'erreurs déjà centralisée dans api.js. *@
+    @* Règles pures des cycles gérés : auth.js (store schoolConfig) les lit dès l'initialisation d'Alpine — à charger AVANT lui,
+    dans CHAQUE mise en page qui charge auth.js (garde : tests/js/managed-cycles-layouts.test.mjs). *@
+    <script src="~/js/managed-cycles.js" asp-append-version="true"></script>
     <script src="~/js/auth.js" asp-append-version="true"></script>
     <script src="~/js/api.js" asp-append-version="true"></script>
     <script src="~/js/marketing.js" asp-append-version="true"></script>

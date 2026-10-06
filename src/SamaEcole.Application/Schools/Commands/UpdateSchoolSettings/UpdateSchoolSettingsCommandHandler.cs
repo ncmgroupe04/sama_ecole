@@ -86,38 +86,6 @@ public class UpdateSchoolSettingsCommandHandler(
 
         logger.LogInformation("Paramètres de l'établissement {SchoolId} mis à jour.", schoolId);
 
-        return new SchoolSettingsDto(
-            settings.GradingScale.ToString(),
-            settings.StudentMatriculeFormat,
-            settings.TeacherMatriculeFormat,
-            settings.AutoLogoutMinutes,
-            settings.DateFormat,
-            settings.TuitionMonthsPerYear,
-            settings.AllowSecretaryToManageGrading,
-            settings.AllowFinanceToModifyFees,
-            settings.AllowFinanceToDeleteFees,
-            settings.DirectorSignatureUrl,
-            settings.SecretarySignatureUrl,
-            settings.CashierSignatureUrl,
-            settings.OfficialStampUrl,
-            settings.SurveillantSignatureUrl,
-            settings.TypeEtablissement.ToString(),
-            settings.SmsOnAttendanceAlert,
-            settings.SmsOnDuesReminder,
-            settings.SmsOnPaymentReceipt,
-            settings.SmsCreditBalance,
-            settings.DebtorReminderThresholdDays,
-            settings.IsPedagogyEnabled,
-            settings.IsFinanceEnabled,
-            settings.IsInternatEnabled,
-            settings.IsCoranModuleEnabled,
-            settings.GradeEditWindowDays,
-            settings.EvaluationPeriodType.ToString(),
-            settings.CustomPeriodCount,
-            SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
-
-            // Non modifiable PAR CETTE commande (voir ApplyEstablishmentProfileCommand) : simple
-            // report de la valeur actuelle, pour ne pas la faire disparaître de la réponse PUT.
-            settings.ProfileEtablissement?.ToString());
+        return SchoolSettingsDtoMapper.From(settings);
     }
 }

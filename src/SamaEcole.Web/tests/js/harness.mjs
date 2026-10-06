@@ -108,7 +108,12 @@ export function loadScripts(files, options = {}) {
     sandbox.globalThis = sandbox;
     vm.createContext(sandbox);
 
-    files.forEach((file) => {
+    // managed-cycles.js (règles pures des cycles gérés) est chargé par _Layout sur CHAQUE page, avant auth.js et les
+    // scripts d'écran : le store schoolConfig et les écrans de classes, d'inscription et d'examens le supposent déjà
+    // présent. Le bac à sable le précharge donc toujours, comme le _Layout.
+    const toLoad = files.includes('managed-cycles.js') ? files : ['managed-cycles.js', ...files];
+
+    toLoad.forEach((file) => {
         const fullPath = path.join(JS_DIR, file);
         vm.runInContext(readFileSync(fullPath, 'utf8'), sandbox, { filename: fullPath });
     });

@@ -62,4 +62,12 @@ public record SchoolSettingsDto(
     /// cliente (onboarding-guard.js) pour rediriger vers /onboarding. Ajouté en DERNIÈRE position pour ne
     /// pas décaler les appels positionnels existants de ce DTO.
     /// </summary>
-    string? ProfileEtablissement = null);
+    string? ProfileEtablissement = null,
+
+    /// <summary>
+    /// Cycles gérés par l'établissement (noms de CycleType : Maternelle, Primaire, College, Lycee), dans l'ordre
+    /// canonique. Ce que lisent les écrans de classes, d'inscription et d'examens. <c>null</c> = non renseigné
+    /// par l'appelant (un DTO partiel) : le client le lit comme « tous les cycles ». Ajouté en DERNIÈRE position
+    /// pour ne pas décaler les appels positionnels existants.
+    /// </summary>
+    IReadOnlyList<string>? ManagedCycles = null);

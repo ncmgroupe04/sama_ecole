@@ -101,15 +101,15 @@ document.addEventListener('alpine:init', () => {
 
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
-        // Revue d'isolation par profil (pré-PR) : une école en profil Élémentaire n'a par construction
-        // aucune classe de Collège/Lycée — lui proposer BFEM/BAC à la création d'une session serait un
-        // choix qui ne peut jamais aboutir (CreateExamDossierCommandHandler.ExpectedCycle refuse déjà
-        // le mismatch de cycle en 422), et polluerait l'écran d'un profil qui n'en a pas l'usage. Les
-        // profils General/FrancoArabe/DaaraInternat couvrent, eux, tout le Secondaire : rien à filtrer.
-        isElementaireProfile: false,
+        // Cycles gérés (SchoolSettings.ManagedCycles) : CFEE si le Primaire est géré, BFEM pour le Collège, BAC
+        // pour le Lycée — voir managed-cycles.js › examTypes. Une école sans Collège ni Lycée ne se voit pas
+        // proposer BFEM/BAC : ce serait un choix qui ne peut jamais aboutir (CreateExamDossierCommandHandler
+        // .ExpectedCycle refuse déjà le mismatch de cycle en 422). Remplace l'ancien test « profil Élémentaire ».
+        managedCycles: [...window.managedCycles.ALL],
 
         get examTypeOptions() {
-            return this.isElementaireProfile ? EXAM_TYPE_OPTIONS.filter((o) => o.value === 'CFEE') : EXAM_TYPE_OPTIONS;
+            const allowed = window.managedCycles.examTypes(this.managedCycles);
+            return EXAM_TYPE_OPTIONS.filter((o) => allowed.includes(o.value));
         },
         sessionStatusOptions: SESSION_STATUS_OPTIONS,
         dossierStatusFilterOptions: DOSSIER_STATUS_FILTER_OPTIONS,
@@ -209,7 +209,7 @@ document.addEventListener('alpine:init', () => {
                 const [schoolYears, classrooms, settings] = await Promise.all(requests);
                 this.schoolYears = schoolYears || [];
                 this.classrooms = classrooms || [];
-                this.isElementaireProfile = !!settings && settings.profileEtablissement === 'ElementairePrimaire';
+                this.managedCycles = window.managedCycles.normalize(settings && settings.managedCycles);
                 if (this.canManage) await this.loadSessions();
             } catch (err) {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des données de référence.');
@@ -286,7 +286,8 @@ document.addEventListener('alpine:init', () => {
             // Profil Élémentaire : BFEM n'est même plus une option valide (examTypeOptions filtré
             // ci-dessus) — CFEE par défaut évite un <select> qui s'ouvrirait sur une valeur absente
             // de sa propre liste.
-            const defaultExamType = this.isElementaireProfile ? 'CFEE' : 'BFEM';
+            const types = this.examTypeOptions.map((o) => o.value);
+            const defaultExamType = types.includes('BFEM') ? 'BFEM' : types[0];
             this.newSession = { schoolYearId: this.activeSchoolYearId, examType: defaultExamType, series: '', centerName: '' };
             this.createSessionErrors = {};
             this.isCreateSessionOpen = true;

@@ -105,6 +105,31 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Changing_The_Profile_Never_Overwrites_The_Managed_Cycles_Set_By_The_Director()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.SchoolSettings.Add(new SchoolSettings { SchoolId = Ecole, ManagedCycles = "Primaire,College" });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Vers l'Élémentaire (qui, à l'Onboarding, limiterait à Maternelle+Primaire) puis vers un autre profil :
+        // dans les deux cas le réglage du Directeur reste tel quel.
+        foreach (var profile in new[] { "ElementairePrimaire", "DaaraInternat", "General" })
+        {
+            await using var db = _db.NewAppContext(Ecole);
+            var result = await new ApplyEstablishmentProfileCommandHandler(
+                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                .Handle(new ApplyEstablishmentProfileCommand(profile), CancellationToken.None);
+
+            result.ManagedCycles.Should().Equal("Primaire", "College");
+        }
+
+        await using var check = _db.NewAppContext(Ecole);
+        check.SchoolSettings.Single().ManagedCycles.Should().Be("Primaire,College");
+    }
+
+    [Fact]
     public async Task Creates_Settings_Row_When_None_Exists_Yet()
     {
         // École sans ligne school_settings (chemin défensif — en pratique couvert dès la création par

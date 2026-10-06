@@ -45,7 +45,7 @@ document.addEventListener('alpine:init', () => {
         // que tuitionMonths/internatEnabled (loadReferenceData), pas via le store partagé
         // schoolConfig (auth.js), pour ne pas dupliquer cette requête déjà faite sur cet écran.
         isSimplifieProfile: false,
-        isElementaireProfile: false,
+        managedCycles: [...window.managedCycles.ALL], // Cycles gérés (SchoolSettings.ManagedCycles) : voir visibleClassrooms().
         isFrancoArabeProfile: false,
 
         // Élèves pour la réinscription (chargés à la demande)
@@ -228,7 +228,7 @@ document.addEventListener('alpine:init', () => {
 
                 const profile = settings && settings.profileEtablissement;
                 this.isSimplifieProfile = profile === 'Simplifie';
-                this.isElementaireProfile = profile === 'ElementairePrimaire';
+                this.managedCycles = window.managedCycles.normalize(settings && settings.managedCycles);
                 this.isFrancoArabeProfile = profile === 'FrancoArabe';
 
                 this.recurringByCategory = {};
@@ -671,17 +671,19 @@ document.addEventListener('alpine:init', () => {
         // ---------------------------------------------------------------- Affichage
 
         /**
-         * Classes proposées au sélecteur — restreintes aux cycles Maternelle/Primaire en profil
-         * Élémentaire (Ticket 4). Filtre sur Classroom.Cycle (structuré), JAMAIS sur Classroom.Level
-         * (texte libre, AGENTS.md : « ne pas introduire d'énumération de niveaux ») : aucune classe
-         * Collège/Lycée n'a de raison d'apparaître pour une école qui n'en gère pas, mais la
+         * Classes proposées au sélecteur — celles des CYCLES GÉRÉS par l'établissement (SchoolSettings
+         * .ManagedCycles, Paramètres › Modules). Filtre sur Classroom.Cycle (structuré), JAMAIS sur
+         * Classroom.Level (texte libre, AGENTS.md : « ne pas introduire d'énumération de niveaux ») : aucune
+         * classe de Collège/Lycée n'a de raison d'apparaître pour une école qui ne gère pas ces cycles, mais la
          * nomenclature des classes proposées reste celle que l'école a choisie. Confort d'affichage
-         * uniquement : CreateEnrollmentCommandHandler ne refuse aujourd'hui aucune classe par cycle,
-         * ce filtre ne fait qu'éviter de proposer un choix hors du périmètre du profil.
+         * uniquement : CreateEnrollmentCommandHandler ne refuse aucune classe par cycle, ce filtre ne fait
+         * qu'éviter de proposer un choix hors du périmètre déclaré par l'école.
          */
         visibleClassrooms() {
-            if (!this.isElementaireProfile) return this.classrooms;
-            return this.classrooms.filter((c) => c.cycle === 'Primaire' || c.cycle === 'Maternelle');
+            // La classe DÉJÀ choisie dans le formulaire (brouillon repris, réinscription d'une classe d'un cycle
+            // retiré depuis) reste proposée : seul le choix d'une NOUVELLE classe hors cycles gérés est évité.
+            return this.classrooms.filter((c) =>
+                c.id === this.form.classroomId || window.managedCycles.isManaged(this.managedCycles, c.cycle));
         },
 
         classroomLabel(classroom) {

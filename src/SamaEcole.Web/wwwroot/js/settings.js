@@ -86,6 +86,22 @@ document.addEventListener('alpine:init', () => {
         // devient le nouveau point de retour) — jamais après un enregistrement en échec.
         profileSnapshot: null,
 
+        // --- Cycles gérés (Paramètres › Modules) ---
+        // SchoolSettings.ManagedCycles : les cycles que l'établissement gère. Volontairement HORS de `config` :
+        // saveConfig() renvoie `config` en entier au PUT général, qui ne connaît pas ce réglage — il a son endpoint
+        // dédié (PUT managed-cycles, toggleManagedCycle) car retirer un cycle qui contient des classes est refusé.
+        managedCycles: [...window.managedCycles.ALL],
+        cyclesSaving: false,
+        cyclesSaved: false,
+        cyclesError: null,
+        cyclesBlocked: false, // Vrai quand le serveur refuse (409 CYCLE_HAS_CLASSROOMS) : l'écran propose d'aller aux classes.
+        cycleOptions: [
+            { key: 'Maternelle', label: 'Maternelle / Crèche' },
+            { key: 'Primaire', label: 'Primaire' },
+            { key: 'College', label: 'Collège' },
+            { key: 'Lycee', label: 'Lycée' }
+        ],
+
         // --- Configuration (réglages) ---
         config: {
             gradingScale: '20',
@@ -342,6 +358,7 @@ document.addEventListener('alpine:init', () => {
                     typeEtablissement: config.typeEtablissement || 'Prive',
                     profileEtablissement: config.profileEtablissement || null
                 };
+                this.managedCycles = window.managedCycles.normalize(config.managedCycles);
                 this.profileSnapshot = JSON.parse(JSON.stringify(this.profile));
                 this.configSnapshot = JSON.parse(JSON.stringify(this.config));
 
@@ -888,6 +905,54 @@ document.addEventListener('alpine:init', () => {
                 this.profileError = window.api.toMessage(err, "Impossible d'appliquer ce profil. Réessayez.");
             } finally {
                 this.profileSaving = false;
+            }
+        },
+
+        // ---------------------------------------------------------------- Cycles gérés
+
+        isCycleChecked(key) {
+            return this.managedCycles.includes(key);
+        },
+
+        /** Un cycle ne se décoche pas s'il est le DERNIER géré (au moins un cycle) ; rien n'est modifiable en cours d'envoi ni hors Directeur. */
+        canToggleCycle(key) {
+            if (this.cyclesSaving || !this.isDirecteur) return false;
+            return !(this.isCycleChecked(key) && this.managedCycles.length === 1);
+        },
+
+        /**
+         * Coche ou décoche un cycle. L'état affiché ne change QU'APRÈS la réponse du serveur : décocher un cycle qui
+         * contient encore des classes est refusé (409 CYCLE_HAS_CLASSROOMS, message nommant le cycle et le nombre de
+         * classes) et la case reste alors cochée. Endpoint dédié, pas saveConfig() — voir managedCycles ci-dessus.
+         */
+        async toggleManagedCycle(key) {
+            if (!this.canToggleCycle(key)) return;
+
+            const next = this.isCycleChecked(key)
+                ? this.managedCycles.filter((c) => c !== key)
+                : window.managedCycles.normalize([...this.managedCycles, key]);
+
+            this.cyclesError = null;
+            this.cyclesBlocked = false;
+            this.cyclesSaved = false;
+            this.cyclesSaving = true;
+            try {
+                const saved = await window.api.put('/schools/current/settings/managed-cycles', { cycles: next });
+
+                this.managedCycles = window.managedCycles.normalize(saved.managedCycles);
+                this.cyclesSaved = true;
+
+                // Rafraîchit le store partagé (formulaires de classe, d'inscription, d'examens) sans recharger la
+                // page — même mécanique que applyEstablishmentProfile.
+                if (window.Alpine && Alpine.store('schoolConfig')) {
+                    Alpine.store('schoolConfig')._initPromise = null;
+                    await Alpine.store('schoolConfig').init();
+                }
+            } catch (err) {
+                this.cyclesBlocked = !!err && err.code === 'CYCLE_HAS_CLASSROOMS';
+                this.cyclesError = window.api.toMessage(err, "Impossible d'enregistrer les cycles. Réessayez.");
+            } finally {
+                this.cyclesSaving = false;
             }
         },
 

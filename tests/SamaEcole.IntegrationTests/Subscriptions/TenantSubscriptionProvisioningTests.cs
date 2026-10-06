@@ -123,6 +123,26 @@ public class TenantSubscriptionProvisioningTests : IAsyncLifetime
         b.Status.Should().Be(TenantSubscriptionStatus.PendingOnboarding);
     }
 
+    [Theory]
+    [InlineData(ProfileType.Elementaire, "Maternelle,Primaire")]
+    [InlineData(ProfileType.InternatDaara, "Maternelle,Primaire,College,Lycee")]
+    [InlineData(ProfileType.FrancoArabe, "Maternelle,Primaire,College,Lycee")]
+    [InlineData(ProfileType.EnseignementGeneral, "Maternelle,Primaire,College,Lycee")]
+    [InlineData(ProfileType.ComptabiliteRapports, "Maternelle,Primaire,College,Lycee")]
+    public async Task Selecting_A_Profile_Initializes_The_Managed_Cycles(ProfileType profile, string expected)
+    {
+        await ProvisionAsync(EcoleA);
+
+        await using (var context = _db.NewAppContext(EcoleA))
+        {
+            await NewHandler(context, EcoleA).Handle(new SelectProfileCommand(profile, StudentQuotaTier.Tier1_150), CancellationToken.None);
+        }
+
+        await using var owner = _db.NewOwnerContext();
+        (await owner.SchoolSettings.IgnoreQueryFilters().AsNoTracking().SingleAsync(s => s.SchoolId == EcoleA))
+            .ManagedCycles.Should().Be(expected);
+    }
+
     [Fact]
     public async Task Selecting_A_Profile_Twice_Is_Refused_And_Keeps_The_First_Choice()
     {

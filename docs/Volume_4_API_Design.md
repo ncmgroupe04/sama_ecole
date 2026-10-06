@@ -99,6 +99,7 @@ logs serveur (Volume 7).
 | `ONBOARDING_REQUIRED` | Souscription en `PendingOnboarding` : seul `/api/v1/onboarding/*` (et la session, le paiement) est accessible ; `details.redirectTo` = `/onboarding/select-profile` (§29) | 403 |
 | `ONBOARDING_ALREADY_COMPLETED` | Profil et tranche déjà choisis : le choix ne se rejoue pas (§29) | 409 |
 | `ONBOARDING_NOT_COMPLETED` | Le Super Admin cible une école qui n'a pas encore choisi son profil et sa tranche (§29) | 409 |
+| `CYCLE_HAS_CLASSROOMS` | Désactivation d'un cycle géré refusée : il contient encore des classes ; `details` = `[{ cycle, classroomCount }]` (§30) | 409 |
 | `STUDENT_QUOTA_EXCEEDED` | Création d'élève(s) refusée : tolérance (Soft cap) dépassée ; `details` = `currentStudentCount`, `maxStudentLimit`, `softQuotaLimit` (§29) | 422 |
 | `SUBSCRIPTION_NOT_ACTIVE` | Création d'élève refusée : souscription commerciale non `Active` ou absente (§29) | 422 |
 | `INTERNAL_ERROR` | Erreur interne non anticipée | 500 |
@@ -927,6 +928,26 @@ jusqu'à `softQuotaLimit` inclus : admis et la réponse porte `quotaWarning` `{ 
 softQuotaLimit, remainingBeforeBlock }` (absent sinon) ; au-delà : 422 `STUDENT_QUOTA_EXCEEDED`. Souscription non `Active`
 ou absente : 422 `SUBSCRIPTION_NOT_ACTIVE`. Le contrôle précède la transaction et ne la verrouille pas : deux créations
 strictement concurrentes à la limite peuvent dépasser la tolérance d'un ou deux élèves.
+
+## 30. API Cycles gérés par l'établissement
+
+Colonne : `school_settings.ManagedCycles` (Volume 3 §4). Lue avec les autres réglages : `GET /api/v1/schools/current/settings`
+renvoie `managedCycles` (noms de `CycleType`, ordre canonique : `Maternelle`, `Primaire`, `College`, `Lycee`).
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `PUT` | `/api/v1/schools/current/settings/managed-cycles` | Directeur | `{ cycles: ["Maternelle","Primaire",…] }` — au moins un cycle, sans doublon, noms de `CycleType` (`Creche` n'est pas un cycle) : sinon 422. Renvoie les réglages (`SchoolSettingsDto`). Journalisé. |
+
+**Règle de désactivation.** Retirer un cycle qui contient encore des classes **vivantes** (non supprimées logiquement, y compris
+sans élève) répond `409 CYCLE_HAS_CLASSROOMS` ; `details` = `[{ cycle, classroomCount }]` et `message` nomme le cycle et le
+nombre de classes. Rien n'est écrit. Ajouter un cycle n'est jamais refusé. Le contrôle est refait côté serveur (l'écran le
+prévient aussi). Le `PUT /api/v1/schools/current/settings` général ignore `managedCycles` : il ne peut pas contourner cette règle.
+
+**Initialisation.** `POST /api/v1/onboarding/select-profile` (§29) pose `Maternelle,Primaire` pour `Elementaire`, tous les cycles
+pour les autres profils. `POST /schools/current/settings/establishment-profile` ne modifie pas les cycles.
+
+**Confort d'affichage.** Les écrans Classes, Inscriptions et Examens ne proposent que les niveaux, classes et types d'examen
+des cycles gérés ; un niveau ou une classe déjà en usage reste visible. L'API ne refuse pas la création d'une classe hors de ces cycles.
 
 ---
 

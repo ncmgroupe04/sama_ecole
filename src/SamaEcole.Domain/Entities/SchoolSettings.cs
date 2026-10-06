@@ -174,6 +174,21 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// </summary>
     public string WorkingDays { get; set; } = SchoolSettingsDefaults.WorkingDays;
 
+    /// <summary>
+    /// Cycles que l'établissement GÈRE, noms de <see cref="Enums.CycleType"/> séparés par des virgules, forme
+    /// canonique Maternelle → Lycée (ManagedCycleSet.Serialize). Pilote ce que proposent les écrans de création
+    /// de classe, d'inscription et d'examens — CONFORT d'affichage : le serveur ne refuse pas la création d'une
+    /// classe hors de ces cycles. Il n'y a pas de cycle « Crèche » : Crèche et Maternelle sont deux niveaux du
+    /// cycle Maternelle.
+    ///
+    /// Défaut : TOUS les cycles, donc aucune école ne perd d'écran par défaut. Seules les écoles déjà passées
+    /// par le profil Élémentaire sont reprises sur « Maternelle,Primaire » (migration AddManagedCyclesToSchoolSettings),
+    /// parce que c'est ce que le profil leur imposait déjà. L'Onboarding l'initialise (SelectProfileCommand) ;
+    /// un changement de profil ultérieur ne le modifie JAMAIS — seul le Directeur le règle ensuite
+    /// (SetManagedCyclesCommand), et il ne peut pas retirer un cycle qui contient encore des classes.
+    /// </summary>
+    public string ManagedCycles { get; set; } = SchoolSettingsDefaults.ManagedCycles;
+
     // ── Conseil de classe (Évolution N°7) : seuils sur la RÉFÉRENCE /20, transposés au barème du bulletin ──
 
     /// <summary>Moyenne générale minimale des Félicitations.</summary>
@@ -270,6 +285,9 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Lundi → Samedi : la grille historique (à garder identique à SchoolWeek.DefaultStored).</summary>
     public const string WorkingDays = "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday";
+
+    /// <summary>Tous les cycles : aucune école existante ne perd d'écran (à garder identique à ManagedCycleSet.AllStored).</summary>
+    public const string ManagedCycles = "Maternelle,Primaire,College,Lycee";
 
     /// <summary>
     /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier

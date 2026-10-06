@@ -236,8 +236,8 @@
  <label for="enr-classroom" class="form-label form-label-required">Classe d'affectation</label>
  @* on-change : les frais diffèrent d'une classe à l'autre — on remet le simulateur de mois à 1
  pour ne pas reporter une simulation faite sur le barème d'une autre classe (voir resetSimulator). *@
- @* Profil Élémentaire (Ticket 4) : visibleClassrooms() restreint le choix aux cycles
- Maternelle/Primaire — voir sa doc dans enrollments.js. Aucun nouveau champ « Série » à
+ @* visibleClassrooms() restreint le choix aux cycles GÉRÉS par l'établissement (Paramètres › Modules) —
+ voir sa doc dans enrollments.js. Aucun nouveau champ « Série » à
  masquer : ce formulaire n'en a jamais eu (la série est un attribut de la CLASSE, fixé à sa
  création, jamais choisi à l'inscription). *@
  <select-field id="enr-classroom" model="form.classroomId" required="true"
@@ -248,7 +248,7 @@
  Aucune classe définie. Créez vos classes avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
  </p>
  <p x-show="classrooms.length > 0 && visibleClassrooms().length === 0" x-cloak class="mt-1 text-xs text-slate-400">
- Aucune classe Maternelle ou Primaire définie. Créez-en une avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
+ Aucune classe dans les cycles gérés par votre établissement. Créez-en une avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
  </p>
  </div>
 

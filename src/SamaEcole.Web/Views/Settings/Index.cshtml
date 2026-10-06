@@ -426,6 +426,43 @@
  <p x-show="profileError" x-cloak x-text="profileError" class="mt-2 text-xs text-danger bg-danger-bg border border-danger/20 rounded-xl px-3 py-2"></p>
  </div>
 
+ @* Cycles gérés (SchoolSettings.ManagedCycles) : ce que proposent les écrans de classes, d'inscription et d'examens.
+ Endpoint DÉDIÉ (toggleManagedCycle, settings.js) : l'état affiché ne change qu'après la réponse du serveur, qui
+ refuse (409 CYCLE_HAS_CLASSROOMS) de retirer un cycle contenant encore des classes. *@
+ <div class="border-t border-slate-100 pt-4">
+ <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cycles gérés</h3>
+ <p class="text-xs text-slate-400 mb-3">
+ Les cycles que votre établissement enseigne. Les écrans de classes, d'inscription et d'examens ne
+ proposent que ceux-ci : décochez Collège et Lycée si vous n'en avez pas. Un cycle qui contient encore
+ des classes ne peut pas être décoché — supprimez d'abord ses classes.
+ </p>
+
+ <div class="flex flex-wrap gap-3" role="group" aria-label="Cycles gérés">
+ <template x-for="option in cycleOptions" :key="option.key">
+ <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 select-none"
+ :class="canToggleCycle(option.key) ? 'cursor-pointer hover:border-primary' : 'cursor-not-allowed opacity-60'">
+ <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary/30"
+ :checked="isCycleChecked(option.key)"
+ :disabled="!canToggleCycle(option.key)"
+ x-on:click.prevent="toggleManagedCycle(option.key)">
+ <span x-text="option.label"></span>
+ </label>
+ </template>
+ </div>
+
+ <p x-show="managedCycles.length === 1" x-cloak class="mt-2 text-xs text-slate-400">
+ Au moins un cycle doit rester coché.
+ </p>
+ <p x-show="cyclesSaving" x-cloak class="mt-2 text-xs text-slate-500">Enregistrement…</p>
+ <p x-show="cyclesSaved" x-cloak class="mt-2 text-xs text-success bg-success-bg border border-success/20 rounded-xl px-3 py-2">
+ Cycles enregistrés — les formulaires sont déjà à jour.
+ </p>
+ <div x-show="cyclesError" x-cloak class="mt-2 text-xs text-danger bg-danger-bg border border-danger/20 rounded-xl px-3 py-2" role="alert">
+ <span x-text="cyclesError"></span>
+ <a x-show="cyclesBlocked" x-cloak href="/classes" class="underline font-medium ml-1">Voir les classes</a>
+ </div>
+ </div>
+
  <div class="border-t border-slate-100 pt-4">
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Réservé — à venir</h3>
  <p class="text-xs text-slate-400 mb-3">

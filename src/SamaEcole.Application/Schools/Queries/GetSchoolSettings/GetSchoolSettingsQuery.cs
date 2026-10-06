@@ -34,36 +34,7 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
             : Map(settings);
     }
 
-    private static SchoolSettingsDto Map(SchoolSettings settings) => new(
-        settings.GradingScale.ToString(),
-        settings.StudentMatriculeFormat,
-        settings.TeacherMatriculeFormat,
-        settings.AutoLogoutMinutes,
-        settings.DateFormat,
-        settings.TuitionMonthsPerYear,
-        settings.AllowSecretaryToManageGrading,
-        settings.AllowFinanceToModifyFees,
-        settings.AllowFinanceToDeleteFees,
-        settings.DirectorSignatureUrl,
-        settings.SecretarySignatureUrl,
-        settings.CashierSignatureUrl,
-        settings.OfficialStampUrl,
-        settings.SurveillantSignatureUrl,
-        settings.TypeEtablissement.ToString(),
-        settings.SmsOnAttendanceAlert,
-        settings.SmsOnDuesReminder,
-        settings.SmsOnPaymentReceipt,
-        settings.SmsCreditBalance,
-        settings.DebtorReminderThresholdDays,
-        settings.IsPedagogyEnabled,
-        settings.IsFinanceEnabled,
-        settings.IsInternatEnabled,
-        settings.IsCoranModuleEnabled,
-        settings.GradeEditWindowDays,
-        settings.EvaluationPeriodType.ToString(),
-        settings.CustomPeriodCount,
-        SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
-        settings.ProfileEtablissement?.ToString());
+    private static SchoolSettingsDto Map(SchoolSettings settings) => SchoolSettingsDtoMapper.From(settings);
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -99,5 +70,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         // n'existait pas encore) : traitée comme une école EXISTANTE, jamais redirigée vers l'Onboarding.
         // Une école neuve, elle, a TOUJOURS une ligne dès sa création (provision_school_director) avec
         // ProfileEtablissement = NULL — elle ne passe donc jamais par CETTE branche.
-        ProfileEtablissement.General.ToString());
+        ProfileEtablissement.General.ToString(),
+        ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.All));
 }
