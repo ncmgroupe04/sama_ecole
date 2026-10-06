@@ -59,6 +59,9 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 
+    /// <summary>Souscription commerciale de l'école (profil, tranche d'effectif, modules) : table tenant, une ligne vivante par école.</summary>
+    DbSet<TenantSubscription> TenantSubscriptions { get; }
+
     /// <summary>Codes promo (module Tarification &amp; Promotions) : table plateforme, comme Subscriptions/Schools.</summary>
     DbSet<PromoCode> PromoCodes { get; }
 
