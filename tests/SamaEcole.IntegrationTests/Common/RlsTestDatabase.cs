@@ -48,7 +48,7 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     public ValueTask DisposeAsync() => _postgres.DisposeAsync();
 
-    private string OwnerConnectionString => _postgres.GetConnectionString();
+    public string OwnerConnectionString => _postgres.GetConnectionString();
 
     public string AppConnectionString =>
         new NpgsqlConnectionStringBuilder(OwnerConnectionString)

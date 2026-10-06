@@ -342,6 +342,16 @@
             }
         },
 
+        /**
+         * Même chose à partir du profil des RÉGLAGES (ProfileEtablissement, ce que lit la sidebar). Exposée
+         * ici car la table de correspondance vit dans cette portée, hors de celle du store schoolConfig.
+         * Une école sans profil enregistré (null — antérieure à l'Onboarding) vaut Enseignement Général,
+         * comme dans la migration AddTenantSubscriptions.
+         */
+        rememberEstablishmentProfile(profileEtablissement) {
+            auth.rememberProfile(PROFILE_TYPE_BY_ESTABLISHMENT_PROFILE[profileEtablissement] || 'EnseignementGeneral');
+        },
+
         /** Mémorise le profil de l'école pour l'atterrissage. Sans valeur, rien n'est modifié. */
         rememberProfile(profileType) {
             if (!profileType) return;
@@ -623,11 +633,8 @@ document.addEventListener('alpine:init', () => {
                 // reste défensif : `undefined` plutôt qu'une fausse redirection si jamais il l'était.
                 this.profileEtablissement = s ? s.profileEtablissement : undefined;
 
-                // Rafraîchit le profil mémorisé pour l'atterrissage. Une école sans profil enregistré
-                // (NULL — école antérieure à l'Onboarding) est traitée comme Enseignement Général, comme le
-                // fait la migration AddTenantSubscriptions.
-                window.auth.rememberProfile(
-                    PROFILE_TYPE_BY_ESTABLISHMENT_PROFILE[s && s.profileEtablissement] || 'EnseignementGeneral');
+                // Rafraîchit le profil mémorisé pour l'atterrissage (voir auth.rememberEstablishmentProfile).
+                window.auth.rememberEstablishmentProfile(s ? s.profileEtablissement : null);
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
                 // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —

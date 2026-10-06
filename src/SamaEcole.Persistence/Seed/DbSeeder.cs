@@ -192,6 +192,28 @@ public static class DbSeeder
                     ExpiresAt = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1)
                 });
             }
+
+            // Souscription commerciale (Onboarding & Pricing SaaS) : Active et illimitée, comme celle que la
+            // migration AddTenantSubscriptions donne aux écoles existantes. Sans elle, le quota (fail-closed)
+            // refuserait toute création d'élève dans l'environnement de démonstration.
+            var hasTenantSubscription = await dbContext.TenantSubscriptions
+                .IgnoreQueryFilters()
+                .AnyAsync(s => s.SchoolId == schoolId, cancellationToken);
+
+            if (!hasTenantSubscription)
+            {
+                dbContext.TenantSubscriptions.Add(new TenantSubscription
+                {
+                    SchoolId = schoolId,
+                    ProfileType = ProfileType.EnseignementGeneral,
+                    StudentQuotaTier = StudentQuotaTier.Tier4_Custom,
+                    MaxStudentLimit = StudentQuotaDefaults.Unlimited,
+                    SoftQuotaLimit = StudentQuotaDefaults.Unlimited,
+                    Status = TenantSubscriptionStatus.Active,
+                    IsPedagogyEnabled = true,
+                    IsFinanceEnabled = true
+                });
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
