@@ -146,11 +146,14 @@ Crée les six tables, index, policies RLS, et patche les deux fonctions de purge
    `Gender` = `Garcons`/`Filles` si tous les élèves inscrits dans ses chambres ont le même `Student.Gender`
    (`"M"`/`"F"`), sinon `Mixte`. Un pavillon vide reçoit `Mixte`.
 2. Chaque `Room` `Dortoir` → un `DormitoryRoom` **qui réutilise le même `Id`** (traçabilité et FK faciles).
-3. Pour chaque chambre : `max(Room.Capacity, nombre d'occupants)` lits numérotés 1..N. (Les occupants peuvent
+3. Pour chaque chambre : `max(Room.Capacity, nombre d'internes de l'année active)` lits numérotés 1..N. (Les occupants peuvent
    dépasser la capacité si celle-ci a été réduite après coup ; le dépassement est consigné, pas bloquant.)
-4. Chaque `Enrollment` avec `BoardingStatus ≠ Externe` et statut ≠ `Cancelled` → un `BoardingEnrollment` actif :
-   `Regime` ← `BoardingStatus`, `StartDate` ← date d'inscription, lit attribué dans l'ordre d'inscription si
-   `RoomId` non nul, sinon `BedId` nul (« en attente »).
+4. Chaque `Enrollment` avec `BoardingStatus ≠ Externe` et statut ≠ `Cancelled` → un `BoardingEnrollment` :
+   `Regime` ← `BoardingStatus`, `StartDate` ← date d'inscription. **Année scolaire active** : séjour actif, lit
+   attribué dans l'ordre d'inscription si le régime est `Interne` et `RoomId` non nul, sinon `BedId` nul (« en
+   attente » ; un `DemiPensionnaire` n'a jamais de lit, N7). **Autre année** : séjour **clos** (`IsActive = false`,
+   `EndDate` = fin de l'année, `BedId` nul), pour qu'une inscription passée n'occupe jamais un lit. Les occupants de
+   chambres supprimées ou qui ne sont plus de type `Dortoir` sont repris sans lit.
 5. Une requête de contrôle (testée) vérifie : `#BoardingEnrollment actifs = #Enrollment pensionnaires`, et aucun lit
    attribué deux fois.
 
