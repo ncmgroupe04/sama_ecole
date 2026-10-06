@@ -38,6 +38,7 @@ public class ApplicationDbContext(
     public DbSet<PaymentBreakdown> PaymentBreakdowns => Set<PaymentBreakdown>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<UserSchool> UserSchools => Set<UserSchool>();

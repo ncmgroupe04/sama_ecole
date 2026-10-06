@@ -96,6 +96,11 @@ logs serveur (Volume 7).
 | `CLIENT_CLOSED_REQUEST` | Requête annulée côté client | 499 |
 | `PAYMENT_PROVIDER_ERROR` | Agrégateur de paiement (PayDunya/CinetPay) injoignable ou en erreur | 502 |
 | `INVALID_WEBHOOK_SIGNATURE` | Signature HMAC de webhook absente ou invalide (§12bis) | 401 |
+| `ONBOARDING_REQUIRED` | Souscription en `PendingOnboarding` : seul `/api/v1/onboarding/*` (et la session, le paiement) est accessible ; `details.redirectTo` = `/onboarding/select-profile` (§29) | 403 |
+| `ONBOARDING_ALREADY_COMPLETED` | Profil et tranche déjà choisis : le choix ne se rejoue pas (§29) | 409 |
+| `ONBOARDING_NOT_COMPLETED` | Le Super Admin cible une école qui n'a pas encore choisi son profil et sa tranche (§29) | 409 |
+| `STUDENT_QUOTA_EXCEEDED` | Création d'élève(s) refusée : tolérance (Soft cap) dépassée ; `details` = `currentStudentCount`, `maxStudentLimit`, `softQuotaLimit` (§29) | 422 |
+| `SUBSCRIPTION_NOT_ACTIVE` | Création d'élève refusée : souscription commerciale non `Active` ou absente (§29) | 422 |
 | `INTERNAL_ERROR` | Erreur interne non anticipée | 500 |
 
 Toute erreur est journalisée (Volume 7, journalisation de sécurité) ; seul `INTERNAL_ERROR` est loggé
@@ -891,6 +896,37 @@ Contrôleur `InternatController`, module Internat requis (`403 MODULE_DISABLED` 
 | `GET` | `/api/v1/internat/students/{id}/hizb-report/pdf` | Directeur, Secrétariat, Surveillant, Enseignant (sa Halqa) | Bulletin coranique PDF A4 bilingue français/arabe. Impression tracée au journal d'audit. |
 
 Pages : `/halqa` (tablette de l'Oustaz, arabe de droite à gauche), `/oustaz` (gestion des Oustaz), `/suivi-coranique` (tableau de bord de la Direction). Tables : `instructors`, `student_hizb_statuses` (un état courant par élève et Hizb, contraintes CHECK sur les bornes et la cohérence état/quarts), colonne `students.InstructorId`.
+
+## 29. API Onboarding & quota d'élèves (souscription commerciale)
+
+Table : `tenant_subscriptions` (Volume 3 §5.15). Une école neuve naît en `PendingOnboarding` (provisionnée à la création
+par le Super Admin ou à l'approbation d'une demande, via la fonction `provision_tenant_subscription`) : le Directeur
+choisit son profil et sa tranche d'effectif, ce qui la passe en `Active`.
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/onboarding/subscription` | Tout rôle de l'école | Souscription courante : `status`, `profileType`, `studentQuotaTier`, `maxStudentLimit`, `softQuotaLimit`, `isPedagogyEnabled`, `isFinanceEnabled`, `isInternatEnabled`, `isCoranModuleEnabled`. 404 si l'école n'a pas de souscription. |
+| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800` (`Tier4_Custom` est réservé au Super Admin : 422). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
+| `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
+
+Pages : `/onboarding/select-profile` (assistant en deux choix — 5 profils, puis 3 tranches ; le sur-mesure est affiché à titre
+informatif, jamais sélectionnable). `/onboarding` redirige vers elle. Le client (`api.js`) y renvoie toute réponse
+`403 ONBOARDING_REQUIRED` (destination lue dans `details.redirectTo`). L'ancienne route
+`POST /schools/current/settings/establishment-profile` reste disponible mais l'interface ne l'utilise plus ; elle maintient
+désormais `tenant_subscriptions.ProfileType` et les modules alignés (sans toucher à la tranche ni au statut).
+
+**Garde de routage (`OnboardingRoutingMiddleware`).** Tant que la souscription est `PendingOnboarding`, toute route
+`/api/*` répond `403 ONBOARDING_REQUIRED`, sauf `/api/v1/auth/*`, `/api/v1/onboarding/*` et `/api/v1/subscriptions/*`
+(paiement). Réciproquement `/api/v1/onboarding/*` est ouvert à l'école `AwaitingPayment` : configurer puis payer, ou
+payer puis configurer, sans blocage mutuel. Super Admin et école sans souscription ne sont pas restreints.
+
+**Quota d'élèves (`StudentQuotaGuard`).** Appliqué à `POST /students`, `POST /enrollments` en **nouvelle** inscription
+(`NewEnrollment` — une réinscription n'ajoute personne et n'est jamais refusée) et à la confirmation de
+`POST /students/import` (tout ou rien : le fichier entier est refusé s'il dépasse). Effectif ≤ `maxStudentLimit` : admis ;
+jusqu'à `softQuotaLimit` inclus : admis et la réponse porte `quotaWarning` `{ currentStudentCount, maxStudentLimit,
+softQuotaLimit, remainingBeforeBlock }` (absent sinon) ; au-delà : 422 `STUDENT_QUOTA_EXCEEDED`. Souscription non `Active`
+ou absente : 422 `SUBSCRIPTION_NOT_ACTIVE`. Le contrôle précède la transaction et ne la verrouille pas : deux créations
+strictement concurrentes à la limite peuvent dépasser la tolérance d'un ou deux élèves.
 
 ---
 

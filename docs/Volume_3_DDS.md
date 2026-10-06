@@ -512,6 +512,41 @@ SubjectId) NULLS NOT DISTINCT WHERE NOT IsDeleted`. RLS + Global Query Filter, `
 N'existe que pour un volume réglé par l'école : sans ligne, la grille codée (`WeeklyHourTemplates`) s'applique.
 Purgée par `reset_school_data` juste avant `subjects`.
 
+### 5.15 Souscription commerciale (Onboarding & Pricing SaaS) — `tenant_subscriptions`
+
+Table tenant : **une ligne vivante par école** (profil choisi, tranche d'effectif, plafonds d'élèves, modules).
+Distincte de `subscriptions` (§5.6, facturation : formule, expiration, paiements) — aucune des deux ne remplace l'autre.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK `schools.Id` RESTRICT, NOT NULL ; index unique partiel `UX_tenant_subscriptions_SchoolId WHERE NOT IsDeleted` |
+| `ProfileType` | `varchar(30)` | NOT NULL — `ProfileType` (§6), enum stocké en texte |
+| `StudentQuotaTier` | `varchar(20)` | NOT NULL — `StudentQuotaTier` (§6) |
+| `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (150, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
+| `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (160, 420, 830, ou calculée) |
+| `Status` | `varchar(20)` | NOT NULL — `TenantSubscriptionStatus` (§6) |
+| `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés |
+
+Règle de quota : effectif ≤ `MaxStudentLimit` → admis ; entre `MaxStudentLimit` (exclu) et `SoftQuotaLimit` (inclus) →
+admis avec avertissement ; au-delà → refusé. Aucune création d'élève tant que `Status ≠ Active` (en particulier
+`PendingOnboarding`). RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE` (aucun `DELETE`). **Non purgée** par
+`reset_school_data` : attribut du compte, pas donnée scolaire. Les écritures du Super Admin (sans `SchoolId` de session)
+passeront par une fonction `SECURITY DEFINER`, comme pour `subscriptions`. La création de la ligne d'une école neuve en
+fait déjà usage : `provision_tenant_subscription(uuid)` (migration `AddTenantSubscriptionProvisioning`, `search_path`
+figé, `EXECUTE` retiré à `PUBLIC` et accordé au seul rôle applicatif) insère une ligne `PendingOnboarding`, modules
+désactivés, profil/tranche **provisoires** (`EnseignementGeneral` / `Tier1_150` — colonnes NOT NULL, `CHECK` positif ;
+sans effet tant que l'école est en Onboarding) et **refuse** (renvoie `NULL`) si l'école a déjà une souscription vivante.
+Le Super Admin lit et modifie la ligne d'une école quelconque par `get_tenant_subscription(uuid)` et
+`update_tenant_subscription(uuid, text, int, int, text, text)` (migration `AddTenantSubscriptionAdminFunctions`, même
+durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni les modules ; un paramètre `NULL` = inchangé.
+
+**Reprise (migration `AddTenantSubscriptions`)** : chaque école existante reçoit une ligne `Active`, tranche
+`Tier4_Custom`, `MaxStudentLimit = SoftQuotaLimit = 2147483647`. Profil existant conservé (`Simplifie` → `ComptabiliteRapports`,
+`ElementairePrimaire` → `Elementaire`, `General` → `EnseignementGeneral`, `FrancoArabe` → `FrancoArabe`,
+`DaaraInternat` → `InternatDaara`) ; sans profil → `EnseignementGeneral`. Les 4 modules sont recopiés depuis
+`school_settings` (source de vérité de l'affichage tant que la sidebar n'est pas rebranchée).
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |
@@ -532,6 +567,9 @@ Purgée par `reset_school_data` juste avant `subjects`.
 | `SubscriptionPaymentMethod` | `MOBILE_MONEY`, `BANK_TRANSFER`, `CARD` |
 | `SubscriptionPaymentStatus` | `INITIATED`, `CONFIRMED`, `FAILED` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR` |
+| `ProfileType` | `Elementaire`, `FrancoArabe`, `InternatDaara`, `EnseignementGeneral`, `ComptabiliteRapports` (texte, `tenant_subscriptions`) |
+| `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` (texte) |
+| `TenantSubscriptionStatus` | `PendingOnboarding`, `PendingApproval`, `Active`, `Suspended`, `Expired` (texte — axe distinct de `SubscriptionStatus`) |
 
 Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou type `enum` PostgreSQL), le domaine C# (`enum` typé) et le contrat API (Volume 4) — aucune chaîne de caractère magique ne doit être dupliquée entre ces trois couches.
 

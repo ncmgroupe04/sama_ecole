@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -42,6 +43,21 @@ public class ApplyEstablishmentProfileCommandHandler(
         settings.IsFinanceEnabled = preset.IsFinanceEnabled;
         settings.IsInternatEnabled = preset.IsInternatEnabled;
         settings.IsCoranModuleEnabled = preset.IsCoranModuleEnabled;
+
+        // Garde la souscription commerciale alignée : sans cela, un changement de profil APRÈS l'Onboarding
+        // (route toujours exposée) laisserait TenantSubscription.ProfileType sur l'ancien choix pendant que
+        // la sidebar, qui lit ces réglages, afficherait le nouveau. La tranche et le statut ne bougent pas —
+        // seul le Super Admin les modifie. Pas de souscription (école antérieure) : rien à aligner.
+        var subscription = await dbContext.TenantSubscriptions.FirstOrDefaultAsync(cancellationToken);
+
+        if (subscription is not null)
+        {
+            subscription.ProfileType = ProfileTypeMapping.FromEstablishmentProfile(profile);
+            subscription.IsPedagogyEnabled = preset.IsPedagogyEnabled;
+            subscription.IsFinanceEnabled = preset.IsFinanceEnabled;
+            subscription.IsInternatEnabled = preset.IsInternatEnabled;
+            subscription.IsCoranModuleEnabled = preset.IsCoranModuleEnabled;
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

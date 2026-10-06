@@ -41,7 +41,13 @@ public class SubscriptionAwaitingPaymentMiddleware(RequestDelegate next)
     private static readonly string[] AllowedPrefixes =
     [
         "/api/v1/auth/",
-        "/api/v1/subscriptions/"
+        "/api/v1/subscriptions/",
+
+        // Onboarding & Pricing SaaS : une école neuve est à la fois AwaitingPayment et PendingOnboarding.
+        // Choisir son profil/sa tranche ne touche à aucune donnée métier : on l'ouvre pour que l'ordre
+        // « configurer puis payer » ne se bloque pas contre OnboardingRoutingMiddleware (qui, lui, ouvre
+        // /api/v1/subscriptions/).
+        "/api/v1/onboarding/"
     ];
 
     public async Task InvokeAsync(HttpContext context, IApplicationDbContext dbContext)

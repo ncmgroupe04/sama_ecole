@@ -125,6 +125,12 @@ public class ApproveRegistrationRequestHandler(
                 ?? throw new InvalidOperationException(
                     $"L'établissement {school.Id} possède déjà un abonnement : il n'est pas à provisionner.");
 
+            // Souscription commerciale (profil + tranche) : PendingOnboarding, le Directeur choisit à sa
+            // première connexion. Même porte étroite, même garde anti-doublon.
+            _ = await provisioningStore.CreateInitialTenantSubscriptionAsync(school.Id, ct)
+                ?? throw new InvalidOperationException(
+                    $"L'établissement {school.Id} possède déjà une souscription commerciale : il n'est pas à provisionner.");
+
             // La demande n'est PAS transformée : elle reste, seul son statut avance et elle pointe
             // désormais vers l'école née de l'approbation.
             reg.Status = RegistrationRequestStatus.Approved;

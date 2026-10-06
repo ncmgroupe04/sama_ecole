@@ -48,6 +48,7 @@ public class EnrollmentBoardingTests : IAsyncLifetime
         await using var owner = _db.NewOwnerContext();
 
         owner.Schools.Add(new School { Id = EcoleA, Name = "École A", Phone = "77 123 45 67" });
+        owner.TenantSubscriptions.Add(RlsTestDatabase.UnlimitedSubscription(EcoleA));
         owner.Classrooms.Add(new Classroom { Id = ClasseA, SchoolId = EcoleA, Name = "CM2", Level = "Primaire", Capacity = 40 });
         owner.SchoolYears.Add(new SchoolYear
         {
@@ -66,7 +67,7 @@ public class EnrollmentBoardingTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db) =>
-        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser());
+        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser(), _db.NewQuotaGuard(db, EcoleA));
 
     private static CreateEnrollmentCommand NewCommand(BoardingStatus status, Guid? roomId, bool includeFee) => new()
     {

@@ -1,6 +1,7 @@
 using System.Globalization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions;
 using SamaEcole.Application.Common.Validation;
 using SamaEcole.Domain.Entities;
 using FluentValidation.Results;
@@ -13,7 +14,8 @@ public class ImportStudentsCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     IStudentImportFileParser fileParser,
-    IMatriculeGenerator matriculeGenerator)
+    IMatriculeGenerator matriculeGenerator,
+    StudentQuotaGuard quotaGuard)
     : IRequestHandler<ImportStudentsCommand, ImportStudentsResult>
 {
     /// <summary>
@@ -105,6 +107,10 @@ public class ImportStudentsCommandHandler(
             throw new ValidationException(errors);
         }
 
+        // Quota : tout le fichier passe ou rien (même rejet intégral que ci-dessus). L'aperçu (DryRun) ne
+        // le vérifie pas — il n'écrit rien ; c'est la confirmation qui est refusée si le fichier dépasse.
+        var quotaWarning = await quotaGuard.EnsureCanAddAsync(parsedRows.Count, cancellationToken);
+
         // Fichier entièrement valide : chaque élève est créé dans UNE seule transaction (règle #5) — le
         // matricule de CHAQUE ligne est généré ICI, séquentiellement, DANS la transaction (règle #3) :
         // si l'import échoue en cours de route, tous les compteurs consommés sont rembobinés avec elle.
@@ -137,7 +143,8 @@ public class ImportStudentsCommandHandler(
         }, cancellationToken);
 
         return new ImportStudentsResult(
-            DryRun: false, Committed: true, fileRows.Count, ValidRows: created, InvalidRows: 0, Created: created, results);
+            DryRun: false, Committed: true, fileRows.Count, ValidRows: created, InvalidRows: 0, Created: created, results,
+            quotaWarning);
     }
 
     /// <summary>

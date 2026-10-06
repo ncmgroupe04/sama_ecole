@@ -20,13 +20,17 @@ public class PagesController : Controller
     [HttpGet("/")]
     public IActionResult Index() => RedirectToAction(nameof(Students));
 
-    // Onboarding (Setup Wizard) — choix du profil d'établissement à la première connexion du
-    // Directeur (Ticket 2). Gabarit anonyme comme le reste : c'est onboarding-guard.js
-    // (wwwroot/js) qui amène ici tout Directeur sans profil, et
-    // SchoolSettingsController.ApplyEstablishmentProfile ([Authorize(Roles = Directeur)]) qui
-    // garde l'écriture.
-    [HttpGet("/onboarding")]
+    // Onboarding & Pricing SaaS — choix du profil ET de la tranche d'effectif à la première connexion du
+    // Directeur. Gabarit anonyme comme le reste : c'est api.js qui amène ici, à la réception du 403
+    // ONBOARDING_REQUIRED (OnboardingRoutingMiddleware), et OnboardingController.SelectProfile
+    // ([Authorize(Roles = Directeur)]) qui garde l'écriture.
+    [HttpGet("/onboarding/select-profile")]
     public IActionResult Onboarding() => View("~/Views/Onboarding/Index.cshtml");
+
+    // Ancienne adresse de l'assistant (profil seul, sans tranche) : conservée en redirection pour les
+    // favoris et liens déjà distribués.
+    [HttpGet("/onboarding")]
+    public IActionResult OnboardingLegacy() => Redirect("/onboarding/select-profile");
 
     // JGK-F04. Route dédiée plutôt que remplacer l'atterrissage par défaut (/eleves) : c'est un
     // tableau de bord FINANCIER, pas un accueil générique — seuls Directeur et Finance en ont l'usage

@@ -73,6 +73,7 @@ public static class DependencyInjection
         // Promotions) : même contournement RLS que ci-dessus, cette fois pour MODIFIER un abonnement
         // existant plutôt que d'en amorcer un.
         services.AddScoped<ISubscriptionAdminStore, SubscriptionAdminStore>();
+        services.AddScoped<ITenantSubscriptionAdminStore, TenantSubscriptionAdminStore>();
 
         // Purge « Zone de danger » de l'écran Paramètres : le Directeur remet SON école à neuf après
         // une phase d'essai. Vit dans Persistence — elle contourne le Global Query Filter (pour

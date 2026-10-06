@@ -39,10 +39,32 @@
     const DASHBOARD_LANDING = '/tableau-de-bord';
     const DASHBOARD_ROLES = ['Directeur', 'Finance'];
 
+    // Atterrissage par PROFIL d'établissement (Onboarding & Pricing SaaS) : un Directeur d'internat/Daara
+    // arrive directement sur le suivi coranique plutôt que sur le tableau de bord financier. Les autres
+    // profils gardent l'atterrissage par rôle ci-dessus (le Directeur d'une école Comptabilité & Rapports y
+    // trouve déjà un tableau de bord financier). CONFORT d'ergonomie : l'écran reste protégé côté API.
+    const PROFILE_LANDINGS = {
+        InternatDaara: { Directeur: '/suivi-coranique' }
+    };
+
+    // ProfileEtablissement (réglages, lu par la sidebar) → ProfileType (souscription). Même
+    // correspondance que ProfileTypeMapping (Application) et que la migration AddTenantSubscriptions.
+    const PROFILE_TYPE_BY_ESTABLISHMENT_PROFILE = {
+        Simplifie: 'ComptabiliteRapports',
+        ElementairePrimaire: 'Elementaire',
+        General: 'EnseignementGeneral',
+        FrancoArabe: 'FrancoArabe',
+        DaaraInternat: 'InternatDaara'
+    };
+
     const STORAGE_KEYS = {
         accessToken: 'sama_ecole.access_token',
         expiresAt: 'sama_ecole.access_token_expires_at',
-        email: 'sama_ecole.email'
+        email: 'sama_ecole.email',
+        // Profil de l'école (ProfileType) : le JWT ne le porte pas, et l'atterrissage se décide AVANT tout
+        // appel d'API. Mémorisé à la fin de l'Onboarding et à chaque chargement des réglages ; effacé avec
+        // la session (clearSession itère sur ces clés) pour ne jamais fuir d'un compte à l'autre.
+        profileType: 'sama_ecole.profile_type'
     };
 
     /**
@@ -303,8 +325,42 @@
         /** Atterrissage par défaut selon le rôle : le Super Admin n'a pas de tenant, on l'oriente vers son espace. */
         defaultLandingForRole() {
             if (this.role === 'SuperAdmin') return SUPER_ADMIN_LANDING;
+
+            const profileLanding = PROFILE_LANDINGS[auth.rememberedProfile()];
+            if (profileLanding && profileLanding[this.role]) return profileLanding[this.role];
+
             if (DASHBOARD_ROLES.includes(this.role)) return DASHBOARD_LANDING;
             return DEFAULT_LANDING;
+        },
+
+        /** Profil (ProfileType) mémorisé pour cet utilisateur, ou null — localStorage peut être indisponible. */
+        rememberedProfile() {
+            try {
+                return localStorage.getItem(STORAGE_KEYS.profileType);
+            } catch {
+                return null;
+            }
+        },
+
+        /**
+         * Même chose à partir du profil des RÉGLAGES (ProfileEtablissement, ce que lit la sidebar). Exposée
+         * ici car la table de correspondance vit dans cette portée, hors de celle du store schoolConfig.
+         * Une école sans profil enregistré (null — antérieure à l'Onboarding) vaut Enseignement Général,
+         * comme dans la migration AddTenantSubscriptions.
+         */
+        rememberEstablishmentProfile(profileEtablissement) {
+            auth.rememberProfile(PROFILE_TYPE_BY_ESTABLISHMENT_PROFILE[profileEtablissement] || 'EnseignementGeneral');
+        },
+
+        /** Mémorise le profil de l'école pour l'atterrissage. Sans valeur, rien n'est modifié. */
+        rememberProfile(profileType) {
+            if (!profileType) return;
+
+            try {
+                localStorage.setItem(STORAGE_KEYS.profileType, profileType);
+            } catch {
+                // Stockage indisponible : l'atterrissage retombe sur le défaut du rôle, sans autre effet.
+            }
         },
 
         /** Inverse : inutile de réafficher l'écran de connexion à quelqu'un qui a déjà une session. */
@@ -522,13 +578,13 @@ document.addEventListener('alpine:init', () => {
         workingDays: [1, 2, 3, 4, 5, 6],
 
         /**
-         * Profil d'Onboarding (Setup Wizard) choisi par le Directeur — voir ApplyEstablishmentProfileCommand.
+         * Profil d'établissement (réglages) — voir SelectProfileCommand / ApplyEstablishmentProfileCommand.
          * Trois états, à ne pas confondre :
-         *   - `undefined` (valeur INITIALE, avant chargement, OU après une erreur réseau) : on NE SAIT PAS,
-         *     onboarding-guard.js ne force jamais de redirection dans ce cas — un aléa réseau ne doit pas
-         *     piéger le Directeur dans une boucle vers /onboarding.
-         *   - `null` (valeur EXPLICITE renvoyée par l'API) : Directeur pas encore passé par l'Onboarding.
-         *     C'est le SEUL état qui déclenche la redirection.
+         *   - `undefined` (valeur INITIALE, avant chargement, OU après une erreur réseau) : on NE SAIT PAS.
+         *   - `null` (valeur EXPLICITE renvoyée par l'API) : école antérieure à l'Onboarding, qui n'a jamais
+         *     enregistré de profil. Ce n'est PLUS un déclencheur d'Onboarding (seul le 403
+         *     ONBOARDING_REQUIRED l'est, voir api.js) : sa souscription est Active, profil Enseignement
+         *     Général par défaut.
          *   - une chaîne (« Simplifie » / « ElementairePrimaire » / « General » / « FrancoArabe » /
          *     « DaaraInternat ») : profil déjà choisi.
          */
@@ -576,6 +632,9 @@ document.addEventListener('alpine:init', () => {
                 // devrait jamais être vide ici (l'API renvoie toujours un SchoolSettingsDto), mais on
                 // reste défensif : `undefined` plutôt qu'une fausse redirection si jamais il l'était.
                 this.profileEtablissement = s ? s.profileEtablissement : undefined;
+
+                // Rafraîchit le profil mémorisé pour l'atterrissage (voir auth.rememberEstablishmentProfile).
+                window.auth.rememberEstablishmentProfile(s ? s.profileEtablissement : null);
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
                 // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —
@@ -586,7 +645,7 @@ document.addEventListener('alpine:init', () => {
                 this.internatEnabled = false;
                 this.workingDays = [1, 2, 3, 4, 5, 6];
                 // profileEtablissement reste `undefined` (valeur initiale) : voir le commentaire de
-                // sa déclaration — jamais forcé à `null`, qui déclencherait /onboarding à tort.
+                // sa déclaration — jamais forcé à `null`, qui prétendrait une école sans profil.
             } finally {
                 this.loaded = true;
             }

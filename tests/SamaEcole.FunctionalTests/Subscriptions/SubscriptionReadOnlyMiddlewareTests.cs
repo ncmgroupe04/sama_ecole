@@ -87,6 +87,7 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
     {
         var approval = await CreateSchoolWithSubscriptionAsync("École Lecture Seule 1", "lecture1@i0b3.sn");
         await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.ReadOnly);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
         var director = await LoginAsync("lecture1@i0b3.sn", DirectorPassword);
 
         var response = await SendAsync(director.AccessToken, HttpMethod.Get, "/api/v1/students");
@@ -100,6 +101,7 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
     {
         var approval = await CreateSchoolWithSubscriptionAsync("École Lecture Seule 2", "lecture2@i0b3.sn");
         await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.ReadOnly);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
         var director = await LoginAsync("lecture2@i0b3.sn", DirectorPassword);
 
         var response = await SendAsync(director.AccessToken, HttpMethod.Post, "/api/v1/classrooms",
@@ -117,6 +119,7 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
         // jamais être bloquée par la restriction qu'elle sert précisément à lever.
         var approval = await CreateSchoolWithSubscriptionAsync("École Lecture Seule 3", "lecture3@i0b3.sn");
         await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.ReadOnly);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
         var director = await LoginAsync("lecture3@i0b3.sn", DirectorPassword);
 
         var response = await SendAsync(
@@ -132,6 +135,7 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
     {
         var approval = await CreateSchoolWithSubscriptionAsync("École Lecture Seule 4", "lecture4@i0b3.sn");
         await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
         var director = await LoginAsync("lecture4@i0b3.sn", DirectorPassword);
 
         var response = await SendAsync(director.AccessToken, HttpMethod.Get, "/api/v1/students");

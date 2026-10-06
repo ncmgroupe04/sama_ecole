@@ -78,6 +78,20 @@ public class SchoolProvisioningStore(ApplicationDbContext dbContext) : ISchoolPr
         return result is Guid id ? id : null;
     }
 
+    public async Task<Guid?> CreateInitialTenantSubscriptionAsync(Guid schoolId, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT provision_tenant_subscription(@schoolId)",
+            cancellationToken);
+
+        command.Parameters.AddWithValue("schoolId", schoolId);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+
+        // NULL = l'école a déjà une souscription : garde anti-escalade, pas une erreur technique.
+        return result is Guid id ? id : null;
+    }
+
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
     {
         // Réutilise la fonction du chemin de login : elle voit TOUS les comptes, toutes écoles

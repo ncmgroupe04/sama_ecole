@@ -5565,6 +5565,84 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("teacher_subjects", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsCoranModuleEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFinanceEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsInternatEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPedagogyEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxStudentLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProfileType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SoftQuotaLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StudentQuotaTier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_tenant_subscriptions_SchoolId")
+                        .HasFilter("NOT \"IsDeleted\"");
+
+                    b.ToTable("tenant_subscriptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_tenant_subscriptions_max_positive", "\"MaxStudentLimit\" > 0");
+
+                            t.HasCheckConstraint("CK_tenant_subscriptions_soft_gte_max", "\"SoftQuotaLimit\" >= \"MaxStudentLimit\"");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.Term", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7078,6 +7156,15 @@ namespace SamaEcole.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("SchoolId", "TeacherId")
                         .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

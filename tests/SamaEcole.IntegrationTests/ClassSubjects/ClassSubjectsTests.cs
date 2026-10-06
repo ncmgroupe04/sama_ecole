@@ -83,6 +83,7 @@ public class ClassSubjectsTests : IAsyncLifetime
 
         await using var owner = _db.NewOwnerContext();
         owner.Schools.Add(new School { Id = Ecole, Name = "Lycée de test" });
+        owner.TenantSubscriptions.Add(RlsTestDatabase.UnlimitedSubscription(Ecole));
         owner.SchoolYears.Add(new SchoolYear
         {
             Id = Annee, SchoolId = Ecole, Label = "2026-2027",
@@ -127,7 +128,7 @@ public class ClassSubjectsTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var receipt = await new CreateEnrollmentCommandHandler(
                 db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(),
-                new TestCurrentUser())
+                new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole))
             .Handle(new CreateEnrollmentCommand
             {
                 Type = EnrollmentType.NewEnrollment,

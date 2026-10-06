@@ -112,6 +112,21 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var hasher = new IdentityPasswordHasher();
 
         owner.Schools.Add(new School { Id = EcoleId, Name = "École de test" });
+
+        // Souscription ACTIVE à plafond illimité — ce que la migration AddTenantSubscriptions donne aux
+        // écoles existantes. Sans elle, le quota (fail-closed) refuserait toute création d'élève.
+        owner.TenantSubscriptions.Add(new TenantSubscription
+        {
+            SchoolId = EcoleId,
+            ProfileType = ProfileType.EnseignementGeneral,
+            StudentQuotaTier = StudentQuotaTier.Tier4_Custom,
+            MaxStudentLimit = int.MaxValue,
+            SoftQuotaLimit = int.MaxValue,
+            Status = TenantSubscriptionStatus.Active,
+            IsPedagogyEnabled = true,
+            IsFinanceEnabled = true
+        });
+
         owner.Users.AddRange(SeedUsers(hasher));
 
         await owner.SaveChangesAsync(CancellationToken.None);
@@ -519,6 +534,18 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // (Restrict), donc AVANT la suppression des écoles. Aucun n'est semé, on peut tout purger.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM subscriptions;");
 
+        // Souscriptions commerciales (Onboarding & Pricing SaaS) : même raison — elles référencent schools
+        // (Restrict). Celle de l'école semée est remise à « Active, illimitée » : des tests la basculent en
+        // PendingOnboarding, Suspended, ou lui posent un quota, et le suivant doit la retrouver neuve.
+        await owner.Database.ExecuteSqlAsync(
+            $"""DELETE FROM tenant_subscriptions WHERE "SchoolId" <> {EcoleId};""");
+        await owner.Database.ExecuteSqlAsync(
+            $"""
+             UPDATE tenant_subscriptions
+                SET "Status" = 'Active', "MaxStudentLimit" = 2147483647, "SoftQuotaLimit" = 2147483647
+              WHERE "SchoolId" = {EcoleId};
+             """);
+
         await owner.Database.ExecuteSqlAsync(
             $"""DELETE FROM schools WHERE "Id" <> {EcoleId};""");
 
@@ -572,6 +599,20 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var owner = NewOwnerContext();
         await owner.Database.ExecuteSqlRawAsync(sql);
     }
+
+    /// <summary>
+    /// Simule la fin de l'Onboarding d'une école créée par un test (Super Admin ou approbation) : sa
+    /// souscription commerciale, née en PendingOnboarding, devient Active à plafond illimité. À appeler
+    /// avant d'exercer une route métier de cette école — sinon OnboardingRoutingMiddleware la refuse en 403.
+    /// </summary>
+    public Task CompleteOnboardingAsync(Guid schoolId) =>
+        ExecuteOwnerSqlAsync(
+            $"""
+             UPDATE tenant_subscriptions
+                SET "Status" = 'Active', "MaxStudentLimit" = 2147483647, "SoftQuotaLimit" = 2147483647,
+                    "IsPedagogyEnabled" = true, "IsFinanceEnabled" = true
+              WHERE "SchoolId" = '{schoolId}'
+             """);
 
     /// <summary>
     /// Modifie directement le statut d'un abonnement (ticket JGK-I04) : simule une confirmation de

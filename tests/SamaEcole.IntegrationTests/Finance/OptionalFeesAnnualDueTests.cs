@@ -67,6 +67,7 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
         await using (var owner = _db.NewOwnerContext())
         {
             owner.Schools.Add(new School { Id = Ecole, Name = "École Frais Optionnels" });
+            owner.TenantSubscriptions.Add(RlsTestDatabase.UnlimitedSubscription(Ecole));
             owner.Classrooms.Add(new Classroom { Id = _classroomId, SchoolId = Ecole, Name = "6e A", Level = "Collège", Capacity = 40 });
             owner.SchoolYears.Add(new SchoolYear
             {
@@ -99,7 +100,7 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var handler = new CreateEnrollmentCommandHandler(
             db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System,
-            new NoOpKpiCache(), new TestCurrentUser());
+            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole));
 
         var receipt = await handler.Handle(new CreateEnrollmentCommand
         {
@@ -286,7 +287,7 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var handler = new CreateEnrollmentCommandHandler(
             db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System,
-            new NoOpKpiCache(), new TestCurrentUser());
+            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole));
 
         // Ni la mensualité ni l'inscription ne se « cochent » ni ne se décochent : c'est refusé, pas ignoré.
         var act = async () => await handler.Handle(new CreateEnrollmentCommand

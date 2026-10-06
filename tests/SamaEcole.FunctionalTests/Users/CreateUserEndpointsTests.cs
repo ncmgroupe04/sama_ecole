@@ -221,6 +221,7 @@ public class CreateUserEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         // Une école tout juste créée est AwaitingPayment (AGENTS.md règle #11) : sans confirmation du
         // premier paiement, SubscriptionAwaitingPaymentMiddleware bloquerait GET /users lui-même.
         await _factory.SetSubscriptionStatusAsync(school.SchoolId, SubscriptionStatus.Active);
+        await _factory.CompleteOnboardingAsync(school.SchoolId);
 
         var password = FakeEmailSender.ExtractPassword(_factory.Emails.LastTo("directrice@filaos.sn")!);
         var otherDirecteur = await TokenAsync("directrice@filaos.sn", password);

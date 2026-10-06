@@ -111,6 +111,54 @@ public class SubscriptionAwaitingPaymentMiddlewareTests(AuthApiFactory factory) 
         (await response.Content.ReadAsStringAsync()).Should().Contain("SUBSCRIPTION_AWAITING_PAYMENT");
     }
 
+    // ------------------------------------------------------------ Onboarding & Pricing SaaS
+
+    [Fact]
+    public async Task An_Approved_School_Is_Provisioned_Pending_Onboarding_And_Can_Onboard_Before_Paying()
+    {
+        // Une école neuve est à la fois AwaitingPayment (facturation) et PendingOnboarding (profil/tranche).
+        // Les deux garde-fous s'ouvrent mutuellement leurs routes : configurer d'abord ne doit pas se
+        // heurter à la restriction de paiement, et payer d'abord ne doit pas se heurter à l'Onboarding.
+        await CreateAwaitingPaymentSchoolAsync("École Neuve", "neuve@onboarding.sn");
+        var director = await LoginAsync("neuve@onboarding.sn", DirectorPassword);
+
+        var current = await GetAsync(director.AccessToken, "/api/v1/onboarding/subscription");
+        current.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await current.Content.ReadAsStringAsync();
+        body.Should().Contain("\"status\":\"PendingOnboarding\"");
+        body.Should().Contain("\"isPedagogyEnabled\":false", "modules suspendus tant que le choix n'est pas fait");
+
+        var select = new HttpRequestMessage(HttpMethod.Post, "/api/v1/onboarding/select-profile")
+        {
+            Content = JsonContent.Create(new { profile = "EnseignementGeneral", tier = "Tier1_150" })
+        };
+        select.Headers.Authorization = new AuthenticationHeaderValue("Bearer", director.AccessToken);
+        (await _client.SendAsync(select)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Configurée mais pas payée : la restriction de paiement reste entière.
+        var students = await GetAsync(director.AccessToken, "/api/v1/students");
+        students.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await students.Content.ReadAsStringAsync()).Should().Contain("SUBSCRIPTION_AWAITING_PAYMENT");
+    }
+
+    [Fact]
+    public async Task A_Paid_But_Not_Onboarded_School_Is_Held_On_The_Onboarding_Screen()
+    {
+        var approval = await CreateAwaitingPaymentSchoolAsync("École Payée Non Configurée", "payee@onboarding.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        var director = await LoginAsync("payee@onboarding.sn", DirectorPassword);
+
+        var response = await GetAsync(director.AccessToken, "/api/v1/students");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("ONBOARDING_REQUIRED");
+
+        // Les routes de paiement restent ouvertes pendant l'Onboarding.
+        var payments = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/subscriptions/{approval.SchoolId}/payments");
+        payments.Headers.Authorization = new AuthenticationHeaderValue("Bearer", director.AccessToken);
+        (await _client.SendAsync(payments)).StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
+    }
+
     // ------------------------------------------------------------ Exceptions obligatoires
 
     [Fact]
@@ -182,6 +230,7 @@ public class SubscriptionAwaitingPaymentMiddlewareTests(AuthApiFactory factory) 
         // simule la confirmation d'un paiement (webhook JGK-I06, pas encore livré) puis revérifie l'accès.
         var approval = await CreateAwaitingPaymentSchoolAsync("École Payée", "payee@i04.sn");
         await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
 
         var director = await LoginAsync("payee@i04.sn", DirectorPassword);
         var response = await GetAsync(director.AccessToken, "/api/v1/students");

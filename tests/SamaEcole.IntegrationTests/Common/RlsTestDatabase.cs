@@ -48,7 +48,7 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     public ValueTask DisposeAsync() => _postgres.DisposeAsync();
 
-    private string OwnerConnectionString => _postgres.GetConnectionString();
+    public string OwnerConnectionString => _postgres.GetConnectionString();
 
     public string AppConnectionString =>
         new NpgsqlConnectionStringBuilder(OwnerConnectionString)
@@ -84,6 +84,27 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     public MatriculeGenerator NewGenerator(ApplicationDbContext dbContext) =>
         new(dbContext, TimeProvider.System);
+
+    /// <summary>
+    /// Souscription ACTIVE à plafond illimité — celle que la migration AddTenantSubscriptions donne aux écoles
+    /// existantes. À ajouter au jeu de données de tout test qui crée des élèves par les Handlers : sans
+    /// souscription, le quota refuse toute création (fail-closed, voir StudentQuotaGuard).
+    /// </summary>
+    public static SamaEcole.Domain.Entities.TenantSubscription UnlimitedSubscription(Guid schoolId) => new()
+    {
+        SchoolId = schoolId,
+        ProfileType = SamaEcole.Domain.Enums.ProfileType.EnseignementGeneral,
+        StudentQuotaTier = SamaEcole.Domain.Enums.StudentQuotaTier.Tier4_Custom,
+        MaxStudentLimit = int.MaxValue,
+        SoftQuotaLimit = int.MaxValue,
+        Status = SamaEcole.Domain.Enums.TenantSubscriptionStatus.Active,
+        IsPedagogyEnabled = true,
+        IsFinanceEnabled = true
+    };
+
+    /// <summary>Garde de quota branchée sur le contexte (donc le rôle) fourni, pour construire les Handlers à la main.</summary>
+    public SamaEcole.Application.Subscriptions.StudentQuotaGuard NewQuotaGuard(ApplicationDbContext dbContext, Guid schoolId) =>
+        new(new SamaEcole.Application.Subscriptions.TenantSubscriptionService(dbContext, new StubTenantProvider(schoolId)));
 
     /// <summary>
     /// AuthStore branché sur le rôle APPLICATIF et SANS tenant — exactement la situation du login :
