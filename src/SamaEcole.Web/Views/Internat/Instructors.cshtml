@@ -74,7 +74,7 @@
                     <tr x-show="!loading && filtered.length === 0" x-cloak>
                         <td colspan="6">
                             <empty-state icon="users" title="Aucun Oustaz à afficher."
-                                         hint="Créez la fiche d'un Oustaz, puis rattachez-lui ses élèves depuis la fiche élève ou l'affectation en lot." />
+                                         hint="Créez la fiche d'un Oustaz. L'affectation des élèves à sa Halqa se fait pour l'instant par l'API (POST /api/v1/internat/students/assign-instructor) : l'écran d'affectation n'existe pas encore." />
                         </td>
                     </tr>
                     <template x-for="instructor in filtered" :key="instructor.id">
