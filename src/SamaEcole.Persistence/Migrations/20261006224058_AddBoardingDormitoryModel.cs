@@ -382,7 +382,94 @@ namespace SamaEcole.Persistence.Migrations
                     $inner$;
                     """);
             }
+
+            // --- Reprise des données Internat héritées (Enrollment.RoomId/BoardingStatus) ---
+            // S'exécute sous le rôle propriétaire (exempté de RLS). Chaque instruction est idempotente. Les colonnes
+            // héritées ne sont que LUES. Spec §4.1 (avec la correction « seule l'année active tient des lits »).
+            migrationBuilder.Sql(BackfillDormitories);
+            migrationBuilder.Sql(BackfillRooms);
+            migrationBuilder.Sql(BackfillBeds);
+            migrationBuilder.Sql(BackfillStays);
         }
+
+        // 1. Pavillons : un par bâtiment vivant ayant au moins une chambre Dortoir vivante, Id = Building.Id.
+        //    Genre déduit des élèves de l'année ACTIVE logés dans ses chambres ; ambigu ou vide → Mixte.
+        private const string BackfillDormitories = """
+            INSERT INTO dormitories ("Id","SchoolId","Name","Gender","CreatedAt","IsDeleted")
+            SELECT b."Id", b."SchoolId", b."Name",
+                   CASE g.gender WHEN 'M' THEN 'Garcons' WHEN 'F' THEN 'Filles' ELSE 'Mixte' END,
+                   NOW(), FALSE
+            FROM buildings b
+            LEFT JOIN LATERAL (
+                SELECT CASE WHEN count(DISTINCT s."Gender") = 1 THEN min(s."Gender") END AS gender
+                FROM enrollments e
+                JOIN school_years y ON y."SchoolId" = e."SchoolId" AND y."Id" = e."SchoolYearId" AND y."IsActive" AND NOT y."IsDeleted"
+                JOIN rooms r ON r."SchoolId" = e."SchoolId" AND r."Id" = e."RoomId"
+                JOIN students s ON s."SchoolId" = e."SchoolId" AND s."Id" = e."StudentId"
+                WHERE r."BuildingId" = b."Id" AND r."Type" = 'Dortoir' AND NOT r."IsDeleted"
+                  AND e."BoardingStatus" <> 'Externe' AND e."Status" <> 'Cancelled' AND NOT e."IsDeleted"
+            ) g ON TRUE
+            WHERE NOT b."IsDeleted"
+              AND EXISTS (SELECT 1 FROM rooms r WHERE r."SchoolId" = b."SchoolId" AND r."BuildingId" = b."Id"
+                          AND r."Type" = 'Dortoir' AND NOT r."IsDeleted")
+            ON CONFLICT ("Id") DO NOTHING;
+            """;
+
+        // 2. Chambres : Id = Room.Id.
+        private const string BackfillRooms = """
+            INSERT INTO dormitory_rooms ("Id","SchoolId","DormitoryId","Name","CreatedAt","IsDeleted")
+            SELECT r."Id", r."SchoolId", r."BuildingId", r."Name", NOW(), FALSE
+            FROM rooms r
+            JOIN dormitories d ON d."SchoolId" = r."SchoolId" AND d."Id" = r."BuildingId"
+            WHERE r."Type" = 'Dortoir' AND NOT r."IsDeleted"
+            ON CONFLICT ("Id") DO NOTHING;
+            """;
+
+        // 3. Lits : max(capacité, internes de l'année active) par chambre, numérotés 1..N.
+        private const string BackfillBeds = """
+            INSERT INTO beds ("Id","SchoolId","DormitoryRoomId","BedNumber","Status","CreatedAt","IsDeleted")
+            SELECT gen_random_uuid(), dr."SchoolId", dr."Id", n::int, 'Available', NOW(), FALSE
+            FROM dormitory_rooms dr
+            JOIN rooms r ON r."SchoolId" = dr."SchoolId" AND r."Id" = dr."Id"
+            CROSS JOIN LATERAL generate_series(1, GREATEST(r."Capacity", (
+                SELECT count(*) FROM enrollments e
+                JOIN school_years y ON y."SchoolId" = e."SchoolId" AND y."Id" = e."SchoolYearId" AND y."IsActive" AND NOT y."IsDeleted"
+                WHERE e."SchoolId" = r."SchoolId" AND e."RoomId" = r."Id" AND e."BoardingStatus" = 'Interne'
+                  AND e."Status" <> 'Cancelled' AND NOT e."IsDeleted"))::int) AS n
+            WHERE NOT EXISTS (SELECT 1 FROM beds b WHERE b."SchoolId" = dr."SchoolId" AND b."DormitoryRoomId" = dr."Id");
+            """;
+
+        // 4. Séjours. Année active → actif (lit de rang = ordre d'inscription parmi les SEULS internes de l'année active
+        //    d'une même chambre — ni les demi-pensionnaires ni les années passées ne décalent le rang) ; autre année →
+        //    clos à la fin de l'année, sans lit. Un DemiPensionnaire n'a jamais de lit (N7).
+        private const string BackfillStays = """
+            WITH legacy AS (
+                SELECT e."Id" AS enrollment_id, e."SchoolId", e."StudentId", e."BoardingStatus" AS regime, e."RoomId",
+                       e."EnrolledAt" AS enrolled_at, (e."EnrolledAt" AT TIME ZONE 'UTC')::date AS started,
+                       y."IsActive" AS year_active, y."EndDate" AS year_end
+                FROM enrollments e
+                JOIN school_years y ON y."SchoolId" = e."SchoolId" AND y."Id" = e."SchoolYearId"
+                WHERE e."BoardingStatus" <> 'Externe' AND e."Status" <> 'Cancelled' AND NOT e."IsDeleted"
+            ),
+            seated AS (
+                SELECT enrollment_id,
+                       row_number() OVER (PARTITION BY "RoomId" ORDER BY enrolled_at, enrollment_id) AS seat
+                FROM legacy
+                WHERE year_active AND regime = 'Interne' AND "RoomId" IS NOT NULL
+            )
+            INSERT INTO boarding_enrollments
+                ("Id","SchoolId","StudentId","EnrollmentId","Regime","BedId","StartDate","EndDate","IsActive",
+                 "AllowedExitPersons","CreatedAt","IsDeleted")
+            SELECT gen_random_uuid(), l."SchoolId", l."StudentId", l.enrollment_id, l.regime, bed."Id",
+                   l.started, CASE WHEN l.year_active THEN NULL ELSE GREATEST(l.year_end, l.started) END,
+                   l.year_active, '[]'::jsonb, NOW(), FALSE
+            FROM legacy l
+            LEFT JOIN seated st ON st.enrollment_id = l.enrollment_id
+            LEFT JOIN beds bed ON bed."SchoolId" = l."SchoolId" AND bed."DormitoryRoomId" = l."RoomId"
+                              AND bed."BedNumber" = st.seat AND NOT bed."IsDeleted"
+            WHERE NOT EXISTS (SELECT 1 FROM boarding_enrollments be
+                              WHERE be."SchoolId" = l."SchoolId" AND be."EnrollmentId" = l.enrollment_id);
+            """;
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
