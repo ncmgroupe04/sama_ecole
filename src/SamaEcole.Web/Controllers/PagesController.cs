@@ -71,6 +71,12 @@ public class PagesController : Controller
     [HttpGet("/oustaz")]
     public IActionResult Instructors() => View("~/Views/Internat/Instructors.cshtml");
 
+    // Suivi coranique (Direction) : progression globale, répartition par tranche, synthèse par Halqa, alertes de
+    // stagnation et bulletin coranique PDF. InternatController garde l'accès (Directeur/Secrétariat/Surveillant) +
+    // [RequireModule(SchoolModule.Internat)], et la RLS isole.
+    [HttpGet("/suivi-coranique")]
+    public IActionResult QuranProgress() => View("~/Views/Internat/Progress.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.

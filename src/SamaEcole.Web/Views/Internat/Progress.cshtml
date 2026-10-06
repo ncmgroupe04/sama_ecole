@@ -1,0 +1,191 @@
+@{
+    ViewData["Title"] = "Suivi coranique";
+}
+
+@* Vue de la Direction sur la mémorisation. auth.js, api.js et pdf-preview.js sont chargés par _Layout : les inclure ici
+   les exécuterait une seconde fois. Pas de `x-init="init()"` : Alpine appelle DÉJÀ la méthode init() du composant.
+   Pas d'attribut dynamique sur <badge> : ce Tag Helper lit ses attributs au rendu serveur, un binding Alpine y reste
+   inerte (même piège que dans Internat/Index.cshtml) — d'où un badge statique par statut, chacun avec son x-show. *@
+@section Scripts {
+    <script src="~/js/progress-dashboard.js" asp-append-version="true"></script>
+}
+
+<div x-data="progressDashboardPage()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Suivi coranique</h1>
+            <p class="page-subtitle">Progression de la mémorisation des élèves rattachés à une Halqa, et alertes de stagnation.</p>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+            <span>Alerte après</span>
+            <select class="input-field w-auto" aria-label="Seuil de stagnation" x-bind:value="staleDays" x-on:change="changeStaleDays($event.target.value)">
+                <template x-for="days in staleOptions" :key="days">
+                    <option :value="days" x-text="days + ' jours'" :selected="days === staleDays"></option>
+                </template>
+            </select>
+            <span>sans évaluation</span>
+        </label>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <template x-if="loading && !data">
+            <template x-for="i in 4" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+        <template x-if="data">
+            <stat-card label="Élèves en Halqa" icon="users" accent="primary">
+                <span x-text="data.studentsInHalqa">0</span>
+            </stat-card>
+        </template>
+        <template x-if="data">
+            <stat-card label="Progression moyenne" icon="percent" accent="blue">
+                <span x-text="data.averageProgressPercent + ' %'">0 %</span>
+            </stat-card>
+        </template>
+        <template x-if="data">
+            <stat-card label="Hizb complets" icon="book" accent="purple">
+                <span x-text="data.completedHizbs">0</span>
+            </stat-card>
+        </template>
+        <template x-if="data">
+            <stat-card label="Élèves à relancer" icon="alert-circle" accent="warning">
+                <span x-text="data.stagnantCount">0</span>
+            </stat-card>
+        </template>
+    </div>
+
+    <p x-show="data && data.unassignedStudents > 0" x-cloak class="mt-3 text-sm text-slate-500">
+        <span x-text="data ? data.unassignedStudents : 0"></span> élève(s) ne sont rattachés à aucune Halqa et ne figurent pas dans ce suivi.
+    </p>
+
+    <div x-show="isEmpty" x-cloak class="card p-12 mt-6">
+        <empty-state icon="book" title="Aucun élève n'est rattaché à une Halqa."
+                     hint="Créez des Oustaz depuis « Oustaz », puis affectez-leur des élèves : le suivi apparaît dès la première évaluation." />
+    </div>
+
+    <div x-show="data && !isEmpty" x-cloak>
+        @* ------------------------------------------------------------------ Répartition par tranche *@
+        <div class="card p-5 mt-6">
+            <h2 class="text-base font-semibold text-slate-800">Répartition des élèves par avancement</h2>
+            <p class="text-xs text-slate-500 mt-1">Part du Coran mémorisée (quarts acquis sur 240).</p>
+            <ul class="mt-4 space-y-2">
+                <template x-for="band in (data ? data.bands : [])" :key="band.min + '-' + band.max">
+                    <li class="flex items-center gap-3">
+                        <span class="w-28 shrink-0 text-sm text-slate-600" x-text="bandLabel(band)"></span>
+                        <div class="flex-1 h-5 rounded bg-slate-100 overflow-hidden">
+                            <div class="h-full rounded bg-emerald-500 transition-all" :style="'width: ' + bandBar(band.studentCount) + '%'"></div>
+                        </div>
+                        <span class="w-10 shrink-0 text-right text-sm font-semibold text-slate-700" x-text="band.studentCount"></span>
+                    </li>
+                </template>
+            </ul>
+        </div>
+
+        @* ------------------------------------------------------------------ Synthèse par Halqa *@
+        <div class="card mt-6">
+            <div class="p-5 border-b border-slate-100">
+                <h2 class="text-base font-semibold text-slate-800">Halqa</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Oustaz</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Élèves</th>
+                            <th class="py-3 px-4">Progression moyenne</th>
+                            <th class="py-3 px-4 text-right">Hizb complets</th>
+                            <th class="py-3 px-4 text-right">À relancer</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-for="halqa in (data ? data.halqas : [])" :key="halqa.instructorId">
+                            <tr>
+                                <td class="py-3 px-4">
+                                    <p class="font-semibold text-slate-800" x-text="halqa.instructorName"></p>
+                                    <p x-show="halqa.instructorNameAr" x-cloak dir="rtl" class="text-sm text-slate-500" x-text="halqa.instructorNameAr"></p>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <badge x-show="halqa.instructorStatus === 'Active'" variant="success"><span>Actif</span></badge>
+                                    <badge x-show="halqa.instructorStatus === 'Suspended'" variant="warning"><span>Suspendu</span></badge>
+                                    <badge x-show="halqa.instructorStatus === 'Blocked'" variant="danger"><span>Bloqué</span></badge>
+                                </td>
+                                <td class="py-3 px-4 text-right font-medium text-slate-700" x-text="halqa.studentCount"></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-2 min-w-[140px]">
+                                        <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                            <div class="h-full rounded-full bg-emerald-500" :style="'width: ' + Math.min(100, halqa.averageProgressPercent) + '%'"></div>
+                                        </div>
+                                        <span class="text-sm text-slate-600 w-14 text-right" x-text="halqa.averageProgressPercent + ' %'"></span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4 text-right text-slate-700" x-text="halqa.completedHizbs"></td>
+                                <td class="py-3 px-4 text-right">
+                                    <span class="font-semibold" :class="halqa.stagnantCount > 0 ? 'text-amber-700' : 'text-slate-400'" x-text="halqa.stagnantCount"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* ------------------------------------------------------------------ Alertes de stagnation *@
+        <div class="card mt-6">
+            <div class="p-5 border-b border-slate-100">
+                <h2 class="text-base font-semibold text-slate-800">Élèves à relancer</h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Jamais évalués, ou sans évaluation depuis plus de <span x-text="staleDays"></span> jours. Un élève qui a terminé les 60 Hizb n'est jamais signalé.
+                </p>
+            </div>
+
+            <div x-show="data && data.stagnant.length === 0" x-cloak class="p-8 text-center text-sm text-slate-500">
+                Aucun élève à relancer : tous ont été évalués récemment.
+            </div>
+
+            <div class="overflow-x-auto" x-show="data && data.stagnant.length > 0" x-cloak>
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Élève</th>
+                            <th class="py-3 px-4">Oustaz</th>
+                            <th class="py-3 px-4">Dernière évaluation</th>
+                            <th class="py-3 px-4 text-right">Progression</th>
+                            <th class="py-3 px-4 text-right">Bulletin</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-for="student in (data ? data.stagnant : [])" :key="student.studentId">
+                            <tr>
+                                <td class="py-3 px-4">
+                                    <p class="font-semibold text-slate-800" x-text="student.fullName"></p>
+                                    <p x-show="student.fullNameAr" x-cloak dir="rtl" class="text-sm text-slate-500" x-text="student.fullNameAr"></p>
+                                    <p class="text-xs text-slate-400" x-text="student.matricule"></p>
+                                </td>
+                                <td class="py-3 px-4 text-sm text-slate-600" x-text="student.instructorName"></td>
+                                <td class="py-3 px-4 text-sm">
+                                    <span class="font-medium" :class="severe(student) ? 'text-rose-600' : 'text-amber-700'" x-text="stagnationLabel(student)"></span>
+                                </td>
+                                <td class="py-3 px-4 text-right text-sm text-slate-700" x-text="student.progressPercent + ' %'"></td>
+                                <td class="py-3 px-4 text-right">
+                                    <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-700" x-on:click="openReport(student)">
+                                        PDF
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <p x-show="hiddenStagnant > 0" x-cloak class="p-4 text-xs text-slate-500 border-t border-slate-100">
+                <span x-text="hiddenStagnant"></span> autre(s) élève(s) non affichés : la liste est limitée aux plus urgents.
+            </p>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_PdfPreviewModal")
+</div>

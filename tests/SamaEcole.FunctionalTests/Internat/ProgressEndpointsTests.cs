@@ -170,6 +170,16 @@ public class ProgressEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
+    public async Task The_Dashboard_And_Report_Pages_Are_Served_With_Their_Scripts()
+    {
+        var response = await _client.GetAsync("/suivi-coranique");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var html = await response.Content.ReadAsStringAsync();
+        html.Should().Contain("x-data=\"progressDashboardPage()\"").And.Contain("/js/progress-dashboard.js");
+    }
+
+    [Fact]
     public async Task Full_Journey_The_Oustaz_Records_Progress_Then_The_Direction_Sees_It_And_Prints_The_Report()
     {
         var directeur = await DirecteurAsync();
