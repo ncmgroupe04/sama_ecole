@@ -559,7 +559,9 @@ Migration `AddDaaraHalqaAndHizbTracking` (tables `instructors` et `student_hizb_
 `/api/v1/internat` (`[RequireModule(Internat)]`) : `GET/POST/PUT instructors`, `GET instructors/{id}/students`,
 `GET my-halqa`, `POST students/assign-instructor`, `GET/PUT students/{id}/hizb-progress`. Écran `/halqa`
 (tablette de l'Oustaz, arabe, de droite à gauche : cartes d'élèves, grille des 60 Hizb par Juz, tiroir de saisie
-des quarts).
+des quarts) et écran `/oustaz` (Direction : liste, création, modification, suspension/réactivation, liaison au
+compte ; écriture Directeur seul, lecture Secrétariat et Surveillant ; les comptes proposés viennent de
+`GET /api/v1/users`, réservé au Directeur).
 
 **Arbitrages actés, à ne pas rouvrir sans raison :**
 
@@ -579,8 +581,8 @@ des quarts).
 6. **Conflit d'écriture** : chaque case de la grille porte son jeton `xmin` ; un 409 recharge la grille côté écran
    au lieu d'écraser.
 
-**Pas encore livré :** écran de gestion des Oustaz pour la Direction (l'API existe), tableau de bord et courbe de
-progression, bulletin coranique PDF (QuestPDF).
+**Pas encore livré :** tableau de bord de la Direction et courbe de progression, bulletin coranique PDF
+(QuestPDF).
 
 ### Module Internat (18/09/2026) — livré
 
