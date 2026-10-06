@@ -56,6 +56,10 @@ public class EnrollmentTests : IAsyncLifetime
             new School { Id = EcoleA, Name = "École A", Phone = "77 123 45 67" },
             new School { Id = EcoleB, Name = "École B" });
 
+        owner.TenantSubscriptions.AddRange(
+            RlsTestDatabase.UnlimitedSubscription(EcoleA),
+            RlsTestDatabase.UnlimitedSubscription(EcoleB));
+
         owner.Classrooms.Add(new Classroom { Id = ClasseA, SchoolId = EcoleA, Name = "CM2", Level = "Primaire", Capacity = 40 });
 
         owner.SchoolYears.Add(new SchoolYear
@@ -85,7 +89,7 @@ public class EnrollmentTests : IAsyncLifetime
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
         new(db, new StubTenantProvider(schoolId),
-            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser());
+            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser(), _db.NewQuotaGuard(db, schoolId));
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
     {
@@ -238,6 +242,71 @@ public class EnrollmentTests : IAsyncLifetime
 
         await using var check = _db.NewAppContext(EcoleA);
         (await check.Students.CountAsync()).Should().Be(1, "aucun nouvel élève n'est créé à la réinscription");
+    }
+
+    [Fact]
+    public async Task At_The_Soft_Cap_A_New_Enrollment_Is_Refused_But_A_ReEnrollment_Still_Goes_Through()
+    {
+        // Quota d'élèves : seule une NOUVELLE inscription crée un élève. Une réinscription réutilise un élève
+        // déjà compté dans l'effectif — elle ne l'augmente pas et ne doit donc jamais être refusée.
+        var studentId = Guid.NewGuid();
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Students.Add(new Student
+            {
+                Id = studentId, SchoolId = EcoleA, Matricule = "ELEV-2020-0001", FullName = "Ancien Élève",
+                BirthDate = new DateOnly(2012, 3, 3), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+
+            // 1 élève présent, plafond nominal 1, tolérance 1 : plus aucune place pour un nouvel élève.
+            var subscription = await owner.TenantSubscriptions.IgnoreQueryFilters().SingleAsync(s => s.SchoolId == EcoleA);
+            subscription.MaxStudentLimit = 1;
+            subscription.SoftQuotaLimit = 1;
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var refused = async () => await NewHandler(db, EcoleA).Handle(NewStudentCommand("Nouvel Élève"), CancellationToken.None);
+        await refused.Should().ThrowAsync<QuotaExceededException>();
+
+        await using var db2 = _db.NewAppContext(EcoleA);
+        var receipt = await NewHandler(db2, EcoleA).Handle(new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.ReEnrollment,
+            ClassroomId = ClasseA,
+            StudentId = studentId
+        }, CancellationToken.None);
+
+        receipt.QuotaWarning.Should().BeNull("une réinscription n'ajoute personne à l'effectif");
+
+        await using var check = _db.NewAppContext(EcoleA);
+        (await check.Students.CountAsync()).Should().Be(1, "la nouvelle inscription refusée n'a créé aucun élève");
+    }
+
+    [Fact]
+    public async Task A_New_Enrollment_Past_The_Nominal_Limit_Returns_The_Quota_Warning_In_The_Receipt()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            // 0 élève, plafond nominal 0 n'existe pas (CHECK > 0) : on part de 1 élève présent, plafond 1,
+            // tolérance 2 — le deuxième élève entre en tolérance.
+            owner.Students.Add(new Student
+            {
+                SchoolId = EcoleA, Matricule = "ELEV-2020-0001", FullName = "Premier Élève",
+                BirthDate = new DateOnly(2012, 3, 3), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA
+            });
+            var subscription = await owner.TenantSubscriptions.IgnoreQueryFilters().SingleAsync(s => s.SchoolId == EcoleA);
+            subscription.MaxStudentLimit = 1;
+            subscription.SoftQuotaLimit = 2;
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+        var receipt = await NewHandler(db, EcoleA).Handle(NewStudentCommand("Deuxième Élève"), CancellationToken.None);
+
+        receipt.QuotaWarning.Should().Be(new SamaEcole.Application.Subscriptions.StudentQuotaWarning(2, 1, 2, 0));
     }
 
     [Fact]

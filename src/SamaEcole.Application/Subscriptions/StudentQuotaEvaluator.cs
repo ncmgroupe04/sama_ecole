@@ -9,14 +9,16 @@ namespace SamaEcole.Application.Subscriptions;
 ///   Max &lt; effectif ≤ Soft cap    → InTolerance : on crée, mais on avertit.
 ///   effectif &gt; Soft cap          → Exceeded    : on refuse.
 ///
-/// Un élève de plus est admis tant que l'effectif APRÈS création reste ≤ Soft cap. Aucune création du
+/// N élèves de plus (1 par défaut ; un import en ajoute plusieurs) sont admis tant que l'effectif APRÈS
+/// création reste ≤ Soft cap. Aucune création du
 /// tout si la souscription n'est pas <see cref="TenantSubscriptionStatus.Active"/> (en particulier tant
 /// que l'Onboarding n'est pas fait).
 /// </summary>
 public static class StudentQuotaEvaluator
 {
     public static StudentQuotaStatus Evaluate(
-        int currentStudentCount, int maxStudentLimit, int softQuotaLimit, TenantSubscriptionStatus? status)
+        int currentStudentCount, int maxStudentLimit, int softQuotaLimit, TenantSubscriptionStatus? status,
+        int additionalStudents = 1)
     {
         var state = currentStudentCount <= maxStudentLimit ? StudentQuotaState.WithinQuota
             : currentStudentCount <= softQuotaLimit ? StudentQuotaState.InTolerance
@@ -28,8 +30,8 @@ public static class StudentQuotaEvaluator
                 currentStudentCount, maxStudentLimit, softQuotaLimit, state, false, StudentAdmissionDenial.SubscriptionNotActive);
         }
 
-        // long : le plafond « illimité » vaut int.MaxValue, et int.MaxValue + 1 ne doit jamais déborder.
-        var canAdd = (long)currentStudentCount + 1 <= softQuotaLimit;
+        // long : le plafond « illimité » vaut int.MaxValue, et int.MaxValue + N ne doit jamais déborder.
+        var canAdd = (long)currentStudentCount + additionalStudents <= softQuotaLimit;
 
         return new StudentQuotaStatus(
             currentStudentCount, maxStudentLimit, softQuotaLimit, state, canAdd,

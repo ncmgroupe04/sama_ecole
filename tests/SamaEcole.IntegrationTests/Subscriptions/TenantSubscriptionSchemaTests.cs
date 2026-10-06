@@ -289,7 +289,7 @@ public class TenantSubscriptionSchemaTests : IAsyncLifetime
     private async Task<StudentQuotaStatus> QuotaAsync(Guid school)
     {
         await using var context = _db.NewAppContext(school);
-        return await new TenantSubscriptionService(context, new FixedTenant(school)).GetQuotaStatusAsync(CancellationToken.None);
+        return await new TenantSubscriptionService(context, new FixedTenant(school)).GetQuotaStatusAsync(1, CancellationToken.None);
     }
 
     private async Task SeedSchoolsAsync()

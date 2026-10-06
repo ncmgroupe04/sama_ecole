@@ -403,4 +403,57 @@ public class StudentImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsync
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    // ------------------------------------------------------------------ Quota d'élèves (Onboarding & Pricing SaaS)
+
+    [Fact]
+    public async Task Confirming_An_Import_That_Exceeds_The_Soft_Cap_Is_Refused_As_A_Whole_And_Writes_Nothing()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Quota");
+        var before = await StudentCountAsync(directeur);
+
+        // Plafond nominal = effectif + 1, tolérance = effectif + 2 : un fichier de 3 élèves ne passe pas.
+        await SetQuotaAsync(max: before + 1, soft: before + 2);
+        var csv = $"{Header}\n" +
+                  $"Awa Ndiaye;12/03/2015;Dakar;F;{classroom.Name};;\n" +
+                  $"Modou Diop;01/06/2015;Thiès;M;{classroom.Name};;\n" +
+                  $"Fatou Sow;03/09/2015;Saint-Louis;F;{classroom.Name};;";
+
+        var response = await ImportAsync(directeur, csv, dryRun: false);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("STUDENT_QUOTA_EXCEEDED");
+        (await StudentCountAsync(directeur)).Should().Be(before, "tout ou rien : aucun des trois élèves n'est créé");
+
+        // L'aperçu, lui, n'écrit rien et reste disponible.
+        (await ImportAsync(directeur, csv, dryRun: true)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Confirming_An_Import_That_Fits_The_Tolerance_Succeeds_And_Returns_The_Warning()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Tolerance");
+        var before = await StudentCountAsync(directeur);
+
+        await SetQuotaAsync(max: before + 1, soft: before + 2);
+        var csv = $"{Header}\n" +
+                  $"Awa Ndiaye;12/03/2015;Dakar;F;{classroom.Name};;\n" +
+                  $"Modou Diop;01/06/2015;Thiès;M;{classroom.Name};;";
+
+        var response = await ImportAsync(directeur, csv, dryRun: false);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"quotaWarning\":{").And.Contain($"\"currentStudentCount\":{before + 2}");
+        (await StudentCountAsync(directeur)).Should().Be(before + 2);
+    }
+
+    private Task SetQuotaAsync(int max, int soft) =>
+        _factory.ExecuteOwnerSqlAsync(
+            $"""
+             UPDATE tenant_subscriptions SET "MaxStudentLimit" = {max}, "SoftQuotaLimit" = {soft}
+              WHERE "SchoolId" = '{AuthApiFactory.EcoleId}'
+             """);
 }

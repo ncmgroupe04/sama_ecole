@@ -41,6 +41,14 @@ public interface ISchoolProvisioningStore
         SubscriptionStatus status,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Crée la souscription commerciale initiale (<c>tenant_subscriptions</c>) en <c>PendingOnboarding</c> :
+    /// l'école devra choisir son profil et sa tranche avant tout usage. Même problème RLS que les deux
+    /// méthodes ci-dessus, même fonction SECURITY DEFINER gardée. Renvoie null si l'école a DÉJÀ une
+    /// souscription vivante.
+    /// </summary>
+    Task<Guid?> CreateInitialTenantSubscriptionAsync(Guid schoolId, CancellationToken cancellationToken);
+
     /// <summary>Un e-mail identifie un compte sur TOUTE la plateforme (docs/Volume_3_DDS.md §5.2).</summary>
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
 }

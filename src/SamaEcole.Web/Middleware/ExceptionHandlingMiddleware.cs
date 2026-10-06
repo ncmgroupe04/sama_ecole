@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Subscriptions;
 
 namespace SamaEcole.Web.Middleware;
 
@@ -82,6 +83,22 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 businessRuleEx.Code ?? "BUSINESS_RULE_VIOLATION",
                 businessRuleEx.Message,
                 null),
+
+            // Quota d'élèves de la souscription (Onboarding & Pricing SaaS) : 422 — c'est le plan de l'école
+            // qui refuse, pas l'état d'une ressource. `details` porte les chiffres (effectif, plafond,
+            // tolérance) pour que l'écran les affiche sans second appel.
+            QuotaExceededException quotaEx => (
+                HttpStatusCode.UnprocessableEntity,
+                quotaEx.Denial == StudentAdmissionDenial.SubscriptionNotActive
+                    ? "SUBSCRIPTION_NOT_ACTIVE"
+                    : "STUDENT_QUOTA_EXCEEDED",
+                quotaEx.Message,
+                (object?)new
+                {
+                    currentStudentCount = quotaEx.Quota.CurrentStudentCount,
+                    maxStudentLimit = quotaEx.Quota.MaxStudentLimit,
+                    softQuotaLimit = quotaEx.Quota.SoftQuotaLimit
+                }),
 
             // Échec d'authentification (ticket JGK-A04). Message volontairement générique : il ne doit
             // jamais permettre de distinguer un e-mail inconnu d'un mot de passe faux.

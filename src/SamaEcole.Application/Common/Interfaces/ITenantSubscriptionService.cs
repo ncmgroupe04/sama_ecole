@@ -23,5 +23,12 @@ public interface ITenantSubscriptionService
     /// Effectif courant, plafonds et verdict « peut-on créer un élève de plus ». Fail-closed : sans
     /// souscription, ou si elle n'est pas <c>Active</c>, la réponse est <c>CanAddStudent = false</c>.
     /// </summary>
-    Task<StudentQuotaStatus> GetQuotaStatusAsync(CancellationToken cancellationToken);
+    Task<StudentQuotaStatus> GetQuotaStatusAsync(CancellationToken cancellationToken) =>
+        GetQuotaStatusAsync(1, cancellationToken);
+
+    /// <summary>
+    /// Même verdict pour <paramref name="additionalStudents"/> créations d'un coup (un import en ajoute
+    /// plusieurs) : <c>CanAddStudent</c> dit alors si TOUTES passent.
+    /// </summary>
+    Task<StudentQuotaStatus> GetQuotaStatusAsync(int additionalStudents, CancellationToken cancellationToken);
 }

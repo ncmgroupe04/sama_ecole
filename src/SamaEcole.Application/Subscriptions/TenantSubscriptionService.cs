@@ -34,7 +34,7 @@ public class TenantSubscriptionService(IApplicationDbContext dbContext, ITenantP
         };
     }
 
-    public async Task<StudentQuotaStatus> GetQuotaStatusAsync(CancellationToken cancellationToken)
+    public async Task<StudentQuotaStatus> GetQuotaStatusAsync(int additionalStudents, CancellationToken cancellationToken)
     {
         var subscription = await LoadAsync(cancellationToken);
 
@@ -44,7 +44,8 @@ public class TenantSubscriptionService(IApplicationDbContext dbContext, ITenantP
         return subscription is null
             ? StudentQuotaEvaluator.WithoutSubscription(currentCount)
             : StudentQuotaEvaluator.Evaluate(
-                currentCount, subscription.MaxStudentLimit, subscription.SoftQuotaLimit, subscription.Status);
+                currentCount, subscription.MaxStudentLimit, subscription.SoftQuotaLimit, subscription.Status,
+                additionalStudents);
     }
 
     private async Task<TenantSubscription?> LoadAsync(CancellationToken cancellationToken)
@@ -56,7 +57,7 @@ public class TenantSubscriptionService(IApplicationDbContext dbContext, ITenantP
             .FirstOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken);
     }
 
-    private static TenantSubscriptionDto ToDto(TenantSubscription s) => new(
+    internal static TenantSubscriptionDto ToDto(TenantSubscription s) => new(
         s.Id,
         s.SchoolId,
         s.ProfileType.ToString(),

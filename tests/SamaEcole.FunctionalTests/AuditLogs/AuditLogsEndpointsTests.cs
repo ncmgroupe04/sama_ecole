@@ -237,6 +237,7 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
         // Une école tout juste créée est AwaitingPayment (AGENTS.md règle #11) : sans confirmation du
         // premier paiement, SubscriptionAwaitingPaymentMiddleware bloquerait GET /audit-logs lui-même.
         await _factory.SetSubscriptionStatusAsync(school.SchoolId, SubscriptionStatus.Active);
+        await _factory.CompleteOnboardingAsync(school.SchoolId);
 
         var email = _factory.Emails.LastTo("directrice@filaos.sn");
         email.Should().NotBeNull();

@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Application.Subscriptions;
 
 namespace SamaEcole.Application.Students.Commands.CreateStudent;
 
@@ -30,4 +31,5 @@ public record CreateStudentCommand : IRequest<CreateStudentResult>
     public string? GuardianNameAr { get; init; }
 }
 
-public record CreateStudentResult(Guid Id, string Matricule);
+/// <param name="QuotaWarning">Non nul quand l'effectif dépasse désormais le plafond nominal (tolérance entamée).</param>
+public record CreateStudentResult(Guid Id, string Matricule, StudentQuotaWarning? QuotaWarning = null);

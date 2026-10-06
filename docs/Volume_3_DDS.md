@@ -532,7 +532,11 @@ Règle de quota : effectif ≤ `MaxStudentLimit` → admis ; entre `MaxStudentLi
 admis avec avertissement ; au-delà → refusé. Aucune création d'élève tant que `Status ≠ Active` (en particulier
 `PendingOnboarding`). RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE` (aucun `DELETE`). **Non purgée** par
 `reset_school_data` : attribut du compte, pas donnée scolaire. Les écritures du Super Admin (sans `SchoolId` de session)
-passeront par une fonction `SECURITY DEFINER`, comme pour `subscriptions`.
+passeront par une fonction `SECURITY DEFINER`, comme pour `subscriptions`. La création de la ligne d'une école neuve en
+fait déjà usage : `provision_tenant_subscription(uuid)` (migration `AddTenantSubscriptionProvisioning`, `search_path`
+figé, `EXECUTE` retiré à `PUBLIC` et accordé au seul rôle applicatif) insère une ligne `PendingOnboarding`, modules
+désactivés, profil/tranche **provisoires** (`EnseignementGeneral` / `Tier1_150` — colonnes NOT NULL, `CHECK` positif ;
+sans effet tant que l'école est en Onboarding) et **refuse** (renvoie `NULL`) si l'école a déjà une souscription vivante.
 
 **Reprise (migration `AddTenantSubscriptions`)** : chaque école existante reçoit une ligne `Active`, tranche
 `Tier4_Custom`, `MaxStudentLimit = SoftQuotaLimit = 2147483647`. Profil existant conservé (`Simplifie` → `ComptabiliteRapports`,

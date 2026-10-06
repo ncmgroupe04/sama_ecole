@@ -552,6 +552,10 @@ app.UseAuthentication();
 // schoolId), avant UseAuthorization/MapControllers (le blocage doit précéder toute logique métier).
 app.UseMiddleware<SubscriptionAwaitingPaymentMiddleware>();
 
+// Onboarding & Pricing SaaS : même emplacement et même raison — il lui faut context.User résolu, et le
+// blocage doit précéder toute logique métier. Les deux middlewares laissent passer les routes l'un de l'autre.
+app.UseMiddleware<OnboardingRoutingMiddleware>();
+
 app.UseAuthorization();
 
 // Après l'authentification : le endpoint (donc sa politique [EnableRateLimiting]) est déjà résolu, et

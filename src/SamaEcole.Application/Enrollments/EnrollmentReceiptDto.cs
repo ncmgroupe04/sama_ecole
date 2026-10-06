@@ -52,7 +52,11 @@ public record EnrollmentReceiptDto(
     // Classe PASSERELLE / ACCÉLÉRÉE (option) : la ligne « Classe d'affectation » du reçu porte alors la
     // mention du dispositif, l'année payée en couvrant deux niveaux. Faux pour une classe ordinaire —
     // le reçu est alors rigoureusement identique à ce qu'il a toujours été.
-    bool IsAcceleratedClass = false)
+    bool IsAcceleratedClass = false,
+
+    // Non nul quand cette NOUVELLE inscription fait dépasser le plafond nominal du quota d'élèves de la
+    // souscription (tolérance entamée) : l'écran affiche un bandeau. Jamais rempli pour une réinscription.
+    SamaEcole.Application.Subscriptions.StudentQuotaWarning? QuotaWarning = null)
 {
     /// <summary>Reste dû sur l'année APRÈS le versement du jour. Jamais négatif : l'encaissement est borné au dû.</summary>
     public decimal RemainingBalance => TotalDue - TotalCollected;

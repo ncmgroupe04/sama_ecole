@@ -143,6 +143,10 @@ public class ProcessPaymentWebhookEndpointsTests(AuthApiFactory factory) : IClas
         beforeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", director.AccessToken);
         (await _client.SendAsync(beforeRequest)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
+        // Le paiement lève la restriction de paiement ; l'Onboarding (profil/tranche) est une autre porte,
+        // franchie ici à part pour ne tester que celle du paiement.
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+
         factory.Payments.NextConfirmationIsPaid = true;
         factory.Payments.NextConfirmationAmount = storedPayment!.Amount;
         await PostWebhookAsync(new { internalPaymentId = paymentId, signatureValid = true });

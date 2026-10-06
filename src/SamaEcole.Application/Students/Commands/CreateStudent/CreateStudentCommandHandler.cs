@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions;
 using SamaEcole.Domain.Entities;
 using FluentValidation.Results;
 using MediatR;
@@ -11,7 +12,8 @@ namespace SamaEcole.Application.Students.Commands.CreateStudent;
 public class CreateStudentCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    IMatriculeGenerator matriculeGenerator)
+    IMatriculeGenerator matriculeGenerator,
+    StudentQuotaGuard quotaGuard)
     : IRequestHandler<CreateStudentCommand, CreateStudentResult>
 {
     public async Task<CreateStudentResult> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
@@ -37,6 +39,10 @@ public class CreateStudentCommandHandler(
                     "La classe indiquée n'existe pas dans votre établissement.")
             ]);
         }
+
+        // Quota de la souscription : refus 422 AVANT d'ouvrir la transaction (donc avant de consommer un
+        // matricule). Un avertissement est renvoyé avec la création quand le plafond nominal est dépassé.
+        var quotaWarning = await quotaGuard.EnsureCanAddAsync(1, cancellationToken);
 
         // Génération du matricule ET insertion dans une seule transaction (AGENTS.md règle #3) :
         // si l'insertion échoue, le compteur de matricules est rembobiné avec elle — aucun trou.
@@ -68,7 +74,7 @@ public class CreateStudentCommandHandler(
             dbContext.Students.Add(student);
             await dbContext.SaveChangesAsync(ct);
 
-            return new CreateStudentResult(student.Id, student.Matricule);
+            return new CreateStudentResult(student.Id, student.Matricule, quotaWarning);
         }, cancellationToken);
     }
 

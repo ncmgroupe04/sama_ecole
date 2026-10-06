@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Application.Subscriptions;
 
 namespace SamaEcole.Application.Students.Commands.ImportStudents;
 
@@ -51,4 +52,5 @@ public record ImportStudentsResult(
     int ValidRows,
     int InvalidRows,
     int Created,
-    IReadOnlyList<ImportStudentsRowResult> Rows);
+    IReadOnlyList<ImportStudentsRowResult> Rows,
+    StudentQuotaWarning? QuotaWarning = null);

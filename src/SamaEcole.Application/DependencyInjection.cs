@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<Schools.WorkingDayGuard>();
         services.AddScoped<Subscriptions.SubscriptionAmountResolver>();
         services.AddScoped<ITenantSubscriptionService, Subscriptions.TenantSubscriptionService>();
+        services.AddScoped<Subscriptions.StudentQuotaGuard>();
         services.AddScoped<Attendance.EntryTickets.EntryTicketRegister>();
         services.AddScoped<Attendance.EntryTickets.ArrivalPlanner>();
         services.AddScoped<Coefficients.CoefficientOverrideLoader>();

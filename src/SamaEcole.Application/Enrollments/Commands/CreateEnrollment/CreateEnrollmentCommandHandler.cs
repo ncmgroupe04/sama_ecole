@@ -2,6 +2,7 @@ using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions;
 using SamaEcole.Application.Enrollments;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -32,7 +33,8 @@ public class CreateEnrollmentCommandHandler(
     IMatriculeGenerator matriculeGenerator,
     TimeProvider timeProvider,
     IKpiCacheService kpiCache,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    StudentQuotaGuard quotaGuard)
     : IRequestHandler<CreateEnrollmentCommand, EnrollmentReceiptDto>
 {
     public async Task<EnrollmentReceiptDto> Handle(CreateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -79,6 +81,12 @@ public class CreateEnrollmentCommandHandler(
                 ]);
             }
         }
+
+        // Quota d'élèves : seule une NOUVELLE inscription crée un élève. Une réinscription réutilise un
+        // élève déjà compté dans l'effectif — elle ne change rien au quota et n'est donc jamais refusée.
+        var quotaWarning = request.Type == EnrollmentType.NewEnrollment
+            ? await quotaGuard.EnsureCanAddAsync(1, cancellationToken)
+            : null;
 
         var receipt = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
@@ -229,7 +237,7 @@ public class CreateEnrollmentCommandHandler(
         kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
         kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
-        return receipt;
+        return receipt with { QuotaWarning = quotaWarning };
     }
 
     private async Task<(Student student, string matricule)> CreateStudentAsync(
