@@ -78,6 +78,18 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
         new { hizbNumber = hizb, completedQuarters = quarters, rating, rowVersion = (uint?)null };
 
     [Fact]
+    public async Task The_Oustaz_Page_Is_Served_Right_To_Left_With_Its_Script()
+    {
+        // La page est servie sans session (c'est l'API qui garde l'accès, comme /internat) : on vérifie qu'elle se rend,
+        // en arabe de droite à gauche, et qu'elle charge le script de l'écran.
+        var response = await _client.GetAsync("/halqa");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var html = await response.Content.ReadAsStringAsync();
+        html.Should().Contain("dir=\"rtl\"").And.Contain("x-data=\"halqaPage()\"").And.Contain("/js/halqa.js");
+    }
+
+    [Fact]
     public async Task Every_Route_Requires_Authentication()
     {
         (await SendAsync(HttpMethod.Get, Halqa(Guid.NewGuid()), null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
