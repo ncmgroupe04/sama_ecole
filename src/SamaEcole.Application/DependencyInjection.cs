@@ -42,6 +42,10 @@ public static class DependencyInjection
         // modification et la suppression d'entrées de journal. Scoped — elle lit le compte de la
         // requête courante.
         services.AddScoped<ClassJournalScopeAuthorizer>();
+
+        // Portée d'une Halqa (module Internat/Daara) : un Oustaz ne lit ni n'écrit que le suivi des élèves de sa
+        // Halqa. Partagée par la lecture et l'écriture du suivi par Hizb. Scoped — elle lit le compte courant.
+        services.AddScoped<Internat.HalqaScopeAuthorizer>();
         services.AddScoped<Grades.GradeCorrectionAuthorizer>();
 
         // Portée de lecture des dossiers d'examen (ticket JGK-J08) : partagée par la liste et la fiche
