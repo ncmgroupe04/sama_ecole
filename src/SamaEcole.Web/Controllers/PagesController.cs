@@ -59,6 +59,24 @@ public class PagesController : Controller
     [HttpGet("/internat")]
     public IActionResult Internat() => View("~/Views/Internat/Index.cshtml");
 
+    // Espace de l'Oustaz (tablette) : sa Halqa, la grille des 60 Hizb par Juz, la saisie des quarts. Écran en arabe,
+    // de droite à gauche. InternatController garde l'accès (GET my-halqa réservé au rôle Enseignant, borné à SA Halqa
+    // par HalqaScopeAuthorizer, + [RequireModule(SchoolModule.Internat)]) et la RLS isole.
+    [HttpGet("/halqa")]
+    public IActionResult Halqa() => View("~/Views/Internat/Halqa.cshtml");
+
+    // Gestion des Oustaz (Direction) : fiches, statut, compte de connexion. InternatController garde l'accès
+    // (liste : Directeur/Secrétariat/Surveillant ; écriture : Directeur seul ; GET /users, Directeur seul, pour le
+    // sélecteur de compte) + [RequireModule(SchoolModule.Internat)], et la RLS isole.
+    [HttpGet("/oustaz")]
+    public IActionResult Instructors() => View("~/Views/Internat/Instructors.cshtml");
+
+    // Suivi coranique (Direction) : progression globale, répartition par tranche, synthèse par Halqa, alertes de
+    // stagnation et bulletin coranique PDF. InternatController garde l'accès (Directeur/Secrétariat/Surveillant) +
+    // [RequireModule(SchoolModule.Internat)], et la RLS isole.
+    [HttpGet("/suivi-coranique")]
+    public IActionResult QuranProgress() => View("~/Views/Internat/Progress.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.

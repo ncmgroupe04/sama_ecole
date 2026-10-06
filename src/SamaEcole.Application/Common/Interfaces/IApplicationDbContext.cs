@@ -188,6 +188,12 @@ public interface IApplicationDbContext
     /// <summary>Notes d'examen oral de récitation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
     DbSet<QuranEvaluation> QuranEvaluations { get; }
 
+    /// <summary>Oustaz (responsables de Halqa) du module Internat/Daara.</summary>
+    DbSet<Instructor> Instructors { get; }
+
+    /// <summary>État courant d'un élève sur chaque Hizb (module Internat/Daara). Verrou optimiste xmin.</summary>
+    DbSet<StudentHizbStatus> StudentHizbStatuses { get; }
+
     // ------------------------------------------------------------------ Module Inventaire
 
     /// <summary>Familles de biens (Mobilier, Manuels scolaires, Informatique…), propres à chaque école.</summary>

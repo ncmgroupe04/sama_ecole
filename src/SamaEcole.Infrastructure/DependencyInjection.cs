@@ -209,6 +209,9 @@ public static class DependencyInjection
         // Module Documents administratifs (cahier des charges élite) — nouveaux documents officiels,
         // même moteur QuestPDF que ci-dessus, sans état.
         services.AddSingleton<IExeatCertificatePdfGenerator, ExeatCertificatePdfGenerator>();
+
+        // Module Internat/Daara : bulletin coranique (suivi de mémorisation par Hizb), bilingue français/arabe.
+        services.AddSingleton<IHizbReportPdfGenerator, HizbReportPdfGenerator>();
         services.AddSingleton<IDisciplinaryPvPdfGenerator, DisciplinaryPvPdfGenerator>();
         services.AddSingleton<IDuesNoticePdfGenerator, DuesNoticePdfGenerator>();
         services.AddSingleton<IWorkCertificatePdfGenerator, WorkCertificatePdfGenerator>();

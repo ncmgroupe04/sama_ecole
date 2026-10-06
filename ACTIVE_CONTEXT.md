@@ -551,6 +551,51 @@ délai, collègue jamais), et isolation RLS dédiée (`class_journal_entries` aj
 lecture/écriture croisée refusées, `DELETE` refusé par privilège — append via soft delete
 uniquement, règle #6).
 
+### Internat — Daara : Oustaz, Halqa et suivi coranique par Hizb (05/10/2026) — livré (branche `feature/daara-halqa-hizb`, non poussée)
+
+Rattache les élèves à la **Halqa** (cercle d'étude) d'un **Oustaz** et suit leur mémorisation Hizb par Hizb.
+Migration `AddDaaraHalqaAndHizbTracking` (tables `instructors` et `student_hizb_statuses`, colonne nullable
+`students.InstructorId`, policies RLS, ajout des deux tables à `reset_school_data`). API sous
+`/api/v1/internat` (`[RequireModule(Internat)]`) : `GET/POST/PUT instructors`, `GET instructors/{id}/students`,
+`GET my-halqa`, `POST students/assign-instructor`, `GET/PUT students/{id}/hizb-progress`. Écran `/halqa`
+(tablette de l'Oustaz, arabe, de droite à gauche : cartes d'élèves, grille des 60 Hizb par Juz, tiroir de saisie
+des quarts) et écran `/oustaz` (Direction : liste, création, modification, suspension/réactivation, liaison au
+compte ; écriture Directeur seul, lecture Secrétariat et Surveillant ; les comptes proposés viennent de
+`GET /api/v1/users`, réservé au Directeur) et écran `/suivi-coranique` (Direction : progression globale,
+répartition par tranche d'avancement, synthèse par Halqa, alertes de stagnation, bulletin coranique PDF par élève ;
+`GET progress-dashboard` et `GET students/{id}/hizb-report/pdf`, bilingue français/arabe, QuestPDF).
+
+**Arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **L'Oustaz se connecte avec le rôle `Enseignant`** — aucun rôle dédié (un nouveau rôle toucherait le JWT, les
+   contraintes de `users` et les gardes de rôle en base). `Instructor.UserId` (index unique partiel : un compte, un
+   Oustaz vivant) le distingue d'un enseignant du cursus ; `HalqaScopeAuthorizer` borne lecture et écriture à SA Halqa
+   (403 sinon) et relit le statut à chaque requête : suspendre l'Oustaz coupe son accès immédiatement.
+2. **`Instructor` n'est pas un `Teacher`** : ni matricule, ni contrat, ni paie, ni STATEDUC.
+3. **`ClassroomId` reste l'axe administratif et de caisse** ; `InstructorId` est l'axe pédagogique. Les deux coexistent.
+4. **`StudentHizbStatus` est un ÉTAT COURANT** (un seul statut vivant par élève et Hizb), pas un journal comme
+   `QuranProgress`. L'état se déduit des quarts (0 = non commencé, 1 à 3 = en cours, 4 = complet) et une contrainte
+   CHECK le verrouille ; le client n'envoie jamais ni état ni date (`LastEvaluatedAt` est posée par le serveur).
+   `Rating` et `LastEvaluatedAt` sont NULLABLES : un Hizb non commencé n'a ni note ni date.
+5. **Compte lié à un Oustaz : un compte absent de l'école renvoie le même 404 neutre** qu'il n'existe nulle part ou
+   qu'il appartienne à une autre école (pas d'énumération). `TeacherUserAccountLink` répond 422 dans ce cas : écart
+   voulu, à aligner si la Direction préfère.
+6. **Conflit d'écriture** : chaque case de la grille porte son jeton `xmin` ; un 409 recharge la grille côté écran
+   au lieu d'écraser.
+
+7. **Alertes = stagnation, pas retard.** Un élève est signalé quand il n'a pas été évalué depuis N jours (30 par
+   défaut, réglable de 1 à 365) ou jamais, sauf s'il a terminé les 60 Hizb. « En retard » supposerait un rythme attendu
+   que personne n'a fixé. Le tableau de bord ne porte que sur les élèves rattachés à une Halqa.
+8. **Pas de courbe d'évolution dans le temps.** Le suivi est un état courant par Hizb (la ligne est mise à jour sur
+   place) : l'historique passé n'existe pas, une courbe serait inventée. Elle exigerait un journal des évaluations
+   (table append-only, écrit à chaque saisie) — à décider séparément, c'est une évolution de schéma.
+9. **Le bulletin n'invente aucune appréciation** : il affiche la note (1 à 5) par Hizb, sa moyenne, la dernière
+   évaluation, et laisse un cadre pour l'appréciation manuscrite de l'Oustaz et les signatures. L'impression est
+   tracée au journal d'audit, et un Oustaz ne tire que le bulletin de SES élèves.
+
+**Pas encore livré :** courbe de progression dans le temps (journal des évaluations requis), bulletin PDF accessible
+depuis la tablette de l'Oustaz.
+
 ### Module Internat (18/09/2026) — livré
 
 Régime d'hébergement (Externe / Demi-pensionnaire / Interne) et affectation de chambre, module

@@ -1,0 +1,192 @@
+@{
+    ViewData["Title"] = "Oustaz";
+}
+
+@* Gestion des Oustaz (Direction). auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une
+   seconde fois. Pas de `x-init="init()"` : Alpine appelle DÉJÀ la méthode init() d'un composant x-data.
+   Pas d'attribut dynamique sur <badge> : ce Tag Helper lit ses attributs au rendu serveur, un binding Alpine y reste
+   inerte (même piège que dans Internat/Index.cshtml) — d'où un badge statique par statut, chacun avec son x-show. *@
+@section Scripts {
+    <script src="~/js/instructors.js" asp-append-version="true"></script>
+}
+
+<div x-data="instructorsPage()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Oustaz</h1>
+            <p class="page-subtitle">Les maîtres coraniques et leur Halqa : fiche, statut et compte de connexion pour la tablette.</p>
+        </div>
+        <button type="button" x-show="canWrite" x-cloak class="btn-modal-primary" x-on:click="openCreate()">
+            <icon name="plus" class="w-4 h-4" />
+            Nouvel Oustaz
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+        <template x-if="loading">
+            <template x-for="i in 3" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Oustaz" icon="users" accent="primary">
+                <span x-text="instructors.length">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Actifs" icon="checkmark-circle" accent="blue">
+                <span x-text="activeCount">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Élèves en Halqa" icon="book" accent="purple">
+                <span x-text="totalStudents">0</span>
+            </stat-card>
+        </template>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="card mt-6">
+        <div class="flex flex-col sm:flex-row gap-3 p-4 border-b border-slate-100">
+            <input type="search" x-model="search" placeholder="Rechercher un nom, un téléphone, un compte…" class="input-field sm:max-w-sm" aria-label="Rechercher un Oustaz">
+            <select x-model="statusFilter" class="input-field sm:max-w-[200px]" aria-label="Filtrer par statut">
+                <option value="">Tous les statuts</option>
+                <option value="Active">Actifs</option>
+                <option value="Suspended">Suspendus</option>
+                <option value="Blocked">Bloqués</option>
+            </select>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4">Oustaz</th>
+                        <th class="py-3 px-4">Téléphone</th>
+                        <th class="py-3 px-4">Compte de connexion</th>
+                        <th class="py-3 px-4 text-right">Élèves</th>
+                        <th class="py-3 px-4">Statut</th>
+                        <th class="py-3 px-4 text-right" x-show="canWrite" x-cloak>Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr x-show="!loading && filtered.length === 0" x-cloak>
+                        <td colspan="6">
+                            <empty-state icon="users" title="Aucun Oustaz à afficher."
+                                         hint="Créez la fiche d'un Oustaz. L'affectation des élèves à sa Halqa se fait pour l'instant par l'API (POST /api/v1/internat/students/assign-instructor) : l'écran d'affectation n'existe pas encore." />
+                        </td>
+                    </tr>
+                    <template x-for="instructor in filtered" :key="instructor.id">
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="py-3 px-4">
+                                <p class="font-semibold text-slate-800" x-text="instructor.fullName"></p>
+                                <p x-show="instructor.fullNameAr" x-cloak dir="rtl" class="text-sm text-slate-500" x-text="instructor.fullNameAr"></p>
+                            </td>
+                            <td class="py-3 px-4 text-sm text-slate-600" x-text="instructor.phone || '—'"></td>
+                            <td class="py-3 px-4 text-sm">
+                                <span x-show="instructor.userEmail" x-text="instructor.userEmail" class="text-slate-700"></span>
+                                <span x-show="!instructor.userEmail" x-cloak class="text-slate-400">Aucun compte</span>
+                            </td>
+                            <td class="py-3 px-4 text-right font-medium text-slate-700" x-text="instructor.studentCount"></td>
+                            <td class="py-3 px-4">
+                                <badge x-show="instructor.status === 'Active'" variant="success"><span>Actif</span></badge>
+                                <badge x-show="instructor.status === 'Suspended'" variant="warning"><span>Suspendu</span></badge>
+                                <badge x-show="instructor.status === 'Blocked'" variant="danger"><span>Bloqué</span></badge>
+                            </td>
+                            <td class="py-3 px-4 text-right whitespace-nowrap" x-show="canWrite" x-cloak>
+                                <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-700" x-on:click="openEdit(instructor)">Modifier</button>
+                                <button type="button" x-show="instructor.status === 'Active'"
+                                        class="ml-3 text-sm font-medium text-rose-600 hover:text-rose-700"
+                                        x-on:click="openStatusChange(instructor, 'Suspended')">Suspendre</button>
+                                <button type="button" x-show="instructor.status !== 'Active'" x-cloak
+                                        class="ml-3 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                                        x-on:click="openStatusChange(instructor, 'Active')">Réactiver</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ------------------------------------------------------------------ Création / modification *@
+    <modal-shell size="lg" open="form.open" on-close="closeForm()" title="Fiche d'Oustaz">
+        <modal-subtitle><span x-text="form.mode === 'create' ? 'Nouvel Oustaz : identité et compte de connexion facultatif.' : 'Modifier l\'identité, le compte lié ou le statut.'"></span></modal-subtitle>
+
+        <div x-show="form.errors.global" x-cloak class="form-error-banner">
+            <span x-text="form.errors.global"></span>
+        </div>
+
+        <form x-on:submit.prevent="submitForm()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Nom complet</label>
+                <input type="text" x-model="form.fullName" required maxlength="200" placeholder="ex : Serigne Modou Diop"
+                       class="input-field" :class="form.errors.fullname && 'input-field-error'">
+                <p x-show="form.errors.fullname" x-text="form.errors.fullname" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label">Nom en arabe</label>
+                <input type="text" x-model="form.fullNameAr" maxlength="200" dir="rtl" placeholder="الاسم الكامل"
+                       class="input-field" :class="form.errors.fullnamear && 'input-field-error'">
+                <p x-show="form.errors.fullnamear" x-text="form.errors.fullnamear" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label">Téléphone</label>
+                <input type="tel" x-model="form.phone" maxlength="30" placeholder="ex : 77 123 45 67"
+                       class="input-field" :class="form.errors.phone && 'input-field-error'">
+                <p x-show="form.errors.phone" x-text="form.errors.phone" class="field-error"></p>
+            </div>
+
+            <div x-show="canWrite">
+                <label class="form-label">Compte de connexion</label>
+                <p class="text-xs text-slate-500 mb-1">Un compte « Enseignant » qui ouvre la Halqa de cet Oustaz sur la tablette. Un compte ne sert qu'à un seul Oustaz.</p>
+                <select-field model="form.userId" placeholder="Aucun" options-expr="accountOptions" />
+                <p x-show="form.errors.userid" x-text="form.errors.userid" class="field-error"></p>
+            </div>
+
+            <div x-show="form.mode === 'edit'" x-cloak>
+                <label class="form-label">Statut</label>
+                <select x-model="form.status" class="input-field">
+                    <option value="Active">Actif</option>
+                    <option value="Suspended">Suspendu</option>
+                    <option value="Blocked">Bloqué</option>
+                </select>
+                <p class="text-xs text-slate-500 mt-1">Suspendre ou bloquer coupe aussitôt l'accès de l'Oustaz à sa Halqa. Ses élèves restent rattachés tant qu'ils ne sont pas réaffectés.</p>
+            </div>
+
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeForm()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="form.saving" class="btn-modal-primary group">
+                    <span x-text="form.saving ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* ------------------------------------------------------------------ Confirmation de suspension / réactivation *@
+    <modal-shell size="lg" open="confirm.open" on-close="closeConfirm()" title="Changer le statut">
+        <div x-show="confirm.error" x-cloak class="form-error-banner">
+            <span x-text="confirm.error"></span>
+        </div>
+
+        <div class="space-y-3">
+            <p class="text-sm text-slate-700" x-show="confirm.target === 'Suspended'">
+                Suspendre <strong x-text="confirm.instructor ? confirm.instructor.fullName : ''"></strong> ? Il perdra
+                immédiatement l'accès à sa Halqa sur la tablette et ne pourra plus recevoir de nouveaux élèves. Ses élèves
+                actuels restent rattachés jusqu'à leur réaffectation.
+            </p>
+            <p class="text-sm text-slate-700" x-show="confirm.target === 'Active'" x-cloak>
+                Réactiver <strong x-text="confirm.instructor ? confirm.instructor.fullName : ''"></strong> ? Il retrouvera
+                l'accès à sa Halqa.
+            </p>
+        </div>
+
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeConfirm()" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmStatusChange()" :disabled="confirm.saving" class="btn-modal-primary group">
+                <span x-text="confirm.saving ? 'Enregistrement...' : 'Confirmer'"></span>
+            </button>
+        </div>
+    </modal-shell>
+</div>
