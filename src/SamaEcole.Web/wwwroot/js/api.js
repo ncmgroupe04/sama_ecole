@@ -12,6 +12,9 @@
 // jamais côté serveur au moment du rendu de la page (voir le commentaire de classe du middleware).
 const SUBSCRIPTION_RESTRICTED_PATH = '/abonnement/paiement';
 
+// Onboarding & Pricing SaaS : repli si la réponse ONBOARDING_REQUIRED ne porte pas sa destination.
+const ONBOARDING_PATH = '/onboarding/select-profile';
+
 /**
  * Codes HTTP qui décrivent une indisponibilité PASSAGÈRE de l'infrastructure, pas un refus : un
  * reverse-proxy qui n'a pas encore de backend prêt (502), un redémarrage applicatif (503), une
@@ -57,6 +60,17 @@ window.api = {
             if (error.code === 'SUBSCRIPTION_AWAITING_PAYMENT'
                 && window.location.pathname !== SUBSCRIPTION_RESTRICTED_PATH) {
                 window.location.assign(SUBSCRIPTION_RESTRICTED_PATH);
+            }
+
+            // Onboarding & Pricing SaaS : OnboardingRoutingMiddleware refuse toute l'API tant que le
+            // Directeur n'a pas choisi profil et tranche. Même principe — seul ce code précis redirige,
+            // jamais un 403 ordinaire. La destination vient de la réponse (details.redirectTo), avec le
+            // chemin connu en repli ; aucune redirection si l'on y est déjà (pas de boucle).
+            if (error.code === 'ONBOARDING_REQUIRED') {
+                const target = (error.details && error.details.redirectTo) || ONBOARDING_PATH;
+                if (window.location.pathname !== target) {
+                    window.location.assign(target);
+                }
             }
 
             throw error;

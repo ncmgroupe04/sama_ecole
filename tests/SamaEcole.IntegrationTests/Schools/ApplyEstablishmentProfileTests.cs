@@ -77,6 +77,34 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Changing_The_Profile_Keeps_The_Commercial_Subscription_Aligned_But_Leaves_Tier_And_Status_Alone()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var subscription = RlsTestDatabase.UnlimitedSubscription(Ecole);
+            subscription.StudentQuotaTier = StudentQuotaTier.Tier2_400;
+            subscription.MaxStudentLimit = 400;
+            subscription.SoftQuotaLimit = 420;
+            owner.TenantSubscriptions.Add(subscription);
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var db = _db.NewAppContext(Ecole))
+        {
+            await new ApplyEstablishmentProfileCommandHandler(
+                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                .Handle(new ApplyEstablishmentProfileCommand("DaaraInternat"), CancellationToken.None);
+        }
+
+        await using var check = _db.NewAppContext(Ecole);
+        var row = check.TenantSubscriptions.Single();
+        row.ProfileType.Should().Be(ProfileType.InternatDaara);
+        (row.IsInternatEnabled, row.IsCoranModuleEnabled).Should().Be((true, true));
+        (row.StudentQuotaTier, row.MaxStudentLimit, row.SoftQuotaLimit, row.Status)
+            .Should().Be((StudentQuotaTier.Tier2_400, 400, 420, TenantSubscriptionStatus.Active));
+    }
+
+    [Fact]
     public async Task Creates_Settings_Row_When_None_Exists_Yet()
     {
         // École sans ligne school_settings (chemin défensif — en pratique couvert dès la création par

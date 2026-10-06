@@ -537,6 +537,9 @@ fait déjà usage : `provision_tenant_subscription(uuid)` (migration `AddTenantS
 figé, `EXECUTE` retiré à `PUBLIC` et accordé au seul rôle applicatif) insère une ligne `PendingOnboarding`, modules
 désactivés, profil/tranche **provisoires** (`EnseignementGeneral` / `Tier1_150` — colonnes NOT NULL, `CHECK` positif ;
 sans effet tant que l'école est en Onboarding) et **refuse** (renvoie `NULL`) si l'école a déjà une souscription vivante.
+Le Super Admin lit et modifie la ligne d'une école quelconque par `get_tenant_subscription(uuid)` et
+`update_tenant_subscription(uuid, text, int, int, text, text)` (migration `AddTenantSubscriptionAdminFunctions`, même
+durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni les modules ; un paramètre `NULL` = inchangé.
 
 **Reprise (migration `AddTenantSubscriptions`)** : chaque école existante reçoit une ligne `Active`, tranche
 `Tier4_Custom`, `MaxStudentLimit = SoftQuotaLimit = 2147483647`. Profil existant conservé (`Simplifie` → `ComptabiliteRapports`,

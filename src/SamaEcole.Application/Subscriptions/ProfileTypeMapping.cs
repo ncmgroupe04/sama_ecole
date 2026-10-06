@@ -19,4 +19,14 @@ public static class ProfileTypeMapping
         ProfileType.ComptabiliteRapports => ProfileEtablissement.Simplifie,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Profil inconnu.")
     };
+
+    public static ProfileType FromEstablishmentProfile(ProfileEtablissement profile) => profile switch
+    {
+        ProfileEtablissement.ElementairePrimaire => ProfileType.Elementaire,
+        ProfileEtablissement.FrancoArabe => ProfileType.FrancoArabe,
+        ProfileEtablissement.DaaraInternat => ProfileType.InternatDaara,
+        ProfileEtablissement.General => ProfileType.EnseignementGeneral,
+        ProfileEtablissement.Simplifie => ProfileType.ComptabiliteRapports,
+        _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Profil inconnu.")
+    };
 }

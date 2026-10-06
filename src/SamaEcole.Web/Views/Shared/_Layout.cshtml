@@ -45,9 +45,10 @@
     pastille de régime de auth.js) + modale d'avertissement. Après setup-assistant.js, dont il lit
     l'événement `setup-progress`. *@
  <script src="~/js/school-mode-guard.js" asp-append-version="true"></script>
- @* Garde-fou « Onboarding » (Setup Wizard, Ticket 2) : redirige un Directeur sans profil
- d'établissement vers /onboarding. Dépend du store schoolConfig (auth.js, ci-dessus). *@
- <script src="~/js/onboarding-guard.js" asp-append-version="true"></script>
+ @* Plus de garde « Onboarding » côté page : la redirection vers /onboarding/select-profile est
+ déclenchée par api.js à la réception du 403 ONBOARDING_REQUIRED (OnboardingRoutingMiddleware), seule
+ source de vérité — l'ancien garde (profil NULL → /onboarding) aurait renvoyé en boucle les écoles
+ antérieures à l'Onboarding, qui n'ont pas de profil mais ont une souscription active. *@
  @* Formatage d'affichage partagé (magics Alpine $phone et $money) — script classique, donc exécuté avant
  Alpine (différé) : l'écouteur alpine:init est enregistré à temps. *@
  <script src="~/js/formatters.js" asp-append-version="true"></script>

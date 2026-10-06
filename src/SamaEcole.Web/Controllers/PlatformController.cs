@@ -7,6 +7,7 @@ using SamaEcole.Application.Platform.Queries.GetPlatformActivity;
 using SamaEcole.Application.Platform.Queries.GetPlatformDashboard;
 using SamaEcole.Application.Platform.Queries.GetPlatformRevenueProjection;
 using SamaEcole.Application.Platform.Queries.GetPlatformSubscriptions;
+using SamaEcole.Application.Subscriptions.Commands.UpdateSubscriptionTier;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -97,6 +98,32 @@ public class PlatformController(ISender mediator) : ControllerBase
 
         return NoContent();
     }
+
+    public record UpdateTenantSubscriptionRequest(
+        StudentQuotaTier? Tier, int? CustomMaxStudentLimit, TenantSubscriptionStatus? Status);
+
+    /// <summary>
+    /// Change la tranche d'effectif (jusqu'au sur-mesure) et/ou le statut (suspension, expiration,
+    /// réactivation) de la souscription commerciale d'une école. Au moins l'un des deux. 409
+    /// <c>ONBOARDING_NOT_COMPLETED</c> tant que l'école n'a pas choisi son profil.
+    /// </summary>
+    [HttpPut("schools/{schoolId:guid}/tenant-subscription")]
+    [ProducesResponseType<SamaEcole.Application.Subscriptions.TenantSubscriptionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateTenantSubscription(
+        Guid schoolId, [FromBody] UpdateTenantSubscriptionRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new UpdateSubscriptionTierCommand
+            {
+                SchoolId = schoolId,
+                Tier = request.Tier,
+                CustomMaxStudentLimit = request.CustomMaxStudentLimit,
+                Status = request.Status
+            },
+            cancellationToken));
 
     public record TopUpSmsCreditsRequest(int Segments);
 

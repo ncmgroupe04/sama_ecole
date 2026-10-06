@@ -3,22 +3,53 @@
  Layout = "_AuthLayout";
 }
 
-@* Page de prise en charge PLEINE (pas le gabarit _Layout à sidebar) : tant qu'aucun profil n'est
- choisi, la sidebar n'a rien de pertinent à proposer (voir onboarding-guard.js, qui amène ici).
- Redirige les visiteurs anonymes vers /login, comme _Layout.cshtml le fait pour les écrans
- applicatifs. Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline'
- (JGK-F01). *@
+@* /onboarding/select-profile — première configuration de l'établissement : le Directeur choisit son
+ PROFIL (5 cartes) puis sa TRANCHE D'EFFECTIF (3 cartes + le sur-mesure, géré par l'équipe commerciale).
+ Un seul envoi, POST /api/v1/onboarding/select-profile : la souscription passe de PendingOnboarding à Active
+ et le quota s'applique immédiatement. Les cartes sont décrites dans onboarding.js (une seule source pour
+ les libellés), pas répétées ici.
+
+ Page de prise en charge PLEINE (pas le gabarit _Layout à sidebar) : tant que le choix n'est pas fait,
+ l'API entière répond 403 ONBOARDING_REQUIRED et la sidebar n'aurait rien à afficher. api.js amène ici.
+ Redirige les visiteurs anonymes vers /login. Fichier EXTERNE et non inline : la CSP n'autorise pas
+ script-src 'unsafe-inline' (JGK-F01). *@
 <script src="~/js/require-session.js" asp-append-version="true"></script>
 
-<div class="min-h-screen flex items-center justify-center p-6 sm:p-12" x-data="onboardingWizard()">
+<div class="min-h-screen flex items-center justify-center p-6 sm:p-12" x-data="onboardingWizard()" x-init="load()">
  <div class="w-full max-w-6xl">
 
  <!-- Logo -->
  <div class="flex items-center justify-center gap-2 mb-8">
- <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">U</div>
+ <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-sm flex items-center justify-center font-bold text-lg">U</div>
  <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
+ <!-- Chargement de l'état de la souscription -->
+ <div x-show="state === 'loading'" class="text-center text-jgk-body text-slate-500" role="status">Chargement…</div>
+
+ <!-- Un autre rôle que le Directeur ne peut pas valider ce choix -->
+ <div x-cloak x-show="state === 'waitDirector'" class="max-w-xl mx-auto text-center">
+ <h1 class="page-title">Configuration en attente</h1>
+ <p class="text-jgk-body text-slate-500 mt-3">
+ Le Directeur de votre établissement doit choisir le profil et la tranche d'effectif avant que
+ l'application ne soit accessible. Revenez après sa configuration.
+ </p>
+ <button type="button" x-on:click="window.auth.logout()"
+ class="mt-6 inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-jgk-body font-semibold text-slate-700 hover:bg-slate-50">
+ Se déconnecter
+ </button>
+ </div>
+
+ <!-- Erreur de chargement (hors refus d'accès) -->
+ <div x-cloak x-show="state === 'loadError'" class="max-w-xl mx-auto text-center" role="alert">
+ <p class="text-jgk-body text-danger" x-text="error"></p>
+ <button type="button" x-on:click="load()"
+ class="mt-4 inline-flex items-center rounded-2xl bg-primary-600 px-5 py-2.5 text-jgk-body font-semibold text-white hover:bg-primary-700">
+ Réessayer
+ </button>
+ </div>
+
+ <div x-cloak x-show="state === 'ready'">
  <div class="text-center mb-10">
  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-jgk-table font-semibold uppercase tracking-wide mb-4">
  <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -26,9 +57,8 @@
  </span>
  <h1 class="page-title">Bienvenue — configurons votre établissement</h1>
  <p class="text-jgk-body text-slate-500 mt-2 max-w-2xl mx-auto">
- Choisissez le profil qui correspond le mieux à votre établissement. Il adapte immédiatement le
- menu, les formulaires et le tableau de bord à votre façon de travailler — vous pourrez en
- changer plus tard.
+ Deux choix et c'est prêt : le profil qui correspond à votre établissement (il adapte le menu et les
+ formulaires), puis la tranche d'effectif qui fixe votre nombre d'élèves.
  </p>
  </div>
 
@@ -43,165 +73,80 @@
  <p class="text-jgk-body text-danger" x-text="error"></p>
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
- <!-- Profil 2 : Enseignement Général (mis en avant — recommandé pour les établissements multi-cycles) -->
+ <!-- Étape 1 : le profil -->
+ <h2 class="text-jgk-body font-semibold text-slate-900 mb-4">1. Votre profil d'établissement</h2>
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" role="radiogroup" aria-label="Profil d'établissement">
+ <template x-for="p in profiles" x-bind:key="p.id">
  <button type="button"
- x-on:click="choose('General')"
+ role="radio"
+ x-bind:aria-checked="(profile === p.id).toString()"
+ x-on:click="profile = p.id"
  x-bind:disabled="isSubmitting"
- x-bind:aria-busy="(submittingProfile === 'General').toString()"
- class="group relative text-left flex flex-col rounded-2xl border-2 border-primary/30 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary hover:shadow-xl hover:shadow-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed sm:col-span-2">
- <span class="absolute top-0 right-0 bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-tr-2xl rounded-bl-xl uppercase tracking-wider">
- Recommandé
- </span>
- <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-white">
- <icon name="chart-multiple" class="w-5 h-5" />
+ x-bind:class="profile === p.id ? 'border-primary ring-2 ring-primary/30 shadow-lg shadow-primary/10' : 'border-slate-200 hover:border-primary hover:shadow-lg hover:shadow-primary/10'"
+ class="group relative text-left flex flex-col rounded-2xl border-2 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
+ <span x-show="p.recommended" class="absolute top-0 right-0 bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-tr-2xl rounded-bl-xl uppercase tracking-wider">Recommandé</span>
+ <span class="inline-flex self-start items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide mb-3" x-text="p.tag"></span>
+ <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-all duration-300"
+ x-bind:class="profile === p.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white'">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-5 h-5"><use x-bind:href="'#icon-' + p.icon"></use></svg>
  </div>
- <h2 class="text-jgk-body font-semibold text-slate-900">Enseignement Général</h2>
- <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed">
- Le socle académique national complet — de la Maternelle au Lycée, Séries, coefficients, bulletins.
- </p>
- <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-jgk-table text-slate-500">
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Maternelle, Primaire, Collège &amp; Lycée</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Séries L/S &amp; coefficients</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Notes, bulletins &amp; emplois du temps</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Suivi des enseignants</li>
- </ul>
- <span class="mt-5 inline-flex items-center gap-2 text-jgk-body font-semibold text-primary">
- <svg x-cloak x-show="submittingProfile === 'General'" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
- <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
- <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
- </svg>
- <span x-text="submittingProfile === 'General' ? 'Application…' : 'Choisir le profil Général'"></span>
- <icon name="chevron-right" class="w-4 h-4" />
- </span>
- </button>
-
- <!-- Profil 5 : Élémentaire / Primaire -->
- <button type="button"
- x-on:click="choose('ElementairePrimaire')"
- x-bind:disabled="isSubmitting"
- x-bind:aria-busy="(submittingProfile === 'ElementairePrimaire').toString()"
- class="group text-left flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary hover:shadow-lg hover:shadow-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
- <span class="inline-flex self-start items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide mb-3">
- Cycle Primaire
- </span>
- <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-white">
- <icon name="book" class="w-5 h-5" />
- </div>
- <h2 class="text-jgk-body font-semibold text-slate-900">Élémentaire / Primaire</h2>
- <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed flex-1">
- Cycles Maternelle (PS/MS/GS) et Élémentaire (CI au CM2), sans Collège ni Lycée.
- </p>
+ <h3 class="text-jgk-body font-semibold text-slate-900" x-text="p.title"></h3>
+ <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed flex-1" x-text="p.description"></p>
  <ul class="mt-4 space-y-1.5 text-jgk-table text-slate-500">
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Compositions mensuelles &amp; trimestrielles</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Préparation CFEE / Entrée en 6ᵉ</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Pas de Séries ni de Secondaire</li>
+ <template x-for="b in p.bullets" x-bind:key="b">
+ <li class="flex items-center gap-2">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-3.5 h-3.5 text-primary shrink-0"><use href="#icon-check"></use></svg>
+ <span x-text="b"></span>
+ </li>
+ </template>
  </ul>
- <span class="mt-5 inline-flex items-center gap-2 text-jgk-body font-semibold text-primary">
- <svg x-cloak x-show="submittingProfile === 'ElementairePrimaire'" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
- <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
- <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
- </svg>
- <span x-text="submittingProfile === 'ElementairePrimaire' ? 'Application…' : 'Choisir ce profil'"></span>
- </span>
  </button>
+ </template>
+ </div>
 
- <!-- Profil 3 : Franco-Arabe -->
+ <!-- Étape 2 : la tranche d'effectif -->
+ <h2 class="text-jgk-body font-semibold text-slate-900 mt-10 mb-4">2. Votre tranche d'effectif</h2>
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" role="radiogroup" aria-label="Tranche d'effectif">
+ <template x-for="t in tiers" x-bind:key="t.id">
  <button type="button"
- x-on:click="choose('FrancoArabe')"
+ role="radio"
+ x-bind:aria-checked="(tier === t.id).toString()"
+ x-on:click="tier = t.id"
  x-bind:disabled="isSubmitting"
- x-bind:aria-busy="(submittingProfile === 'FrancoArabe').toString()"
- class="group text-left flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary hover:shadow-lg hover:shadow-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
- <span class="inline-flex self-start items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide mb-3">
- Bilingue
- </span>
- <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-white">
- <icon name="globe" class="w-5 h-5" />
- </div>
- <h2 class="text-jgk-body font-semibold text-slate-900">Franco-Arabe</h2>
- <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed flex-1">
- Le socle académique, enrichi du bilinguisme et des disciplines arabes/islamiques.
- </p>
- <ul class="mt-4 space-y-1.5 text-jgk-table text-slate-500">
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Disciplines arabes &amp; islamiques</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Bulletins bilingues</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Socle académique complet</li>
- </ul>
- <span class="mt-5 inline-flex items-center gap-2 text-jgk-body font-semibold text-primary">
- <svg x-cloak x-show="submittingProfile === 'FrancoArabe'" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
- <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
- <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
- </svg>
- <span x-text="submittingProfile === 'FrancoArabe' ? 'Application…' : 'Choisir ce profil'"></span>
- </span>
+ x-bind:class="tier === t.id ? 'border-primary ring-2 ring-primary/30 shadow-lg shadow-primary/10' : 'border-slate-200 hover:border-primary hover:shadow-lg hover:shadow-primary/10'"
+ class="text-left flex flex-col rounded-2xl border-2 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
+ <span class="text-2xl font-bold text-slate-900" x-text="t.label"></span>
+ <span class="mt-1 text-jgk-table text-slate-500" x-text="t.hint"></span>
  </button>
+ </template>
 
- <!-- Profil 4 : Internat / Daara Moderne -->
+ <!-- Sur-mesure : fixé par l'équipe commerciale, jamais choisi ici (refusé en 422 par l'API). -->
+ <div class="flex flex-col rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-5">
+ <span class="text-2xl font-bold text-slate-400">Sur mesure</span>
+ <span class="mt-1 text-jgk-table text-slate-500">Plus de 800 élèves ou besoin particulier : contactez-nous, nous fixons votre plafond.</span>
+ </div>
+ </div>
+
+ <p class="mt-3 text-jgk-table text-slate-500">
+ Vous pouvez dépasser légèrement votre plafond : un bandeau d'avertissement s'affiche, puis la
+ création d'élèves s'arrête à la limite de tolérance. Votre tranche peut être modifiée à tout moment
+ par notre équipe.
+ </p>
+
+ <div class="mt-8 flex justify-center">
  <button type="button"
- x-on:click="choose('DaaraInternat')"
- x-bind:disabled="isSubmitting"
- x-bind:aria-busy="(submittingProfile === 'DaaraInternat').toString()"
- class="group text-left flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary hover:shadow-lg hover:shadow-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
- <span class="inline-flex self-start items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide mb-3">
- Vie Collective
- </span>
- <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-white">
- <icon name="bed" class="w-5 h-5" />
- </div>
- <h2 class="text-jgk-body font-semibold text-slate-900">Internat / Daara Moderne</h2>
- <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed flex-1">
- Le socle académique, complété par la vie collective et le suivi religieux.
- </p>
- <ul class="mt-4 space-y-1.5 text-jgk-table text-slate-500">
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Dortoirs &amp; hébergement</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Carnet de mémorisation Hifz/Coran</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Pension &amp; tuteurs de sortie</li>
- </ul>
- <span class="mt-5 inline-flex items-center gap-2 text-jgk-body font-semibold text-primary">
- <svg x-cloak x-show="submittingProfile === 'DaaraInternat'" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+ x-on:click="submit()"
+ x-bind:disabled="!canSubmit"
+ x-bind:aria-busy="isSubmitting.toString()"
+ class="inline-flex items-center gap-2 rounded-2xl bg-primary-600 px-8 py-3 text-jgk-body font-semibold text-white shadow-sm transition-all hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+ <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
  </svg>
- <span x-text="submittingProfile === 'DaaraInternat' ? 'Application…' : 'Choisir ce profil'"></span>
- </span>
+ <span x-text="isSubmitting ? 'Enregistrement…' : 'Terminer la configuration'"></span>
  </button>
-
- <!-- Profil 1 : Inscriptions & Scolarité Simplifiée -->
- <button type="button"
- x-on:click="choose('Simplifie')"
- x-bind:disabled="isSubmitting"
- x-bind:aria-busy="(submittingProfile === 'Simplifie').toString()"
- class="group text-left flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary hover:shadow-lg hover:shadow-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 disabled:cursor-not-allowed">
- <span class="inline-flex self-start items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide mb-3">
- Gestion Essentielle
- </span>
- <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-white">
- <icon name="sparkle" class="w-5 h-5" />
  </div>
- <h2 class="text-jgk-body font-semibold text-slate-900">Inscriptions &amp; Scolarité Simplifiée</h2>
- <p class="mt-2 text-jgk-table text-slate-500 leading-relaxed flex-1">
- L'essentiel pour gérer les inscriptions et les encaissements, sans notes ni bulletins.
- </p>
- <ul class="mt-4 space-y-1.5 text-jgk-table text-slate-500">
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Inscriptions &amp; annuaire des élèves</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Caisse &amp; scolarité</li>
- <li class="flex items-center gap-2"><icon name="check" class="w-3.5 h-3.5 text-primary shrink-0" /> Import / export Excel</li>
- </ul>
- <span class="mt-5 inline-flex items-center gap-2 text-jgk-body font-semibold text-primary">
- <svg x-cloak x-show="submittingProfile === 'Simplifie'" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
- <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
- <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
- </svg>
- <span x-text="submittingProfile === 'Simplifie' ? 'Application…' : 'Choisir ce profil'"></span>
- </span>
- </button>
-
  </div>
-
- <p class="mt-8 text-center text-jgk-table text-slate-400">
- Vous pourrez changer de profil à tout moment depuis cet écran ou, bientôt, depuis Paramètres.
- </p>
  </div>
 </div>
 
