@@ -7,7 +7,9 @@ using SamaEcole.Application.Internat.Commands.UpdateHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetInstructorStudents;
 using SamaEcole.Application.Internat.Queries.GetInternatDashboard;
 using SamaEcole.Application.Internat.Queries.GetMyHalqa;
+using SamaEcole.Application.Internat.Queries.GetProgressDashboard;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
+using SamaEcole.Application.Internat.Queries.GetStudentHizbReportPdf;
 using SamaEcole.Application.Internat.Queries.ListInstructors;
 using SamaEcole.Application.Internat.Queries.SearchBoardableStudents;
 using SamaEcole.Domain.Enums;
@@ -74,6 +76,21 @@ public class InternatController(ISender mediator) : ControllerBase
             new ChangeBoardingAssignmentCommand(
                 enrollmentId, request.RoomId, request.BoardingStatus, request.IncludeBoardingFee, request.RowVersion),
             cancellationToken));
+
+    // ---------------------------------------------------------------- Tableau de bord de la mémorisation
+
+    /// <summary>
+    /// Vue de la Direction : progression globale, répartition par tranche, synthèse par Halqa et alertes de stagnation
+    /// (élève non évalué depuis <c>staleDays</c> jours ou jamais évalué). Distinct de GET dashboard, qui est celui de
+    /// l'occupation des dortoirs.
+    /// </summary>
+    [HttpGet("progress-dashboard")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<ProgressDashboardDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetProgressDashboard(
+        [FromQuery] int staleDays = ProgressDashboardRules.DefaultStaleDays, CancellationToken cancellationToken = default)
+        => Ok(await mediator.Send(new GetProgressDashboardQuery(staleDays), cancellationToken));
 
     // ---------------------------------------------------------------- Gestion des Oustaz
 
@@ -173,6 +190,26 @@ public class InternatController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHizbProgress(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentHizbProgressQuery(studentId), cancellationToken));
+
+    /// <summary>
+    /// Le bulletin coranique d'un élève en PDF. Même portée que la grille : un Oustaz ne tire que le bulletin de ses
+    /// élèves (403 sinon). L'impression est tracée dans le journal d'audit.
+    /// </summary>
+    [HttpGet("students/{studentId:guid}/hizb-report/pdf")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHizbReportPdf(Guid studentId, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetStudentHizbReportPdfQuery(studentId), cancellationToken);
+
+        // Le matricule ne contient que des caractères sûrs pour un en-tête HTTP ; on l'assainit quand même.
+        var safeName = new string(result.Matricule.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_').ToArray());
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"Bulletin-Coranique-{safeName}.pdf\"";
+        return File(result.Content, "application/pdf");
+    }
 
     /// <summary>Enregistre l'avancement d'un Hizb (quarts, note). Un Oustaz n'écrit que pour sa Halqa (403 sinon).</summary>
     [HttpPut("students/{studentId:guid}/hizb-progress")]
