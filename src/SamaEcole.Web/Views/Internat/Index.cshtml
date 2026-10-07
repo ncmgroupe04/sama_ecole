@@ -7,6 +7,7 @@
     <script src="~/js/internat-helpers.js" asp-append-version="true"></script>
     <script src="~/js/internat-dormitories.js" asp-append-version="true"></script>
     <script src="~/js/internat-occupation.js" asp-append-version="true"></script>
+    <script src="~/js/internat-boarders.js" asp-append-version="true"></script>
     <script src="~/js/internat.js" asp-append-version="true"></script>
 }
 
@@ -43,5 +44,11 @@
         @* Chemin complet : PagesController rend cette vue par chemin explicite, donc la recherche d'une partielle par simple nom explorerait
            Views/Pages et Views/Shared, pas Views/Internat (404 de vue → 500). *@
         @await Html.PartialAsync("~/Views/Internat/_Dormitories.cshtml")
+    </div>
+
+    <!-- Onglet Pensionnaires : liste des séjours, fiche d'urgence et profil (/api/v1/boarding). Fiche médicale réservée au Directeur et au Surveillant. -->
+    <div x-show="tab === 'pensionnaires'" x-cloak role="tabpanel">
+        @* Chemin complet : voir la note de l'onglet Pavillons. *@
+        @await Html.PartialAsync("~/Views/Internat/_Boarders.cshtml")
     </div>
 </div>

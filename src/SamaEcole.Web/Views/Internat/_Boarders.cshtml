@@ -1,0 +1,244 @@
+@*
+    Onglet « Pensionnaires » de /internat (lot G4, tâche 8) — liste filtrable des séjours, fiche et profil d'un pensionnaire, sur /api/v1/boarding.
+    Composant Alpine `boardersTab` (wwwroot/js/internat-boarders.js).
+
+    FICHE MÉDICALE : donnée de santé d'un mineur. Les deux blocs qui la portent sont derrière `<template x-if="showMedical">` — jamais un simple
+    `x-show` : pour le Secrétariat (et tout autre rôle), la section est ABSENTE du DOM, pas seulement cachée. Le serveur reste la barrière
+    (`medicalNotes` vaut null pour ces rôles, et le PUT refuse une valeur envoyée par eux).
+*@
+<div x-data="boardersTab()">
+    <div class="mt-6">
+        <p class="text-sm text-slate-500">Séjours de l'année scolaire active : filtres par pavillon, chambre, régime et situation, fiche d'urgence et personnes habilitées.</p>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mt-4 p-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div class="lg:col-span-2">
+                <label for="boarders-search" class="form-label">Recherche</label>
+                <input id="boarders-search" type="search" x-model="filters.search" x-on:input="onSearchInput()"
+                       placeholder="Nom, prénom ou matricule" class="input-field mt-1" autocomplete="off" />
+            </div>
+            <div>
+                <label class="form-label">Pavillon</label>
+                <select-field model="filters.dormitoryId" options-expr="dormitoryOptions" on-change="onDormitoryChange()" placeholder="Tous les pavillons" />
+            </div>
+            <div>
+                <label class="form-label">Chambre</label>
+                <select-field model="filters.roomId" options-expr="roomOptions" on-change="applyFilters()" disabled="!filters.dormitoryId" placeholder="Toutes les chambres" />
+            </div>
+            <div>
+                <label class="form-label">Régime</label>
+                <select-field model="filters.regime" options-expr="regimeChoices" on-change="applyFilters()" placeholder="Tous les régimes" />
+            </div>
+        </div>
+
+        <p x-show="filterError" x-cloak class="mt-3 text-xs text-amber-700" role="alert" x-text="filterError"></p>
+
+        <!-- Situation : pastilles exclusives (un seul statut à la fois côté API) -->
+        <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Situation des pensionnaires">
+            <template x-for="s in statusChoices" :key="s.value">
+                <button type="button"
+                        class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+                        :class="filters.status === s.value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                        :aria-pressed="filters.status === s.value"
+                        x-on:click="filters.status = s.value; applyFilters()" x-text="s.label"></button>
+            </template>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <p x-show="notice" x-cloak class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" x-text="notice"></p>
+
+    <!-- Liste -->
+    <div class="card mt-4 overflow-hidden">
+        <template x-if="loading">
+            <div class="space-y-2 p-4">
+                <template x-for="i in 5" :key="i"><div class="h-10 rounded skeleton"></div></template>
+            </div>
+        </template>
+
+        <template x-if="!loading && items.length === 0 && !error">
+            <div class="p-12">
+                <empty-state icon="users" title="Aucun pensionnaire ne correspond."
+                             hint="Modifiez les filtres, ou affectez des élèves depuis l'onglet « Occupation »." />
+            </div>
+        </template>
+
+        <div class="overflow-x-auto" x-show="!loading && items.length > 0" x-cloak>
+            <table class="min-w-full divide-y divide-slate-100 text-sm">
+                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th scope="col" class="px-4 py-3">Élève</th>
+                        <th scope="col" class="px-4 py-3">Classe</th>
+                        <th scope="col" class="px-4 py-3">Régime</th>
+                        <th scope="col" class="px-4 py-3">Hébergement</th>
+                        <th scope="col" class="px-4 py-3">Situation</th>
+                        <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-for="item in items" :key="item.id">
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-slate-800" x-text="item.studentName"></p>
+                                <p class="text-xs text-slate-400" x-text="item.matricule"></p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600" x-text="item.classroomName"></td>
+                            <td class="px-4 py-3 text-slate-600" x-text="regimeLabel(item.regime)"></td>
+                            <td class="px-4 py-3 text-slate-600" x-text="locationLabel(item) || '—'"></td>
+                            <td class="px-4 py-3">
+                                <badge x-show="statusLabel(item) === 'Actif'" variant="success"><span x-text="statusLabel(item)"></span></badge>
+                                <badge x-show="statusLabel(item) === 'En attente de lit'" variant="warning"><span x-text="statusLabel(item)"></span></badge>
+                                <badge x-show="statusLabel(item) === 'Séjour clos'" variant="neutral"><span x-text="statusLabel(item)"></span></badge>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="button" class="text-xs font-semibold text-primary-600 hover:text-primary-700" x-on:click="openDetail(item)">
+                                    Ouvrir la fiche
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="border-t border-slate-100 px-4 py-3" x-show="!loading && totalCount > pageSize" x-cloak>
+            <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
+        </div>
+    </div>
+
+    <!-- Fiche d'un pensionnaire -->
+    <modal-shell open="panel.open" on-close="closeDetail()" size="lg" title="Fiche du pensionnaire">
+        <div class="space-y-5">
+            <template x-if="panel.loading"><div class="h-24 rounded skeleton"></div></template>
+
+            <p x-show="panel.error" x-cloak class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" x-text="panel.error"></p>
+
+            <template x-if="panel.data">
+                <div class="space-y-5">
+                    <!-- Identité et hébergement -->
+                    <section>
+                        <h3 class="text-base font-semibold text-slate-800" x-text="panel.data.boarder.studentName"></h3>
+                        <p class="text-sm text-slate-500">
+                            <span x-text="panel.data.boarder.matricule"></span> ·
+                            <span x-text="panel.data.boarder.classroomName"></span> ·
+                            <span x-text="regimeLabel(panel.data.boarder.regime)"></span>
+                        </p>
+                        <p class="mt-1 text-sm text-slate-600">
+                            Hébergement : <strong x-text="locationLabel(panel.data.boarder) || 'sans lit'"></strong>
+                            — depuis le <span x-text="panel.data.boarder.startDate"></span>
+                            <span x-show="panel.data.boarder.endDate" x-cloak>jusqu'au <span x-text="panel.data.boarder.endDate"></span></span>
+                        </p>
+                    </section>
+
+                    <!-- Lecture -->
+                    <template x-if="!panel.editing">
+                        <div class="space-y-5">
+                            <section>
+                                <h4 class="form-label">Contact d'urgence</h4>
+                                <p class="text-sm text-slate-700">
+                                    <span x-text="panel.data.emergencyContactName || 'Non renseigné'"></span>
+                                    <span x-show="panel.data.emergencyContactPhone" x-cloak> — <span x-text="panel.data.emergencyContactPhone"></span></span>
+                                </p>
+                            </section>
+
+                            <section>
+                                <h4 class="form-label">Personnes habilitées à récupérer l'élève</h4>
+                                <p x-show="panel.data.allowedExitPersons.length === 0" class="text-sm text-slate-500">Aucune personne habilitée n'est enregistrée.</p>
+                                <ul class="space-y-1">
+                                    <template x-for="(person, i) in panel.data.allowedExitPersons" :key="i">
+                                        <li class="text-sm text-slate-700">
+                                            <span class="font-medium" x-text="person.name"></span>
+                                            <span class="text-slate-400" x-show="person.relationship" x-cloak x-text="' · ' + person.relationship"></span>
+                                            <span class="text-slate-400" x-show="person.phone" x-cloak x-text="' · ' + person.phone"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </section>
+
+                            <!-- Fiche médicale : absente du DOM hors Directeur / Surveillant -->
+                            <template x-if="showMedical">
+                                <section>
+                                    <h4 class="form-label">Fiche médicale</h4>
+                                    <p class="whitespace-pre-line text-sm text-slate-700" x-text="medicalText"></p>
+                                </section>
+                            </template>
+
+                            <section>
+                                <h4 class="form-label">Sorties récentes</h4>
+                                <p x-show="panel.data.leaves.length === 0" class="text-sm text-slate-500">Aucune sortie enregistrée.</p>
+                                <ul class="space-y-1">
+                                    <template x-for="leave in panel.data.leaves" :key="leave.id">
+                                        <li class="text-sm text-slate-700">
+                                            <span x-text="leave.leaveDate"></span> → <span x-text="leave.expectedReturnDate"></span>
+                                            <span class="text-slate-400" x-text="' · ' + leave.reason"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </section>
+
+                            <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                                <button type="button" class="btn-modal-secondary group" x-on:click="closeDetail()">Fermer</button>
+                                <button type="button" class="btn-modal-primary group" x-on:click="startEdit()">Modifier le profil</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Modification du profil -->
+                    <template x-if="panel.editing && panel.form">
+                        <form class="space-y-4" x-on:submit.prevent="saveProfile()">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="profile-contact-name" class="form-label">Contact d'urgence</label>
+                                    <input id="profile-contact-name" type="text" maxlength="150" x-model="panel.form.emergencyContactName" class="input-field mt-1" />
+                                    <p x-show="panel.errors.emergencyContactName" x-cloak class="field-error" x-text="panel.errors.emergencyContactName"></p>
+                                </div>
+                                <div>
+                                    <label for="profile-contact-phone" class="form-label">Téléphone du contact</label>
+                                    <input id="profile-contact-phone" type="tel" maxlength="30" x-model="panel.form.emergencyContactPhone" class="input-field mt-1" />
+                                    <p x-show="panel.errors.emergencyContactPhone" x-cloak class="field-error" x-text="panel.errors.emergencyContactPhone"></p>
+                                </div>
+                            </div>
+
+                            <fieldset>
+                                <legend class="form-label">Personnes habilitées (dix au plus)</legend>
+                                <div class="mt-2 space-y-2">
+                                    <template x-for="(person, i) in panel.form.allowedExitPersons" :key="i">
+                                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]">
+                                            <input type="text" maxlength="150" x-model="person.name" placeholder="Nom complet" aria-label="Nom de la personne habilitée" class="input-field" />
+                                            <input type="text" maxlength="50" x-model="person.relationship" placeholder="Lien" aria-label="Lien de parenté" class="input-field" />
+                                            <input type="tel" maxlength="30" x-model="person.phone" placeholder="Téléphone" aria-label="Téléphone" class="input-field" />
+                                            <button type="button" class="text-xs text-rose-600 hover:text-rose-700" x-on:click="removePerson(i)">Retirer</button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button type="button" class="mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                                        :disabled="!canAddPerson" x-on:click="addPerson()">+ Ajouter une personne</button>
+                                <p x-show="panel.errors.allowedExitPersons" x-cloak class="field-error" x-text="panel.errors.allowedExitPersons"></p>
+                            </fieldset>
+
+                            <!-- Fiche médicale : le champ n'existe pas dans le DOM hors Directeur / Surveillant -->
+                            <template x-if="showMedical">
+                                <div>
+                                    <label for="profile-medical" class="form-label">Fiche médicale</label>
+                                    <textarea id="profile-medical" rows="4" maxlength="2000" x-model="panel.form.medicalNotes" class="input-field mt-1"
+                                              placeholder="Allergies, traitements, précautions…"></textarea>
+                                    <p x-show="panel.errors.medicalNotes" x-cloak class="field-error" x-text="panel.errors.medicalNotes"></p>
+                                </div>
+                            </template>
+
+                            <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                                <button type="button" class="btn-modal-secondary group" x-on:click="cancelEdit()">Annuler</button>
+                                <button type="submit" class="btn-modal-primary group" :disabled="panel.saving">
+                                    <span x-text="panel.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </modal-shell>
+</div>

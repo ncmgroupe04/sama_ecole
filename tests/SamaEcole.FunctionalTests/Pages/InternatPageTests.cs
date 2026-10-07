@@ -36,6 +36,21 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         html.Should().Contain("tab === 'occupation'").And.Contain("tab === 'pavillons'");
     }
 
+    [Fact]
+    public async Task The_Boarders_Tab_Is_Embedded_By_Its_Full_Path_And_Hides_The_Medical_Section_From_The_Dom_Behind_An_X_If()
+    {
+        var html = await InternatHtmlAsync();
+
+        html.Should().Contain("tab === 'pensionnaires'");
+        html.Should().Contain("x-data=\"boardersTab()\"", "l'onglet Pensionnaires");
+
+        // La fiche médicale doit être derrière un x-if (absente du DOM), jamais un x-show (présente mais cachée) : un x-show laisserait la
+        // donnée de santé dans la page servie au Secrétariat.
+        html.Should().Contain("<template x-if=\"showMedical\">");
+        html.Should().NotMatchRegex("x-show=\"showMedical\"");
+        html.Should().NotContain("medicalText\" x-show");
+    }
+
     [Theory]
     [InlineData("dormitories")]
     [InlineData("dormitory-rooms")]
@@ -54,15 +69,17 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var helpers = scripts.IndexOf("/js/internat-helpers.js");
         var dormitories = scripts.IndexOf("/js/internat-dormitories.js");
         var occupation = scripts.IndexOf("/js/internat-occupation.js");
+        var boarders = scripts.IndexOf("/js/internat-boarders.js");
         var screen = scripts.IndexOf("/js/internat.js");
 
         helpers.Should().BeGreaterThanOrEqualTo(0);
         dormitories.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
         occupation.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
-        screen.Should().BeGreaterThan(Math.Max(dormitories, occupation));
+        boarders.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
+        screen.Should().BeGreaterThan(new[] { dormitories, occupation, boarders }.Max());
         scripts.IndexOf("/js/trash.js").Should().BeGreaterThanOrEqualTo(0, "les panneaux de corbeille sont chargés par le layout");
 
-        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat.js", "/js/trash.js" })
+        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat-boarders.js", "/js/internat.js", "/js/trash.js" })
         {
             var response = await _client.GetAsync(script);
             response.StatusCode.Should().Be(HttpStatusCode.OK, script);
