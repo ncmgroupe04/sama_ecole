@@ -10,6 +10,9 @@ namespace SamaEcole.Application.Internat.Queries.SearchBoardableStudents;
 /// (spec §5.4). Restreint aux inscriptions ACTIVES de l'année en cours : un élève sans inscription
 /// active n'a rien à affecter. Retourne le régime et la chambre ACTUELS pour le badge de statut et
 /// l'avertissement de transfert côté UI.
+///
+/// Depuis le lot C (modèle Pavillon/Lit), régime et chambre viennent du SÉJOUR actif de l'inscription (« Externe » s'il n'y
+/// en a pas ; chambre nulle pour un demi-pensionnaire ou un interne en attente de lit). JSON inchangé.
 /// </summary>
 public record SearchBoardableStudentsQuery(string SearchTerm) : IRequest<IReadOnlyList<BoardableStudentDto>>;
 
@@ -65,8 +68,14 @@ public class SearchBoardableStudentsQueryHandler(IApplicationDbContext dbContext
                 s.Matricule,
                 s.FullName,
                 ClassroomName = c.Name,
-                e.BoardingStatus,
-                e.RoomId,
+                Regime = dbContext.BoardingEnrollments
+                    .Where(b => b.EnrollmentId == e.Id && b.IsActive)
+                    .Select(b => (BoardingRegime?)b.Regime)
+                    .FirstOrDefault(),
+                RoomId = (from be in dbContext.BoardingEnrollments
+                          where be.EnrollmentId == e.Id && be.IsActive
+                          join bed in dbContext.Beds on be.BedId equals bed.Id
+                          select (Guid?)bed.DormitoryRoomId).FirstOrDefault(),
                 RowVersion = EF.Property<uint>(e, "xmin")
             })
             .OrderBy(r => r.FullName)
@@ -76,13 +85,13 @@ public class SearchBoardableStudentsQueryHandler(IApplicationDbContext dbContext
         var roomIds = results.Where(r => r.RoomId is not null).Select(r => r.RoomId!.Value).Distinct().ToList();
         var roomNames = roomIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await dbContext.Rooms.AsNoTracking()
+            : await dbContext.DormitoryRooms.AsNoTracking()
                 .Where(r => roomIds.Contains(r.Id))
                 .ToDictionaryAsync(r => r.Id, r => r.Name, cancellationToken);
 
         return results
             .Select(r => new BoardableStudentDto(
-                r.Id, r.EnrollmentId, r.Matricule, r.FullName, r.ClassroomName, r.BoardingStatus.ToString(),
+                r.Id, r.EnrollmentId, r.Matricule, r.FullName, r.ClassroomName, (r.Regime?.ToString() ?? nameof(BoardingStatus.Externe)),
                 r.RoomId, r.RoomId is { } id ? roomNames.GetValueOrDefault(id) : null, r.RowVersion))
             .ToList();
     }
