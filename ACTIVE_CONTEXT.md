@@ -661,6 +661,19 @@ tables sont peuplées par la reprise mais ne sont pas encore lues. Suppression d
 un demi-pensionnaire ou une inscription d'année passée dans la même chambre décalait les lits (bug trouvé par
 `BoardingBackfillMigrationTests`).
 
+### Module Internat — modèle Pavillon/Lit, lot B (07/10/2026) — livré (CQRS pavillons, chambres, lits)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-b.md`. `BoardingController` (`/api/v1/boarding`, voir
+Volume 4 §31) : pavillons, chambres (création avec génération des lits) et lits (statut, suppression, restauration),
+corbeilles, code d'erreur `RESOURCE_IN_USE`. Le statut `Occupied` d'un lit est **calculé** depuis les séjours actifs
+(`BoardingOccupancy`), jamais stocké. Suppression stricte, sans cascade.
+
+**Commit isolé à ne pas livrer seul — « Masque les anciennes salles Dortoir » (décision Q1).** Après lui, un dortoir ne se
+crée plus par `/infrastructures` (422) et un dortoir créé par la nouvelle API est invisible de l'ancien écran
+`/internat`, qui lit encore `Room` de type `Dortoir`. **Le lot B ne doit pas être livré en production sans le lot C**
+(bascule des lectures). Le lot C devra aussi réconcilier les affectations faites avec l'ancien écran depuis la migration
+du lot A (la reprise est un instantané).
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
