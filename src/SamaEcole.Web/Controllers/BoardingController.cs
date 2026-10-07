@@ -2,6 +2,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SamaEcole.Application.Boarding;
+using SamaEcole.Application.Boarding.Attendance;
+using SamaEcole.Application.Boarding.Attendance.GetAttendanceSheet;
+using SamaEcole.Application.Boarding.Attendance.RecordAttendance;
 using SamaEcole.Application.Boarding.Beds.ChangeBedStatus;
 using SamaEcole.Application.Boarding.Beds.CreateBed;
 using SamaEcole.Application.Boarding.Beds.DeleteBed;
@@ -19,6 +22,10 @@ using SamaEcole.Application.Boarding.Dormitories.GetDormitory;
 using SamaEcole.Application.Boarding.Dormitories.ListDormitories;
 using SamaEcole.Application.Boarding.Dormitories.RestoreDormitory;
 using SamaEcole.Application.Boarding.Dormitories.UpdateDormitory;
+using SamaEcole.Application.Boarding.Leaves;
+using SamaEcole.Application.Boarding.Leaves.DeclareLeave;
+using SamaEcole.Application.Boarding.Leaves.ListLeaves;
+using SamaEcole.Application.Boarding.Leaves.RecordReturn;
 using SamaEcole.Application.Boarding.Rooms.CreateDormitoryRoom;
 using SamaEcole.Application.Boarding.Rooms.DeleteDormitoryRoom;
 using SamaEcole.Application.Boarding.Rooms.GetDeletedDormitoryRooms;
@@ -67,6 +74,14 @@ public class BoardingController(ISender mediator) : ControllerBase
     public record UpdateBoarderProfileRequest(
         string? MedicalNotes, string? EmergencyContactName, string? EmergencyContactPhone,
         List<AllowedExitPersonDto>? AllowedExitPersons, uint RowVersion);
+
+    public record DeclareLeaveRequest(
+        Guid BoarderId, DateOnly LeaveDate, DateOnly ExpectedReturnDate, BoardingLeaveReason Reason,
+        string? ReasonDetail, string AccompaniedBy);
+
+    public record ReturnLeaveRequest(uint RowVersion, DateOnly? ActualReturnDate);
+
+    public record RecordAttendanceRequest(DateOnly Date, Guid DormitoryId, List<AttendanceEntryInput>? Entries);
 
     // ------------------------------------------------------------------ Pavillons
 
@@ -360,4 +375,86 @@ public class BoardingController(ISender mediator) : ControllerBase
                 id, request.MedicalNotes, request.EmergencyContactName, request.EmergencyContactPhone,
                 request.AllowedExitPersons ?? [], request.RowVersion),
             cancellationToken));
+
+    // ------------------------------------------------------------------ Sorties
+
+    /// <summary>
+    /// Déclare la sortie d'un pensionnaire actif. Un accompagnateur hors liste est ACCEPTÉ et signalé
+    /// (<c>isCompanionUnlisted</c>). 409 <c>LEAVE_ALREADY_OPEN</c> si une sortie est déjà ouverte.
+    /// </summary>
+    [HttpPost("leaves")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoardingLeaveDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DeclareLeave([FromBody] DeclareLeaveRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new DeclareLeaveCommand(
+                request.BoarderId, request.LeaveDate, request.ExpectedReturnDate, request.Reason, request.ReasonDetail,
+                request.AccompaniedBy),
+            cancellationToken);
+
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>Enregistre le retour (date du jour par défaut). 409 <c>LEAVE_ALREADY_RETURNED</c> s'il est déjà enregistré.</summary>
+    [HttpPut("leaves/{id:guid}/return")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoardingLeaveDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RecordReturn(
+        Guid id, [FromBody] ReturnLeaveRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new RecordReturnCommand(id, request.RowVersion, request.ActualReturnDate), cancellationToken));
+
+    /// <summary>Registre des sorties, plus récentes d'abord. <c>status</c> : Pending, Active, Overdue ou Returned.</summary>
+    [HttpGet("leaves")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<PaginatedLeaves>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ListLeaves(
+        [FromQuery] Guid? boarderId, [FromQuery] Guid? dormitoryId, [FromQuery] LeaveStatus? status,
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] bool unlistedOnly,
+        CancellationToken cancellationToken, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await mediator.Send(
+            new ListLeavesQuery
+            {
+                BoarderId = boarderId, DormitoryId = dormitoryId, Status = status, From = from, To = to,
+                UnlistedOnly = unlistedOnly, Page = page, PageSize = pageSize
+            }, cancellationToken));
+
+    // ------------------------------------------------------------------ Pointage de nuit
+
+    /// <summary>
+    /// Pointage collectif d'un pavillon. Réponse LIGNE PAR LIGNE : une ligne refusée n'empêche pas les autres. Un pensionnaire
+    /// en sortie n'est accepté qu'absent.
+    /// </summary>
+    [HttpPost("attendance")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<RecordAttendanceResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RecordAttendance(
+        [FromBody] RecordAttendanceRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new RecordAttendanceCommand(request.Date, request.DormitoryId, request.Entries ?? []), cancellationToken));
+
+    /// <summary>Feuille d'appel du soir d'un pavillon (absents en permission pré-remplis).</summary>
+    [HttpGet("attendance")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<AttendanceSheetDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetAttendanceSheet(
+        [FromQuery] Guid dormitoryId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetAttendanceSheetQuery(dormitoryId, date), cancellationToken));
 }
