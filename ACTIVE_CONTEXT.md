@@ -637,6 +637,30 @@ base) → refus 422 explicite d'une écriture Interne/chambre quand le module es
 Données de vérification créées sur une école jetable dédiée, entièrement nettoyées après coup (base de
 développement partagée).
 
+### Module Internat — modèle Pavillon/Lit, lot A (06/10/2026) — livré (schéma, reprise, purges)
+
+Spec : `docs/superpowers/specs/2026-10-06-internat-backend-and-profile-isolation-design.md` (PR #60) ; plan :
+`docs/superpowers/plans/2026-10-06-internat-backend-lot-a.md`. Fait ÉVOLUER le module du 18/09 : **les
+arbitrages 1, 2 et 3 ci-dessus sont révisés** (hiérarchie dédiée `Dormitory → DormitoryRoom → Bed`, capacité
+dérivée du nombre de lits, séjour porté par `BoardingEnrollment`). Les arbitrages 4 (pension jamais retirée) et
+5 (le masquage d'IHM n'est qu'ergonomique) restent en vigueur.
+
+**Livré dans ce lot, schéma seulement :** six tables (`dormitories`, `dormitory_rooms`, `beds`,
+`boarding_enrollments`, `boarding_leaves`, `boarding_attendances`) avec RLS, index uniques partiels (un séjour actif
+par inscription, un séjour actif par lit, une sortie ouverte par pensionnaire, un pointage par nuit), CHECK
+(`Occupied` jamais stocké, demi-pensionnaire sans lit, séjour clos sans lit) — migration `AddBoardingDormitoryModel`
+; reprise des données héritées dans cette même migration (pavillon = `Building`, chambre = `Room`, lits =
+`max(capacité, internes de l'année active)`, genre déduit des élèves sinon `Mixte`, séjours clos pour les années
+passées) ; patch de `reset_school_data` et `delete_school_year` — migration `AddBoardingToPurges`.
+
+**Pas encore livré :** aucun handler, endpoint, PDF ni écran. `Enrollment.BoardingStatus/RoomId` et
+`/api/v1/internat/*` restent la source de vérité de l'application jusqu'à la bascule (lot C) ; les nouvelles
+tables sont peuplées par la reprise mais ne sont pas encore lues. Suppression des anciennes colonnes : lot F.
+
+**Piège évité :** le rang de lit de la reprise ne compte que les internes de l'année active d'une même chambre —
+un demi-pensionnaire ou une inscription d'année passée dans la même chambre décalait les lits (bug trouvé par
+`BoardingBackfillMigrationTests`).
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
