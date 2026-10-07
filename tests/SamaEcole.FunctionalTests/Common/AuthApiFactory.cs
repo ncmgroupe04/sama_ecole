@@ -415,6 +415,17 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync("""UPDATE students SET "InstructorId" = NULL WHERE "InstructorId" IS NOT NULL;""");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM instructors;");
 
+        // Internat « Pavillon/Lit » : les séjours référencent les inscriptions, les élèves et les lits (FK Restrict), et les
+        // pavillons peuvent référencer un compte Surveillant — donc AVANT la purge des inscriptions, des élèves et des
+        // comptes plus bas. Enfants avant parents. Sans elle, un test qui affecte un élève ferait échouer le nettoyage du
+        // suivant en 23503.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_attendances;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_leaves;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_enrollments;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM beds;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM dormitory_rooms;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM dormitories;");
+
         // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
         // dans un test resterait provisionnée et fausserait le suivant. Les utilisateurs d'abord :
         // ils référencent les écoles.

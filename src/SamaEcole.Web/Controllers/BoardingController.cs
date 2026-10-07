@@ -7,6 +7,11 @@ using SamaEcole.Application.Boarding.Beds.CreateBed;
 using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
+using SamaEcole.Application.Boarding.Boarders.AssignBed;
+using SamaEcole.Application.Boarding.Boarders.EndBoarding;
+using SamaEcole.Application.Boarding.Boarders.GetBoarder;
+using SamaEcole.Application.Boarding.Boarders.ListBoarders;
+using SamaEcole.Application.Boarding.Boarders.UpdateBoarderProfile;
 using SamaEcole.Application.Boarding.Dormitories.CreateDormitory;
 using SamaEcole.Application.Boarding.Dormitories.DeleteDormitory;
 using SamaEcole.Application.Boarding.Dormitories.GetDeletedDormitories;
@@ -56,6 +61,12 @@ public class BoardingController(ISender mediator) : ControllerBase
     public record CreateBedRequest(Guid DormitoryRoomId, int? BedNumber);
 
     public record ChangeBedStatusRequest(BedStatus Status, uint RowVersion);
+
+    public record AssignBedRequest(Guid EnrollmentId, BoardingRegime Regime, Guid? BedId, bool IncludeBoardingFee, uint? RowVersion);
+
+    public record UpdateBoarderProfileRequest(
+        string? MedicalNotes, string? EmergencyContactName, string? EmergencyContactPhone,
+        List<AllowedExitPersonDto>? AllowedExitPersons, uint RowVersion);
 
     // ------------------------------------------------------------------ Pavillons
 
@@ -273,4 +284,80 @@ public class BoardingController(ISender mediator) : ControllerBase
         await mediator.Send(new RestoreBedCommand(id), cancellationToken);
         return NoContent();
     }
+
+    // ------------------------------------------------------------------ Pensionnaires
+
+    /// <summary>
+    /// Affecte un élève (inscription de l'année active) à un lit, ou l'inscrit en demi-pension. Un séjour actif existant est
+    /// TRANSFÉRÉ : le <c>rowVersion</c> du séjour est alors requis. 409 <c>BED_UNAVAILABLE</c> si le lit est pris.
+    /// </summary>
+    [HttpPost("assign-bed")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoarderListItemDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AssignBed([FromBody] AssignBedRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new AssignBedCommand(request.EnrollmentId, request.Regime, request.BedId, request.IncludeBoardingFee, request.RowVersion),
+            cancellationToken));
+
+    /// <summary>Met fin au séjour (lit libéré, rien n'est supprimé). 409 <c>LEAVE_IN_PROGRESS</c> si une sortie est ouverte.</summary>
+    [HttpDelete("unassign-bed/{boarderId:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnassignBed(
+        Guid boarderId, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new EndBoardingCommand(boarderId, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("boarders")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<PaginatedBoarders>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ListBoarders(
+        [FromQuery] Guid? dormitoryId, [FromQuery] Guid? roomId, [FromQuery] BoardingRegime? regime,
+        [FromQuery] string? status, [FromQuery] string? search,
+        CancellationToken cancellationToken, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await mediator.Send(
+            new ListBoardersQuery
+            {
+                DormitoryId = dormitoryId, RoomId = roomId, Regime = regime, Status = status ?? "active",
+                Search = search, Page = page, PageSize = pageSize
+            }, cancellationToken));
+
+    /// <summary>Fiche complète. <c>medicalNotes</c> est <c>null</c> pour tout rôle autre que Directeur et Surveillant.</summary>
+    [HttpGet("boarders/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoarderDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBoarder(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetBoarderQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Fiche médicale, contact d'urgence et personnes habilitées. Le Secrétariat reçoit 403 s'il envoie
+    /// <c>medicalNotes</c> ; en l'omettant, la fiche médicale existante est conservée.
+    /// </summary>
+    [HttpPut("boarders/{id:guid}/profile")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoarderDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateBoarderProfile(
+        Guid id, [FromBody] UpdateBoarderProfileRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new UpdateBoarderProfileCommand(
+                id, request.MedicalNotes, request.EmergencyContactName, request.EmergencyContactPhone,
+                request.AllowedExitPersons ?? [], request.RowVersion),
+            cancellationToken));
 }
