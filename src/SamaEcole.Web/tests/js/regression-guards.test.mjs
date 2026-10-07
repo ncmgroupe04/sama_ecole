@@ -587,3 +587,68 @@ test('garde-fou : aucun composant Alpine n\'exécute son init() deux fois', () =
         doubled.join('\n  ')
     );
 });
+
+// ----------------------------------------------------------------------------------------------------------------
+// Navigation Internat / Daara : module INTERNAT, jamais Coran (lot G, décision G-D1)
+//
+// La spec du 06/10/2026 (§8.1) présentait comme une anomalie que /suivi-coranique, /oustaz et /halqa soient conditionnés par
+// `internatEnabled`, au motif que leur API relèverait du module Coran. C'est faux dans le code : ces écrans appellent
+// /api/v1/internat/*, gardé par [RequireModule(Internat)] (InternatController) ; /api/v1/quran (module Coran) n'a aucun
+// consommateur dans le front. « Corriger » les menus par `coranEnabled` masquerait ces écrans à une école Internat-seul alors que leur
+// API répond, et les montrerait à une école Coran-seul dont l'API répond 403. Ce test fige l'état correct.
+// Le jour où un écran consommera /api/v1/quran, c'est LUI qu'on conditionnera par `coranEnabled` — et on adaptera ce garde-fou.
+// ----------------------------------------------------------------------------------------------------------------
+
+const INTERNAT_ROUTES = ['/internat', '/suivi-coranique', '/oustaz', '/halqa'];
+
+function viewSource(name) {
+    return readFileSync(path.join(WEB_ROOT, 'Views', 'Shared', name), 'utf8');
+}
+
+test('navigation : chaque lien Internat/Daara de la barre latérale est conditionné par internatEnabled et jamais par coranEnabled', () => {
+    const layout = viewSource('_Layout.cshtml');
+
+    for (const route of INTERNAT_ROUTES) {
+        const match = layout.match(new RegExp(`<a href="${route}"[^>]*>`));
+        assert.ok(match, `le lien ${route} doit exister dans la barre latérale`);
+
+        const tag = match[0];
+        assert.match(tag, /internatEnabled/, `${route} doit être conditionné par internatEnabled (son API relève du module Internat)`);
+        assert.doesNotMatch(tag, /coranEnabled/, `${route} ne doit pas dépendre de coranEnabled : voir la décision G-D1`);
+    }
+});
+
+test('navigation : la navigation rapide conditionne /internat par internatEnabled', () => {
+    const quickNav = viewSource('_QuickNav.cshtml');
+
+    const line = quickNav.split('\n').find((l) => l.includes('("/internat"'));
+    assert.ok(line, 'l\'entrée /internat doit exister dans la navigation rapide');
+    assert.match(line, /"internatEnabled"/);
+    assert.doesNotMatch(line, /coranEnabled/);
+});
+
+test('navigation : aucune vue ne conditionne un écran par coranEnabled tant qu\'aucun écran ne consomme /api/v1/quran', () => {
+    const viewsDir = path.join(WEB_ROOT, 'Views');
+    const offenders = [];
+
+    const walk = (dir) => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name.endsWith('.cshtml') && readFileSync(full, 'utf8').includes('coranEnabled')) {
+                offenders.push(path.relative(WEB_ROOT, full));
+            }
+        }
+    };
+    walk(viewsDir);
+
+    assert.deepEqual(offenders, [], 'coranEnabled est dans le store mais aucun écran ne doit en dépendre pour l\'instant (G-D1)');
+});
+
+test('navigation : aucun script du front n\'appelle /api/v1/quran (sinon coranEnabled devient pertinent et ce garde-fou doit évoluer)', () => {
+    const consumers = jsFiles()
+        .filter((f) => /api\/v1\/quran|['"`]\/quran\b/.test(stripComments(f.source)))
+        .map((f) => f.name);
+
+    assert.deepEqual(consumers, [], 'un écran consomme /api/v1/quran : le conditionner par coranEnabled et adapter les tests de navigation');
+});
