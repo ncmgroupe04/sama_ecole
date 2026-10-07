@@ -738,8 +738,23 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
   sans lit ; libération par `unassign-bed`. **Plus aucun écran n'appelle les 3 routes héritées** (`/internat/dashboard`, `/internat/students/search`,
   `/internat/assignments/{id}`) : un test JS le verrouille, le lot F peut les supprimer. Piège de test : dans un jeu de données inséré en une seule transaction, tous
   les `xmin` sont égaux — faire avancer l'un d'eux dans une transaction séparée pour qu'un test de jeton ait un sens.
-- **Reste :** G4 (pensionnaires, sorties, pointage, PDF), puis le lot F
-  (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`).
+- **G4 (fait) — onglets Pensionnaires, Sorties et Pointage, PDF.** `/internat` compte désormais cinq onglets (`#occupation`, `#pavillons`, `#pensionnaires`,
+  `#sorties`, `#pointage`), chacun un composant Alpine et une vue partielle appelée par chemin complet (`_Boarders`, `_Leaves`, `_Attendance`). Aucune route
+  ajoutée, aucune migration.
+  - **Fiche médicale :** affichée et envoyée seulement pour Directeur et Surveillant (miroir de `BoarderDetailReader.CanReadMedical`). La section est derrière un
+    `<template x-if>` — **absente du DOM**, jamais un `x-show` — et `medicalNotes` n'est jamais dans le corps du `PUT …/profile` pour un autre rôle (clé absente :
+    le serveur conserve la fiche). `null` se lit « Non renseignée ». Le serveur reste la barrière (masque, 403).
+  - **PDF :** fiche du pensionnaire et registre du pavillon passent par la modale commune `window.pdfPreview` (jeton, erreurs 403/404/422 affichées), pas de lien
+    `<a href>` (les routes exigent l'en-tête `Authorization`) ni de nouveau mécanisme. Aucun paramètre de rôle n'est envoyé : le masquage du PDF est décidé par le serveur.
+  - **Sorties :** un accompagnateur hors liste est un **avertissement, jamais un blocage** (spec Q5), avec la règle de `CompanionMatcher` (espaces et casse ignorés,
+    accents conservés, nom complet) ; l'écran n'envoie pas `isCompanionUnlisted`. Retour avec le `rowVersion` de la sortie.
+  - **Pointage :** un pensionnaire en permission est verrouillé « absent » ; seules les lignes décidées et modifiées partent ; un résultat mixte garde chaque refus
+    visible sur sa ligne ; changer de pavillon ou de nuit avec une saisie non enregistrée demande confirmation.
+  - **Pièges :** (1) `LEAVE_IN_PROGRESS` garde le message précis du serveur (un test du lot G3 le verrouille) ; (2) les garde-fous de `regression-guards.test.mjs` refusent
+    un `catch` muet sur un `load*()` et un littéral `'/api/v1/boarding'` seul (écrire les chemins complets) ; (3) un composant dont `init()` est appelé par le harnais
+    ne doit pas être ré-initialisé dans les tests ; (4) `Write`/`Edit` décodent `\uXXXX` : pour écrire un échappement dans un fichier source, le construire par code.
+- **Reste :** le lot F (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`),
+  puis la recette navigateur des cinq onglets (3 rôles + Enseignant + module désactivé + coupure réseau).
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
