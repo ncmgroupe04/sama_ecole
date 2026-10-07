@@ -35,7 +35,7 @@ public abstract class LeaveTestBase : IAsyncLifetime
     /// <summary>Séjours par clé : m1-m3 (pavillon A), m4 (pavillon A2), attente (interne sans lit), demi, clos, autre (école B).</summary>
     protected readonly Dictionary<string, Guid> Stays = new();
 
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         await Db.InitializeAsync();
         await using var owner = Db.NewOwnerContext();

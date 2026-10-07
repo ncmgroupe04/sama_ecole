@@ -33,11 +33,13 @@ public record AllowedExitPersonDto(string Name, string Relationship, string Phon
 
 /// <summary>
 /// Fiche complète d'un pensionnaire. <see cref="MedicalNotes"/> est une donnée de santé d'un mineur : elle n'est renvoyée
-/// qu'au Directeur et au Surveillant, et vaut <c>null</c> pour tout autre rôle (spec §5.2).
+/// qu'au Directeur et au Surveillant, et vaut <c>null</c> pour tout autre rôle (spec §5.2). <see cref="Leaves"/> : les dix
+/// dernières sorties du pensionnaire, la plus récente d'abord (champ additif du lot D).
 /// </summary>
 public record BoarderDetailDto(
     BoarderListItemDto Boarder,
     string? MedicalNotes,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
-    IReadOnlyList<AllowedExitPersonDto> AllowedExitPersons);
+    IReadOnlyList<AllowedExitPersonDto> AllowedExitPersons,
+    IReadOnlyList<Leaves.BoardingLeaveDto> Leaves);

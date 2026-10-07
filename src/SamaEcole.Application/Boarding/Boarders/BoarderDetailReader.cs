@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SamaEcole.Application.Boarding.Leaves;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 
@@ -13,8 +14,10 @@ internal static class BoarderDetailReader
 {
     public static bool CanReadMedical(Role? role) => role is Role.Directeur or Role.Surveillant;
 
+    private const int RecentLeaves = 10;
+
     public static async Task<BoarderDetailDto> GetAsync(
-        IApplicationDbContext dbContext, Guid id, Role? role, CancellationToken cancellationToken)
+        IApplicationDbContext dbContext, Guid id, Role? role, TimeProvider timeProvider, CancellationToken cancellationToken)
     {
         var stay = await dbContext.BoardingEnrollments.AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id, cancellationToken)
@@ -22,11 +25,17 @@ internal static class BoarderDetailReader
 
         var item = await BoarderReader.GetItemAsync(dbContext, id, cancellationToken);
 
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var leaves = await LeaveReader.Project(dbContext, dbContext.BoardingLeaves.AsNoTracking().Where(l => l.BoardingEnrollmentId == id))
+            .Take(RecentLeaves)
+            .ToListAsync(cancellationToken);
+
         return new BoarderDetailDto(
             item,
             CanReadMedical(role) ? stay.MedicalNotes : null,
             stay.EmergencyContactName,
             stay.EmergencyContactPhone,
-            stay.AllowedExitPersons.Select(p => new AllowedExitPersonDto(p.Name, p.Relationship, p.Phone)).ToList());
+            stay.AllowedExitPersons.Select(p => new AllowedExitPersonDto(p.Name, p.Relationship, p.Phone)).ToList(),
+            leaves.Select(l => LeaveReader.ToDto(l, today)).ToList());
     }
 }

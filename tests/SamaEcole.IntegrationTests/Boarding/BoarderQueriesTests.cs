@@ -115,13 +115,13 @@ public class BoarderQueriesTests : IAsyncLifetime
     private async Task<PaginatedBoarders> ListAsync(ListBoardersQuery query)
     {
         await using var ctx = _db.NewAppContext(EcoleA);
-        return await new ListBoardersQueryHandler(ctx).Handle(query, CancellationToken.None);
+        return await new ListBoardersQueryHandler(ctx, TimeProvider.System).Handle(query, CancellationToken.None);
     }
 
     private async Task<BoarderDetailDto> DetailAsync(Guid id, Role role, Guid? school = null)
     {
         await using var ctx = _db.NewAppContext(school ?? EcoleA);
-        return await new GetBoarderQueryHandler(ctx, new TestCurrentUser(UserId, role)).Handle(new GetBoarderQuery(id), CancellationToken.None);
+        return await new GetBoarderQueryHandler(ctx, new TestCurrentUser(UserId, role), TimeProvider.System).Handle(new GetBoarderQuery(id), CancellationToken.None);
     }
 
     // ------------------------------------------------------------------ Liste
@@ -201,7 +201,7 @@ public class BoarderQueriesTests : IAsyncLifetime
     {
         var token = rowVersion ?? (await DetailAsync(id, Role.Directeur)).Boarder.RowVersion;
         await using var ctx = _db.NewAppContext(EcoleA);
-        return await new UpdateBoarderProfileCommandHandler(ctx, new TestCurrentUser(UserId, role)).Handle(
+        return await new UpdateBoarderProfileCommandHandler(ctx, new TestCurrentUser(UserId, role), TimeProvider.System).Handle(
             new UpdateBoarderProfileCommand(id, notes, contact, "77 000 00 00", persons ?? [], token), CancellationToken.None);
     }
 
@@ -252,7 +252,7 @@ public class BoarderQueriesTests : IAsyncLifetime
         await stale.Should().ThrowAsync<ConcurrencyConflictException>();
 
         await using var ctx = _db.NewAppContext(EcoleA);
-        var other = async () => await new UpdateBoarderProfileCommandHandler(ctx, new TestCurrentUser(UserId, Role.Directeur))
+        var other = async () => await new UpdateBoarderProfileCommandHandler(ctx, new TestCurrentUser(UserId, Role.Directeur), TimeProvider.System)
             .Handle(new UpdateBoarderProfileCommand(_stays["b1"], "x", null, null, [], 0), CancellationToken.None);
         await other.Should().ThrowAsync<KeyNotFoundException>();
     }

@@ -49,7 +49,8 @@ public class UpdateBoarderProfileCommandValidator : AbstractValidator<UpdateBoar
     }
 }
 
-public class UpdateBoarderProfileCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
+public class UpdateBoarderProfileCommandHandler(
+    IApplicationDbContext dbContext, ICurrentUserService currentUser, TimeProvider timeProvider)
     : IRequestHandler<UpdateBoarderProfileCommand, BoarderDetailDto>
 {
     public async Task<BoarderDetailDto> Handle(UpdateBoarderProfileCommand request, CancellationToken cancellationToken)
@@ -85,7 +86,7 @@ public class UpdateBoarderProfileCommandHandler(IApplicationDbContext dbContext,
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return await BoarderDetailReader.GetAsync(dbContext, stay.Id, role, cancellationToken);
+        return await BoarderDetailReader.GetAsync(dbContext, stay.Id, role, timeProvider, cancellationToken);
     }
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

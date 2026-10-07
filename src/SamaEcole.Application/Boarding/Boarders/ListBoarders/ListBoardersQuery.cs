@@ -8,8 +8,8 @@ namespace SamaEcole.Application.Boarding.Boarders.ListBoarders;
 
 /// <summary>
 /// GET /api/v1/boarding/boarders — pensionnaires de l'année scolaire ACTIVE (décision D10). <see cref="Status"/> :
-/// <c>active</c> (défaut), <c>ended</c> (séjours clos de l'année) ou <c>awaitingBed</c> (internes actifs sans lit).
-/// Le filtre « en permission » arrive avec les sorties (lot D).
+/// <c>active</c> (défaut), <c>ended</c> (séjours clos de l'année), <c>awaitingBed</c> (internes actifs sans lit) ou
+/// <c>onLeave</c> (pensionnaires actifs actuellement en sortie : parti et pas encore rentré, retard compris).
 /// </summary>
 public record ListBoardersQuery : IRequest<PaginatedBoarders>
 {
@@ -24,18 +24,18 @@ public record ListBoardersQuery : IRequest<PaginatedBoarders>
 
 public class ListBoardersQueryValidator : AbstractValidator<ListBoardersQuery>
 {
-    private static readonly string[] Statuses = ["active", "ended", "awaitingBed"];
+    private static readonly string[] Statuses = ["active", "ended", "awaitingBed", "onLeave"];
 
     public ListBoardersQueryValidator()
     {
         RuleFor(x => x.Status)
             .Must(s => Statuses.Contains(s, StringComparer.OrdinalIgnoreCase))
-            .WithMessage("Statut inconnu : choisissez active, ended ou awaitingBed.");
+            .WithMessage("Statut inconnu : choisissez active, ended, awaitingBed ou onLeave.");
         RuleFor(x => x.Regime).IsInEnum().When(x => x.Regime is not null);
     }
 }
 
-public class ListBoardersQueryHandler(IApplicationDbContext dbContext)
+public class ListBoardersQueryHandler(IApplicationDbContext dbContext, TimeProvider timeProvider)
     : IRequestHandler<ListBoardersQuery, PaginatedBoarders>
 {
     private const int MaxPageSize = 100;
@@ -44,6 +44,7 @@ public class ListBoardersQueryHandler(IApplicationDbContext dbContext)
     {
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
         var activeYearId = await dbContext.SchoolYears.AsNoTracking()
             .Where(y => y.IsActive)
@@ -65,6 +66,8 @@ public class ListBoardersQueryHandler(IApplicationDbContext dbContext)
         {
             "ended" => stays.Where(b => !b.IsActive),
             "awaitingbed" => stays.Where(b => b.IsActive && b.Regime == BoardingRegime.Interne && b.BedId == null),
+            "onleave" => stays.Where(b => b.IsActive && dbContext.BoardingLeaves.Any(
+                l => l.BoardingEnrollmentId == b.Id && l.ActualReturnDate == null && l.LeaveDate <= today)),
             _ => stays.Where(b => b.IsActive)
         };
 

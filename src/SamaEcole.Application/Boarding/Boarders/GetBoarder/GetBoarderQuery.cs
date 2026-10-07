@@ -9,9 +9,9 @@ namespace SamaEcole.Application.Boarding.Boarders.GetBoarder;
 /// </summary>
 public record GetBoarderQuery(Guid Id) : IRequest<BoarderDetailDto>;
 
-public class GetBoarderQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
+public class GetBoarderQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser, TimeProvider timeProvider)
     : IRequestHandler<GetBoarderQuery, BoarderDetailDto>
 {
     public Task<BoarderDetailDto> Handle(GetBoarderQuery request, CancellationToken cancellationToken) =>
-        BoarderDetailReader.GetAsync(dbContext, request.Id, currentUser.Role, cancellationToken);
+        BoarderDetailReader.GetAsync(dbContext, request.Id, currentUser.Role, timeProvider, cancellationToken);
 }
