@@ -33,6 +33,7 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         // Cartographie IEF (Évolution N°7) : défaut false en base, une inscription existante reste « Nouveau ».
         builder.Property(e => e.IsTransferredIn).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.PreviousSchoolName).HasMaxLength(150);
+#pragma warning disable CS0618 // Colonnes héritées (lot C) : toujours MAPPÉES jusqu'à leur suppression en base (lot F).
         // Régime d'hébergement (module Internat) : défaut base 'Externe' pour que toute inscription
         // existante (créée avant cette colonne) reste Externe, jamais NULL — même contrat qu'IsRepeating.
         builder.Property(e => e.BoardingStatus)
@@ -101,5 +102,6 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .IsRequired(false);
 
         builder.HasIndex(e => new { e.SchoolId, e.RoomId });
+#pragma warning restore CS0618
     }
 }

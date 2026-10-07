@@ -78,16 +78,22 @@ public class Enrollment : AuditableEntity, ITenantEntity
     public DateTimeOffset EnrolledAt { get; set; }
 
     /// <summary>
-    /// Régime d'hébergement (module Internat), portée ANNUELLE comme <see cref="IsRepeating"/>.
+    /// OBSOLÈTE depuis le lot C (modèle Pavillon/Lit) : le régime et le lit d'un élève vivent dans <c>boarding_enrollments</c>
+    /// (<see cref="BoardingEnrollment"/>). Cette colonne n'est plus ni lue ni écrite ; elle reste en base jusqu'au lot F (sa
+    /// suppression exige que l'ancien écran et ses routes aient disparu). Historique : régime d'hébergement (module Internat),
+    /// portée ANNUELLE comme <see cref="IsRepeating"/>.
     /// Défaut Externe : le module est désactivé par défaut (SchoolSettingsDefaults.IsInternatEnabled),
     /// donc toute inscription existante ou nouvelle sans saisie explicite reste Externe.
     /// </summary>
+    [Obsolete("Remplacé par BoardingEnrollment (modèle Pavillon/Lit, lot C) : plus lu ni écrit. Suppression en base : lot F.")]
     public BoardingStatus BoardingStatus { get; set; } = BoardingStatus.Externe;
 
     /// <summary>
-    /// Chambre affectée (module Internat) — significatif seulement si <see cref="BoardingStatus"/> ≠
+    /// OBSOLÈTE depuis le lot C : voir <see cref="BoardingStatus"/>. Historique : chambre affectée (module Internat) —
+    /// significatif seulement si <see cref="BoardingStatus"/> ≠
     /// Externe. Null pour un externe, ou un interne/demi-pensionnaire pas encore affecté à une
     /// chambre précise (l'école a choisi le régime avant de loger l'élève).
     /// </summary>
+    [Obsolete("Remplacé par BoardingEnrollment (modèle Pavillon/Lit, lot C) : plus lu ni écrit. Suppression en base : lot F.")]
     public Guid? RoomId { get; set; }
 }
