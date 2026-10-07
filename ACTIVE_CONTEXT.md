@@ -674,6 +674,26 @@ crée plus par `/infrastructures` (422) et un dortoir créé par la nouvelle API
 (bascule des lectures). Le lot C devra aussi réconcilier les affectations faites avec l'ancien écran depuis la migration
 du lot A (la reprise est un instantané).
 
+### Module Internat — modèle Pavillon/Lit, lot C (07/10/2026) — livré (réconciliation, pensionnaires, bascule)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-c.md`. **`boarding_enrollments` est désormais la source de vérité de
+l'hébergement.** Réconciliation à usage unique (migration `ReconcileBoardingWithLegacyModel`) : l'ancien modèle prévaut pour les séjours,
+la structure est additive. Nouvelles routes `/api/v1/boarding/{assign-bed,unassign-bed,boarders,boarders/{id},boarders/{id}/profile}`
+(Volume 4 §31.1) avec masquage de la fiche médicale par rôle. Service unique `IBoardingAssignmentService` : lit libre/maintenance/genre,
+pension ajoutée une fois et jamais retirée, course sur le dernier lit → 409 `BED_UNAVAILABLE`.
+
+**Compatibilité** (Volume 4 §31.2) : `/api/v1/internat/*` et `POST /enrollments` gardent leur JSON ; leurs handlers sont des adaptateurs.
+`Enrollment.BoardingStatus/RoomId` sont `[Obsolete]`, plus lus ni écrits (suppression : lot F). Un demi-pensionnaire n'occupe plus de place.
+
+**PRÉREQUIS DE DÉPLOIEMENT — à ne pas ignorer :**
+1. **Arrêter toutes les anciennes instances AVANT d'appliquer la migration** (pas de déploiement progressif) : une instance du lot A/B
+   écrirait encore des colonnes que plus personne ne lit.
+2. **Livrer les lots B et C dans la même fenêtre** : le lot B coupe la création de dortoirs par `/infrastructures`.
+3. **Ne jamais rejouer la réconciliation** après la bascule : elle fermerait de vrais séjours.
+4. Contrôle après déploiement : séjours actifs de l'année active = inscriptions pensionnaires de l'année active (requête dans la PR).
+
+Reste : lot D (sorties et pointage de nuit), lot E (PDF), lot F (suppression des colonnes et routes héritées), lot G (IHM).
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,

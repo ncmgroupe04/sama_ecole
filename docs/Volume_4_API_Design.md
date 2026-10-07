@@ -91,6 +91,8 @@ logs serveur (Volume 7).
 | `CONCURRENCY_CONFLICT` | Écriture concurrente (RowVersion/xmin) — règle #5 | 409 |
 | `BUSINESS_RULE_VIOLATION` | Règle métier bloquant l'opération vu l'état de la ressource | 409 |
 | `RESOURCE_IN_USE` | La ressource a encore des éléments vivants dépendants : pavillon avec chambres, chambre avec lits, lit occupé (§31) | 409 |
+| `BED_UNAVAILABLE` | Le lit demandé est (ou vient d'être) tenu par un autre pensionnaire — course tranchée par l'index unique du lit (§31) | 409 |
+| `LEAVE_IN_PROGRESS` | Fin de séjour refusée : une sortie est encore ouverte, enregistrez d'abord le retour (§31) | 409 |
 | `ARCHIVED_ENTITY_EXISTS` / `ACTIVE_ENTITY_CONFLICT` / `PARENT_ENTITY_ARCHIVED` | Cycle soft delete : l'identité n'existe qu'à l'état supprimé / une ligne active la porte déjà / le parent est supprimé | 409 |
 | `INVALID_CREDENTIALS` | Authentification échouée (message volontairement générique) | 401 |
 | `FORBIDDEN` | Permission insuffisante | 403 |
@@ -983,8 +985,37 @@ règle que `DELETE /buildings`). Cela rend la restauration non ambiguë.
 **Anciennes salles `Dortoir`.** `GET /api/v1/buildings` n'expose plus les salles de type `Dortoir` ni les bâtiments qui ne
 contiennent que des dortoirs ; `POST`/`PUT /api/v1/rooms` refusent `Dortoir` (`422`). Voir §17.
 
-**Pas encore livré** (lots suivants) : affectation d'un élève à un lit, fin de séjour, pensionnaires, sorties, pointage de nuit
-et PDF.
+### 31.1 Pensionnaires (lot C)
+
+Un **séjour** (`boarding_enrollments`) rattache l'inscription d'un élève de l'année active à un lit (régime `Interne`) ou à la
+demi-pension (aucun lit). Rôles : lecture et écriture `Directeur`, `Secretariat`, `Surveillant` ; la fiche médicale a sa propre règle (ci-dessous).
+
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/boarding/assign-bed` | `{ enrollmentId, regime, bedId?, includeBoardingFee, rowVersion? }` — `200` avec la ligne du pensionnaire. `Interne` ⇒ `bedId` requis ; `DemiPensionnaire` ⇒ `bedId` interdit. Si l'élève a déjà un séjour actif, c'est un **transfert** : `rowVersion` (jeton du séjour) est requis, `409` s'il est périmé. `409 BED_UNAVAILABLE` si le lit est pris ; `422` si le lit est en maintenance ou si le pavillon n'est pas du genre de l'élève (`Mixte` accepte tout) ; `404` si l'inscription n'est pas de l'année active. `includeBoardingFee` ajoute la ligne de pension **une seule fois**. |
+| `DELETE` | `/api/v1/boarding/unassign-bed/{boarderId}?rowVersion=` | Met fin au séjour : `isActive = false`, `endDate` = aujourd'hui, lit libéré. Rien n'est supprimé et la pension déjà facturée **reste due**. `204` ; `409 LEAVE_IN_PROGRESS` si une sortie est ouverte. |
+| `GET` | `/api/v1/boarding/boarders?dormitoryId=&roomId=&regime=&status=&search=&page=&pageSize=` | Pensionnaires de l'année active, triés par nom, paginés (`items`, `totalCount`, `page`, `pageSize` ; 20 par défaut, 100 au plus). `status` ∈ `active` (défaut), `ended`, `awaitingBed` (internes sans lit) ; autre valeur : `422`. `search` : nom ou matricule, 2 caractères au moins. |
+| `GET` | `/api/v1/boarding/boarders/{id}` | Fiche : ligne du pensionnaire, `medicalNotes`, contact d'urgence, `allowedExitPersons`. |
+| `PUT` | `/api/v1/boarding/boarders/{id}/profile` | `{ medicalNotes?, emergencyContactName?, emergencyContactPhone?, allowedExitPersons[≤10], rowVersion }`. |
+
+**Fiche médicale.** `medicalNotes` est une donnée de santé d'un mineur : renvoyée seulement au `Directeur` et au `Surveillant`, `null` pour
+le `Secretariat`. Le `Secretariat` qui envoie `medicalNotes` reçoit `403` (le message ne reprend jamais la valeur) ; en l'omettant, la
+fiche existante est **conservée** et le reste du profil est mis à jour. Pour les deux autres rôles la fiche est remplacée (vide = effacée).
+
+**Demi-pensionnaire.** Il ne dort pas à l'internat : aucun lit, aucune chambre. Il n'occupe donc aucune place du tableau de bord.
+
+**Pas encore livré** (lots suivants) : sorties et retours, pointage de nuit, filtre « en permission », PDF.
+
+### 31.2 Compatibilité de l'ancien écran `/internat`
+
+Les routes historiques gardent **leurs chemins et leur JSON** ; leurs handlers lisent et écrivent désormais les séjours :
+`GET /api/v1/internat/dashboard`, `GET /api/v1/internat/students/search?term=` et `POST /api/v1/internat/assignments/{enrollmentId}`.
+`roomId` y désigne une chambre du modèle Pavillon/Lit (`DormitoryRoom.Id`, identique à l'ancien `Room.Id` pour les chambres reprises),
+`buildingName` le **nom du pavillon**, `capacity` les lits hors maintenance. Le jeton `rowVersion` reste le `xmin` de l'**inscription**
+(l'affectation « touche » le dossier pour le faire avancer). L'ancien écran envoie une chambre et non un lit : le plus petit numéro de lit
+libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
+`DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. `POST /api/v1/enrollments` suit la même règle et crée le séjour dans la
+**même transaction** que l'inscription. **Ces routes disparaissent au lot F**, avec l'ancien écran.
 
 ---
 
