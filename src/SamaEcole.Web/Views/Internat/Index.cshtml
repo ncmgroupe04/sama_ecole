@@ -4,19 +4,34 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+    <script src="~/js/internat-helpers.js" asp-append-version="true"></script>
+    <script src="~/js/internat-dormitories.js" asp-append-version="true"></script>
     <script src="~/js/internat.js" asp-append-version="true"></script>
 }
 
 @* Pas de `x-init="init()"` : Alpine appelle DÉJÀ tout seul la méthode `init()` d'un composant
    x-data. L'ajouter la déclenchait une seconde fois — GET /api/v1/internat/dashboard
    serait demandé deux fois à chaque ouverture. *@
-<div x-data="internatPage()">
+<div x-data="internatTabs()">
     <div class="page-header">
         <div>
             <h1 class="page-title">Internat</h1>
-            <p class="page-subtitle">Occupation des dortoirs pour l'année scolaire active et affectation des élèves internes et demi-pensionnaires.</p>
+            <p class="page-subtitle">Occupation des pavillons pour l'année scolaire active, affectation des élèves internes et demi-pensionnaires, et gestion des pavillons.</p>
         </div>
     </div>
+
+    <!-- Onglets : l'onglet ouvert suit le fragment d'URL (/internat#pavillons) -->
+    <nav class="mt-6 flex gap-1 border-b border-slate-200" role="tablist" aria-label="Sections de l'internat">
+        <template x-for="t in tabs" :key="t.key">
+            <button type="button" role="tab" :aria-selected="tab === t.key"
+                    class="-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors"
+                    :class="tab === t.key ? 'border-primary-600 text-primary-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                    x-on:click="select(t.key)" x-text="t.label"></button>
+        </template>
+    </nav>
+
+    <!-- Onglet Occupation : le tableau de bord historique et la modale d'affectation, inchangés -->
+    <div x-show="tab === 'occupation'" x-data="internatPage()" role="tabpanel">
 
     <!-- Barre KPI -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -199,4 +214,12 @@
             </div>
         </div>
     </modal-shell>
+    </div>
+
+    <!-- Onglet Pavillons : création et gestion des pavillons, chambres et lits (/api/v1/boarding) -->
+    <div x-show="tab === 'pavillons'" x-cloak role="tabpanel">
+        @* Chemin complet : PagesController rend cette vue par chemin explicite, donc la recherche d'une partielle par simple nom explorerait
+           Views/Pages et Views/Shared, pas Views/Internat (404 de vue → 500). *@
+        @await Html.PartialAsync("~/Views/Internat/_Dormitories.cshtml")
+    </div>
 </div>

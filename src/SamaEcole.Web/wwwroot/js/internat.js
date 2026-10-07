@@ -16,6 +16,22 @@
  * seul flux, spec §6.2 ne distinguant les deux qu'au niveau du payload envoyé, jamais de l'UI.
  */
 document.addEventListener('alpine:init', () => {
+    /**
+     * Conteneur à onglets de l'écran (lot G) : Occupation (le tableau de bord historique ci-dessous), Pavillons… L'onglet ouvert suit le
+     * fragment d'URL (`/internat#pavillons`) pour pouvoir être partagé et survivre à un rechargement. La logique pure (liste des onglets,
+     * lecture du fragment) est dans internat-helpers.js (testée).
+     */
+    Alpine.data('internatTabs', () => ({
+        tabs: window.internatHelpers.TABS,
+        tab: window.internatHelpers.tabFromHash(window.location.hash),
+
+        select(key) {
+            this.tab = key;
+            // replaceState : changer d'onglet n'empile pas l'historique du navigateur.
+            if (window.history && window.history.replaceState) window.history.replaceState(null, '', `#${key}`);
+        }
+    }));
+
     Alpine.data('internatPage', () => ({
         loading: true,
         error: null,

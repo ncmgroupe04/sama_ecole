@@ -77,6 +77,32 @@
             restore: (id) => `/school-years/${id}/restore`,
             label: (item) => item.label,
             detail: (item) => `${formatDay(item.startDate)} → ${formatDay(item.endDate)}`
+        },
+        // Module Internat, modèle Pavillon/Lit (lot G). Réservées au Directeur et au Secrétariat côté API. Restaurer une chambre ou un lit dont le
+        // parent est supprimé est refusé (409 PARENT_ENTITY_ARCHIVED) : il faut restaurer le pavillon d'abord.
+        dormitories: {
+            title: 'Pavillons supprimés',
+            noun: 'Pavillon',
+            list: '/boarding/dormitories/deleted',
+            restore: (id) => `/boarding/dormitories/${id}/restore`,
+            label: (item) => item.name,
+            detail: (item) => (item.deletedAt ? `Supprimé le ${formatDate(item.deletedAt)}` : '')
+        },
+        'dormitory-rooms': {
+            title: 'Chambres supprimées',
+            noun: 'Chambre',
+            list: '/boarding/rooms/deleted',
+            restore: (id) => `/boarding/rooms/${id}/restore`,
+            label: (item) => item.name,
+            detail: (item) => (item.deletedAt ? `Supprimée le ${formatDate(item.deletedAt)}` : '')
+        },
+        beds: {
+            title: 'Lits supprimés',
+            noun: 'Lit',
+            list: '/boarding/beds/deleted',
+            restore: (id) => `/boarding/beds/${id}/restore`,
+            label: (item) => item.name,
+            detail: (item) => (item.deletedAt ? `Supprimé le ${formatDate(item.deletedAt)}` : '')
         }
     };
 

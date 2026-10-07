@@ -719,6 +719,23 @@ registre n'a ni santé ni téléphone (DTO verrouillé par réflexion). Contrôl
 **tests uniquement** — attention : `UglyToad.PdfPig` sur NuGet est un paquet tiers non vérifié, ne pas l'utiliser). Piège : chercher du texte dans les octets
 d'un PDF QuestPDF ne trouve jamais rien (flux compressé), un test « absent » sur les octets passe à vide ; et `JsonSerializer` échappe les accents.
 
+### Module Internat — modèle Pavillon/Lit, lot G (IHM) — EN COURS (07/10/2026)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/internat-ui`, empilée sur le lot E. Découpé en PR successives.
+
+- **G1 (fait) — gardes de page par module.** `[PageModule(SchoolModule.X)]` → balise `required-module` → `module-route-guard.js` (redirige si le module est
+  désactivé, **jamais sur un échec de lecture des réglages**, repli neutre anti-boucle). **Correction de la spec §8** : `/internat`, `/halqa`, `/oustaz`,
+  `/suivi-coranique` relèvent du module **Internat** (leur API est `/api/v1/internat/*`) ; `/api/v1/quran` (Coran) n'a aucun consommateur. Garde-fous :
+  `PageModuleTests`, `regression-guards.test.mjs`.
+- **G2 (fait) — onglet Pavillons** de `/internat` (création / modification, chambres avec leurs lits, maintenance, suppression logique, corbeilles). Depuis le
+  lot B c'est le **seul** endroit où créer un pavillon : B, C et G2 doivent être livrés dans la même fenêtre. Écran désormais à onglets
+  (`internatTabs`, fragment `#pavillons`), l'onglet Occupation est conservé tel quel jusqu'à G3.
+- **Piège Razor :** `PagesController` rend `Views/Internat/Index.cshtml` par chemin explicite ; une vue partielle de ce dossier doit être appelée par
+  **chemin complet** (`Html.PartialAsync("~/Views/Internat/_Dormitories.cshtml")`), sinon la recherche par nom n'explore que `Views/Pages` et `Views/Shared` et la
+  page répond 500 — sans qu'aucun test JavaScript puisse le voir (`InternatPageTests`).
+- **Reste :** G3 (occupation et affectation sur `/api/v1/boarding`, route `boardable-students`), G4 (pensionnaires, sorties, pointage, PDF), puis le lot F
+  (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`).
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
