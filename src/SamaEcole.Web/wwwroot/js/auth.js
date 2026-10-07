@@ -571,6 +571,21 @@ document.addEventListener('alpine:init', () => {
         internatEnabled: false,
 
         /**
+         * Module Coran (Paramètres › Modules) — même logique « sûr par défaut = caché » qu'internatEnabled. Aujourd'hui
+         * AUCUN écran ne consomme /api/v1/quran (module Coran) : les écrans Halqa/Oustaz/Suivi coranique appellent
+         * /api/v1/internat/*, gardé par le module INTERNAT et donc conditionné par internatEnabled (lot G, décision G-D1).
+         * Le champ est prêt pour le jour où un écran consommera /api/v1/quran.
+         */
+        coranEnabled: false,
+
+        /**
+         * Vrai quand la lecture des réglages a ÉCHOUÉ (réseau, serveur). Distingue « module désactivé » de « on n'a pas pu le
+         * savoir » : la garde de page (module-route-guard.js) ne redirige JAMAIS sur un échec de chargement — une coupure
+         * réseau éjecterait à tort un Directeur de Daara de son module principal. Remis à faux à chaque nouvelle tentative.
+         */
+        loadFailed: false,
+
+        /**
          * Jours OUVRÉS de l'établissement (DayOfWeek : dimanche = 0), dans l'ordre d'AFFICHAGE calculé par
          * le serveur (SchoolWeek.DisplayOrder). Défaut lundi → samedi tant que la réponse n'est pas
          * arrivée : la grille historique. CONFORT d'affichage — le vrai verrou est WorkingDayGuard (422).
@@ -623,18 +638,26 @@ document.addEventListener('alpine:init', () => {
             return this._initPromise;
         },
 
+        /** Relance le chargement des réglages après un échec (bandeau « Réessayer » de la garde de page). */
+        retry() {
+            this._initPromise = null;
+            return this.init();
+        },
+
         async _load() {
             // Super Admin plateforme : pas d'école, pas de settings. On laisse les valeurs par défaut.
             if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') {
                 this.loaded = true;
                 return;
             }
+            this.loadFailed = false;
             try {
                 const s = await window.api.get('/schools/current/settings');
                 this.isPublicSchool = (s && s.typeEtablissement === 'Public');
                 this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
+                this.coranEnabled = !!s && s.isCoranModuleEnabled === true;
                 this.workingDays = window.dayIndexes(s && s.workingDays);
                 // s.profileEtablissement vaut soit NULL (JSON explicite), soit une chaîne — jamais
                 // absent (le DTO le porte toujours, voir GetSchoolSettingsQuery). `s` lui-même ne
@@ -653,6 +676,8 @@ document.addEventListener('alpine:init', () => {
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
                 this.internatEnabled = false;
+                this.coranEnabled = false;
+                this.loadFailed = true;
                 this.workingDays = [1, 2, 3, 4, 5, 6];
                 this.managedCycles = [...window.managedCycles.ALL];
                 // profileEtablissement reste `undefined` (valeur initiale) : voir le commentaire de
