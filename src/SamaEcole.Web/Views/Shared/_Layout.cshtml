@@ -3,6 +3,11 @@
 <head>
  <meta charset="utf-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ @* Module dont dépend la page ([PageModule] sur l'action de PagesController) : lu par module-route-guard.js. Ergonomie, pas sécurité. *@
+ @if (ViewData["RequiredModule"] is string requiredModule)
+ {
+ <meta name="required-module" content="@requiredModule" />
+ }
  <title>@ViewData["Title"] - Unikol</title>
  <link rel="icon" type="image/png" href="~/images/logo-unikol-solid.png" />
  @* Police plateforme Inter, auto-hébergée (CSP font-src 'self' — voir @@font-face en tête de
