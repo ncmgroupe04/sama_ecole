@@ -735,8 +735,9 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
   page répond 500 — sans qu'aucun test JavaScript puisse le voir (`InternatPageTests`).
 - **G3 (fait) — onglet Occupation sur `/api/v1/boarding`.** Nouvelle route `GET /api/v1/boarding/boardable-students` (décrit le **séjour** et son jeton `xmin`,
   réutilisable par `assign-bed`). Le tableau de bord se calcule depuis les pavillons ; la modale choisit un **lit** (plus une chambre) ; un demi-pensionnaire s'affecte
-  sans lit ; libération par `unassign-bed`. **Plus aucun écran n'appelle les 3 routes héritées** (`/internat/dashboard`, `/internat/students/search`,
-  `/internat/assignments/{id}`) : un test JS le verrouille, le lot F peut les supprimer. Piège de test : dans un jeu de données inséré en une seule transaction, tous
+  sans lit ; libération par `unassign-bed`. **L'écran `/internat` n'appelle plus les 3 routes héritées** (`/internat/dashboard`, `/internat/students/search`,
+  `/internat/assignments/{id}`) — **mais `enrollments.js` (`loadAvailableRooms`, sélecteur de chambre du formulaire d'inscription) appelle encore
+  `GET /internat/dashboard`** : le test de dérive de G3 ne scannait que 4 fichiers `internat*.js`. À migrer AVANT le lot F (voir son plan). Piège de test : dans un jeu de données inséré en une seule transaction, tous
   les `xmin` sont égaux — faire avancer l'un d'eux dans une transaction séparée pour qu'un test de jeton ait un sens.
 - **G4 (fait) — onglets Pensionnaires, Sorties et Pointage, PDF.** `/internat` compte désormais cinq onglets (`#occupation`, `#pavillons`, `#pensionnaires`,
   `#sorties`, `#pointage`), chacun un composant Alpine et une vue partielle appelée par chemin complet (`_Boarders`, `_Leaves`, `_Attendance`). Aucune route
