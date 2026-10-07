@@ -412,3 +412,12 @@ test('le message des filtres disparaît dès que le chargement réussit', async 
     await t.loadDormitories();
     assert.equal(t.filterError, '');
 });
+
+test("les sorties récentes de la fiche sont affichées en français, jamais en valeurs brutes de l'API", async () => {
+    const { tab } = boot({ detail: DETAIL({ leaves: [{ id: 'l1', reason: 'Sante', status: 'Overdue', leaveDate: '2026-10-01', expectedReturnDate: '2026-10-02' }] }) });
+    const t = await ready(tab());
+    await t.openDetail(ITEM('s1', 'Awa Diop'));
+
+    assert.equal(t.leaveReasonLabel('Sante'), 'Santé');
+    assert.equal(t.leaveStatusLabel('Overdue'), 'En retard');
+});

@@ -173,7 +173,7 @@
                                     <template x-for="leave in panel.data.leaves" :key="leave.id">
                                         <li class="text-sm text-slate-700">
                                             <span x-text="leave.leaveDate"></span> → <span x-text="leave.expectedReturnDate"></span>
-                                            <span class="text-slate-400" x-text="' · ' + leave.reason"></span>
+                                            <span class="text-slate-400" x-text="' · ' + leaveReasonLabel(leave.reason) + ' · ' + leaveStatusLabel(leave.status)"></span>
                                         </li>
                                     </template>
                                 </ul>

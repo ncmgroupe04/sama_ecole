@@ -5,6 +5,7 @@
  *   - Occupation  → internat-occupation.js  (tableau de bord et affectation des élèves)
  *   - Pavillons   → internat-dormitories.js (pavillons, chambres, lits, corbeilles)
  *   - Pensionnaires → internat-boarders.js  (liste des séjours, fiche d'urgence et profil ; fiche médicale selon le rôle)
+ *   - Sorties     → internat-leaves.js     (registre, déclaration, retour ; accompagnateur hors liste = avertissement)
  * La logique pure partagée (jauge, libellés, corps de requête, codes d'erreur, liste des onglets) est dans internat-helpers.js.
  *
  * Tout passe par /api/v1/boarding/* (modèle Pavillon/Lit). Le composant historique de cet écran — tableau de bord par chambre, recherche d'élèves

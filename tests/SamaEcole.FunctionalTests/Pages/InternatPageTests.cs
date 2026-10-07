@@ -52,6 +52,18 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
     }
 
     [Fact]
+    public async Task The_Leaves_Tab_Is_Embedded_And_Never_Blocks_On_An_Unlisted_Companion()
+    {
+        var html = await InternatHtmlAsync();
+
+        html.Should().Contain("tab === 'sorties'");
+        html.Should().Contain("x-data=\"leavesTab()\"", "l'onglet Sorties");
+        html.Should().Contain("companionUnlisted", "avertissement d'accompagnateur hors liste");
+        html.Should().Contain("Non habilité", "pastille du registre");
+        html.Should().Contain("closeDeclare()").And.Contain("closeReturn()", "déclaration et retour passent par des modales");
+    }
+
+    [Fact]
     public async Task The_Boarder_Sheet_Pdf_Goes_Through_The_Shared_Preview_Modal_Loaded_By_The_Layout()
     {
         var html = await InternatHtmlAsync();
@@ -82,16 +94,18 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var dormitories = scripts.IndexOf("/js/internat-dormitories.js");
         var occupation = scripts.IndexOf("/js/internat-occupation.js");
         var boarders = scripts.IndexOf("/js/internat-boarders.js");
+        var leaves = scripts.IndexOf("/js/internat-leaves.js");
         var screen = scripts.IndexOf("/js/internat.js");
 
         helpers.Should().BeGreaterThanOrEqualTo(0);
         dormitories.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
         occupation.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
         boarders.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
-        screen.Should().BeGreaterThan(new[] { dormitories, occupation, boarders }.Max());
+        leaves.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
+        screen.Should().BeGreaterThan(new[] { dormitories, occupation, boarders, leaves }.Max());
         scripts.IndexOf("/js/trash.js").Should().BeGreaterThanOrEqualTo(0, "les panneaux de corbeille sont chargés par le layout");
 
-        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat-boarders.js", "/js/internat.js", "/js/trash.js" })
+        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat-boarders.js", "/js/internat-leaves.js", "/js/internat.js", "/js/trash.js" })
         {
             var response = await _client.GetAsync(script);
             response.StatusCode.Should().Be(HttpStatusCode.OK, script);

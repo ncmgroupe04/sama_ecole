@@ -34,11 +34,12 @@ window.internatHelpers = (() => {
 
     // ------------------------------------------------------------------ Onglets
 
-    /** Onglets de l'écran, dans l'ordre d'affichage. D'autres s'ajoutent aux tâches suivantes du lot G (Sorties, Pointage). */
+    /** Onglets de l'écran, dans l'ordre d'affichage. D'autres s'ajoutent aux tâches suivantes du lot G (Pointage). */
     const TABS = [
         { key: 'occupation', label: 'Occupation' },
         { key: 'pavillons', label: 'Pavillons' },
-        { key: 'pensionnaires', label: 'Pensionnaires' }
+        { key: 'pensionnaires', label: 'Pensionnaires' },
+        { key: 'sorties', label: 'Sorties' }
     ];
 
     /** Onglet désigné par le fragment d'URL (`#pavillons`), `occupation` par défaut : un fragment inconnu ne casse jamais l'écran. */
@@ -140,6 +141,31 @@ window.internatHelpers = (() => {
         return errors;
     }
 
+    // ------------------------------------------------------------------ Sorties
+
+    const LEAVE_STATUS_LABELS = { Pending: 'À venir', Active: 'En cours', Overdue: 'En retard', Returned: 'Rentré' };
+    const LEAVE_REASONS = [
+        { value: 'Weekend', label: 'Week-end' },
+        { value: 'Sante', label: 'Santé' },
+        { value: 'Famille', label: 'Famille' },
+        { value: 'Autre', label: 'Autre' }
+    ];
+
+    /** Statut CALCULÉ par le serveur (jamais stocké), affiché en français. Un statut inconnu reste lisible tel quel. */
+    function leaveStatusLabel(status) {
+        return LEAVE_STATUS_LABELS[status] || status || '';
+    }
+
+    function leaveReasonLabel(reason) {
+        const found = LEAVE_REASONS.find((r) => r.value === reason);
+        return found ? found.label : (reason || '');
+    }
+
+    /** Jour courant, local, au format yyyy-MM-dd (isolé ici pour pouvoir être figé dans les tests). */
+    function today() {
+        return isoDate(new Date());
+    }
+
     // ------------------------------------------------------------------ PDF
 
     /** Date au format yyyy-MM-dd attendu par l'API : une chaîne déjà conforme, ou un objet Date lu avec ses composantes LOCALES (toISOString décalerait le jour). */
@@ -183,6 +209,9 @@ window.internatHelpers = (() => {
         ARCHIVED_ENTITY_EXISTS: 'Un élément supprimé porte déjà ce nom : restaurez-le depuis les éléments supprimés plutôt que de le recréer.',
         PARENT_ENTITY_ARCHIVED: "Restauration impossible : l'élément parent est supprimé. Restaurez-le d'abord (le pavillon, puis la chambre).",
         CONCURRENCY_CONFLICT: 'Cet élément a été modifié par une autre personne. Les données ont été rechargées : vérifiez puis recommencez.',
+        LEAVE_ALREADY_OPEN: "Ce pensionnaire a déjà une sortie en cours : enregistrez d'abord son retour.",
+        LEAVE_ALREADY_RETURNED: 'Le retour de cette sortie est déjà enregistré. Le registre a été rechargé.',
+        ATTENDANCE_CONFLICT: "Le pointage de cette nuit a été modifié par une autre personne. La feuille d'appel a été rechargée : vérifiez puis recommencez.",
         BED_UNAVAILABLE: "Ce lit vient d'être attribué à un autre pensionnaire.",
         MODULE_DISABLED: "Le module Internat n'est pas activé pour votre établissement."
     };
@@ -207,6 +236,7 @@ window.internatHelpers = (() => {
         GENDER_CHOICES, genderLabel, bedStatusLabel,
         buildDormitoryBody, buildRoomBody,
         validateDormitory, validateRoom,
+        LEAVE_REASONS, leaveStatusLabel, leaveReasonLabel, today,
         isoDate, boarderPdfUrl, registerPdfUrl, pdfFileName,
         ERROR_MESSAGES, errorMessage
     };

@@ -8,6 +8,7 @@
     <script src="~/js/internat-dormitories.js" asp-append-version="true"></script>
     <script src="~/js/internat-occupation.js" asp-append-version="true"></script>
     <script src="~/js/internat-boarders.js" asp-append-version="true"></script>
+    <script src="~/js/internat-leaves.js" asp-append-version="true"></script>
     <script src="~/js/internat.js" asp-append-version="true"></script>
 }
 
@@ -50,5 +51,11 @@
     <div x-show="tab === 'pensionnaires'" x-cloak role="tabpanel">
         @* Chemin complet : voir la note de l'onglet Pavillons. *@
         @await Html.PartialAsync("~/Views/Internat/_Boarders.cshtml")
+    </div>
+
+    <!-- Onglet Sorties : registre, déclaration (accompagnateur hors liste = avertissement, jamais un blocage) et retour (/api/v1/boarding) -->
+    <div x-show="tab === 'sorties'" x-cloak role="tabpanel">
+        @* Chemin complet : voir la note de l'onglet Pavillons. *@
+        @await Html.PartialAsync("~/Views/Internat/_Leaves.cshtml")
     </div>
 </div>

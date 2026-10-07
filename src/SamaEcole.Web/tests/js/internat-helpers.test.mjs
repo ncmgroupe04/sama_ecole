@@ -169,6 +169,7 @@ test("tabFromHash : l'onglet ouvert suit le fragment d'URL, avec repli sur Occup
     assert.equal(h.tabFromHash('#pavillons'), 'pavillons');
     assert.equal(h.tabFromHash('#occupation'), 'occupation');
     assert.equal(h.tabFromHash('#pensionnaires'), 'pensionnaires');
+    assert.equal(h.tabFromHash('#sorties'), 'sorties');
     assert.equal(h.tabFromHash('#PAVILLONS'), 'pavillons', 'insensible à la casse');
     assert.equal(h.tabFromHash(''), 'occupation');
     assert.equal(h.tabFromHash(undefined), 'occupation');
@@ -179,6 +180,6 @@ test("tabFromHash : l'onglet ouvert suit le fragment d'URL, avec repli sur Occup
 test('TABS : liste ordonnée des onglets disponibles', () => {
     const h = helpers();
 
-    assert.deepEqual(plain(h.TABS.map((t) => t.key)), ['occupation', 'pavillons', 'pensionnaires']);
+    assert.deepEqual(plain(h.TABS.map((t) => t.key)), ['occupation', 'pavillons', 'pensionnaires', 'sorties']);
     assert.ok(h.TABS.every((t) => t.label));
 });

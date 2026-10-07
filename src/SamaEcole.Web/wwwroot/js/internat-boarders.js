@@ -197,6 +197,8 @@ document.addEventListener('alpine:init', () => {
         statusLabel(item) { return this.logic().statusLabel(item); },
         regimeLabel(regime) { return this.logic().regimeLabel(regime); },
         locationLabel(item) { return this.logic().locationLabel(item); },
+        leaveReasonLabel(reason) { return this.helpers().leaveReasonLabel(reason); },
+        leaveStatusLabel(status) { return this.helpers().leaveStatusLabel(status); },
 
         // ------------------------------------------------------------------ Liste
 
