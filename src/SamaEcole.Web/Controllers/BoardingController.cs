@@ -11,7 +11,7 @@ using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
 using SamaEcole.Application.Boarding.Boarders.AssignBed;
-using SamaEcole.Application.Boarding.Boarders.EndBoarding;
+using SamaEcole.Application.Boarding.Boarders.EndBoarding;
 using SamaEcole.Application.Boarding.Boarders.FindBoardableStudents;
 using SamaEcole.Application.Boarding.Boarders.GetBoarder;
 using SamaEcole.Application.Boarding.Boarders.ListBoarders;
