@@ -188,10 +188,13 @@ public class BoardingAssignmentService(IApplicationDbContext dbContext, TimeProv
             return;
         }
 
-        var studentGender = await dbContext.Students.AsNoTracking()
-            .Where(s => s.Id == studentId)
-            .Select(s => s.Gender)
-            .FirstOrDefaultAsync(cancellationToken);
+        // L'élève peut être NEUF et pas encore enregistré (inscription d'un nouvel élève, même transaction) : on regarde
+        // d'abord les entités suivies par le contexte, puis la base.
+        var studentGender = dbContext.Students.Local.FirstOrDefault(s => s.Id == studentId)?.Gender
+            ?? await dbContext.Students.AsNoTracking()
+                .Where(s => s.Id == studentId)
+                .Select(s => s.Gender)
+                .FirstOrDefaultAsync(cancellationToken);
 
         if (dormitoryGender == DormitoryGender.Garcons && studentGender != "M")
         {

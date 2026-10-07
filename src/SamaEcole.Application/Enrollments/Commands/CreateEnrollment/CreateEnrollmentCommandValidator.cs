@@ -20,12 +20,12 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
         RuleFor(x => x.BoardingStatus).IsInEnum();
         RuleFor(x => x.PreviousSchoolName).MaximumLength(150).NoHtml();
 
-        // Un régime Interne/Demi-pensionnaire sans chambre est une saisie incomplète — RoomId reste
-        // libre pour Externe (spec §3.3 : significatif seulement si BoardingStatus != Externe).
+        // Un régime Interne sans chambre est une saisie incomplète — RoomId reste libre pour Externe (spec du 18/09 §3.3). Un
+        // Demi-pensionnaire ne dort pas à l'internat (spec Pavillon/Lit, N7) : sa chambre est facultative et, si elle est
+        // envoyée par l'ancien formulaire, ignorée.
         RuleFor(x => x.RoomId)
-            .NotNull()
-            .When(x => x.BoardingStatus != BoardingStatus.Externe)
-            .WithMessage("Une chambre est requise pour un régime Interne ou Demi-pensionnaire.");
+            .NotNull().WithMessage("Une chambre est requise pour un régime Interne.")
+            .When(x => x.BoardingStatus == BoardingStatus.Interne);
 
         // Symétrique de la règle ci-dessus : un RoomId sur un régime Externe contournerait la garde du
         // module (le Handler n'entre dans la vérification IsInternatEnabled que si BoardingStatus !=
