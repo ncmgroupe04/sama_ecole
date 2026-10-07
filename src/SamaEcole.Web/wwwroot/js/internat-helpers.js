@@ -34,12 +34,13 @@ window.internatHelpers = (() => {
 
     // ------------------------------------------------------------------ Onglets
 
-    /** Onglets de l'écran, dans l'ordre d'affichage. D'autres s'ajoutent aux tâches suivantes du lot G (Pointage). */
+    /** Onglets de l'écran, dans l'ordre d'affichage. D'autres s'ajoutent aux tâches suivantes du lot G (aucune : les cinq onglets sont en place). */
     const TABS = [
         { key: 'occupation', label: 'Occupation' },
         { key: 'pavillons', label: 'Pavillons' },
         { key: 'pensionnaires', label: 'Pensionnaires' },
-        { key: 'sorties', label: 'Sorties' }
+        { key: 'sorties', label: 'Sorties' },
+        { key: 'pointage', label: 'Pointage' }
     ];
 
     /** Onglet désigné par le fragment d'URL (`#pavillons`), `occupation` par défaut : un fragment inconnu ne casse jamais l'écran. */

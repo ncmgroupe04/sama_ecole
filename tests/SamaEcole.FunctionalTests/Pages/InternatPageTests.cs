@@ -64,6 +64,30 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
     }
 
     [Fact]
+    public async Task The_Attendance_Tab_Is_Embedded_Locks_Boarders_On_Leave_And_Offers_The_Register_Pdf()
+    {
+        var html = await InternatHtmlAsync();
+
+        html.Should().Contain("tab === 'pointage'");
+        html.Should().Contain("x-data=\"attendanceTab()\"", "l'onglet Pointage");
+        html.Should().Contain(":disabled=\"line.onLeave\"", "la case « Présent » est verrouillée pour un pensionnaire en permission");
+        html.Should().Contain("openRegisterPdf()", "bouton « Registre PDF »");
+        html.Should().Contain("rejectedLines", "les refus du serveur sont détaillés ligne par ligne");
+    }
+
+    [Fact]
+    public async Task The_Five_Tabs_Are_Declared_In_Order()
+    {
+        var html = await InternatHtmlAsync();
+
+        var panels = new[] { "occupation", "pavillons", "pensionnaires", "sorties", "pointage" }
+            .Select(tab => html.IndexOf($"tab === '{tab}'", StringComparison.Ordinal)).ToList();
+
+        panels.Should().OnlyContain(index => index >= 0, "chaque onglet a son panneau");
+        panels.Should().BeInAscendingOrder();
+    }
+
+    [Fact]
     public async Task The_Boarder_Sheet_Pdf_Goes_Through_The_Shared_Preview_Modal_Loaded_By_The_Layout()
     {
         var html = await InternatHtmlAsync();
@@ -95,6 +119,7 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var occupation = scripts.IndexOf("/js/internat-occupation.js");
         var boarders = scripts.IndexOf("/js/internat-boarders.js");
         var leaves = scripts.IndexOf("/js/internat-leaves.js");
+        var attendance = scripts.IndexOf("/js/internat-attendance.js");
         var screen = scripts.IndexOf("/js/internat.js");
 
         helpers.Should().BeGreaterThanOrEqualTo(0);
@@ -102,10 +127,11 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         occupation.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
         boarders.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
         leaves.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
-        screen.Should().BeGreaterThan(new[] { dormitories, occupation, boarders, leaves }.Max());
+        attendance.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
+        screen.Should().BeGreaterThan(new[] { dormitories, occupation, boarders, leaves, attendance }.Max());
         scripts.IndexOf("/js/trash.js").Should().BeGreaterThanOrEqualTo(0, "les panneaux de corbeille sont chargés par le layout");
 
-        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat-boarders.js", "/js/internat-leaves.js", "/js/internat.js", "/js/trash.js" })
+        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat-boarders.js", "/js/internat-leaves.js", "/js/internat-attendance.js", "/js/internat.js", "/js/trash.js" })
         {
             var response = await _client.GetAsync(script);
             response.StatusCode.Should().Be(HttpStatusCode.OK, script);

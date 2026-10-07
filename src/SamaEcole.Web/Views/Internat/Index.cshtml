@@ -9,6 +9,7 @@
     <script src="~/js/internat-occupation.js" asp-append-version="true"></script>
     <script src="~/js/internat-boarders.js" asp-append-version="true"></script>
     <script src="~/js/internat-leaves.js" asp-append-version="true"></script>
+    <script src="~/js/internat-attendance.js" asp-append-version="true"></script>
     <script src="~/js/internat.js" asp-append-version="true"></script>
 }
 
@@ -57,5 +58,11 @@
     <div x-show="tab === 'sorties'" x-cloak role="tabpanel">
         @* Chemin complet : voir la note de l'onglet Pavillons. *@
         @await Html.PartialAsync("~/Views/Internat/_Leaves.cshtml")
+    </div>
+
+    <!-- Onglet Pointage : feuille d'appel du soir et pointage collectif (/api/v1/boarding), registre PDF -->
+    <div x-show="tab === 'pointage'" x-cloak role="tabpanel">
+        @* Chemin complet : voir la note de l'onglet Pavillons. *@
+        @await Html.PartialAsync("~/Views/Internat/_Attendance.cshtml")
     </div>
 </div>
