@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\SamaEcole.Web\SamaEcole.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\SamaEcole.UnitTests\Boarding\PdfText.cs" Link="Common\PdfText.cs" />
+  </ItemGroup>
+
 </Project>

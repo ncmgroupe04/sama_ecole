@@ -21,6 +21,9 @@ using SamaEcole.Application.Boarding.Dormitories.GetDeletedDormitories;
 using SamaEcole.Application.Boarding.Dormitories.GetDormitory;
 using SamaEcole.Application.Boarding.Dormitories.ListDormitories;
 using SamaEcole.Application.Boarding.Dormitories.RestoreDormitory;
+using SamaEcole.Application.Boarding.Documents;
+using SamaEcole.Application.Boarding.Documents.BoarderSheet;
+using SamaEcole.Application.Boarding.Documents.DormitoryRegister;
 using SamaEcole.Application.Boarding.Dormitories.UpdateDormitory;
 using SamaEcole.Application.Boarding.Leaves;
 using SamaEcole.Application.Boarding.Leaves.DeclareLeave;
@@ -457,4 +460,46 @@ public class BoardingController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GetAttendanceSheet(
         [FromQuery] Guid dormitoryId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetAttendanceSheetQuery(dormitoryId, date), cancellationToken));
+
+    // ------------------------------------------------------------------ Documents PDF
+
+    /// <summary>
+    /// Fiche individuelle d'un pensionnaire (séjour actif ou clos). La fiche médicale n'y figure que pour le Directeur et le
+    /// Surveillant ; tout autre rôle reçoit le même document sans ce bloc. L'impression est tracée dans le journal d'audit.
+    /// </summary>
+    [HttpGet("boarders/{id:guid}/pdf")]
+    [Authorize(Roles = ReadRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBoarderSheetPdf(Guid id, CancellationToken cancellationToken)
+        => PdfFile(await mediator.Send(new GetBoarderSheetPdfQuery(id), cancellationToken), "Fiche-Pensionnaire");
+
+    /// <summary>
+    /// Registre imprimable d'un pavillon pour une nuit (<c>date</c>, aujourd'hui par défaut). Sans donnée de santé ni
+    /// téléphone. 422 pour une date future ou hors de l'année active. L'impression est tracée dans le journal d'audit.
+    /// </summary>
+    [HttpGet("dormitories/{id:guid}/register-pdf")]
+    [Authorize(Roles = ReadRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetDormitoryRegisterPdf(
+        Guid id, [FromQuery] DateOnly? date, CancellationToken cancellationToken)
+        => PdfFile(await mediator.Send(new GetDormitoryRegisterPdfQuery(id, date), cancellationToken), "Registre-Pavillon");
+
+    /// <summary>Nom de fichier assaini : ASCII (lettres, chiffres, tiret, souligné), les espaces deviennent des tirets.</summary>
+    private IActionResult PdfFile(BoardingPdfResult result, string prefix)
+    {
+        var safe = new string(result.FileStem
+            .Select(ch => ch == ' ' ? '-' : ch)
+            .Where(ch => ch is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '-' or '_')
+            .ToArray());
+
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{prefix}-{safe}.pdf\"";
+        return File(result.Content, "application/pdf");
+    }
 }
