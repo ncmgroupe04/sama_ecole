@@ -26,6 +26,15 @@ public enum BedStatus
     Maintenance
 }
 
+/// <summary>Statut CALCULÉ d'une sortie (jamais stocké, spec N6) — voir <see cref="BoardingLeaveStatus"/>.</summary>
+public enum LeaveStatus
+{
+    Pending,
+    Active,
+    Overdue,
+    Returned
+}
+
 public enum BoardingLeaveReason
 {
     Weekend,
