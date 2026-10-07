@@ -137,6 +137,19 @@ public interface IApplicationDbContext
     /// <summary>Dispenses d'un élève pour une matière obligatoire, par année scolaire (motif sensible).</summary>
     DbSet<StudentSubjectExemption> StudentSubjectExemptions { get; }
 
+    // --- Internat (modèle Pavillon/Lit, spec 2026-10-06) ---
+    DbSet<Dormitory> Dormitories { get; }
+
+    DbSet<DormitoryRoom> DormitoryRooms { get; }
+
+    DbSet<Bed> Beds { get; }
+
+    DbSet<BoardingEnrollment> BoardingEnrollments { get; }
+
+    DbSet<BoardingLeave> BoardingLeaves { get; }
+
+    DbSet<BoardingAttendance> BoardingAttendances { get; }
+
     /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
     DbSet<GradeAgeNorm> GradeAgeNorms { get; }
 
