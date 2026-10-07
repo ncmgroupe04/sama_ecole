@@ -11,7 +11,8 @@ internal static class DormitoryReader
 {
     /// <summary>
     /// Pavillon relu APRÈS écriture, avec le jeton xmin réel (même technique que RoomResult). Le nom du
-    /// surveillant est celui du compte lié s'il existe, sinon le texte libre.
+    /// surveillant est celui du compte lié s'il existe, sinon le texte libre. Introuvable (autre école, supprimé) :
+    /// <see cref="KeyNotFoundException"/> (404).
     /// </summary>
     public static async Task<DormitoryDto> GetDtoAsync(IApplicationDbContext dbContext, Guid id, CancellationToken cancellationToken)
     {
@@ -23,7 +24,8 @@ internal static class DormitoryReader
                 LinkedName = dbContext.Users.Where(u => u.Id == d.SupervisorUserId).Select(u => u.FullName).FirstOrDefault(),
                 RowVersion = EF.Property<uint>(d, "xmin")
             })
-            .FirstAsync(cancellationToken);
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException($"Pavillon {id} introuvable.");
 
         return new DormitoryDto(
             row.Id, row.Name, row.Gender,
