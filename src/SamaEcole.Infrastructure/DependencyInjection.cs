@@ -214,6 +214,7 @@ public static class DependencyInjection
         services.AddSingleton<IHizbReportPdfGenerator, HizbReportPdfGenerator>();
         // Module Internat, modèle Pavillon/Lit (lot E) : fiche individuelle d'un pensionnaire et registre d'un pavillon.
         services.AddSingleton<IBoarderSheetPdfGenerator, BoarderSheetPdfGenerator>();
+        services.AddSingleton<IDormitoryRegisterPdfGenerator, DormitoryRegisterPdfGenerator>();
         services.AddSingleton<IDisciplinaryPvPdfGenerator, DisciplinaryPvPdfGenerator>();
         services.AddSingleton<IDuesNoticePdfGenerator, DuesNoticePdfGenerator>();
         services.AddSingleton<IWorkCertificatePdfGenerator, WorkCertificatePdfGenerator>();
