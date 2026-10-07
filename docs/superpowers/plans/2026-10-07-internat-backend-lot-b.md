@@ -776,5 +776,5 @@ Un bâtiment sans aucune salle reste listé (le `GroupBy` ne le produit pas).
 
 - **Couverture de la spec §6.1 et décisions** : `GET/POST/PUT dormitories` → tâches 2, 5, 6 ; `POST rooms` (+ `bedCount`) et `POST beds` → 3, 4 ; compléments validés (`PUT rooms/{id}`, `PUT beds/{id}/status`, `DELETE`/`restore`, corbeilles) → 3, 4, 5, 6 ; taux d'occupation et statut calculé → 1, 5 ; `Mixte` refusé (Q2) → 2 ; surveillant lié (Q7) → 2 ; masquage `Dortoir` (Q1) → 8 ; `RESOURCE_IN_USE` → 1 ; rôles §5.1 et garde de module → 6, 7. **Hors lot** : affectation/fin de séjour (C), sorties/pointage (D), PDF (E).
 - **Écart assumé avec la spec §3.7** : suppression stricte (point d'attention n°2).
-- **Placeholders** : aucun ; les trois actions de contrôleur « sur le même modèle » sont des répétitions mécaniques dont le verbe, la route, le rôle et la commande sont spécifiés, et le test fonctionnel les exerce toutes.
+- **Placeholders** : aucun ; les 17 actions du contrôleur sont écrites (pavillons, chambres, lits). Deux points restent à trancher à l'exécution et sont signalés dans le texte : la traduction EF de la requête de liste (repli en trois requêtes prévu) et la tolérance de `MustBeValidSenegalPhone` à `null`.
 - **Cohérence des noms** : commandes, DTO et `BedReader`/`BoardingOccupancy` identiques entre les tâches 1 à 7.
