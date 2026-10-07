@@ -212,6 +212,8 @@ public static class DependencyInjection
 
         // Module Internat/Daara : bulletin coranique (suivi de mémorisation par Hizb), bilingue français/arabe.
         services.AddSingleton<IHizbReportPdfGenerator, HizbReportPdfGenerator>();
+        // Module Internat, modèle Pavillon/Lit (lot E) : fiche individuelle d'un pensionnaire et registre d'un pavillon.
+        services.AddSingleton<IBoarderSheetPdfGenerator, BoarderSheetPdfGenerator>();
         services.AddSingleton<IDisciplinaryPvPdfGenerator, DisciplinaryPvPdfGenerator>();
         services.AddSingleton<IDuesNoticePdfGenerator, DuesNoticePdfGenerator>();
         services.AddSingleton<IWorkCertificatePdfGenerator, WorkCertificatePdfGenerator>();
