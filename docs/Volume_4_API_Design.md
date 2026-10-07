@@ -523,6 +523,7 @@ Référentiel des locaux : bâtiments de l'établissement et salles qu'ils conti
 **Règles :**
 - La lecture est volontairement ouverte à tous les rôles de l'établissement : un enseignant a besoin de connaître les salles pour lire son emploi du temps (§19).
 - `GET /buildings` renvoie une **liste vide** (`200`), jamais une erreur `500`, sur un établissement dont la migration Infrastructures n'a pas encore été appliquée.
+- **Dortoirs.** Depuis le module Internat « Pavillon/Lit » (§31), les dortoirs ne se gèrent plus ici : `GET /buildings` n'expose ni les salles de type `Dortoir` ni les bâtiments qui ne contiennent que des dortoirs, et `POST`/`PUT /rooms` refusent le type `Dortoir` (`422`).
 
 ---
 
