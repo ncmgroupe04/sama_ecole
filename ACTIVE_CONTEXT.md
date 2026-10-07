@@ -692,7 +692,21 @@ pension ajoutée une fois et jamais retirée, course sur le dernier lit → 409 
 3. **Ne jamais rejouer la réconciliation** après la bascule : elle fermerait de vrais séjours.
 4. Contrôle après déploiement : séjours actifs de l'année active = inscriptions pensionnaires de l'année active (requête dans la PR).
 
-Reste : lot D (sorties et pointage de nuit), lot E (PDF), lot F (suppression des colonnes et routes héritées), lot G (IHM).
+Reste : lot E (PDF), lot G (IHM), puis lot F (suppression des colonnes et routes héritées — APRÈS la migration de l'écran, donc après G).
+
+### Module Internat — modèle Pavillon/Lit, lot D (07/10/2026) — livré (sorties et pointage de nuit)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-d.md`. Branche `feat/internat-leaves-attendance`, **empilée sur le lot C**
+(PR #63), **aucune migration** : les tables `boarding_leaves` et `boarding_attendances` datent du lot A, **aucun script SQL post-déploiement**.
+Routes `/api/v1/boarding/{leaves, leaves/{id}/return, attendance}` (Volume 4 §31.3), mêmes rôles que le lot C
+(`Directeur`, `Secretariat`, `Surveillant`). Le statut d'une sortie est **calculé** (`BoardingLeaveStatus.Of`, et le même prédicat en SQL
+pour le filtre de liste). Un accompagnateur non habilité est **accepté** et tracé (`isCompanionUnlisted`, figé à la déclaration).
+`GET /boarders/{id}` gagne `leaves` (additif) et `GET /boarders` le filtre `status=onLeave`.
+
+**Règles à connaître :** pointage = date ≤ aujourd'hui **et** dans l'année active ; seuls les internes actifs avec un lit du pavillon sont
+pointables ; une sortie non rentrée (même dépassée) compte « dehors », la nuit du retour non ; résultat du pointage **ligne par ligne** (une
+ligne refusée n'en bloque pas d'autres). Codes 409 : `LEAVE_ALREADY_OPEN`, `LEAVE_ALREADY_RETURNED`, `ATTENDANCE_CONFLICT`.
+`openapi.yaml` ne décrit aucune route `boarding` (lots A à D) : à compléter à part.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 

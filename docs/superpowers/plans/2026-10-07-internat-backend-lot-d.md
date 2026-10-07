@@ -497,3 +497,12 @@ et une section « Sorties et pointage » avec 5 actions minces (`[Authorize(Role
 - **Écart spec assumé** : « jour pointable » défini par D1 ; à confirmer par le relecteur.
 - **Cohérence des noms** : `LeaveStatus`, `BoardingLeaveStatus.Of/Matches/OnNight`, `CompanionMatcher.IsListed`, `BoardingLeaveDto`, `LeaveReader.GetAsync/Project/ToDto`, `AttendanceRules.DormitoryStays/EnsurePointableAsync/OnLeaveNote` — identiques dans toutes les tâches.
 - **Risque connu** : l'ajout de `Leaves` à `BoarderDetailDto` casse la compilation des tests du lot C qui construisent ce record — à corriger dans la même tâche (T4).
+
+## Écarts constatés à l'exécution
+
+- L'exception de validation de l'application est `SamaEcole.Application.Common.Exceptions.ValidationException` (422), pas celle de FluentValidation.
+- Pas de `FakeTimeProvider` référencé dans les tests d'intégration : horloge fixe locale `FixedTimeProvider` (`LeaveTestBase.cs`), « aujourd'hui » = 2026-10-12.
+- `ListBoardersQueryHandler`, `GetBoarderQueryHandler` et `UpdateBoarderProfileCommandHandler` reçoivent désormais un `TimeProvider` (les 4 appels de `BoarderQueriesTests` sont mis à jour).
+- Un statut inconnu dans `GET /leaves?status=` renvoie **400** (binding de l'énumération), pas 422 comme `GET /boarders?status=` (chaîne validée par FluentValidation).
+- L'isolation entre écoles est prouvée en intégration (rôle SQL bridé + RLS), pas en fonctionnel : la fabrique fonctionnelle n'a qu'une école.
+- `openapi.yaml` ne contient aucune route `boarding` depuis le lot A : non complété ici.

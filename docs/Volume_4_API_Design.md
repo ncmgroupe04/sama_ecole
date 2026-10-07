@@ -93,6 +93,9 @@ logs serveur (Volume 7).
 | `RESOURCE_IN_USE` | La ressource a encore des éléments vivants dépendants : pavillon avec chambres, chambre avec lits, lit occupé (§31) | 409 |
 | `BED_UNAVAILABLE` | Le lit demandé est (ou vient d'être) tenu par un autre pensionnaire — course tranchée par l'index unique du lit (§31) | 409 |
 | `LEAVE_IN_PROGRESS` | Fin de séjour refusée : une sortie est encore ouverte, enregistrez d'abord le retour (§31) | 409 |
+| `LEAVE_ALREADY_OPEN` | Déclaration refusée : ce pensionnaire a déjà une sortie ouverte (§31.3) | 409 |
+| `LEAVE_ALREADY_RETURNED` | Retour refusé : il est déjà enregistré (§31.3) | 409 |
+| `ATTENDANCE_CONFLICT` | Pointage refusé : la même nuit vient d'être saisie par un autre opérateur, rechargez la feuille (§31.3) | 409 |
 | `ARCHIVED_ENTITY_EXISTS` / `ACTIVE_ENTITY_CONFLICT` / `PARENT_ENTITY_ARCHIVED` | Cycle soft delete : l'identité n'existe qu'à l'état supprimé / une ligne active la porte déjà / le parent est supprimé | 409 |
 | `INVALID_CREDENTIALS` | Authentification échouée (message volontairement générique) | 401 |
 | `FORBIDDEN` | Permission insuffisante | 403 |
@@ -994,8 +997,8 @@ demi-pension (aucun lit). Rôles : lecture et écriture `Directeur`, `Secretaria
 |---|---|---|
 | `POST` | `/api/v1/boarding/assign-bed` | `{ enrollmentId, regime, bedId?, includeBoardingFee, rowVersion? }` — `200` avec la ligne du pensionnaire. `Interne` ⇒ `bedId` requis ; `DemiPensionnaire` ⇒ `bedId` interdit. Si l'élève a déjà un séjour actif, c'est un **transfert** : `rowVersion` (jeton du séjour) est requis, `409` s'il est périmé. `409 BED_UNAVAILABLE` si le lit est pris ; `422` si le lit est en maintenance ou si le pavillon n'est pas du genre de l'élève (`Mixte` accepte tout) ; `404` si l'inscription n'est pas de l'année active. `includeBoardingFee` ajoute la ligne de pension **une seule fois**. |
 | `DELETE` | `/api/v1/boarding/unassign-bed/{boarderId}?rowVersion=` | Met fin au séjour : `isActive = false`, `endDate` = aujourd'hui, lit libéré. Rien n'est supprimé et la pension déjà facturée **reste due**. `204` ; `409 LEAVE_IN_PROGRESS` si une sortie est ouverte. |
-| `GET` | `/api/v1/boarding/boarders?dormitoryId=&roomId=&regime=&status=&search=&page=&pageSize=` | Pensionnaires de l'année active, triés par nom, paginés (`items`, `totalCount`, `page`, `pageSize` ; 20 par défaut, 100 au plus). `status` ∈ `active` (défaut), `ended`, `awaitingBed` (internes sans lit) ; autre valeur : `422`. `search` : nom ou matricule, 2 caractères au moins. |
-| `GET` | `/api/v1/boarding/boarders/{id}` | Fiche : ligne du pensionnaire, `medicalNotes`, contact d'urgence, `allowedExitPersons`. |
+| `GET` | `/api/v1/boarding/boarders?dormitoryId=&roomId=&regime=&status=&search=&page=&pageSize=` | Pensionnaires de l'année active, triés par nom, paginés (`items`, `totalCount`, `page`, `pageSize` ; 20 par défaut, 100 au plus). `status` ∈ `active` (défaut), `ended`, `awaitingBed` (internes sans lit), `onLeave` (actuellement en sortie : parti et pas encore rentré, retard compris — §31.3) ; autre valeur : `422`. `search` : nom ou matricule, 2 caractères au moins. |
+| `GET` | `/api/v1/boarding/boarders/{id}` | Fiche : ligne du pensionnaire, `medicalNotes`, contact d'urgence, `allowedExitPersons`, et `leaves` (les 10 dernières sorties, la plus récente d'abord — champ **additif** du lot D). |
 | `PUT` | `/api/v1/boarding/boarders/{id}/profile` | `{ medicalNotes?, emergencyContactName?, emergencyContactPhone?, allowedExitPersons[≤10], rowVersion }`. |
 
 **Fiche médicale.** `medicalNotes` est une donnée de santé d'un mineur : renvoyée seulement au `Directeur` et au `Surveillant`, `null` pour
@@ -1004,7 +1007,7 @@ fiche existante est **conservée** et le reste du profil est mis à jour. Pour l
 
 **Demi-pensionnaire.** Il ne dort pas à l'internat : aucun lit, aucune chambre. Il n'occupe donc aucune place du tableau de bord.
 
-**Pas encore livré** (lots suivants) : sorties et retours, pointage de nuit, filtre « en permission », PDF.
+**Pas encore livré** (lots suivants) : PDF (fiche et registre), IHM.
 
 ### 31.2 Compatibilité de l'ancien écran `/internat`
 
@@ -1016,6 +1019,31 @@ Les routes historiques gardent **leurs chemins et leur JSON** ; leurs handlers l
 libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
 `DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. `POST /api/v1/enrollments` suit la même règle et crée le séjour dans la
 **même transaction** que l'inscription. **Ces routes disparaissent au lot F**, avec l'ancien écran.
+
+### 31.3 Sorties et pointage de nuit (lot D)
+
+Rôles : lecture et écriture `Directeur`, `Secretariat`, `Surveillant` ; `Enseignant`/`Finance` → `403` ; module Internat désactivé → `403 MODULE_DISABLED`.
+Aucune route ne renvoie de donnée médicale. Dates en `yyyy-MM-dd`. « Aujourd'hui » = date UTC du serveur.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/boarding/leaves` | `{ boarderId, leaveDate, expectedReturnDate, reason, reasonDetail?, accompaniedBy }` — `reason` ∈ `Weekend`, `Sante`, `Famille`, `Autre`. `201` avec la sortie. Pensionnaire **actif** requis (`404` sinon). `expectedReturnDate ≥ leaveDate` (`422`). `409 LEAVE_ALREADY_OPEN` si une sortie est déjà ouverte (garantie par un index unique : deux déclarations simultanées donnent un seul succès). Un `accompaniedBy` qui ne correspond à aucune personne habilitée (nom complet, casse et espaces ignorés) est **accepté** : `isCompanionUnlisted = true`, **figé** à la déclaration. |
+| `PUT` | `/api/v1/boarding/leaves/{id}/return` | `{ rowVersion, actualReturnDate? }` — date du jour par défaut ; ni dans le futur ni avant la sortie (`422`). `409 LEAVE_ALREADY_RETURNED` si le retour est déjà enregistré ; `409` si `rowVersion` est périmé. Le retour lève le garde `LEAVE_IN_PROGRESS` de la fin de séjour (§31.1). |
+| `GET` | `/api/v1/boarding/leaves?boarderId=&dormitoryId=&status=&from=&to=&unlistedOnly=&page=&pageSize=` | Registre des sorties, plus récentes d'abord, paginé (20 par défaut, 100 au plus). `status` ∈ `Pending`, `Active`, `Overdue`, `Returned` (valeur inconnue : `400`). `dormitoryId` : pavillon **actuel** du pensionnaire. `from`/`to` : sorties dont [sortie, retour prévu] chevauche la période. `unlistedOnly` : accompagnateur non habilité (pastille du registre). |
+| `GET` | `/api/v1/boarding/attendance?dormitoryId=&date=` | Feuille d'appel : les **internes avec un lit** du pavillon, triés par chambre puis lit. Une ligne déjà pointée porte ses valeurs (`recorded = true`) ; un pensionnaire en sortie ce soir-là est pré-rempli `isPresent = false`, `note = "En permission"` ; les autres ont `isPresent = null`. |
+| `POST` | `/api/v1/boarding/attendance` | `{ date, dormitoryId, entries: [{ boarderId, isPresent, note? }] }` — 1 à 200 lignes. **Upsert** par `(pensionnaire, date)`. `200` avec un **résultat par ligne** : `{ saved, rejected, lines: [{ boarderId, outcome, code?, message? }] }` ; une ligne refusée n'empêche pas les autres. |
+
+**Statut d'une sortie (jamais stocké).** `Returned` si un retour est enregistré ; sinon `Pending` avant la date de sortie, `Overdue` après le
+retour prévu, `Active` entre les deux (bornes incluses). Le filtre `status` applique le même verdict en SQL.
+
+**Pointage — règles.**
+- Date : pas dans le futur **et** dans l'année scolaire active (`422` sinon) ; pavillon inconnu ou d'une autre école : `404`. Aucune règle sur le jour de la semaine.
+- Seuls les séjours **actifs `Interne`** ayant un lit dans le pavillon sont pointables : un demi-pensionnaire, un interne sans lit ou d'un autre pavillon est rejeté `NOT_IN_DORMITORY`. Le pointage rétroactif d'un séjour clos n'est pas géré.
+- Un pensionnaire dort **dehors** la nuit `D` s'il est parti (`leaveDate ≤ D`) et pas encore rentré **ce soir-là** (`actualReturnDate` absente ou `> D`) : une sortie dépassée mais non rentrée compte encore, la nuit du retour il dort à l'internat. Déclaré **présent** cette nuit-là : ligne rejetée `BOARDER_ON_LEAVE` ; **absent** sans note : la note `En permission` est posée.
+- Un `boarderId` répété dans la requête : la première ligne l'emporte, les suivantes sont rejetées `DUPLICATE_ENTRY`.
+- Deux premières saisies simultanées de la même nuit : `409 ATTENDANCE_CONFLICT` pour la perdante (rechargez la feuille).
+
+**Codes de refus par ligne** (dans `lines[].code`, pas des erreurs HTTP) : `NOT_IN_DORMITORY`, `DUPLICATE_ENTRY`, `BOARDER_ON_LEAVE`.
 
 ---
 
