@@ -90,6 +90,8 @@ logs serveur (Volume 7).
 | `VALIDATION_ERROR` | Erreur de saisie (FluentValidation) | 422 |
 | `CONCURRENCY_CONFLICT` | Écriture concurrente (RowVersion/xmin) — règle #5 | 409 |
 | `BUSINESS_RULE_VIOLATION` | Règle métier bloquant l'opération vu l'état de la ressource | 409 |
+| `RESOURCE_IN_USE` | La ressource a encore des éléments vivants dépendants : pavillon avec chambres, chambre avec lits, lit occupé (§31) | 409 |
+| `ARCHIVED_ENTITY_EXISTS` / `ACTIVE_ENTITY_CONFLICT` / `PARENT_ENTITY_ARCHIVED` | Cycle soft delete : l'identité n'existe qu'à l'état supprimé / une ligne active la porte déjà / le parent est supprimé | 409 |
 | `INVALID_CREDENTIALS` | Authentification échouée (message volontairement générique) | 401 |
 | `FORBIDDEN` | Permission insuffisante | 403 |
 | `NOT_FOUND` | Ressource inexistante | 404 |
@@ -521,6 +523,7 @@ Référentiel des locaux : bâtiments de l'établissement et salles qu'ils conti
 **Règles :**
 - La lecture est volontairement ouverte à tous les rôles de l'établissement : un enseignant a besoin de connaître les salles pour lire son emploi du temps (§19).
 - `GET /buildings` renvoie une **liste vide** (`200`), jamais une erreur `500`, sur un établissement dont la migration Infrastructures n'a pas encore été appliquée.
+- **Dortoirs.** Depuis le module Internat « Pavillon/Lit » (§31), les dortoirs ne se gèrent plus ici : `GET /buildings` n'expose ni les salles de type `Dortoir` ni les bâtiments qui ne contiennent que des dortoirs, et `POST`/`PUT /rooms` refusent le type `Dortoir` (`422`).
 
 ---
 
@@ -948,6 +951,40 @@ pour les autres profils. `POST /schools/current/settings/establishment-profile` 
 
 **Confort d'affichage.** Les écrans Classes, Inscriptions et Examens ne proposent que les niveaux, classes et types d'examen
 des cycles gérés ; un niveau ou une classe déjà en usage reste visible. L'API ne refuse pas la création d'une classe hors de ces cycles.
+
+## 31. API Internat — Pavillons, chambres et lits
+
+Contrôleur `BoardingController` (`/api/v1/boarding`), module Internat requis (`403 MODULE_DISABLED` sinon, lecture comprise).
+Spec : `docs/superpowers/specs/2026-10-06-internat-backend-and-profile-isolation-design.md` §6.1. Tables : `dormitories`,
+`dormitory_rooms`, `beds` (Volume 3 §4). Routes plates, comme `/buildings` et `/rooms`. Lecture : Directeur, Secrétariat,
+Surveillant. Écriture et corbeille : Directeur, Secrétariat. Tout `rowVersion` est le jeton `xmin` renvoyé par la lecture
+précédente ; un jeton périmé répond `409 CONCURRENCY_CONFLICT`.
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/boarding/dormitories?gender=` | Lecture | Pavillons triés par nom : `roomCount`, `capacity`, `occupiedBeds`, `maintenanceBeds`, `occupancyRate` (0..1, sur les lits hors maintenance), `supervisorName`. **Capacités dérivées des lits, jamais saisies.** |
+| `GET` | `/api/v1/boarding/dormitories/{id}` | Lecture | Pavillon avec ses chambres et leurs lits : `status` ∈ `Available`, `Occupied`, `Maintenance` (calculé), `occupantName`, `occupantBoarderId`. |
+| `POST` | `/api/v1/boarding/dormitories` | Écriture | `{ name, gender, supervisorName?, supervisorPhone?, supervisorUserId?, notes? }` — `201`. `gender` ∈ `Garcons`, `Filles` ; **`Mixte` est refusé (`422`)**, il n'existe que pour les pavillons repris de l'ancien module. `supervisorUserId` : compte `Surveillant` actif de l'école (`422` sinon) ; le nom affiché est alors celui du compte. `409 ARCHIVED_ENTITY_EXISTS` si le nom n'existe que dans la corbeille. |
+| `PUT` | `/api/v1/boarding/dormitories/{id}` | Écriture | Fiche entière + `rowVersion`. Le genre ne change pas tant que le pavillon héberge des pensionnaires (`422`). |
+| `DELETE` | `/api/v1/boarding/dormitories/{id}?rowVersion=` | Écriture | Suppression logique. `409 RESOURCE_IN_USE` tant que le pavillon a des chambres. |
+| `GET` / `POST` | `/api/v1/boarding/dormitories/deleted` / `.../{id}/restore` | Écriture | Corbeille / restauration. `409 ACTIVE_ENTITY_CONFLICT` si le nom est repris. |
+| `POST` | `/api/v1/boarding/rooms` | Écriture | `{ dormitoryId, name, bedCount 1-40 }` — crée la chambre ET ses lits 1..N en une transaction (`201`). |
+| `PUT` | `/api/v1/boarding/rooms/{id}` | Écriture | `{ name, rowVersion }` — renomme ; ne touche pas aux lits. |
+| `DELETE` | `/api/v1/boarding/rooms/{id}?rowVersion=` | Écriture | `409 RESOURCE_IN_USE` tant que la chambre a des lits vivants. |
+| `GET` / `POST` | `/api/v1/boarding/rooms/deleted` / `.../{id}/restore` | Écriture | `409 PARENT_ENTITY_ARCHIVED` si le pavillon est supprimé. |
+| `POST` | `/api/v1/boarding/beds` | Écriture | `{ dormitoryRoomId, bedNumber? }` — numéro automatique = plus grand numéro de la chambre (lits supprimés compris) + 1. `201`. |
+| `PUT` | `/api/v1/boarding/beds/{id}/status` | Écriture | `{ status, rowVersion }` — `Available` ↔ `Maintenance` seulement (`Occupied` : `422`). `409 RESOURCE_IN_USE` pour un lit occupé. |
+| `DELETE` | `/api/v1/boarding/beds/{id}?rowVersion=` | Écriture | `409 RESOURCE_IN_USE` pour un lit occupé. |
+| `GET` / `POST` | `/api/v1/boarding/beds/deleted` / `.../{id}/restore` | Écriture | `409 ACTIVE_ENTITY_CONFLICT` (numéro repris) ou `PARENT_ENTITY_ARCHIVED` (chambre supprimée). |
+
+**Règle de suppression stricte.** Jamais de cascade : on supprime d'abord les lits, puis la chambre, puis le pavillon (même
+règle que `DELETE /buildings`). Cela rend la restauration non ambiguë.
+
+**Anciennes salles `Dortoir`.** `GET /api/v1/buildings` n'expose plus les salles de type `Dortoir` ni les bâtiments qui ne
+contiennent que des dortoirs ; `POST`/`PUT /api/v1/rooms` refusent `Dortoir` (`422`). Voir §17.
+
+**Pas encore livré** (lots suivants) : affectation d'un élève à un lit, fin de séjour, pensionnaires, sorties, pointage de nuit
+et PDF.
 
 ---
 
