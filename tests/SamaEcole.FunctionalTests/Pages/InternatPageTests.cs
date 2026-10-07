@@ -30,7 +30,8 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var html = await InternatHtmlAsync();
 
         html.Should().Contain("x-data=\"internatTabs()\"");
-        html.Should().Contain("x-data=\"internatPage()\"", "l'onglet Occupation (tableau de bord et affectation) est conservé tel quel");
+        html.Should().Contain("x-data=\"occupationTab()\"", "l'onglet Occupation (tableau de bord et affectation sur /api/v1/boarding)");
+        html.Should().NotContain("internatPage()", "l'ancien composant, fondé sur les routes héritées, a disparu");
         html.Should().Contain("x-data=\"dormitoriesTab()\"", "l'onglet Pavillons");
         html.Should().Contain("tab === 'occupation'").And.Contain("tab === 'pavillons'");
     }
@@ -52,14 +53,16 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var scripts = Regex.Matches(html, "<script src=\"(/js/[^\"?]+)").Select(m => m.Groups[1].Value).ToList();
         var helpers = scripts.IndexOf("/js/internat-helpers.js");
         var dormitories = scripts.IndexOf("/js/internat-dormitories.js");
+        var occupation = scripts.IndexOf("/js/internat-occupation.js");
         var screen = scripts.IndexOf("/js/internat.js");
 
         helpers.Should().BeGreaterThanOrEqualTo(0);
         dormitories.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
-        screen.Should().BeGreaterThan(dormitories);
+        occupation.Should().BeGreaterThan(helpers, "le composant utilise les helpers");
+        screen.Should().BeGreaterThan(Math.Max(dormitories, occupation));
         scripts.IndexOf("/js/trash.js").Should().BeGreaterThanOrEqualTo(0, "les panneaux de corbeille sont chargés par le layout");
 
-        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat.js", "/js/trash.js" })
+        foreach (var script in new[] { "/js/internat-helpers.js", "/js/internat-dormitories.js", "/js/internat-occupation.js", "/js/internat.js", "/js/trash.js" })
         {
             var response = await _client.GetAsync(script);
             response.StatusCode.Should().Be(HttpStatusCode.OK, script);

@@ -733,7 +733,12 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
 - **Piège Razor :** `PagesController` rend `Views/Internat/Index.cshtml` par chemin explicite ; une vue partielle de ce dossier doit être appelée par
   **chemin complet** (`Html.PartialAsync("~/Views/Internat/_Dormitories.cshtml")`), sinon la recherche par nom n'explore que `Views/Pages` et `Views/Shared` et la
   page répond 500 — sans qu'aucun test JavaScript puisse le voir (`InternatPageTests`).
-- **Reste :** G3 (occupation et affectation sur `/api/v1/boarding`, route `boardable-students`), G4 (pensionnaires, sorties, pointage, PDF), puis le lot F
+- **G3 (fait) — onglet Occupation sur `/api/v1/boarding`.** Nouvelle route `GET /api/v1/boarding/boardable-students` (décrit le **séjour** et son jeton `xmin`,
+  réutilisable par `assign-bed`). Le tableau de bord se calcule depuis les pavillons ; la modale choisit un **lit** (plus une chambre) ; un demi-pensionnaire s'affecte
+  sans lit ; libération par `unassign-bed`. **Plus aucun écran n'appelle les 3 routes héritées** (`/internat/dashboard`, `/internat/students/search`,
+  `/internat/assignments/{id}`) : un test JS le verrouille, le lot F peut les supprimer. Piège de test : dans un jeu de données inséré en une seule transaction, tous
+  les `xmin` sont égaux — faire avancer l'un d'eux dans une transaction séparée pour qu'un test de jeton ait un sens.
+- **Reste :** G4 (pensionnaires, sorties, pointage, PDF), puis le lot F
   (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`).
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)

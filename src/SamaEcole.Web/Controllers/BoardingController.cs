@@ -11,7 +11,8 @@ using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
 using SamaEcole.Application.Boarding.Boarders.AssignBed;
-using SamaEcole.Application.Boarding.Boarders.EndBoarding;
+using SamaEcole.Application.Boarding.Boarders.EndBoarding;
+using SamaEcole.Application.Boarding.Boarders.FindBoardableStudents;
 using SamaEcole.Application.Boarding.Boarders.GetBoarder;
 using SamaEcole.Application.Boarding.Boarders.ListBoarders;
 using SamaEcole.Application.Boarding.Boarders.UpdateBoarderProfile;
@@ -334,6 +335,17 @@ public class BoardingController(ISender mediator) : ControllerBase
         await mediator.Send(new EndBoardingCommand(boarderId, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Recherche des élèves à affecter (inscriptions non annulées de l'année active, 2 caractères au moins, 20 résultats au plus). Décrit le SÉJOUR
+    /// actif — <c>boarderId</c>, régime, lit, <c>rowVersion</c> du séjour — pour alimenter <c>assign-bed</c> (transfert) sans second appel.
+    /// </summary>
+    [HttpGet("boardable-students")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<IReadOnlyList<BoardableStudentCandidateDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> FindBoardableStudents([FromQuery] string? term, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new FindBoardableStudentsQuery(term), cancellationToken));
 
     [HttpGet("boarders")]
     [Authorize(Roles = ReadRoles)]
