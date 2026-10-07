@@ -1,3 +1,4 @@
+using SamaEcole.Domain.Enums;
 using SamaEcole.Application.Common.Validation;
 using FluentValidation;
 
@@ -12,6 +13,8 @@ public class CreateRoomCommandValidator : AbstractValidator<CreateRoomCommand>
             .GreaterThan(0).WithMessage("La capacité doit être supérieure à zéro.")
             .LessThanOrEqualTo(1000).WithMessage("La capacité annoncée semble irréaliste (maximum 1000).");
         RuleFor(x => x.Type).IsInEnum().WithMessage("Type de salle invalide.");
+        RuleFor(x => x.Type).NotEqual(RoomType.Dortoir)
+            .WithMessage("Les dortoirs se gèrent dans Internat › Pavillons, plus dans Bâtiments et salles.");
         RuleFor(x => x.BuildingId).NotEmpty();
     }
 }

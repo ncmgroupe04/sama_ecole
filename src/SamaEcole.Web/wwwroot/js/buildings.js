@@ -310,10 +310,10 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // `currentType` : garde le type déjà enregistré dans la liste même si le module Internat est
-        // désactivé depuis (salle déjà en Dortoir) — seul le choix d'un NOUVEAU Dortoir est empêché,
-        // la donnée existante ne disparaît jamais du sélecteur (même principe que
-        // classroomsView.visibleLevelOptions, wwwroot/js/classrooms.js).
+        // `currentType` : garde le type déjà enregistré dans la liste — la donnée existante ne disparaît jamais du
+        // sélecteur (même principe que classroomsView.visibleLevelOptions, wwwroot/js/classrooms.js).
+        // Décision Q1 (spec Internat 2026-10-06) : « Dortoir » n'est plus proposé pour une NOUVELLE salle, quel que
+        // soit l'état du module — les dortoirs se gèrent dans Internat › Pavillons, et l'API refuse ce type (422).
         roomTypeOptions(currentType = null) {
             const all = [
                 { value: 'SalleDeClasse', label: 'Salle de classe' },
@@ -322,8 +322,6 @@ document.addEventListener('alpine:init', () => {
                 { value: 'Dortoir', label: 'Dortoir' },
                 { value: 'Autre', label: 'Autre' }
             ];
-            const config = Alpine.store('schoolConfig');
-            if (config && config.internatEnabled) return all;
             return all.filter((o) => o.value === currentType || o.value !== 'Dortoir');
         }
     }));
