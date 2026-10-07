@@ -25,3 +25,19 @@ public record BoarderListItemDto(
     DateOnly StartDate,
     DateOnly? EndDate,
     uint RowVersion);
+
+/// <summary>Page de pensionnaires (convention de pagination du Volume 4 §0.2).</summary>
+public record PaginatedBoarders(IReadOnlyList<BoarderListItemDto> Items, int TotalCount, int Page, int PageSize);
+
+public record AllowedExitPersonDto(string Name, string Relationship, string Phone);
+
+/// <summary>
+/// Fiche complète d'un pensionnaire. <see cref="MedicalNotes"/> est une donnée de santé d'un mineur : elle n'est renvoyée
+/// qu'au Directeur et au Surveillant, et vaut <c>null</c> pour tout autre rôle (spec §5.2).
+/// </summary>
+public record BoarderDetailDto(
+    BoarderListItemDto Boarder,
+    string? MedicalNotes,
+    string? EmergencyContactName,
+    string? EmergencyContactPhone,
+    IReadOnlyList<AllowedExitPersonDto> AllowedExitPersons);

@@ -20,6 +20,8 @@ public static class BoarderReader
         from room in rooms.DefaultIfEmpty()
         join dg in dbContext.Dormitories on room.DormitoryId equals dg.Id into dormitories
         from dormitory in dormitories.DefaultIfEmpty()
+        // Tri par nom d'élève DANS la projection : EF ne traduit pas un OrderBy appliqué après la construction du record.
+        orderby s.FullName, be.Id
         select new BoarderListItemDto(
             be.Id,
             s.Id,
