@@ -242,6 +242,21 @@ internal static class UniqueConstraintCatalog
         ("exam_dossiers_SchoolId_ExamSessionId_CandidateNumber",
             "Ce numéro de table est déjà attribué à un autre candidat de cette session. Laissez le "
             + "champ vide pour une attribution automatique, ou choisissez-en un autre."),
+
+        ("UX_boarding_enrollments_active_enrollment",
+            "Cet élève est déjà hébergé à l'internat pour cette année. Rechargez la fiche : son séjour y figure déjà."),
+
+        ("UX_boarding_enrollments_active_bed",
+            "Ce lit vient d'être attribué à un autre pensionnaire. Choisissez un autre lit."),
+
+        ("UX_dormitories_name",
+            "Un pavillon porte déjà ce nom. Choisissez un autre nom, ou restaurez le pavillon existant."),
+
+        ("UX_dormitory_rooms_name",
+            "Une chambre porte déjà ce nom dans ce pavillon."),
+
+        ("UX_beds_number",
+            "Ce numéro de lit est déjà utilisé dans cette chambre."),
     ];
 
     /// <summary>

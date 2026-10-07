@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Ancien modèle (Enrollment.BoardingStatus/RoomId) volontairement utilisé : c'est ce que la reprise lit.
+
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;

@@ -223,6 +223,8 @@ public class GetStudentDetailQueryHandler(
             .Select(y => (Guid?)y.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
+        // Depuis le lot C (modèle Pavillon/Lit), régime et chambre viennent du SÉJOUR actif de l'inscription : un séjour
+        // actif tient un lit, et une chambre ou un lit supprimés ne peuvent pas héberger un séjour actif (refus 409).
         var boarding = activeYearId is null
             ? null
             : await dbContext.Enrollments.AsNoTracking()
@@ -230,13 +232,15 @@ public class GetStudentDetailQueryHandler(
                             && e.Status != EnrollmentStatus.Cancelled)
                 .Select(e => new
                 {
-                    e.BoardingStatus,
-                    RoomName = e.RoomId == null
-                        ? null
-                        : dbContext.Rooms.AsNoTracking()
-                            .Where(r => r.Id == e.RoomId)
-                            .Select(r => r.Name)
-                            .FirstOrDefault() ?? "Chambre supprimée"
+                    Regime = dbContext.BoardingEnrollments
+                        .Where(b => b.EnrollmentId == e.Id && b.IsActive)
+                        .Select(b => (BoardingRegime?)b.Regime)
+                        .FirstOrDefault(),
+                    RoomName = (from be in dbContext.BoardingEnrollments
+                                where be.EnrollmentId == e.Id && be.IsActive && be.BedId != null
+                                join bed in dbContext.Beds on be.BedId equals bed.Id
+                                join r in dbContext.DormitoryRooms on bed.DormitoryRoomId equals r.Id
+                                select r.Name).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -260,7 +264,7 @@ public class GetStudentDetailQueryHandler(
             student.FullNameAr,
             student.GuardianNameAr,
             student.RowVersion,
-            (boarding?.BoardingStatus ?? BoardingStatus.Externe).ToString(),
+            boarding?.Regime?.ToString() ?? nameof(BoardingStatus.Externe),
             boarding?.RoomName);
 
         // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20), et NON un réglage
@@ -296,16 +300,33 @@ public class GetStudentDetailQueryHandler(
                     .Select(c => c.Name)
                     .FirstOrDefault() ?? "Classe supprimée",
 
-                // Module Internat : régime + chambre de CETTE inscription (portée annuelle).
-                e.BoardingStatus,
-                RoomLabel = e.RoomId == null ? null :
-                    dbContext.Rooms.AsNoTracking()
-                        .Where(r => r.Id == e.RoomId)
-                        .Select(r => r.Name + " — " + dbContext.Buildings.AsNoTracking()
-                            .Where(b => b.Id == r.BuildingId).Select(b => b.Name).FirstOrDefault())
-                        .FirstOrDefault()
+                // Module Internat : dernier séjour de CETTE inscription (portée annuelle). Un séjour clos garde son régime
+                // mais n'a plus de lit ; « Externe » s'il n'y en a jamais eu.
+                Stay = dbContext.BoardingEnrollments.AsNoTracking()
+                    .Where(b => b.EnrollmentId == e.Id)
+                    .OrderByDescending(b => b.StartDate).ThenByDescending(b => b.CreatedAt)
+                    .Select(b => new { b.Regime, b.BedId })
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
+
+        // Libellés « Chambre — Pavillon » des lits actuellement tenus, en UNE requête (pas de N+1).
+        var heldBedIds = enrollments.Where(e => e.Stay?.BedId is not null).Select(e => e.Stay!.BedId!.Value).Distinct().ToList();
+        var roomLabelByBed = heldBedIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await (
+                from bed in dbContext.Beds.AsNoTracking()
+                where heldBedIds.Contains(bed.Id)
+                select new
+                {
+                    bed.Id,
+                    Room = dbContext.DormitoryRooms.Where(r => r.Id == bed.DormitoryRoomId).Select(r => r.Name).FirstOrDefault(),
+                    Dormitory = (from r in dbContext.DormitoryRooms
+                                 join d in dbContext.Dormitories on r.DormitoryId equals d.Id
+                                 where r.Id == bed.DormitoryRoomId
+                                 select d.Name).FirstOrDefault()
+                }).ToListAsync(cancellationToken))
+                .ToDictionary(x => x.Id, x => $"{x.Room ?? "Chambre supprimée"} — {x.Dormitory ?? "Pavillon supprimé"}");
 
         // Moyenne annuelle d'affichage = moyenne des moyennes trimestrielles disponibles de l'année.
         // Dérivée pour la seule présentation (frontière JGK-G02) — null tant qu'aucun trimestre n'a de note.
@@ -326,8 +347,8 @@ public class GetStudentDetailQueryHandler(
                 averageByYear.GetValueOrDefault(e.SchoolYearId),
                 e.EnrolledAt,
                 e.RowVersion,
-                e.BoardingStatus.ToString(),
-                e.RoomLabel))
+                e.Stay?.Regime.ToString() ?? nameof(BoardingStatus.Externe),
+                e.Stay?.BedId is { } heldBed ? roomLabelByBed.GetValueOrDefault(heldBed) : null))
             .ToList();
 
         // 4) Paiements — jamais pour l'Enseignant (Volume 7 « Finance », Volume 1 §« Sans accès »).

@@ -157,6 +157,36 @@ public class CreateEnrollmentCommandValidatorTests
     }
 
     [Fact]
+    public void An_Interne_Enrollment_Without_A_RoomId_Should_Fail()
+    {
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment, ClassroomId = Guid.NewGuid(), FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12), BirthPlace = "Dakar", Gender = "F",
+            BoardingStatus = BoardingStatus.Interne, RoomId = null
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.RoomId));
+    }
+
+    [Fact]
+    public void A_Half_Boarder_Enrollment_Does_Not_Need_A_RoomId()
+    {
+        // Spec Pavillon/Lit (N7) : un demi-pensionnaire ne dort pas à l'internat, donc n'a ni lit ni chambre.
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment, ClassroomId = Guid.NewGuid(), FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12), BirthPlace = "Dakar", Gender = "F",
+            BoardingStatus = BoardingStatus.DemiPensionnaire, RoomId = null
+        };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void An_Enrollment_Without_A_Classroom_Should_Fail()
     {
         var command = new CreateEnrollmentCommand

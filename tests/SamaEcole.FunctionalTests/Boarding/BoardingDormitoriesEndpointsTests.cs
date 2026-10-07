@@ -87,7 +87,7 @@ public class BoardingDormitoriesEndpointsTests : IClassFixture<AuthApiFactory>, 
         return await _client.SendAsync(request);
     }
 
-    private async Task EnableInternatAsync(string directeurToken)
+    private async Task EnableInternatAsync(string directeurToken, bool enabled = true)
     {
         var response = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeurToken, new
         {
@@ -100,7 +100,7 @@ public class BoardingDormitoriesEndpointsTests : IClassFixture<AuthApiFactory>, 
             allowSecretaryToManageGrading = false,
             isPedagogyEnabled = true,
             isFinanceEnabled = true,
-            isInternatEnabled = true,
+            isInternatEnabled = enabled,
             isCoranModuleEnabled = false
         });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -143,6 +143,9 @@ public class BoardingDormitoriesEndpointsTests : IClassFixture<AuthApiFactory>, 
     public async Task Every_Route_Returns_403_MODULE_DISABLED_Until_The_Module_Is_Enabled()
     {
         var directeur = await DirecteurAsync();
+        // Les autres tests de la classe activent le module dans la MÊME base : on le désactive explicitement, pour que ce
+        // test ne dépende pas de l'ordre d'exécution.
+        await EnableInternatAsync(directeur, enabled: false);
 
         var response = await SendAsync(HttpMethod.Get, "/api/v1/boarding/dormitories", directeur);
 
