@@ -217,3 +217,13 @@ Routes : `[HttpGet("boarders/{id:guid}/pdf")]`, `[HttpGet("dormitories/{id:guid}
 - **Risque principal** : l'extraction de texte (E1). Si PdfPig ne lit pas la police embarquée, le plan s'arrête à la tâche 1 plutôt que d'affaiblir les tests.
 - **Cohérence des noms** : `BoarderSheetDto`, `GetBoarderSheetQuery`, `GetBoarderSheetPdfQuery`, `DormitoryRegisterDto`, `DormitoryRegisterRowDto`, `GetDormitoryRegisterQuery`, `GetDormitoryRegisterPdfQuery`, `BoardingPdfResult`, `IBoarderSheetPdfGenerator`, `IDormitoryRegisterPdfGenerator`, `PdfText.Extract` — identiques dans toutes les tâches.
 - **Limite connue** : la date du registre est une nuit unique ; un registre de période n'est pas prévu.
+
+## Écarts constatés à l'exécution
+
+- **Paquet NuGet :** l'identifiant `UglyToad.PdfPig` est un paquet **tiers non vérifié** (propriétaire `grinay`, 2 versions dont une préversion « custom »). Le paquet officiel s'appelle **`PdfPig`** (mainteneurs BobLd et EliotJones), version stable 0.1.16 retenue. `UglyToad.PdfPig` n'est que l'espace de noms dans le code.
+- **Extraction :** PdfPig lit bien le texte accentué des PDF QuestPDF avec les polices de production ; le garde-fou « police » n'a pas été déclenché.
+- **DTO :** `GetBoarderSheetQueryHandler` appelle directement `BoarderDetailReader` (source unique du masquage) et `GetDormitoryRegisterQueryHandler` un lecteur partagé `AttendanceSheetReader` (extrait de `GetAttendanceSheetQueryHandler`) au lieu de passer par `ISender` : les tests d'intégration construisent les handlers sans médiateur.
+- **PdfText** est partagé avec les tests fonctionnels par un `<Compile Include … Link=…>` plutôt que dupliqué.
+- **Piège de test :** `JsonSerializer` échappe les accents (`é` → `\u00E9`) : une recherche de la fiche médicale dans un JSON ainsi sérialisé échoue toujours, et un test « absent » passe à vide. Encodeur `UnsafeRelaxedJsonEscaping` + assertion jumelle sur un nom accentué.
+- **Test de mutation :** autoriser temporairement le Secrétariat dans `CanReadMedical` fait échouer `The_Sheet_Shows_The_Medical_Notes_To_Director_And_Supervisor_And_Hides_Them_From_The_Secretary` (puis fichier restauré) — la confidentialité est bien verrouillée par ce test.
+- Le registre d'une nuit déjà pointée affiche « Présent » / « Absent » ; les cases vides sont dessinées (pas de glyphe `☐`, absent de la police).

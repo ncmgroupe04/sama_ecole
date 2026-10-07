@@ -692,7 +692,7 @@ pension ajoutée une fois et jamais retirée, course sur le dernier lit → 409 
 3. **Ne jamais rejouer la réconciliation** après la bascule : elle fermerait de vrais séjours.
 4. Contrôle après déploiement : séjours actifs de l'année active = inscriptions pensionnaires de l'année active (requête dans la PR).
 
-Reste : lot E (PDF), lot G (IHM), puis lot F (suppression des colonnes et routes héritées — APRÈS la migration de l'écran, donc après G).
+Reste : lot G (IHM), puis lot F (suppression des colonnes et routes héritées — APRÈS la migration de l'écran, donc après G).
 
 ### Module Internat — modèle Pavillon/Lit, lot D (07/10/2026) — livré (sorties et pointage de nuit)
 
@@ -707,6 +707,17 @@ pour le filtre de liste). Un accompagnateur non habilité est **accepté** et tr
 pointables ; une sortie non rentrée (même dépassée) compte « dehors », la nuit du retour non ; résultat du pointage **ligne par ligne** (une
 ligne refusée n'en bloque pas d'autres). Codes 409 : `LEAVE_ALREADY_OPEN`, `LEAVE_ALREADY_RETURNED`, `ATTENDANCE_CONFLICT`.
 `openapi.yaml` ne décrit aucune route `boarding` (lots A à D) : à compléter à part.
+
+### Module Internat — modèle Pavillon/Lit, lot E (07/10/2026) — livré (fiche pensionnaire et registre du pavillon en PDF)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-e.md`. Branche `feat/internat-pdf-reports`, **empilée sur le lot D**, **aucune migration**
+ni script post-déploiement. Routes `GET /api/v1/boarding/boarders/{id}/pdf` (fiche, portrait) et `GET /api/v1/boarding/dormitories/{id}/register-pdf?date=`
+(registre d'une nuit, paysage) — Volume 4 §31.4. Chaque impression est auditée (le journal ne retient pas le contenu).
+
+**Confidentialité :** la fiche médicale n'est imprimée que pour le Directeur et le Surveillant (`BoarderDetailReader.CanReadMedical`, source unique) ; le
+registre n'a ni santé ni téléphone (DTO verrouillé par réflexion). Contrôlé sur le **texte extrait des PDF** avec `PdfPig` (paquet NuGet officiel `PdfPig`,
+**tests uniquement** — attention : `UglyToad.PdfPig` sur NuGet est un paquet tiers non vérifié, ne pas l'utiliser). Piège : chercher du texte dans les octets
+d'un PDF QuestPDF ne trouve jamais rien (flux compressé), un test « absent » sur les octets passe à vide ; et `JsonSerializer` échappe les accents.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 

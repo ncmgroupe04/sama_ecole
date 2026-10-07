@@ -1007,7 +1007,7 @@ fiche existante est **conservée** et le reste du profil est mis à jour. Pour l
 
 **Demi-pensionnaire.** Il ne dort pas à l'internat : aucun lit, aucune chambre. Il n'occupe donc aucune place du tableau de bord.
 
-**Pas encore livré** (lots suivants) : PDF (fiche et registre), IHM.
+**Pas encore livré** (lots suivants) : IHM.
 
 ### 31.2 Compatibilité de l'ancien écran `/internat`
 
@@ -1044,6 +1044,22 @@ retour prévu, `Active` entre les deux (bornes incluses). Le filtre `status` app
 - Deux premières saisies simultanées de la même nuit : `409 ATTENDANCE_CONFLICT` pour la perdante (rechargez la feuille).
 
 **Codes de refus par ligne** (dans `lines[].code`, pas des erreurs HTTP) : `NOT_IN_DORMITORY`, `DUPLICATE_ENTRY`, `BOARDER_ON_LEAVE`.
+
+### 31.4 Documents PDF (lot E)
+
+Rôles : `Directeur`, `Secretariat`, `Surveillant` ; `Enseignant`/`Finance` → `403` ; module Internat désactivé → `403 MODULE_DISABLED`. Réponse
+`200 application/pdf`, `Content-Disposition: inline; filename="…"` (nom ASCII assaini). **Chaque impression est tracée** dans le journal d'audit (module
+`Boarding`, actions `GetBoarderSheetPdf` / `GetDormitoryRegisterPdf`) ; le journal ne retient jamais le contenu du document.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/boarding/boarders/{id}/pdf` | **Fiche individuelle** (A4 portrait) d'un séjour actif **ou clos** (archive) : identité (nom arabe si renseigné), classe, régime, pavillon / chambre / lit, dates du séjour, contact d'urgence, personnes habilitées, **fiche médicale selon le rôle**, et **toutes les sorties de l'année scolaire active** (statut, pastille « Non habilité »). `404` si le séjour n'est pas de l'école. |
+| `GET` | `/api/v1/boarding/dormitories/{id}/register-pdf?date=` | **Registre du pavillon** (A4 paysage) pour **une nuit** (`date`, aujourd'hui par défaut) : chambre, lit, nom (+ arabe), matricule, classe, présence, observations. Nuit non pointée : deux cases vides à cocher à la main ; nuit pointée : « Présent » / « Absent » ; pensionnaire en sortie : « En permission ». En-tête de tableau répété sur chaque page. `404` pavillon inconnu ; `422` date future ou hors de l'année active (mêmes règles que le pointage, §31.3). |
+
+**Confidentialité (spec §5.2).** La fiche médicale n'est imprimée sur la fiche individuelle que pour le `Directeur` et le `Surveillant` (même règle que
+`GET /boarders/{id}`, `BoarderDetailReader.CanReadMedical`) ; pour le `Secretariat` le **bloc entier, titre compris, disparaît**. Le registre, posé dans le
+pavillon, ne contient **jamais** de donnée de santé ni de numéro de téléphone (celui du surveillant du pavillon non plus : seul son nom figure) ; son DTO est
+verrouillé par un test par réflexion. Les deux contrôles sont faits sur le **texte extrait des PDF** (PdfPig, dépendance de tests uniquement), pas sur les octets.
 
 ---
 
