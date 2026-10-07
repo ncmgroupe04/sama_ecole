@@ -140,6 +140,40 @@ window.internatHelpers = (() => {
         return errors;
     }
 
+    // ------------------------------------------------------------------ PDF
+
+    /** Date au format yyyy-MM-dd attendu par l'API : une chaîne déjà conforme, ou un objet Date lu avec ses composantes LOCALES (toISOString décalerait le jour). */
+    function isoDate(value) {
+        if (Object.prototype.toString.call(value) === '[object Date]' && !Number.isNaN(value.getTime())) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+        }
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+    }
+
+    /** GET /boarding/boarders/{id}/pdf — fiche individuelle. Aucun paramètre : le masquage de la fiche médicale est décidé par le serveur, selon le rôle. */
+    function boarderPdfUrl(boarderId) {
+        return boarderId ? `/api/v1/boarding/boarders/${boarderId}/pdf` : '';
+    }
+
+    /** GET /boarding/dormitories/{id}/register-pdf?date= — registre d'une nuit. Sans date valide, le serveur prend aujourd'hui. */
+    function registerPdfUrl(dormitoryId, date) {
+        if (!dormitoryId) return '';
+        const day = isoDate(date);
+        return `/api/v1/boarding/dormitories/${dormitoryId}/register-pdf${day ? `?date=${day}` : ''}`;
+    }
+
+    /** Nom de téléchargement ASCII : accents ramenés à leur lettre, espaces en tirets, tout autre caractère retiré (jamais de « ../ »). */
+    function pdfFileName(prefix, ...parts) {
+        const safe = parts
+            .map((part) => String(part || '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/[^A-Za-z0-9_-]/g, ''))
+            .filter(Boolean);
+        return [prefix, ...safe].join('-') + '.pdf';
+    }
+
     // ------------------------------------------------------------------ Codes d'erreur
 
     /** Messages actionnables par code métier de l'API (Volume 4 §0.3 et §31). */
@@ -173,6 +207,7 @@ window.internatHelpers = (() => {
         GENDER_CHOICES, genderLabel, bedStatusLabel,
         buildDormitoryBody, buildRoomBody,
         validateDormitory, validateRoom,
+        isoDate, boarderPdfUrl, registerPdfUrl, pdfFileName,
         ERROR_MESSAGES, errorMessage
     };
 })();

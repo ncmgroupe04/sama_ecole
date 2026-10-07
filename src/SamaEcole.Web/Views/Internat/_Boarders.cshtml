@@ -181,6 +181,11 @@
 
                             <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
                                 <button type="button" class="btn-modal-secondary group" x-on:click="closeDetail()">Fermer</button>
+                                @* Imprimable par les trois rôles : le serveur retire la fiche médicale du document pour le Secrétariat. *@
+                                <button type="button" class="btn-modal-secondary group" x-on:click="openBoarderPdf()">
+                                    <icon name="print" class="w-4 h-4" />
+                                    Fiche PDF
+                                </button>
                                 <button type="button" class="btn-modal-primary group" x-on:click="startEdit()">Modifier le profil</button>
                             </div>
                         </div>
@@ -241,4 +246,7 @@
             </template>
         </div>
     </modal-shell>
+
+    @* Après la modale de fiche dans le DOM : l'aperçu PDF s'ouvre PAR-DESSUS la fiche (même z-index, le dernier frère l'emporte). *@
+    @await Html.PartialAsync("_PdfPreviewModal")
 </div>

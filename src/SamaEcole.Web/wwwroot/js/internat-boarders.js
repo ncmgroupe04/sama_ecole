@@ -153,6 +153,9 @@ document.addEventListener('alpine:init', () => {
     });
 
     Alpine.data('boardersTab', () => ({
+        // Modale d'aperçu PDF commune (wwwroot/js/pdf-preview.js) : fiche du pensionnaire.
+        ...window.pdfPreview.state(),
+
         loading: true,
         error: '',
         filterError: '',
@@ -282,6 +285,22 @@ document.addEventListener('alpine:init', () => {
         closeDetail() {
             this.detailSeq++;
             this.panel = emptyPanel();
+        },
+
+        // ------------------------------------------------------------------ PDF
+
+        /**
+         * Fiche individuelle en PDF, pour les trois rôles de lecture. Aucun paramètre n'est envoyé : c'est le serveur qui retire la fiche médicale du
+         * document pour le Secrétariat, l'écran ne choisit jamais ce que le PDF contient.
+         */
+        async openBoarderPdf() {
+            const boarder = this.panel.data && this.panel.data.boarder;
+            if (!boarder) return;
+            const helpers = this.helpers();
+            await this.openPdfPreview(
+                helpers.boarderPdfUrl(boarder.id),
+                `Fiche de ${boarder.studentName}`,
+                helpers.pdfFileName('Fiche-Pensionnaire', boarder.matricule));
         },
 
         // ------------------------------------------------------------------ Modification du profil

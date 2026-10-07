@@ -56,6 +56,7 @@ function boot({ role = 'Directeur', detail = DETAIL(), list = { items: [ITEM('s1
     const ctx = loadScripts(['internat-helpers.js', 'internat-boarders.js'], {
         preload: {
             auth: { role },
+            pdfPreview: { state: () => ({ showPdfModal: false, openPdfPreview: async () => {} }) },
             api: {
                 get: (endpoint) => record('GET', endpoint, undefined, route(endpoint)),
                 put: (endpoint, body) => record('PUT', endpoint, body, detail),

@@ -51,6 +51,18 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         html.Should().NotContain("medicalText\" x-show");
     }
 
+    [Fact]
+    public async Task The_Boarder_Sheet_Pdf_Goes_Through_The_Shared_Preview_Modal_Loaded_By_The_Layout()
+    {
+        var html = await InternatHtmlAsync();
+
+        html.Should().Contain("openBoarderPdf()", "bouton « Fiche PDF » de la fiche");
+        html.Should().Contain("closePdfPreview()", "la modale d'aperçu PDF commune est incluse");
+        html.Should().Contain("/js/pdf-preview.js", "le moteur d'aperçu est chargé par le layout");
+        html.Should().NotContain("/boarders/${", "aucun lien <a href> direct vers une route PDF : elle exige l'en-tête Authorization");
+        html.Should().NotMatchRegex("<a[^>]+href=\"[^\"]*/pdf");
+    }
+
     [Theory]
     [InlineData("dormitories")]
     [InlineData("dormitory-rooms")]
