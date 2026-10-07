@@ -56,7 +56,8 @@ public class BoarderProfileValidatorTests
     [InlineData("ended", true)]
     [InlineData("awaitingBed", true)]
     [InlineData("ACTIVE", true)]
-    [InlineData("onLeave", false)]   // reporté au lot D (sorties)
+    [InlineData("onLeave", true)]    // livré au lot D (sorties)
+    [InlineData("ONLEAVE", true)]
     [InlineData("nimporte", false)]
     public void The_List_Status_Is_One_Of_The_Known_Values(string status, bool expected) =>
         _list.Validate(new ListBoardersQuery { Status = status }).IsValid.Should().Be(expected);
