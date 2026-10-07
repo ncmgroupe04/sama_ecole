@@ -14,14 +14,24 @@ public record GetAttendanceSheetQuery(Guid DormitoryId, DateOnly Date) : IReques
 public class GetAttendanceSheetQueryHandler(IApplicationDbContext dbContext, TimeProvider timeProvider)
     : IRequestHandler<GetAttendanceSheetQuery, AttendanceSheetDto>
 {
-    public async Task<AttendanceSheetDto> Handle(GetAttendanceSheetQuery request, CancellationToken cancellationToken)
+    public Task<AttendanceSheetDto> Handle(GetAttendanceSheetQuery request, CancellationToken cancellationToken) =>
+        AttendanceSheetReader.GetAsync(
+            dbContext, request.DormitoryId, request.Date, DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime), cancellationToken);
+}
+
+/// <summary>
+/// Construction UNIQUE de la feuille d'appel d'un pavillon : l'écran de pointage et le registre imprimable (lot E) lisent la
+/// même définition de « qui est pointable et qui est en sortie ».
+/// </summary>
+internal static class AttendanceSheetReader
+{
+    public static async Task<AttendanceSheetDto> GetAsync(
+        IApplicationDbContext dbContext, Guid dormitoryId, DateOnly date, DateOnly today, CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        await AttendanceRules.EnsurePointableAsync(dbContext, date, today, cancellationToken);
+        var dormitory = await AttendanceRules.GetDormitoryAsync(dbContext, dormitoryId, cancellationToken);
 
-        await AttendanceRules.EnsurePointableAsync(dbContext, request.Date, today, cancellationToken);
-        var dormitory = await AttendanceRules.GetDormitoryAsync(dbContext, request.DormitoryId, cancellationToken);
-
-        var boarders = await (from be in AttendanceRules.DormitoryStays(dbContext, request.DormitoryId).AsNoTracking()
+        var boarders = await (from be in AttendanceRules.DormitoryStays(dbContext, dormitoryId).AsNoTracking()
                               join s in dbContext.Students on be.StudentId equals s.Id
                               join bed in dbContext.Beds on be.BedId equals bed.Id
                               join room in dbContext.DormitoryRooms on bed.DormitoryRoomId equals room.Id
@@ -30,9 +40,9 @@ public class GetAttendanceSheetQueryHandler(IApplicationDbContext dbContext, Tim
             .ToListAsync(cancellationToken);
 
         var stayIds = boarders.Select(b => b.Id).ToList();
-        var onLeave = await AttendanceRules.OnLeaveAsync(dbContext, stayIds, request.Date, cancellationToken);
+        var onLeave = await AttendanceRules.OnLeaveAsync(dbContext, stayIds, date, cancellationToken);
         var recorded = (await dbContext.BoardingAttendances.AsNoTracking()
-                .Where(a => a.Date == request.Date && stayIds.Contains(a.BoardingEnrollmentId))
+                .Where(a => a.Date == date && stayIds.Contains(a.BoardingEnrollmentId))
                 .ToListAsync(cancellationToken))
             .ToDictionary(a => a.BoardingEnrollmentId);
 
@@ -50,6 +60,6 @@ public class GetAttendanceSheetQueryHandler(IApplicationDbContext dbContext, Tim
                 : new AttendanceSheetLineDto(b.Id, b.FullName, b.Matricule, b.RoomName, b.BedNumber, false, false, null, null);
         }).ToList();
 
-        return new AttendanceSheetDto(request.Date, request.DormitoryId, dormitory.Name, lines);
+        return new AttendanceSheetDto(date, dormitoryId, dormitory.Name, lines);
     }
 }
