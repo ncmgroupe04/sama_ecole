@@ -333,6 +333,17 @@
             return DEFAULT_LANDING;
         },
 
+        /**
+         * Point de repli de la garde de page par module (module-route-guard.js) : l'atterrissage SANS tenir compte du profil. L'atterrissage
+         * par profil peut être une page gardée par un module (Directeur Daara → /suivi-coranique) : si ce module est désactivé, le renvoyer là
+         * ferait boucler. Le repli n'est jamais une page gardée.
+         */
+        neutralLandingForRole() {
+            if (this.role === 'SuperAdmin') return SUPER_ADMIN_LANDING;
+            if (DASHBOARD_ROLES.includes(this.role)) return DASHBOARD_LANDING;
+            return DEFAULT_LANDING;
+        },
+
         /** Profil (ProfileType) mémorisé pour cet utilisateur, ou null — localStorage peut être indisponible. */
         rememberedProfile() {
             try {

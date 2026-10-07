@@ -56,6 +56,24 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
         (await response.Content.ReadAsStringAsync()).Should().NotContain("required-module", url);
     }
 
+    [Theory]
+    [InlineData("/internat")]
+    [InlineData("/eleves")]
+    public async Task The_Layout_Loads_The_Guard_After_The_Scripts_It_Depends_On(string url)
+    {
+        var html = await (await _client.GetAsync(url)).Content.ReadAsStringAsync();
+
+        var guard = html.IndexOf("/js/module-route-guard.js", StringComparison.Ordinal);
+        guard.Should().BeGreaterThan(0, url);
+        foreach (var dependency in new[] { "/js/auth.js", "/js/api.js", "/js/ui-components.js" })
+        {
+            html.IndexOf(dependency, StringComparison.Ordinal).Should().BeInRange(1, guard - 1, $"{dependency} doit précéder la garde ({url})");
+        }
+
+        // Le script de la garde est classique (synchrone) : il s'exécute avant Alpine (defer) et enregistre son écouteur à temps.
+        html.IndexOf("/js/vendor/alpine.min.js", StringComparison.Ordinal).Should().BeGreaterThan(guard);
+    }
+
     // ------------------------------------------------------------------ Verrou de la décision G-D1
 
     [Fact]

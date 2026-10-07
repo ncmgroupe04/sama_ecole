@@ -52,6 +52,9 @@
     pastille de régime de auth.js) + modale d'avertissement. Après setup-assistant.js, dont il lit
     l'événement `setup-progress`. *@
  <script src="~/js/school-mode-guard.js" asp-append-version="true"></script>
+ @* Garde de page par module ([PageModule] → <meta name="required-module">) : redirige vers l'atterrissage quand le module est désactivé,
+    JAMAIS sur un échec de lecture des réglages. Ergonomie, pas sécurité : l'API reste le juge. Après auth.js, api.js et ui-components.js (toast). *@
+ <script src="~/js/module-route-guard.js" asp-append-version="true"></script>
  @* Plus de garde « Onboarding » côté page : la redirection vers /onboarding/select-profile est
  déclenchée par api.js à la réception du 403 ONBOARDING_REQUIRED (OnboardingRoutingMiddleware), seule
  source de vérité — l'ancien garde (profil NULL → /onboarding) aurait renvoyé en boucle les écoles
