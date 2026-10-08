@@ -256,22 +256,28 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Chambres avec au moins une place libre — réutilise le tableau de bord Internat (Task 15)
-         * plutôt qu'une route dédiée : l'écran /internat en a déjà besoin, une seconde requête aussi
-         * légère n'apporterait rien. Échec silencieux (module désactivé entretemps, RequireModule
-         * ayant déjà tranché le sort de l'écran, ou 403 transitoire) : le sélecteur reste vide plutôt
-         * que de bloquer l'inscription — le champ garde son astérisque required, l'utilisateur verra
-         * l'absence d'option.
+         * Chambres ayant au moins un lit libre — GET /boarding/available-rooms (lot F0). Le serveur ne renvoie QUE des chambres avec une place :
+         * aucun filtre côté client. Remplace l'ancien GET /internat/dashboard, route supprimée au lot F. Le formulaire continue d'envoyer
+         * boardingStatus + roomId à POST /enrollments : c'est le serveur qui choisit le lit et juge (genre du pavillon, lit repris entre-temps).
+         * Échec silencieux (module désactivé entretemps, RequireModule ayant déjà tranché le sort de l'écran, ou 403 transitoire) : le sélecteur
+         * reste vide plutôt que de bloquer l'inscription — le champ garde son astérisque required, l'utilisateur verra l'absence d'option.
          */
         async loadAvailableRooms() {
             try {
-                const dashboard = await window.api.get('/internat/dashboard');
-                this.availableRooms = (dashboard.rooms || []).filter((r) => r.occupantsCount < r.capacity);
+                this.availableRooms = await window.api.get('/boarding/available-rooms');
             } catch {
                 // silence-volontaire: module désactivé entretemps ou aucune chambre — le sélecteur
                 // reste simplement vide (champ toujours `required`), pas d'incident à signaler.
                 this.availableRooms = [];
             }
+        },
+
+        /** Options du sélecteur de chambre : identifiant, puis « Chambre — Pavillon (n place(s) libre(s)) ». */
+        get roomOptions() {
+            return this.availableRooms.map((r) => ({
+                value: r.roomId,
+                label: `${r.roomName} — ${r.dormitoryName} (${r.freeBeds} ${r.freeBeds > 1 ? 'places libres' : 'place libre'})`
+            }));
         },
 
         // ---------------------------------------------------------------- Aperçu des frais

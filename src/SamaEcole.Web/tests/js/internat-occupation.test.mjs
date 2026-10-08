@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadScripts, flush, plain } from './harness.mjs';
@@ -397,11 +397,17 @@ test('les trois rôles de l\'internat peuvent affecter ; les autres n\'ont pas a
 
 // ---------------------------------------------------------------- garde-fou de dérive (prérequis du lot F)
 
-test('l\'écran n\'appelle plus AUCUNE des trois routes héritées supprimées au lot F', () => {
+test("AUCUN fichier de wwwroot/js n'appelle les trois routes héritées supprimées au lot F", () => {
     const legacy = [/\/internat\/dashboard/, /\/internat\/students\/search/, /\/internat\/assignments/];
     const strip = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-    for (const file of ['internat.js', 'internat-occupation.js', 'internat-dormitories.js', 'internat-helpers.js']) {
+    // TOUS les scripts de l'application, pas seulement ceux de l'écran Internat : la version de G3 ne scannait que quatre fichiers et a laissé passer
+    // enrollments.js (sélecteur de chambre du formulaire d'inscription), qui appelait encore GET /internat/dashboard. Seul wwwroot/js/vendor est exclu.
+    const files = readdirSync(JS_DIR, { withFileTypes: true }).filter((f) => f.isFile() && f.name.endsWith('.js')).map((f) => f.name);
+    assert.ok(files.length > 50, `le scan doit couvrir tous les scripts (${files.length} trouvés)`);
+    assert.ok(files.includes('enrollments.js'), 'enrollments.js fait partie du scan');
+
+    for (const file of files) {
         const source = strip(readFileSync(path.join(JS_DIR, file), 'utf8'));
         for (const pattern of legacy) {
             assert.doesNotMatch(source, pattern, `${file} appelle encore une route héritée (${pattern}) : le lot F ne pourrait pas la supprimer`);
