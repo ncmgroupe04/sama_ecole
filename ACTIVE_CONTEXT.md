@@ -763,6 +763,18 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
 - **Reste :** le lot F (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`),
   puis la recette navigateur des cinq onglets (3 rôles + Enseignant + module désactivé + coupure réseau).
 
+### Module Internat — modèle Pavillon/Lit, lot F (retrait de l'ancien modèle) — EN COURS (07-08/10/2026)
+
+Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.md`. Branche `feat/internat-legacy-cleanup`, empilée sur le lot G. Trois PR : F0 → F1 → F2.
+
+- **F0 (fait) — dernier consommateur de `GET /internat/dashboard`.** Le sélecteur de chambre du formulaire d'inscription (`enrollments.js`) lit désormais
+  `GET /api/v1/boarding/available-rooms` (chambres ayant au moins un lit libre : `Available` et aucun séjour actif ; pavillon, genre, `freeBeds`). Le payload de
+  `POST /enrollments` ne change pas (`boardingStatus` + `roomId`) : `IBoardingAssignmentService` choisit le lit. Le test de dérive scanne maintenant **tous** les
+  scripts de `wwwroot/js` (la version de G3 n'en scannait que quatre).
+- **Reste :** F1 (retrait des 3 routes, handlers et tests ; propriétés `Enrollment.BoardingStatus/RoomId` retirées du CLR mais colonnes mappées en propriétés
+  fantômes, sans migration), puis F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus). Recette navigateur du formulaire d'inscription
+  (élève interne) **obligatoire** pour F0.
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
