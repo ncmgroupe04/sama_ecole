@@ -33,6 +33,7 @@ using SamaEcole.Application.Boarding.Leaves.RecordReturn;
 using SamaEcole.Application.Boarding.Rooms.CreateDormitoryRoom;
 using SamaEcole.Application.Boarding.Rooms.DeleteDormitoryRoom;
 using SamaEcole.Application.Boarding.Rooms.GetDeletedDormitoryRooms;
+using SamaEcole.Application.Boarding.Rooms.ListAvailableRooms;
 using SamaEcole.Application.Boarding.Rooms.RestoreDormitoryRoom;
 using SamaEcole.Application.Boarding.Rooms.UpdateDormitoryRoom;
 using SamaEcole.Domain.Enums;
@@ -346,6 +347,17 @@ public class BoardingController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> FindBoardableStudents([FromQuery] string? term, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new FindBoardableStudentsQuery(term), cancellationToken));
+
+    /// <summary>
+    /// Chambres ayant au moins un lit libre (statut <c>Available</c> et aucun séjour actif), avec leur pavillon, son genre et le nombre de lits libres.
+    /// Alimente le sélecteur de chambre du formulaire d'inscription ; le lit lui-même est choisi, et jugé, par <c>POST /enrollments</c>.
+    /// </summary>
+    [HttpGet("available-rooms")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<IReadOnlyList<AvailableRoomDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListAvailableRooms(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ListAvailableRoomsQuery(), cancellationToken));
 
     [HttpGet("boarders")]
     [Authorize(Roles = ReadRoles)]
