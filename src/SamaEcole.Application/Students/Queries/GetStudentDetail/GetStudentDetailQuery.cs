@@ -87,7 +87,7 @@ public record StudentIdentityDto(
     // Régime d'hébergement (module Internat) pour l'année scolaire ACTIVE — jamais une autre année,
     // le régime étant annuel (Enrollment.BoardingStatus). "Externe" (valeur par défaut) tant que le
     // module est inactif, que l'élève n'a pas d'inscription pour l'année active, ou n'est pas
-    // interne/demi-pensionnaire : l'UI ne montre alors aucun badge, cohérent avec ChangeBoardingAssignment.
+    // interne/demi-pensionnaire : l'UI ne montre alors aucun badge, cohérent avec l'affectation d'un lit (AssignBed).
     string BoardingStatus,
 
     // Nom de la chambre affectée, renseigné seulement pour BoardingStatus == Interne. Comme

@@ -6,7 +6,7 @@ namespace SamaEcole.Application.Boarding.Assignments;
 /// <summary>
 /// Règle d'affectation d'un élève à l'internat, écrite UNE seule fois (spec Internat Pavillon/Lit, lot C) : utilisée par
 /// les commandes <c>assign-bed</c>/<c>unassign-bed</c> ET par les adaptateurs de l'ancien écran
-/// (<c>ChangeBoardingAssignment</c>, <c>CreateEnrollment</c>). Aucune méthode n'appelle <c>SaveChanges</c> : l'appelant
+/// (<c>AssignBed</c>, <c>CreateEnrollment</c>). Aucune méthode n'appelle <c>SaveChanges</c> : l'appelant
 /// décide de la transaction (l'inscription, par exemple, enregistre séjour et dossier ensemble) et passe par
 /// <see cref="BoardingConflicts.SaveAsync"/> pour traduire la course sur un lit en 409 <c>BED_UNAVAILABLE</c>.
 /// </summary>
