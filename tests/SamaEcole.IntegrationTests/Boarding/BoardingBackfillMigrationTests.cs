@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Ancien modèle (Enrollment.BoardingStatus/RoomId) volontairement utilisé : c'est ce que la reprise lit.
-
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -173,12 +171,14 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
             {
                 Id = Guid.NewGuid(), SchoolId = school, StudentId = student.Id, SchoolYearId = year, ClassroomId = classroom,
                 Type = EnrollmentType.NewEnrollment, Status = enrollmentStatus, ReceiptNumber = $"REC-{key}",
-                EnrolledAt = enrolledAt ?? new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero).AddDays(day++),
-                BoardingStatus = status, RoomId = room
+                EnrolledAt = enrolledAt ?? new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero).AddDays(day++)
             };
             _enrollments[key] = enrollment.Id;
             owner.Students.Add(student);
             owner.Enrollments.Add(enrollment);
+            // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la reprise lit.
+            owner.Entry(enrollment).Property("BoardingStatus").CurrentValue = status.ToString();
+            owner.Entry(enrollment).Property("RoomId").CurrentValue = room;
         }
 
         Add("g1", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Interne, Ch101);

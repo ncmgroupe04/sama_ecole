@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Ancien modèle (Enrollment.BoardingStatus/RoomId) volontairement utilisé : c'est ce que la réconciliation lit.
-
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -226,13 +224,16 @@ public class BoardingReconciliationTests : IAsyncLifetime
                 StartDate = new DateOnly(2027, 9, 1), EndDate = new DateOnly(2028, 6, 30), IsActive = true
             });
             await owner.SaveChangesAsync();
-            owner.Enrollments.Add(new Enrollment
+            var reEnrollment = new Enrollment
             {
                 SchoolId = EcoleA, StudentId = _students["g1"], SchoolYearId = anneeSuivante, ClassroomId = ClasseA,
                 Type = EnrollmentType.ReEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = "REC-G1-NEW",
-                EnrolledAt = new DateTimeOffset(2027, 9, 2, 8, 0, 0, TimeSpan.Zero),
-                BoardingStatus = BoardingStatus.Interne, RoomId = Ch101
-            });
+                EnrolledAt = new DateTimeOffset(2027, 9, 2, 8, 0, 0, TimeSpan.Zero)
+            };
+            owner.Enrollments.Add(reEnrollment);
+            // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la réconciliation lit.
+            owner.Entry(reEnrollment).Property("BoardingStatus").CurrentValue = nameof(BoardingStatus.Interne);
+            owner.Entry(reEnrollment).Property("RoomId").CurrentValue = Ch101;
             await owner.SaveChangesAsync();
         }
 
@@ -299,13 +300,15 @@ public class BoardingReconciliationTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(), SchoolId = school, StudentId = student.Id, SchoolYearId = year, ClassroomId = classroom,
             Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = $"REC-{key}",
-            EnrolledAt = new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero).AddDays(_day++),
-            BoardingStatus = status, RoomId = room
+            EnrolledAt = new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero).AddDays(_day++)
         };
         _students[key] = student.Id;
         _enrollments[key] = enrollment.Id;
         owner.Students.Add(student);
         owner.Enrollments.Add(enrollment);
+        // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la réconciliation lit.
+        owner.Entry(enrollment).Property("BoardingStatus").CurrentValue = status.ToString();
+        owner.Entry(enrollment).Property("RoomId").CurrentValue = room;
     }
 
     // ------------------------------------------------------------------ Exécution et lectures (rôle propriétaire)

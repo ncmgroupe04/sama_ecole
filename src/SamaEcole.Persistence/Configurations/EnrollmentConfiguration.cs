@@ -33,14 +33,13 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         // Cartographie IEF (Évolution N°7) : défaut false en base, une inscription existante reste « Nouveau ».
         builder.Property(e => e.IsTransferredIn).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.PreviousSchoolName).HasMaxLength(150);
-#pragma warning disable CS0618 // Colonnes héritées (lot C) : toujours MAPPÉES jusqu'à leur suppression en base (lot F).
-        // Régime d'hébergement (module Internat) : défaut base 'Externe' pour que toute inscription
-        // existante (créée avant cette colonne) reste Externe, jamais NULL — même contrat qu'IsRepeating.
-        builder.Property(e => e.BoardingStatus)
-            .HasConversion<string>()
+        // Colonnes héritées Internat (lot F1) : mappées en propriétés fantômes — le schéma physique est inchangé
+        // jusqu'à la migration DropLegacyBoardingColumns (lot F2). Aucun code métier ne les lit ni ne les écrit.
+        builder.Property<string>("BoardingStatus")
             .HasMaxLength(20)
             .IsRequired()
-            .HasDefaultValue(BoardingStatus.Externe);
+            .HasDefaultValue("Externe");
+        builder.Property<Guid?>("RoomId");
         builder.Property(e => e.TotalDue).IsRequired().HasPrecision(12, 2);
         // Cumul des encaissements (JGK-F02) : par défaut 0, incrémenté sous le verrou xmin de cette table.
         builder.Property(e => e.AmountPaid).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
@@ -92,16 +91,14 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .OnDelete(DeleteBehavior.Restrict);
 
         // FK COMPOSITE (SchoolId, RoomId) → Room, même défense anti cross-tenant que Student/Classroom/
-        // SchoolYear ci-dessus. Nullable : une chambre non affectée (régime posé, logement pas encore
-        // choisi) ou un élève Externe.
+        // SchoolYear ci-dessus. Nullable : conservée pour alignement avec le schéma existant (lot F2).
         builder.HasOne<Room>()
             .WithMany()
-            .HasForeignKey(e => new { e.SchoolId, e.RoomId })
+            .HasForeignKey("SchoolId", "RoomId")
             .HasPrincipalKey(r => new { r.SchoolId, r.Id })
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
 
-        builder.HasIndex(e => new { e.SchoolId, e.RoomId });
-#pragma warning restore CS0618
+        builder.HasIndex("SchoolId", "RoomId");
     }
 }

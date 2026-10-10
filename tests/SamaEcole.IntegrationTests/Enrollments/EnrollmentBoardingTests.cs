@@ -136,11 +136,11 @@ public class EnrollmentBoardingTests : IAsyncLifetime
         stay.StartDate.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow));
         (await check.Beds.AsNoTracking().SingleAsync(b => b.Id == stay.BedId)).DormitoryRoomId.Should().Be(Chambre);
 
-        // Les colonnes héritées de l'inscription ne sont plus écrites.
-        var enrollment = await check.Enrollments.AsNoTracking().SingleAsync(e => e.Id == stay.EnrollmentId);
-#pragma warning disable CS0618
-        (enrollment.BoardingStatus, enrollment.RoomId).Should().Be((BoardingStatus.Externe, (Guid?)null));
-#pragma warning restore CS0618
+        // Les colonnes héritées de l'inscription ne sont plus écrites (propriétés fantômes depuis le lot F1 : lues par EF.Property).
+        var legacy = await check.Enrollments.AsNoTracking().Where(e => e.Id == stay.EnrollmentId)
+            .Select(e => new { Status = EF.Property<string>(e, "BoardingStatus"), Room = EF.Property<Guid?>(e, "RoomId") })
+            .SingleAsync();
+        (legacy.Status, legacy.Room).Should().Be(("Externe", (Guid?)null));
     }
 
     [Fact]
