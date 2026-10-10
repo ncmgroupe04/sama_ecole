@@ -1011,16 +1011,20 @@ fiche existante est **conservée** et le reste du profil est mis à jour. Pour l
 
 **Pas encore livré** (lots suivants) : IHM.
 
-### 31.2 Compatibilité de l'ancien écran `/internat`
+### 31.2 Compatibilité de l'ancien écran `/internat` — routes retirées (lot F1)
 
-Les routes historiques gardent **leurs chemins et leur JSON** ; leurs handlers lisent et écrivent désormais les séjours :
-`GET /api/v1/internat/dashboard`, `GET /api/v1/internat/students/search?term=` et `POST /api/v1/internat/assignments/{enrollmentId}`.
-`roomId` y désigne une chambre du modèle Pavillon/Lit (`DormitoryRoom.Id`, identique à l'ancien `Room.Id` pour les chambres reprises),
-`buildingName` le **nom du pavillon**, `capacity` les lits hors maintenance. Le jeton `rowVersion` reste le `xmin` de l'**inscription**
-(l'affectation « touche » le dossier pour le faire avancer). L'ancien écran envoie une chambre et non un lit : le plus petit numéro de lit
-libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
-`DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. `POST /api/v1/enrollments` suit la même règle et crée le séjour dans la
-**même transaction** que l'inscription. **Ces routes disparaissent au lot F**, avec l'ancien écran.
+Les trois routes historiques `GET /api/v1/internat/dashboard`, `GET /api/v1/internat/students/search?term=` et
+`POST /api/v1/internat/assignments/{enrollmentId}` ont été **supprimées** (elles répondent 404). Leurs remplaçants :
+`GET /api/v1/boarding/dormitories` (+ `/{id}`) pour l'occupation, `GET /api/v1/boarding/boardable-students` pour la recherche,
+`POST /api/v1/boarding/assign-bed` et `DELETE /api/v1/boarding/unassign-bed/{boarderId}` pour l'affectation, et
+`GET /api/v1/boarding/available-rooms` pour le sélecteur de chambre du formulaire d'inscription. Le reste de `/api/v1/internat/*`
+(instructeurs, Halqa, Hizb, suivi, bulletin coranique) est **inchangé**.
+
+`POST /api/v1/enrollments` garde ses champs `boardingStatus`, `roomId` et `includeBoardingFee` : on envoie une chambre et non un lit, le plus
+petit numéro de lit libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
+`DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. Le séjour est créé dans la **même transaction** que l'inscription.
+Les colonnes `enrollments.BoardingStatus` et `enrollments.RoomId` ne sont plus mappées par le code (propriétés fantômes EF, schéma physique
+inchangé) et seront supprimées par la migration `DropLegacyBoardingColumns` (lot F2).
 
 ### 31.3 Sorties et pointage de nuit (lot D)
 

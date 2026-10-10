@@ -767,13 +767,22 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
 
 Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.md`. Branche `feat/internat-legacy-cleanup`, empilée sur le lot G. Trois PR : F0 → F1 → F2.
 
-- **F0 (fait) — dernier consommateur de `GET /internat/dashboard`.** Le sélecteur de chambre du formulaire d'inscription (`enrollments.js`) lit désormais
+- **F0 (qualifié, `3e3eaefb`) — dernier consommateur de `GET /internat/dashboard`.** Le sélecteur de chambre du formulaire d'inscription (`enrollments.js`) lit
   `GET /api/v1/boarding/available-rooms` (chambres ayant au moins un lit libre : `Available` et aucun séjour actif ; pavillon, genre, `freeBeds`). Le payload de
-  `POST /enrollments` ne change pas (`boardingStatus` + `roomId`) : `IBoardingAssignmentService` choisit le lit. Le test de dérive scanne maintenant **tous** les
-  scripts de `wwwroot/js` (la version de G3 n'en scannait que quatre).
-- **Reste :** F1 (retrait des 3 routes, handlers et tests ; propriétés `Enrollment.BoardingStatus/RoomId` retirées du CLR mais colonnes mappées en propriétés
-  fantômes, sans migration), puis F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus). Recette navigateur du formulaire d'inscription
-  (élève interne) **obligatoire** pour F0.
+  `POST /enrollments` ne change pas (`boardingStatus` + `roomId`) : `IBoardingAssignmentService` choisit le lit. Le test de dérive scanne **tous** les scripts de
+  `wwwroot/js`. **Suites F0 :** build 0 erreur ; unitaires **2019/2019** ; JS **721/721** ; fonctionnels **943/943** ; intégration **1098/1098**. Recette
+  navigateur du formulaire d'inscription (élève interne) **obligatoire** avant merge F0.
+- **F1 (codé, à qualifier) — retrait du code de l'ancien modèle, sans migration.** Les 3 routes `GET /internat/dashboard`, `GET /internat/students/search`
+  et `POST /internat/assignments/{id}` répondent 404 ; leurs handlers (`GetInternatDashboard`, `SearchBoardableStudents`, `ChangeBoardingAssignment`) et leurs 3 classes
+  de tests d'intégration sont supprimés (chaque scénario avait son équivalent dans `BoardingAssignmentServiceTests`, `BoarderCommandsTests`, `EnrollmentBoardingTests`,
+  `FindBoardableStudentsTests`). `Enrollment.BoardingStatus/RoomId` n'existent plus dans le CLR : les colonnes restent mappées en **propriétés fantômes** EF
+  (`Property<string>("BoardingStatus")`, `Property<Guid?>("RoomId")`, FK composite et index inchangés), donc **modèle identique à l'instantané, aucune migration**
+  (`dotnet ef migrations has-pending-model-changes` : aucun changement). L'enum `BoardingStatus` et les champs `boardingStatus`/`roomId` de `POST /enrollments` et de la
+  fiche élève **restent** (contrat d'API). Le reste de `/api/v1/internat/*` (instructeurs, Halqa, Hizb) est inchangé. Pièges : (1) l'initialisation des tests
+  d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
+  état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
+- **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
+  `LegacyBoardingColumnsGuardTests`).
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
