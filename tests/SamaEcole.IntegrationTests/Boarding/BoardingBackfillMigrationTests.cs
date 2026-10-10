@@ -12,13 +12,21 @@ namespace SamaEcole.IntegrationTests.Boarding;
 
 /// <summary>
 /// Reprise des données Internat héritées (spec 2026-10-06 §4.1, plan lot A tâche 4). Les dortoirs/chambres/inscriptions
-/// sont semés dans le schéma COURANT (les colonnes héritées <c>enrollments.BoardingStatus/RoomId</c> existent toujours),
+/// sont semés dans le schéma d'AVANT le lot F2 (les colonnes héritées <c>enrollments.BoardingStatus/RoomId</c> y existent encore),
 /// puis on RECULE avant la migration et on la rejoue sur ces données — exactement ce qui arrive en production.
 /// </summary>
 [Trait("Category", "MultiTenant")]
 public class BoardingBackfillMigrationTests : IAsyncLifetime
 {
     private const string PreviousMigration = "20261006145320_AddManagedCyclesToSchoolSettings";
+
+    /// <summary>
+    /// Dernière migration d'avant le lot F2 : les colonnes héritées <c>enrollments.BoardingStatus/RoomId</c> existent. Les scénarios de la reprise
+    /// sèment et relisent ces colonnes ; ils s'arrêtent donc ici, jamais au « head » où elles n'existent plus.
+    /// </summary>
+    private const string BeforeDrop = "20261007090741_ReconcileBoardingWithLegacyModel";
+
+    private readonly List<(Guid Id, string Status, Guid? Room)> _legacy = new();
 
     private readonly RlsTestDatabase _db = new();
 
@@ -55,7 +63,7 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
         await SeedLegacyAsync();
 
         await MigrateToAsync(PreviousMigration);
-        await MigrateToAsync(null);
+        await MigrateToAsync(BeforeDrop);
 
         // --- Pavillons : un par bâtiment ayant une chambre Dortoir, Id = Building.Id, genre déduit.
         var dormitories = await QueryAsync("""SELECT "Id", "Gender" FROM dormitories WHERE "SchoolId" = @school""", EcoleA);
@@ -121,11 +129,11 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
         await MigrateToAsync(PreviousMigration);
         (await TableExistsAsync()).Should().BeFalse("Down supprime les tables");
 
-        await MigrateToAsync(null);
+        await MigrateToAsync(BeforeDrop);
         var first = await ScalarAsync<long>("SELECT count(*) FROM boarding_enrollments", null);
 
         await MigrateToAsync(PreviousMigration);
-        await MigrateToAsync(null);
+        await MigrateToAsync(BeforeDrop);
         var second = await ScalarAsync<long>("SELECT count(*) FROM boarding_enrollments", null);
 
         first.Should().Be(11, "10 séjours de l'école A + 1 de l'école B");
@@ -138,6 +146,9 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
 
     private async Task SeedLegacyAsync()
     {
+        // Le schéma courant n'a plus les colonnes héritées (lot F2) : on se place là où elles existent.
+        await MigrateToAsync(BeforeDrop);
+
         await using var owner = _db.NewOwnerContext();
 
         owner.Schools.AddRange(new School { Id = EcoleA, Name = "École A" }, new School { Id = EcoleB, Name = "École B" });
@@ -176,9 +187,8 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
             _enrollments[key] = enrollment.Id;
             owner.Students.Add(student);
             owner.Enrollments.Add(enrollment);
-            // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la reprise lit.
-            owner.Entry(enrollment).Property("BoardingStatus").CurrentValue = status.ToString();
-            owner.Entry(enrollment).Property("RoomId").CurrentValue = room;
+            // Ancien modèle (colonnes héritées) : c'est ce que la reprise lit ; posé par SQL après l'enregistrement.
+            _legacy.Add((enrollment.Id, status.ToString(), room));
         }
 
         Add("g1", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Interne, Ch101);
@@ -198,6 +208,13 @@ public class BoardingBackfillMigrationTests : IAsyncLifetime
         Add("b1", EcoleB, AnneeB, ClasseB, "M", BoardingStatus.Interne, ChB);
 
         await owner.SaveChangesAsync();
+        foreach (var (id, status, room) in _legacy)
+        {
+            await owner.Database.ExecuteSqlAsync(
+                $"""UPDATE enrollments SET "BoardingStatus" = {status}, "RoomId" = {room} WHERE "Id" = {id}""");
+        }
+
+        _legacy.Clear();
     }
 
     // ------------------------------------------------------------------ Lectures (rôle propriétaire)

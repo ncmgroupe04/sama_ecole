@@ -33,13 +33,6 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         // Cartographie IEF (Évolution N°7) : défaut false en base, une inscription existante reste « Nouveau ».
         builder.Property(e => e.IsTransferredIn).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.PreviousSchoolName).HasMaxLength(150);
-        // Colonnes héritées Internat (lot F1) : mappées en propriétés fantômes — le schéma physique est inchangé
-        // jusqu'à la migration DropLegacyBoardingColumns (lot F2). Aucun code métier ne les lit ni ne les écrit.
-        builder.Property<string>("BoardingStatus")
-            .HasMaxLength(20)
-            .IsRequired()
-            .HasDefaultValue("Externe");
-        builder.Property<Guid?>("RoomId");
         builder.Property(e => e.TotalDue).IsRequired().HasPrecision(12, 2);
         // Cumul des encaissements (JGK-F02) : par défaut 0, incrémenté sous le verrou xmin de cette table.
         builder.Property(e => e.AmountPaid).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
@@ -89,16 +82,5 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .HasForeignKey(e => new { e.SchoolId, e.SchoolYearId })
             .HasPrincipalKey(y => new { y.SchoolId, y.Id })
             .OnDelete(DeleteBehavior.Restrict);
-
-        // FK COMPOSITE (SchoolId, RoomId) → Room, même défense anti cross-tenant que Student/Classroom/
-        // SchoolYear ci-dessus. Nullable : conservée pour alignement avec le schéma existant (lot F2).
-        builder.HasOne<Room>()
-            .WithMany()
-            .HasForeignKey("SchoolId", "RoomId")
-            .HasPrincipalKey(r => new { r.SchoolId, r.Id })
-            .OnDelete(DeleteBehavior.Restrict)
-            .IsRequired(false);
-
-        builder.HasIndex("SchoolId", "RoomId");
     }
 }
