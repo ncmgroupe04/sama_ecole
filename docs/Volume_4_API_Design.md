@@ -1023,8 +1023,8 @@ Les trois routes historiques `GET /api/v1/internat/dashboard`, `GET /api/v1/inte
 `POST /api/v1/enrollments` garde ses champs `boardingStatus`, `roomId` et `includeBoardingFee` : on envoie une chambre et non un lit, le plus
 petit numéro de lit libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
 `DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. Le séjour est créé dans la **même transaction** que l'inscription.
-Les colonnes `enrollments.BoardingStatus` et `enrollments.RoomId` ne sont plus mappées par le code (propriétés fantômes EF, schéma physique
-inchangé) et seront supprimées par la migration `DropLegacyBoardingColumns` (lot F2).
+Les colonnes `enrollments.BoardingStatus` et `enrollments.RoomId` ont été supprimées par la migration `DropLegacyBoardingColumns` (lot F2) ;
+l'enum `BoardingStatus` reste le vocabulaire de ces requêtes et de la fiche élève.
 
 ### 31.3 Sorties et pointage de nuit (lot D)
 

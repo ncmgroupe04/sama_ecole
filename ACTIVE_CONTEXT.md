@@ -781,8 +781,14 @@ Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.
   fiche élève **restent** (contrat d'API). Le reste de `/api/v1/internat/*` (instructeurs, Halqa, Hizb) est inchangé. Pièges : (1) l'initialisation des tests
   d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
   état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
-- **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
-  `LegacyBoardingColumnsGuardTests`).
+- **F2 (codé, à qualifier) — migration `DropLegacyBoardingColumns`.** Supprime `enrollments.BoardingStatus` et `RoomId` avec leur FK composite vers `rooms` et leur
+  index ; les propriétés fantômes et `LegacyBoardingColumnsGuardTests` disparaissent. `Down()` recrée les colonnes puis **re-dérive** leur valeur des séjours ACTIFS
+  (régime ; chambre seulement si elle existe aussi dans `rooms`, sinon la FK serait violée) : approximation documentée, pas une restitution exacte.
+  **Prérequis de déploiement : toutes les instances en F1 ou plus** (une instance antérieure échouerait sur chaque requête touchant `enrollments`). **Porte de sécurité
+  à zéro avant déploiement** (requête `GateSql` de `DropLegacyBoardingColumnsMigrationTests`, reprise dans la PR F2) : inscriptions de l'année active, non annulées, déclarées
+  pensionnaires par l'ancien modèle et sans AUCUN séjour (actif ou clos — un séjour clos depuis le lot C n'est pas un écart ; la spec parlait de « séjour actif », ce qui
+  aurait donné de faux positifs). Les tests de reprise (lot A) et de réconciliation (lot C) reculent d'abord à `ReconcileBoardingWithLegacyModel` (colonnes présentes) et
+  posent l'ancien état par SQL. Les purges n'ont rien à changer (lot A) : `BoardingPurgeTests` passe sur le schéma d'après F2.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
