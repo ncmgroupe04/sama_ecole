@@ -299,7 +299,12 @@ document.addEventListener('alpine:init', () => {
             const boarder = this.panel.data && this.panel.data.boarder;
             if (!boarder) return;
             const helpers = this.helpers();
-            await this.openPdfPreview(
+            // Le moteur d'aperçu ferme d'abord TOUTES les modales : la fiche — donc le bouton cliqué — disparaît du DOM. Alpine résout `this.$refs` par
+            // rapport à l'élément qui a déclenché l'appel ; devenu orphelin, il ne trouve plus le conteneur des pages et le rendu abandonne en silence
+            // (aperçu bloqué sur « Génération… »). On appelle donc le moteur sur le composant lié à sa RACINE, qui ne disparaît jamais. Sans Alpine (tests),
+            // on retombe sur `this`.
+            const component = this.$root && typeof Alpine !== 'undefined' && typeof Alpine.$data === 'function' ? Alpine.$data(this.$root) : this;
+            await component.openPdfPreview(
                 helpers.boarderPdfUrl(boarder.id),
                 `Fiche de ${boarder.studentName}`,
                 helpers.pdfFileName('Fiche-Pensionnaire', boarder.matricule));

@@ -66,7 +66,7 @@ function bootBoarders(role) {
             }
         }
     });
-    return { tab: ctx.component('boardersTab'), previews };
+    return { ctx, tab: ctx.component('boardersTab'), previews };
 }
 
 const DETAIL = { boarder: { id: ID, matricule: 'M-001', studentName: 'Awa Diop' } };
@@ -107,4 +107,34 @@ test("le composant étale l'état de la modale PDF commune (pas de copie du méc
     const { tab } = bootBoarders('Directeur');
     assert.equal(tab.showPdfModal, false);
     assert.equal(typeof tab.openPdfPreview, 'function');
+});
+
+// ---------------------------------------------------------------- défaut trouvé à la recette navigateur
+
+test("« Fiche PDF » appelle le moteur sur le composant RACINE, pas sur l'élément cliqué (qui disparaît quand le moteur ferme la fiche)", async () => {
+    // Le moteur d'aperçu ferme d'abord TOUTES les modales : la fiche, donc le bouton cliqué, est retirée du DOM. Alpine résout `this.$refs` par rapport à
+    // l'élément qui a déclenché l'appel : devenu orphelin, il ne trouve plus le conteneur des pages et le rendu abandonne en silence (« Génération… »
+    // pour toujours). Les tests qui appellent la méthode directement ne pouvaient pas le voir ; seul un vrai clic le montre.
+    const ROOT = { id: 'racine' };
+    const onRoot = [];
+    const rootData = { openPdfPreview: async (...args) => { onRoot.push(args); } };
+    const { ctx, tab, previews } = bootBoarders('Directeur');
+    ctx.sandbox.Alpine.$data = (element) => (element === ROOT ? rootData : undefined);
+    tab.$root = ROOT;
+    tab.panel.data = DETAIL;
+
+    await tab.openBoarderPdf();
+
+    assert.equal(onRoot.length, 1, "le moteur doit être appelé sur les données liées à la racine");
+    assert.equal(previews.length, 0, "jamais sur `this`, lié à l'élément cliqué");
+    assert.equal(onRoot[0][0], `/api/v1/boarding/boarders/${ID}/pdf`);
+});
+
+test("sans Alpine ni racine (tests, rendu serveur), « Fiche PDF » retombe sur le composant lui-même", async () => {
+    const { tab, previews } = bootBoarders('Directeur');
+    tab.panel.data = DETAIL;
+
+    await tab.openBoarderPdf();
+
+    assert.equal(previews.length, 1);
 });
