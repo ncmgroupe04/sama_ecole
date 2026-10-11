@@ -34,7 +34,7 @@ public class BoarderSheetDocument(BoarderSheetDto sheet, byte[]? logo) : IDocume
         {
             page.Size(PageSizes.A4);
             page.Margin(1.4f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9.5f).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9.5f).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

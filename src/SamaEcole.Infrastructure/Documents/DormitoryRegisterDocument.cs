@@ -34,7 +34,7 @@ public class DormitoryRegisterDocument(DormitoryRegisterDto register, byte[]? lo
         {
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9.5f).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9.5f).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(8).Element(ComposeTable);
