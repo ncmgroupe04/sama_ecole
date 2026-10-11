@@ -129,6 +129,24 @@ jobs:
           name: test-results
           path: '**/*.trx'
 
+  # Construit les DEUX images Docker (web et outils de migration) à chaque PR, SANS les pousser ni les déployer.
+  # Le job `deploy` ne tourne que sur `main` : sans ce garde-fou, une erreur propre à l'image (fichier non copié
+  # dans le contexte, étape Tailwind qui échoue…) n'apparaissait qu'APRÈS la fusion, et le déploiement s'arrêtait
+  # (cf. échec du 11/10/2026 : tailwind.dark-theme.js absent de l'étape css-build). Job parallèle à build-and-test :
+  # il ne rallonge pas la durée de la PR.
+  docker-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Construire l'image web (sans la pousser)
+        run: docker build -f Dockerfile -t sama-ecole-web:pr .
+
+      - name: Construire l'image des outils de migration (sans la pousser)
+        run: docker build -f tools/SamaEcole.Tools/Dockerfile -t sama-ecole-tools:pr .
+
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
