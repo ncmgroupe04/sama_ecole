@@ -1,5 +1,10 @@
+// Mode sombre : remappage central des couleurs (variables CSS + classe `.dark` sur <html>) — voir
+// tailwind.dark-theme.js. Les vues gardent leurs classes habituelles (bg-white, text-slate-700…).
+const darkTheme = require("./tailwind.dark-theme");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   // Analyse toutes les vues Razor + tout JS/TS ajouté plus tard dans wwwroot, ainsi que les Tag
   // Helpers (TagHelpers/*.cs) : ModalShellTagHelper compose ses classes Tailwind dans une chaîne C#,
   // pas dans un .cshtml — sans cette entrée, ces classes seraient absentes du CSS compilé.
@@ -17,6 +22,8 @@ module.exports = {
       lg: "1024px"  // Desktop (Volume 5 §2.4)
     },
     extend: {
+      // Variantes sombres des couleurs de fond / texte / trait (tailwind.dark-theme.js).
+      ...darkTheme.extend,
       // Palette alignée sur le design system Unikol 2026 (bleu Unikol, plus l'indigo
       // Tailwind générique) — un agent qui a besoin d'une de ces couleurs utilise la
       // classe utilitaire (ex. bg-primary), jamais un code hexadécimal en dur dans une vue.
@@ -87,5 +94,5 @@ module.exports = {
       }
     }
   },
-  plugins: []
+  plugins: [darkTheme.plugin]
 };
