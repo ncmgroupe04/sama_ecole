@@ -24,6 +24,13 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
 {
     private static readonly string[] InternatPageActions = ["Internat", "Halqa", "Instructors", "QuranProgress"];
 
+    /// <summary>Pages que la sidebar masque quand la Pédagogie est coupée (Daara — Mémorisation, Comptabilité &amp; Rapports).</summary>
+    private static readonly string[] PedagogyPageActions =
+    [
+        "Attendance", "Billets", "PointageProfs", "Discipline", "ParentSummons", "Subjects", "Grades", "ClassJournal",
+        "AttendanceReport", "Exams", "InstitutionalReports", "Syllabus"
+    ];
+
     private readonly HttpClient _client = factory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = false });
 
@@ -45,9 +52,32 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
     }
 
     [Theory]
+    [InlineData("/presences")]
+    [InlineData("/billets")]
+    [InlineData("/pointage-profs")]
+    [InlineData("/discipline")]
+    [InlineData("/convocations")]
+    [InlineData("/matieres")]
+    [InlineData("/notes")]
+    [InlineData("/cahier-de-texte")]
+    [InlineData("/rapports/assiduite")]
+    [InlineData("/examens")]
+    [InlineData("/rapports/institutionnels")]
+    [InlineData("/programmes")]
+    public async Task The_Pedagogy_Pages_Declare_The_Pedagogy_Module(string url)
+    {
+        var response = await _client.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, url);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("<meta name=\"required-module\" content=\"Pedagogy\"");
+    }
+
+    [Theory]
     [InlineData("/eleves")]
     [InlineData("/inventaire")]
     [InlineData("/classes")]
+    [InlineData("/caisse")]
+    [InlineData("/integration-etatique")]
     public async Task Pages_Of_Other_Modules_Declare_No_Required_Module(string url)
     {
         var response = await _client.GetAsync(url);
@@ -91,6 +121,18 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
     }
 
     [Fact]
+    public void The_Pedagogy_Pages_Carry_Exactly_PageModule_Pedagogy()
+    {
+        foreach (var name in PedagogyPageActions)
+        {
+            var action = typeof(PagesController).GetMethod(name);
+
+            action.Should().NotBeNull($"PagesController.{name} doit exister");
+            PageModuleOf(action!).Should().Be(SchoolModule.Pedagogy, $"{name} est masquée par la sidebar quand la Pédagogie est coupée");
+        }
+    }
+
+    [Fact]
     public void No_Other_Page_Action_Declares_A_Module_And_None_Declares_Coran()
     {
         var declared = typeof(PagesController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -98,7 +140,9 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
             .Where(x => x.Module is not null)
             .ToList();
 
-        declared.Select(x => x.Name).Should().BeEquivalentTo(InternatPageActions, "seules ces quatre pages déclarent un module");
+        declared.Select(x => x.Name).Should().BeEquivalentTo(
+            InternatPageActions.Concat(PedagogyPageActions),
+            "seules les pages Internat/Daara et les pages pédagogiques déclarent un module (Élèves, Classes, Caisse, Intégration étatique : aucun)");
         declared.Should().NotContain(x => x.Module == SchoolModule.Coran, "aucun écran ne consomme encore /api/v1/quran");
     }
 
