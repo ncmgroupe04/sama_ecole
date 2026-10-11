@@ -23,6 +23,9 @@
  s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
  @* Anti-flash du menu latéral réduit : pose .sidebar-collapsed sur <html> avant le rendu,
  donc avant Alpine. Script classique synchrone, tout en haut du <head>. *@
+ @* Thème clair/sombre : pose .dark sur <html> avant le rendu (anti-flash, comme sidebar-boot.js). Le store Alpine « theme »
+ (theme.js, plus bas) gère ensuite le sélecteur du menu de profil. *@
+ <script src="~/js/theme-boot.js" asp-append-version="true"></script>
  <script src="~/js/sidebar-boot.js" asp-append-version="true"></script>
  @* Cycles gérés (règles pures) : lu par le store schoolConfig (auth.js) et par les écrans de classes, d'inscription et d'examens. *@
  <script src="~/js/managed-cycles.js" asp-append-version="true"></script>
@@ -33,6 +36,7 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ <script src="~/js/theme.js" asp-append-version="true"></script>
  @* Corbeille et restauration (soft delete) : composant Alpine partagé + pont vers les formulaires de création.
     Après api.js et ui-components.js (toast), avant Alpine différé. *@
  <script src="~/js/trash.js" asp-append-version="true"></script>
@@ -424,7 +428,19 @@
  @* Deux actions PLEINES et contrastées (demande produit) : « Changer mon mot de passe » sur fond
     noir, « Se déconnecter » sur fond rouge (jeton danger, comme .btn-danger) — texte et icône
     blancs dans les deux cas. `mt-1.5` sépare les deux pavés pleins. *@
- <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
+@* Apparence : clair / sombre / système, mémorisée dans le navigateur (store « theme », theme.js). *@
+ <div class="px-1 pb-2">
+ <p class="px-2 pb-1 text-xs font-semibold text-slate-500">Apparence</p>
+ <div role="group" aria-label="Apparence" class="grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">
+ <template x-for="option in $store.theme.modes" :key="option.value">
+ <button type="button" x-on:click="$store.theme.set(option.value)" :aria-pressed="($store.theme.mode === option.value).toString()"
+ class="rounded-md px-2 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+ :class="$store.theme.mode === option.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+ x-text="option.label"></button>
+ </template>
+ </div>
+ </div>
+  <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
  Changer mon mot de passe
