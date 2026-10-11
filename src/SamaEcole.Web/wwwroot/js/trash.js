@@ -29,6 +29,9 @@
      * Une entrée par type d'élément restaurable. `list`/`restore` sont les routes de l'API ; `label` et `detail`
      * disent comment présenter une ligne de la corbeille (le DTO diffère d'une entité à l'autre).
      */
+    // Mêmes rôles que ManageRoles de BoardingController : les autres reçoivent un 403 sur les listes de corbeille.
+    const INTERNAT_MANAGE_ROLES = ['Directeur', 'Secretariat'];
+
     const KINDS = {
         buildings: {
             title: 'Bâtiments supprimés',
@@ -83,6 +86,7 @@
         dormitories: {
             title: 'Pavillons supprimés',
             noun: 'Pavillon',
+            roles: INTERNAT_MANAGE_ROLES,
             list: '/boarding/dormitories/deleted',
             restore: (id) => `/boarding/dormitories/${id}/restore`,
             label: (item) => item.name,
@@ -91,6 +95,7 @@
         'dormitory-rooms': {
             title: 'Chambres supprimées',
             noun: 'Chambre',
+            roles: INTERNAT_MANAGE_ROLES,
             list: '/boarding/rooms/deleted',
             restore: (id) => `/boarding/rooms/${id}/restore`,
             label: (item) => item.name,
@@ -99,6 +104,7 @@
         beds: {
             title: 'Lits supprimés',
             noun: 'Lit',
+            roles: INTERNAT_MANAGE_ROLES,
             list: '/boarding/beds/deleted',
             restore: (id) => `/boarding/beds/${id}/restore`,
             label: (item) => item.name,
@@ -213,6 +219,13 @@
             },
 
             async load() {
+                // Rôle connu comme non autorisé : on n'émet pas la requête (un 403 serait ignoré, mais il pollue la console et le journal d'accès).
+                if (this.kind.roles && window.auth && typeof window.auth.canView === 'function' && !window.auth.canView(this.kind.roles)) {
+                    this.forbidden = true;
+                    this.loaded = true;
+                    return;
+                }
+
                 this.loading = true;
                 try {
                     this.items = await window.api.get(this.kind.list) || [];
