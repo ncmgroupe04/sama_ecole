@@ -37,7 +37,7 @@ public class ClassDeliberationDocument(
         {
             page.Size(PageSizes.A4);
             page.Margin(15, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(10).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(10).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingVertical(10).Element(ComposeContent);

@@ -210,7 +210,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             // Times New Roman : absente des dépôts Linux (police propriétaire) — le Dockerfile de
             // production mappe ce nom vers Liberation Serif, un clone à métriques identiques, via un
             // alias fontconfig. Rien à faire ici pour que les deux environnements donnent le même rendu.
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(7.5f).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(7.5f).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

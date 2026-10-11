@@ -43,7 +43,7 @@ public class StateducReportDocument(
         {
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(8).Element(ComposeBody);

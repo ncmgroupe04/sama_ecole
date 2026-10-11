@@ -15,7 +15,7 @@ public class SchoolCardDocument(SchoolCardBatchDto batch) : IDocument
             page.Size(PageSizes.A4);
             page.Margin(10, Unit.Millimetre);
             page.PageColor(Colors.White);
-            page.DefaultTextStyle(x => x.FontFamily(Fonts.Arial).FontSize(9));
+            page.DefaultTextStyle(x => x.FontFamily(Fonts.Arial).FontSize(9).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Element(ComposeContent);
         });

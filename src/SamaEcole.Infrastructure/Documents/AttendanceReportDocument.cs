@@ -25,7 +25,7 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
         {
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(6).Element(ComposeTable);

@@ -34,7 +34,7 @@ public class TeachersExportDocument(TeachersExportModel model) : IDocument
             // ne tiennent pas en portrait sans écraser le nom et l'e-mail.
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.2f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(8).Element(ComposeTable);

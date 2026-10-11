@@ -26,7 +26,7 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
         {
             page.Size(PageSizes.A4);
             page.Margin(1.5f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(8).Element(ComposeTable);

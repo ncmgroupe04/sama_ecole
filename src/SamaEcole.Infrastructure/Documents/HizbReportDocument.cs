@@ -41,7 +41,7 @@ public class HizbReportDocument(HizbReportDto report, byte[]? logo) : IDocument
         {
             page.Size(PageSizes.A4);
             page.Margin(1.4f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

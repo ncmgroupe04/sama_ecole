@@ -29,7 +29,7 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
         {
             page.Size(PageSizes.A4);
             page.Margin(20, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

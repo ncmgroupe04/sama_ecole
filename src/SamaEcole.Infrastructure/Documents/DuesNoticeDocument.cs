@@ -27,7 +27,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
         {
             page.Size(PageSizes.A4);
             page.Margin(20, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

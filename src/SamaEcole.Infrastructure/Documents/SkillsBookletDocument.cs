@@ -37,7 +37,7 @@ public class SkillsBookletDocument(SkillsBookletModel model) : IDocument
         {
             page.Size(PageSizes.A4);
             page.Margin(1.4f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(8).Column(column =>
