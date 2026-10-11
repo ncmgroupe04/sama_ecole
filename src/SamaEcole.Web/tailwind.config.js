@@ -78,7 +78,8 @@ module.exports = {
         // Inter (variable, AUTO-HÉBERGÉE — voir les @font-face en tête de Styles/input.css), repli
         // système Segoe UI (Volume 5 §2.2). Elle était déjà déclarée ici mais jamais chargée : la
         // plateforme rendait en Segoe UI.
-        sans: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+        // Cairo : glyphes arabes uniquement (unicode-range, voir Styles/input.css) — le latin reste en Inter.
+        sans: ["Inter", "Cairo", "Segoe UI", "system-ui", "sans-serif"],
         // Harmonisation demandée : `font-mono` ne bascule PLUS vers une chasse fixe. C'est la même
         // Inter que le reste de la plateforme ; les chiffres tabulaires (pour aligner les colonnes
         // de nombres — matricules, montants FCFA, n° de reçu, dates, ~22 vues) sont ajoutés via une
