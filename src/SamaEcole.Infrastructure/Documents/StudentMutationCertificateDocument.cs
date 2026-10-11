@@ -41,7 +41,7 @@ public class StudentMutationCertificateDocument(
         {
             page.Size(PageSizes.A4);
             page.Margin(1.6f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

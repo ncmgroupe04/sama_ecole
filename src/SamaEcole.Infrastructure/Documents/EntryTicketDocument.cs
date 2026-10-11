@@ -37,7 +37,7 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? su
         {
             page.Size(PageSizes.A5.Landscape());
             page.Margin(15, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(HeadingColor));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(HeadingColor).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

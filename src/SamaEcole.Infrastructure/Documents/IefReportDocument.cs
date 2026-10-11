@@ -29,7 +29,7 @@ public class IefReportDocument(IefReportDto report) : IDocument
         {
             page.Size(PageSizes.A4.Landscape());
             page.Margin(1.1f, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Header().Element(ComposeHeader);
             page.Content().PaddingTop(6).Column(column =>

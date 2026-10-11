@@ -27,7 +27,7 @@ public class ExeatCertificateDocument(ExeatCertificateDto certificate, byte[]? l
         {
             page.Size(PageSizes.A4);
             page.Margin(2, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(11).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(11).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

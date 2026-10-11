@@ -15,7 +15,7 @@ function reply(status, body) {
     return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-function boot(handler) {
+function boot(handler, role = 'Directeur') {
     const calls = [];
     const fetchStub = async (url, init = {}) => {
         const call = { url: url.replace('/api/v1', ''), method: init.method || 'GET' };
@@ -26,7 +26,7 @@ function boot(handler) {
     const ctx = loadScripts(['api.js', 'trash.js'], {
         fetch: fetchStub,
         preload: {
-            auth: { accessToken: 'jwt', isAuthenticated: () => false, isAccessTokenStale: () => false, redirectToLogin() {} },
+            auth: { accessToken: 'jwt', role, canView: (roles) => roles.includes(role), isAuthenticated: () => false, isAccessTokenStale: () => false, redirectToLogin() {} },
             toast: { success() {}, error() {} }
         }
     });
@@ -178,6 +178,46 @@ test('un rôle sans droit (403) ne voit pas le panneau et aucun message n\'est a
     assert.equal(p.forbidden, true);
     assert.equal(p.visible, false);
     assert.equal(p.error, '');
+});
+
+test("Internat : un rôle sans droit de gestion (Surveillant, Finance, Enseignant) n'émet AUCUNE requête de corbeille", async () => {
+    for (const role of ['Surveillant', 'Finance', 'Enseignant']) {
+        const { calls, panel } = boot(async () => reply(403, null), role);
+
+        for (const kind of ['dormitories', 'dormitory-rooms', 'beds']) {
+            const p = panel(kind);
+            await tick();
+
+            assert.equal(p.forbidden, true, `${role} / ${kind}`);
+            assert.equal(p.visible, false, `${role} / ${kind}`);
+            assert.equal(p.error, '', `${role} / ${kind}`);
+        }
+
+        assert.deepEqual(calls, [], `${role} : aucune requête (sinon 403 en console et dans le journal d'accès)`);
+    }
+});
+
+test('Internat : le Directeur et le Secrétariat chargent bien les trois corbeilles', async () => {
+    for (const role of ['Directeur', 'Secretariat']) {
+        const { calls, panel } = boot(async () => reply(200, [{ id: 'd1', name: 'Pavillon X', deletedAt: '2026-10-01T10:00:00Z' }]), role);
+
+        for (const kind of ['dormitories', 'dormitory-rooms', 'beds']) {
+            const p = panel(kind);
+            await tick();
+            assert.equal(p.items.length, 1, `${role} / ${kind}`);
+        }
+
+        assert.deepEqual(calls.map((c) => c.url), ['/boarding/dormitories/deleted', '/boarding/rooms/deleted', '/boarding/beds/deleted'], role);
+    }
+});
+
+test("les corbeilles hors Internat ne dépendent pas du rôle côté écran : le serveur reste seul juge (403 ignoré)", async () => {
+    const { calls, panel } = boot(async () => reply(403, null), 'Surveillant');
+    const p = panel('rooms');
+    await tick();
+
+    assert.equal(calls.length, 1, 'la requête part, le 403 masque simplement le panneau');
+    assert.equal(p.forbidden, true);
 });
 
 test("depuis un formulaire en conflit, le panneau s'ouvre sur l'élément en doublon", async () => {

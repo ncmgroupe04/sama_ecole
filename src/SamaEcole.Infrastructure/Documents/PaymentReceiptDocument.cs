@@ -44,7 +44,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             // A5 paysage, marge 10 mm : zone utile de 190 × 128 mm, identique à la maquette validée.
             page.Size(PageSizes.A5.Landscape());
             page.Margin(10, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(ReceiptTheme.Ink));
+            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(ReceiptTheme.Ink).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

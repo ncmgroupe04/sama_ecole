@@ -31,7 +31,7 @@ public class ExamConvocationDocument(ExamConvocationModel notice, byte[]? logo, 
             // que toute la convocation tienne sur UNE page.
             page.Size(PageSizes.A5.Landscape());
             page.Margin(12, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

@@ -30,7 +30,7 @@ public class EnrollmentCertificateDocument(EnrollmentCertificateDto certificate,
             // Times New Roman : absente des dépôts Linux (police propriétaire) — le Dockerfile de
             // production mappe ce nom vers Liberation Serif, un clone à métriques identiques, via un
             // alias fontconfig (même convention que ReportCardDocument).
-            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(11).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(11).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

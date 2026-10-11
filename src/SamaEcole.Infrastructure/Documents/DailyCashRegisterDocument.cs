@@ -21,7 +21,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
         {
             page.Size(PageSizes.A4.Portrait());
             page.Margin(10, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

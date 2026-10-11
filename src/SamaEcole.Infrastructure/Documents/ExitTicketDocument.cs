@@ -26,7 +26,7 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
         {
             page.Size(PageSizes.A5.Landscape());
             page.Margin(8, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

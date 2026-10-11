@@ -22,7 +22,7 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
         {
             page.Size(PageSizes.A4.Portrait());
             page.Margin(15, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

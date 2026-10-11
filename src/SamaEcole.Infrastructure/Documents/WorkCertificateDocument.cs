@@ -27,7 +27,7 @@ public class WorkCertificateDocument(WorkCertificateDto certificate, byte[]? log
         {
             page.Size(PageSizes.A4);
             page.Margin(20, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black));
+            page.DefaultTextStyle(text => text.FontSize(10).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
             page.Content().Column(column =>
             {

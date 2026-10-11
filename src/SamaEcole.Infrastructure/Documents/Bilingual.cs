@@ -1,4 +1,5 @@
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
 namespace SamaEcole.Infrastructure.Documents;
@@ -36,7 +37,8 @@ public static class Bilingual
 
         container.ContentFromRightToLeft().Text(text =>
         {
-            var span = text.Span(arabicText).FontFamily(PdfFonts.Arabic).FontSize(fontSize);
+            // Ligatures rétablies : le style par défaut des pages les coupe (texte latin), or l'arabe en dépend pour sa mise en forme.
+            var span = text.Span(arabicText).FontFamily(PdfFonts.Arabic).FontSize(fontSize).EnableFontFeature(FontFeatures.StandardLigatures);
             if (bold)
             {
                 span.Bold();
