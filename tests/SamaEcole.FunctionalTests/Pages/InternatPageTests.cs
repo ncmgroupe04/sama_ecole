@@ -76,6 +76,19 @@ public class InternatPageTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
     }
 
     [Fact]
+    public async Task Every_Tab_Root_Listens_To_The_Tab_Shown_Announcement_So_It_Reloads_When_Opened()
+    {
+        var html = await InternatHtmlAsync();
+
+        // Sans cette écoute, un onglet ne chargerait ses données qu'à l'ouverture de la page : une sortie déclarée dans « Sorties » n'apparaîtrait pas
+        // (verrou « absent ») dans « Pointage » avant un rechargement (constat de la recette navigateur).
+        foreach (var component in new[] { "occupationTab", "dormitoriesTab", "boardersTab", "leavesTab", "attendanceTab" })
+        {
+            html.Should().Contain($"x-data=\"{component}()\" x-on:internat-tab-shown.window=\"onTabShown($event.detail.key)\"", component);
+        }
+    }
+
+    [Fact]
     public async Task The_Five_Tabs_Are_Declared_In_Order()
     {
         var html = await InternatHtmlAsync();

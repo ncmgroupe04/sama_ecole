@@ -29,6 +29,7 @@ document.addEventListener('alpine:init', () => {
         detail: null,          // DormitoryDetailDto du pavillon ouvert, ou null
         detailLoading: false,
         canManage: false,
+        loadedAt: 0,
         genderChoices: window.internatHelpers.GENDER_CHOICES,
 
         form: { open: false, mode: 'create', id: null, rowVersion: null, values: {}, errors: {}, saving: false, error: '', archivedConflict: false },
@@ -53,7 +54,15 @@ document.addEventListener('alpine:init', () => {
                 this.error = this.helpers().errorMessage(err, 'Erreur lors du chargement des pavillons.');
             } finally {
                 this.loading = false;
+                this.loadedAt = Date.now();
             }
+        },
+
+        /** Relit à l'ouverture de l'onglet, sauf formulaire ou confirmation de suppression ouvert, ou écriture en cours. */
+        async onTabShown(key) {
+            const busy = this.loading || this.detailLoading || this.form.open || this.form.saving || this.roomForm.open || this.roomForm.saving
+                || this.removal.open || this.removal.saving;
+            if (this.helpers().shouldRefreshOnShow({ tabKey: 'pavillons', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) await this.refresh();
         },
 
         async openDetail(dormitory) {

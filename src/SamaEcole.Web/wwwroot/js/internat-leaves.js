@@ -121,6 +121,7 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('leavesTab', () => ({
         loading: true,
+        loadedAt: 0,
         error: '',
         filterError: '',
         notice: '',
@@ -181,8 +182,18 @@ document.addEventListener('alpine:init', () => {
                 this.totalCount = 0;
                 this.error = this.helpers().errorMessage(err, 'Erreur lors du chargement du registre des sorties.');
             } finally {
-                if (seq === this.listSeq) this.loading = false;
+                if (seq === this.listSeq) {
+                    this.loading = false;
+                    this.loadedAt = Date.now();
+                }
             }
+        },
+
+        /** Relit à l'ouverture de l'onglet (registre ET pavillons du filtre), sauf modale de déclaration ou de retour ouverte, ou enregistrement en cours. */
+        async onTabShown(key) {
+            const busy = this.loading || this.declare.open || this.declare.saving || this.returnModal.open || this.returnModal.saving;
+            if (!this.helpers().shouldRefreshOnShow({ tabKey: 'sorties', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) return;
+            await Promise.all([this.load(), this.loadDormitories()]);
         },
 
         async applyFilters() {

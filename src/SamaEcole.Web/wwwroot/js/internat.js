@@ -22,10 +22,21 @@ document.addEventListener('alpine:init', () => {
         tabs: window.internatHelpers.TABS,
         tab: window.internatHelpers.tabFromHash(window.location.hash),
 
+        init() {
+            // Le fragment n'était lu qu'à l'ouverture de la page : le modifier sur la page déjà ouverte (lien collé, saisie dans la barre d'adresse) ne
+            // changeait pas d'onglet. replaceState ne déclenche pas hashchange : pas de boucle avec select().
+            window.addEventListener('hashchange', () => {
+                const key = window.internatHelpers.tabFromHash(window.location.hash);
+                if (key !== this.tab) this.select(key);
+            });
+        },
+
         select(key) {
             this.tab = key;
             // replaceState : changer d'onglet n'empile pas l'historique du navigateur.
             if (window.history && window.history.replaceState) window.history.replaceState(null, '', `#${key}`);
+            // Chaque onglet relit ses données à son ouverture (voir internat-helpers.js › shouldRefreshOnShow).
+            window.internatHelpers.announceTabShown(key);
         }
     }));
 });

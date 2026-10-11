@@ -6,7 +6,7 @@
     `x-show` : pour le Secrétariat (et tout autre rôle), la section est ABSENTE du DOM, pas seulement cachée. Le serveur reste la barrière
     (`medicalNotes` vaut null pour ces rôles, et le PUT refuse une valeur envoyée par eux).
 *@
-<div x-data="boardersTab()">
+<div x-data="boardersTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
     <div class="mt-6">
         <p class="text-sm text-slate-500">Séjours de l'année scolaire active : filtres par pavillon, chambre, régime et situation, fiche d'urgence et personnes habilitées.</p>
     </div>

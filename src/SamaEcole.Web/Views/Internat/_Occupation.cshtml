@@ -6,7 +6,7 @@
     Les lits, leur état et leurs occupants viennent des pavillons créés dans l'onglet « Pavillons ». Un demi-pensionnaire n'a pas de lit : il s'affecte
     sans chambre (bouton « Affecter un élève » de l'en-tête).
 *@
-<div x-data="occupationTab()">
+<div x-data="occupationTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-slate-500">Occupation des pavillons pour l'année scolaire active.</p>
         <button type="button" x-show="canAssign" x-cloak class="btn-modal-primary" x-on:click="openAssignModal(null)">

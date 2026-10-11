@@ -157,6 +157,7 @@ document.addEventListener('alpine:init', () => {
         ...window.pdfPreview.state(),
 
         loading: true,
+        loadedAt: 0,
         error: '',
         filterError: '',
         notice: '',
@@ -231,8 +232,18 @@ document.addEventListener('alpine:init', () => {
                 this.totalCount = 0;
                 this.error = this.helpers().errorMessage(err, 'Erreur lors du chargement des pensionnaires.');
             } finally {
-                if (seq === this.listSeq) this.loading = false;
+                if (seq === this.listSeq) {
+                    this.loading = false;
+                    this.loadedAt = Date.now();
+                }
             }
+        },
+
+        /** Relit à l'ouverture de l'onglet (liste ET pavillons du filtre), sauf fiche ou aperçu PDF ouvert, ou profil en cours d'enregistrement. */
+        async onTabShown(key) {
+            const busy = this.loading || this.panel.open || this.panel.saving || this.showPdfModal;
+            if (!this.helpers().shouldRefreshOnShow({ tabKey: 'pensionnaires', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) return;
+            await Promise.all([this.load(), this.loadDormitories()]);
         },
 
         async applyFilters() {

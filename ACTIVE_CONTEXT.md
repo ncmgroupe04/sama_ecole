@@ -754,6 +754,12 @@ Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/i
   - **Pièges :** (1) `LEAVE_IN_PROGRESS` garde le message précis du serveur (un test du lot G3 le verrouille) ; (2) les garde-fous de `regression-guards.test.mjs` refusent
     un `catch` muet sur un `load*()` et un littéral `'/api/v1/boarding'` seul (écrire les chemins complets) ; (3) un composant dont `init()` est appelé par le harnais
     ne doit pas être ré-initialisé dans les tests ; (4) `Write`/`Edit` décodent `\uXXXX` : pour écrire un échappement dans un fichier source, le construire par code.
+  **Trouvés à la recette navigateur (Playwright, 2026-10-11), invisibles des tests JS :** (5) un aperçu PDF ouvert depuis un bouton DANS une modale : le moteur
+  (`window.closeAllModals`) retire d'abord ce bouton du DOM et Alpine résout `this.$refs` par rapport à l'élément cliqué → conteneur introuvable, rendu abandonné en
+  silence (« Génération… » pour toujours) ; appeler `Alpine.$data(this.$root).openPdfPreview(…)` (composant lié à sa racine). Un appel direct de la méthode, lui,
+  fonctionne : seul un vrai clic reproduit. (6) Chaque onglet de `/internat` recharge ses données à son ouverture (événement `internat-tab-shown`, décision pure
+  `shouldRefreshOnShow`), sauf modale/saisie en cours et données chargées depuis moins de 2 s ; le Pointage ne relit JAMAIS une saisie non enregistrée. Le fragment
+  d'URL est aussi suivi sur `hashchange`.
 - **Reste :** le lot F (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`),
   puis la recette navigateur des cinq onglets (3 rôles + Enseignant + module désactivé + coupure réseau).
 

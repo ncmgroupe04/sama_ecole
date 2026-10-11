@@ -50,6 +50,29 @@ window.internatHelpers = (() => {
         return found ? found.key : TABS[0].key;
     }
 
+    // ------------------------------------------------------------------ Rechargement à l'ouverture d'un onglet
+
+    /** Événement (sur window) annonçant l'onglet qui vient d'être affiché : chaque composant décide s'il doit relire ses données. */
+    const TAB_SHOWN_EVENT = 'internat-tab-shown';
+
+    /** Données chargées depuis moins que cela : pas relues (évite un double chargement à l'ouverture de la page et aux allers-retours rapides). */
+    const REFRESH_MIN_GAP_MS = 2000;
+
+    function announceTabShown(key) {
+        const event = typeof CustomEvent === 'function' ? new CustomEvent(TAB_SHOWN_EVENT, { detail: { key } }) : { type: TAB_SHOWN_EVENT, detail: { key } };
+        window.dispatchEvent(event);
+    }
+
+    /**
+     * Faut-il relire les données de l'onglet `tabKey` maintenant que `shownKey` vient d'être affiché ? Oui seulement pour SON onglet, s'il n'est pas `busy`
+     * (modale ouverte, enregistrement en cours, saisie non enregistrée : relire détruirait l'état de l'utilisateur) et si ses données ne viennent pas d'être
+     * chargées. Les onglets ne chargeaient qu'à l'ouverture de la page : une écriture faite dans un autre onglet n'y apparaissait pas (recette navigateur).
+     */
+    function shouldRefreshOnShow({ tabKey, shownKey, busy, loadedAt, now }) {
+        if (shownKey !== tabKey || busy) return false;
+        return !loadedAt || now - loadedAt >= REFRESH_MIN_GAP_MS;
+    }
+
     // ------------------------------------------------------------------ Libellés
 
     /**
@@ -233,7 +256,7 @@ window.internatHelpers = (() => {
 
     return {
         occupancyPercent, occupancyColor,
-        TABS, tabFromHash,
+        TABS, tabFromHash, TAB_SHOWN_EVENT, REFRESH_MIN_GAP_MS, announceTabShown, shouldRefreshOnShow,
         GENDER_CHOICES, genderLabel, bedStatusLabel,
         buildDormitoryBody, buildRoomBody,
         validateDormitory, validateRoom,

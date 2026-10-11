@@ -150,6 +150,7 @@ document.addEventListener('alpine:init', () => {
         details: [],
         counts: { interne: 0, demiPensionnaire: 0, awaitingBed: 0 },
         canAssign: false,
+        loadedAt: 0,
         searchDebounce: null,
         assignModal: {
             open: false, roomId: null, roomLabel: '', searchTerm: '', results: [], selected: null,
@@ -185,7 +186,14 @@ document.addEventListener('alpine:init', () => {
                 this.error = this.helpers().errorMessage(err, "Erreur lors du chargement du tableau de bord de l'internat.");
             } finally {
                 this.loading = false;
+                this.loadedAt = Date.now();
             }
+        },
+
+        /** Relit à l'ouverture de l'onglet (une affectation faite ailleurs doit apparaître), sauf modale d'affectation ouverte ou en cours. */
+        async onTabShown(key) {
+            const busy = this.loading || this.assignModal.open || this.assignModal.saving;
+            if (this.helpers().shouldRefreshOnShow({ tabKey: 'occupation', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) await this.load();
         },
 
         get rooms() { return this.logic().flattenRooms(this.details); },

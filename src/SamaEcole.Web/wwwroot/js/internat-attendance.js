@@ -132,6 +132,7 @@ document.addEventListener('alpine:init', () => {
         ...window.pdfPreview.state(),
 
         loading: false,
+        loadedAt: 0,
         saving: false,
         error: '',
         dateError: '',
@@ -225,7 +226,30 @@ document.addEventListener('alpine:init', () => {
                 this.loaded = null;
                 this.error = this.helpers().errorMessage(err, 'Erreur lors du chargement de la feuille d\'appel.');
             } finally {
-                if (seq === this.sheetSeq) this.loading = false;
+                if (seq === this.sheetSeq) {
+                    this.loading = false;
+                    this.loadedAt = Date.now();
+                }
+            }
+        },
+
+        /**
+         * Relit à l'ouverture de l'onglet : une sortie déclarée dans « Sorties » doit verrouiller « absent » le pensionnaire concerné dès maintenant, pas au
+         * prochain rechargement de la page. JAMAIS pendant une saisie non enregistrée, un enregistrement, une confirmation d'abandon ou un aperçu PDF :
+         * relire jetterait les pointages saisis. Sans feuille affichée, on relit les pavillons (l'un d'eux a pu être créé entre-temps).
+         */
+        async onTabShown(key) {
+            const busy = this.loading || this.saving || this.discard.open || this.showPdfModal || (this.hasSheet && this.logic().hasUnsavedInput(this.lines));
+            if (!this.helpers().shouldRefreshOnShow({ tabKey: 'pointage', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) return;
+
+            if (this.hasSheet) {
+                await this.loadSheet();
+                return;
+            }
+            await this.loadDormitories();
+            if (this.dormitories.length === 1 && !this.sel.dormitoryId) {
+                this.sel.dormitoryId = this.dormitories[0].id;
+                await this.onSelectionChange();
             }
         },
 

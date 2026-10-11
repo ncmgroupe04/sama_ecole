@@ -6,7 +6,7 @@
     Droits : lecture Directeur / Secrétariat / Surveillant ; les boutons d'écriture ne s'affichent qu'au Directeur et au Secrétariat (`canManage`,
     confort d'affichage : l'API répond 403 aux autres). Capacité et occupation sont DÉRIVÉES des lits, jamais saisies.
 *@
-<div x-data="dormitoriesTab()">
+<div x-data="dormitoriesTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-slate-500">
             Pavillons, chambres et lits de l'internat. La capacité est la somme des lits : elle n'est jamais saisie.

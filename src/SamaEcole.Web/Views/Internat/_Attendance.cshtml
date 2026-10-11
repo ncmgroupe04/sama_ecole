@@ -5,7 +5,7 @@
     Un pensionnaire en permission est verrouillé « absent » (le serveur refuserait « présent » : BOARDER_ON_LEAVE). Seules les lignes décidées et modifiées
     sont envoyées. Un résultat mixte garde chaque refus visible sur sa ligne.
 *@
-<div x-data="attendanceTab()">
+<div x-data="attendanceTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
     <div class="mt-6">
         <p class="text-sm text-slate-500">Appel du soir par pavillon : choisissez le pavillon et la nuit, pointez chaque interne, puis enregistrez.</p>
     </div>

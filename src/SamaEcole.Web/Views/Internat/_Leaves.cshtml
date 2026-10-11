@@ -5,7 +5,7 @@
     Un accompagnateur qui ne figure pas parmi les personnes habilitées est un AVERTISSEMENT (bandeau ambre dans la modale, pastille « Non habilité » dans
     le registre), jamais un blocage : la déclaration reste possible (spec Q5).
 *@
-<div x-data="leavesTab()">
+<div x-data="leavesTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-slate-500">Sorties et permissions des pensionnaires de l'année scolaire active.</p>
         <button type="button" class="btn-modal-primary" x-on:click="openDeclare()">
