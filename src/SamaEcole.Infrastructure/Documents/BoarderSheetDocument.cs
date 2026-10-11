@@ -207,7 +207,7 @@ public class BoarderSheetDocument(BoarderSheetDto sheet, byte[]? logo) : IDocume
                     BodyCell(table.Cell(), leave.ActualReturnDate is { } back ? Date(back) : "—");
                     BodyCell(table.Cell(), Reason(leave.Reason));
                     BodyCell(table.Cell(), leave.IsCompanionUnlisted
-                        ? $"{leave.AccompaniedBy} — Non habilité"
+                        ? $"{leave.AccompaniedBy} — Non\u00A0habilité" // espace insécable : la mention ne se coupe jamais sur deux lignes
                         : leave.AccompaniedBy);
                     BodyCell(table.Cell(), Status(leave.Status));
                 }
