@@ -11,6 +11,10 @@ namespace SamaEcole.Web.TagHelpers;
 /// développés une seule fois »), plutôt que redupliquée dans chaque vue comme c'était le cas jusqu'ici
 /// (panneau latéral copié-collé dans Students/Classrooms/Subjects/Fees/_SchoolYearsPanel).
 ///
+/// Apparence « verre dépoli » (fond translucide + flou, coins 3xl, bordure claire) alignée sur la fenêtre de saisie
+/// de la Halqa (Views/Internat/Halqa.cshtml) ; ✕ discret au lieu du carré rose. Pas de classes dark: : l'application
+/// n'a pas de mode sombre (voir Styles/input.css), elles ne rendraient sombre que ces fenêtres selon le thème du système.
+///
 /// Fermeture par le fond, le bouton ✕, ou Échap — même convention que les dialogues déjà centrés du
 /// module Finance (Volume 5 §5 : « navigation clavier complète »).
 ///
@@ -162,18 +166,18 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"{backdropClose}></div>
+                     class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"{backdropClose}></div>
 
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-xl"{panelStyleAttr}>
+                     class="relative flex w-full flex-col overflow-hidden border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-3xl"{panelStyleAttr}>
                     {cornerClose}
                     {(hasHeader ? $"""
-                    <div class="flex-shrink-0 bg-white border-b border-slate-100 p-6">
+                    <div class="flex-shrink-0 border-b border-slate-200/60 p-6">
                         <div class="flex items-center justify-between gap-4">
                             <h2 class="text-2xl font-bold text-slate-900">{titleHtml}</h2>
-                            <button type="button" x-on:click="{close}" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 p-2 rounded-xl transition-all shadow-sm focus:outline-none shrink-0">
+                            <button type="button" x-on:click="{close}" class="shrink-0 rounded-2xl p-2 text-slate-400 transition-colors hover:bg-slate-900/5 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary">
                                 <span class="sr-only">Fermer</span>
                                 <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
@@ -185,7 +189,7 @@ public class ModalShellTagHelper : TagHelper
                         {body}
                     </div>
                     {(footer is null ? "" : $"""
-                    <div class="flex-shrink-0 bg-white border-t border-slate-100 p-4 px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div class="flex-shrink-0 border-t border-slate-200/60 bg-white/60 p-4 px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         {footer}
                     </div>
                     """)}
