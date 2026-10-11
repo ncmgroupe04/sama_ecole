@@ -21,7 +21,8 @@
 # reproductible dans CE contexte de build Docker restreint.
 FROM node:20-alpine AS css-build
 WORKDIR /src/web
-COPY src/SamaEcole.Web/package.json src/SamaEcole.Web/tailwind.config.js ./
+# tailwind.config.js charge tailwind.dark-theme.js (mode sombre) : sans lui, `npm run build:css` échoue (« Cannot find module »).
+COPY src/SamaEcole.Web/package.json src/SamaEcole.Web/tailwind.config.js src/SamaEcole.Web/tailwind.dark-theme.js ./
 COPY src/SamaEcole.Web/Styles ./Styles
 COPY src/SamaEcole.Web/Views ./Views
 COPY src/SamaEcole.Web/wwwroot/js ./wwwroot/js
