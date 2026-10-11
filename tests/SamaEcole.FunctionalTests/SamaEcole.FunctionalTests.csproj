@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="FluentAssertions" Version="7.0.0" />
@@ -21,6 +22,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SamaEcole.Web\SamaEcole.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SamaEcole.UnitTests\Boarding\PdfText.cs" Link="Common\PdfText.cs" />
   </ItemGroup>
 
 </Project>

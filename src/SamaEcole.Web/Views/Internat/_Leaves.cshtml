@@ -1,0 +1,218 @@
+@*
+    Onglet « Sorties » de /internat (lot G4, tâche 10) — registre des sorties, déclaration et retour, sur /api/v1/boarding. Composant Alpine `leavesTab`
+    (wwwroot/js/internat-leaves.js).
+
+    Un accompagnateur qui ne figure pas parmi les personnes habilitées est un AVERTISSEMENT (bandeau ambre dans la modale, pastille « Non habilité » dans
+    le registre), jamais un blocage : la déclaration reste possible (spec Q5).
+*@
+<div x-data="leavesTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">Sorties et permissions des pensionnaires de l'année scolaire active.</p>
+        <button type="button" class="btn-modal-primary" x-on:click="openDeclare()">
+            <icon name="plus" class="w-4 h-4" />
+            Déclarer une sortie
+        </button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mt-4 p-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div class="lg:col-span-2">
+                <label class="form-label">Pavillon</label>
+                <select-field model="filters.dormitoryId" options-expr="dormitoryOptions" on-change="applyFilters()" placeholder="Tous les pavillons" />
+            </div>
+            <div>
+                <label class="form-label">Du</label>
+                <date-field model="filters.from" aria-label="Du" class="mt-1" />
+            </div>
+            <div>
+                <label class="form-label">Au</label>
+                <date-field model="filters.to" aria-label="Au" class="mt-1" />
+            </div>
+            <div class="flex items-end">
+                <button type="button" class="btn-modal-secondary group w-full" x-on:click="applyFilters()">Appliquer la période</button>
+            </div>
+        </div>
+
+        <p x-show="filterError" x-cloak class="mt-3 text-xs text-amber-700" role="alert" x-text="filterError"></p>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Statut des sorties">
+            <template x-for="s in statusFilters" :key="s.value">
+                <button type="button"
+                        class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+                        :class="filters.status === s.value ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                        :aria-pressed="filters.status === s.value"
+                        x-on:click="filters.status = s.value; applyFilters()" x-text="s.label"></button>
+            </template>
+            <label class="ml-auto flex items-center gap-2 text-xs text-slate-700">
+                <input type="checkbox" class="checkbox-field" x-model="filters.unlistedOnly" x-on:change="applyFilters()" />
+                Accompagnateur non habilité seulement
+            </label>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <p x-show="notice" x-cloak class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" x-text="notice"></p>
+
+    <!-- Registre -->
+    <div class="card mt-4 overflow-hidden">
+        <template x-if="loading">
+            <div class="space-y-2 p-4">
+                <template x-for="i in 5" :key="i"><div class="h-10 rounded skeleton"></div></template>
+            </div>
+        </template>
+
+        <template x-if="!loading && items.length === 0 && !error">
+            <div class="p-12">
+                <empty-state icon="calendar" title="Aucune sortie ne correspond."
+                             hint="Modifiez les filtres, ou déclarez une sortie avec le bouton ci-dessus." />
+            </div>
+        </template>
+
+        <div class="overflow-x-auto" x-show="!loading && items.length > 0" x-cloak>
+            <table class="min-w-full divide-y divide-slate-100 text-sm">
+                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th scope="col" class="px-4 py-3">Pensionnaire</th>
+                        <th scope="col" class="px-4 py-3">Motif</th>
+                        <th scope="col" class="px-4 py-3">Sortie → retour prévu</th>
+                        <th scope="col" class="px-4 py-3">Accompagnateur</th>
+                        <th scope="col" class="px-4 py-3">Statut</th>
+                        <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-for="leave in items" :key="leave.id">
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-slate-800" x-text="leave.studentName"></p>
+                                <p class="text-xs text-slate-400">
+                                    <span x-text="leave.matricule"></span><span x-show="leave.dormitoryName" x-cloak x-text="' · ' + leave.dormitoryName"></span>
+                                </p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">
+                                <span x-text="reasonLabel(leave.reason)"></span>
+                                <p class="text-xs text-slate-400" x-show="leave.reasonDetail" x-cloak x-text="leave.reasonDetail"></p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">
+                                <span x-text="leave.leaveDate"></span> → <span x-text="leave.expectedReturnDate"></span>
+                                <p class="text-xs text-slate-400" x-show="leave.actualReturnDate" x-cloak x-text="'Rentré le ' + leave.actualReturnDate"></p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">
+                                <span x-text="leave.accompaniedBy"></span>
+                                <badge x-show="leave.isCompanionUnlisted" x-cloak variant="warning" class="ml-1">Non habilité</badge>
+                            </td>
+                            <td class="px-4 py-3">
+                                <badge x-show="leave.status === 'Pending'" variant="neutral"><span x-text="statusLabel(leave.status)"></span></badge>
+                                <badge x-show="leave.status === 'Active'" variant="primary"><span x-text="statusLabel(leave.status)"></span></badge>
+                                <badge x-show="leave.status === 'Overdue'" variant="danger"><span x-text="statusLabel(leave.status)"></span></badge>
+                                <badge x-show="leave.status === 'Returned'" variant="success"><span x-text="statusLabel(leave.status)"></span></badge>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="button" x-show="canRecordReturn(leave)" x-cloak
+                                        class="text-xs font-semibold text-primary-600 hover:text-primary-700" x-on:click="openReturn(leave)">
+                                    Enregistrer le retour
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="border-t border-slate-100 px-4 py-3" x-show="!loading && totalCount > pageSize" x-cloak>
+            <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
+        </div>
+    </div>
+
+    <!-- Déclaration d'une sortie -->
+    <modal-shell open="declare.open" on-close="closeDeclare()" size="lg" title="Déclarer une sortie">
+        <form class="space-y-4" x-on:submit.prevent="submitDeclare()">
+            <div class="relative">
+                <label for="leave-boarder" class="form-label">Pensionnaire</label>
+                <input id="leave-boarder" type="text" x-model="declare.search" x-on:input="onBoarderSearchInput()"
+                       placeholder="Nom, prénom ou matricule (2 caractères au moins)" class="input-field mt-1" autocomplete="off" />
+                <ul x-show="declare.results.length > 0" x-cloak
+                    class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-auto">
+                    <template x-for="boarder in declare.results" :key="boarder.id">
+                        <li class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm" x-on:click="selectBoarder(boarder)">
+                            <span x-text="boarder.studentName"></span>
+                            <span class="text-xs text-slate-400" x-text="' — ' + boarder.classroomName"></span>
+                        </li>
+                    </template>
+                </ul>
+                <p x-show="declare.errors.boarder" x-cloak class="field-error" x-text="declare.errors.boarder"></p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                    <label class="form-label">Date de sortie</label>
+                    <date-field model="declare.form.leaveDate" required="true" aria-label="Date de sortie" class="mt-1" />
+                    <p x-show="declare.errors.leaveDate" x-cloak class="field-error" x-text="declare.errors.leaveDate"></p>
+                </div>
+                <div>
+                    <label class="form-label">Retour prévu</label>
+                    <date-field model="declare.form.expectedReturnDate" required="true" aria-label="Retour prévu" class="mt-1" />
+                    <p x-show="declare.errors.expectedReturnDate" x-cloak class="field-error" x-text="declare.errors.expectedReturnDate"></p>
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label">Motif</label>
+                <select-field model="declare.form.reason" options-expr="reasonChoices" />
+            </div>
+
+            <div>
+                <label for="leave-detail" class="form-label">Précision (facultatif)</label>
+                <input id="leave-detail" type="text" maxlength="500" x-model="declare.form.reasonDetail" class="input-field mt-1" />
+                <p x-show="declare.errors.reasonDetail" x-cloak class="field-error" x-text="declare.errors.reasonDetail"></p>
+            </div>
+
+            <div>
+                <label for="leave-companion" class="form-label">Accompagnateur</label>
+                <input id="leave-companion" type="text" maxlength="150" x-model="declare.form.accompaniedBy" placeholder="Nom complet de la personne qui vient chercher l'élève"
+                       class="input-field mt-1" autocomplete="off" />
+                <p x-show="declare.errors.accompaniedBy" x-cloak class="field-error" x-text="declare.errors.accompaniedBy"></p>
+
+                <!-- Avertissement, jamais un blocage (spec Q5) : la déclaration reste possible. -->
+                <p x-show="companionUnlisted" x-cloak role="alert"
+                   class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Cette personne ne figure pas parmi les personnes habilitées de <strong x-text="declare.boarder && declare.boarder.studentName"></strong>.
+                    Vous pouvez enregistrer la sortie : elle sera signalée « Non habilité » dans le registre.
+                </p>
+            </div>
+
+            <p x-show="declare.error" x-cloak class="field-error" x-text="declare.error"></p>
+
+            <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeDeclare()">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="!canSubmitDeclare">
+                    <span x-text="declare.saving ? 'Enregistrement…' : 'Enregistrer la sortie'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Retour d'une sortie -->
+    <modal-shell open="returnModal.open" on-close="closeReturn()" size="md" title="Enregistrer le retour">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-600" x-show="returnModal.leave" x-cloak>
+                <strong x-text="returnModal.leave && returnModal.leave.studentName"></strong> —
+                sortie du <span x-text="returnModal.leave && returnModal.leave.leaveDate"></span>,
+                retour prévu le <span x-text="returnModal.leave && returnModal.leave.expectedReturnDate"></span>.
+            </p>
+            <div>
+                <label class="form-label">Date de retour</label>
+                <date-field model="returnModal.date" required="true" aria-label="Date de retour" class="mt-1" />
+            </div>
+            <p x-show="returnModal.error" x-cloak class="field-error" x-text="returnModal.error"></p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeReturn()">Fermer</button>
+                <button type="button" class="btn-modal-primary group" :disabled="returnModal.saving || returnModal.stale" x-on:click="submitReturn()">
+                    <span x-text="returnModal.saving ? 'Enregistrement…' : 'Confirmer le retour'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+</div>

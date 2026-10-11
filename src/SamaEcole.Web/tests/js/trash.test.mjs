@@ -50,7 +50,11 @@ test("les routes de chaque corbeille correspondent à celles de l'API", () => {
         classrooms: ['/classrooms/deleted', `/classrooms/${id}/restore`],
         'fee-categories': ['/finance/fee-categories/deleted', `/finance/fee-categories/${id}/restore`],
         mentions: ['/grades/mentions/deleted', `/grades/mentions/${id}/restore`],
-        'school-years': ['/school-years/deleted', `/school-years/${id}/restore`]
+        'school-years': ['/school-years/deleted', `/school-years/${id}/restore`],
+        // Module Internat (lot G) : routes du contrôleur /api/v1/boarding, réservées au Directeur et au Secrétariat.
+        dormitories: ['/boarding/dormitories/deleted', `/boarding/dormitories/${id}/restore`],
+        'dormitory-rooms': ['/boarding/rooms/deleted', `/boarding/rooms/${id}/restore`],
+        beds: ['/boarding/beds/deleted', `/boarding/beds/${id}/restore`]
     };
 
     assert.deepEqual(Object.keys(kinds).sort(), Object.keys(expected).sort());
@@ -216,4 +220,27 @@ test("une suppression signalée (trash:changed) recharge la corbeille du bon typ
     ctx.window.softDeleteTrash.notifyChanged('classrooms');
     await tick();
     assert.equal(calls.length, before + 1, 'le même type se recharge');
+});
+
+// ------------------------------------------------------------------------------------------------- Internat (lot G)
+
+test('Internat : les trois corbeilles se présentent par leur nom et la date de suppression', () => {
+    const { ctx } = boot(async () => reply(200, []));
+    const kinds = ctx.window.softDeleteTrash.KINDS;
+    const item = { id: 'a', name: 'Pavillon Nord', parentId: null, deletedAt: '2026-10-05T10:00:00Z' };
+
+    for (const key of ['dormitories', 'dormitory-rooms', 'beds']) {
+        assert.equal(kinds[key].label(item), 'Pavillon Nord', key);
+        assert.match(kinds[key].detail(item), /Supprim.* le \d{2}\/\d{2}\/\d{4}/, key);
+        assert.equal(kinds[key].detail({ ...item, deletedAt: null }), '', `${key} : pas de date, pas de détail`);
+    }
+});
+
+test('Internat : le panneau des pavillons charge GET /boarding/dormitories/deleted', async () => {
+    const { calls, panel } = boot(async () => reply(200, [{ id: 'a', name: 'Pavillon Nord', parentId: null, deletedAt: '2026-10-05T10:00:00Z' }]));
+    const p = panel('dormitories');
+    await tick();
+
+    assert.deepEqual(calls.map((c) => `${c.method} ${c.url}`), ['GET /boarding/dormitories/deleted']);
+    assert.equal(p.visible, true);
 });

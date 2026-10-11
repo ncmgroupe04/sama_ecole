@@ -661,6 +661,129 @@ tables sont peuplées par la reprise mais ne sont pas encore lues. Suppression d
 un demi-pensionnaire ou une inscription d'année passée dans la même chambre décalait les lits (bug trouvé par
 `BoardingBackfillMigrationTests`).
 
+### Module Internat — modèle Pavillon/Lit, lot B (07/10/2026) — livré (CQRS pavillons, chambres, lits)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-b.md`. `BoardingController` (`/api/v1/boarding`, voir
+Volume 4 §31) : pavillons, chambres (création avec génération des lits) et lits (statut, suppression, restauration),
+corbeilles, code d'erreur `RESOURCE_IN_USE`. Le statut `Occupied` d'un lit est **calculé** depuis les séjours actifs
+(`BoardingOccupancy`), jamais stocké. Suppression stricte, sans cascade.
+
+**Commit isolé à ne pas livrer seul — « Masque les anciennes salles Dortoir » (décision Q1).** Après lui, un dortoir ne se
+crée plus par `/infrastructures` (422) et un dortoir créé par la nouvelle API est invisible de l'ancien écran
+`/internat`, qui lit encore `Room` de type `Dortoir`. **Le lot B ne doit pas être livré en production sans le lot C**
+(bascule des lectures). Le lot C devra aussi réconcilier les affectations faites avec l'ancien écran depuis la migration
+du lot A (la reprise est un instantané).
+
+### Module Internat — modèle Pavillon/Lit, lot C (07/10/2026) — livré (réconciliation, pensionnaires, bascule)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-c.md`. **`boarding_enrollments` est désormais la source de vérité de
+l'hébergement.** Réconciliation à usage unique (migration `ReconcileBoardingWithLegacyModel`) : l'ancien modèle prévaut pour les séjours,
+la structure est additive. Nouvelles routes `/api/v1/boarding/{assign-bed,unassign-bed,boarders,boarders/{id},boarders/{id}/profile}`
+(Volume 4 §31.1) avec masquage de la fiche médicale par rôle. Service unique `IBoardingAssignmentService` : lit libre/maintenance/genre,
+pension ajoutée une fois et jamais retirée, course sur le dernier lit → 409 `BED_UNAVAILABLE`.
+
+**Compatibilité** (Volume 4 §31.2) : `/api/v1/internat/*` et `POST /enrollments` gardent leur JSON ; leurs handlers sont des adaptateurs.
+`Enrollment.BoardingStatus/RoomId` sont `[Obsolete]`, plus lus ni écrits (suppression : lot F). Un demi-pensionnaire n'occupe plus de place.
+
+**PRÉREQUIS DE DÉPLOIEMENT — à ne pas ignorer :**
+1. **Arrêter toutes les anciennes instances AVANT d'appliquer la migration** (pas de déploiement progressif) : une instance du lot A/B
+   écrirait encore des colonnes que plus personne ne lit.
+2. **Livrer les lots B et C dans la même fenêtre** : le lot B coupe la création de dortoirs par `/infrastructures`.
+3. **Ne jamais rejouer la réconciliation** après la bascule : elle fermerait de vrais séjours.
+4. Contrôle après déploiement : séjours actifs de l'année active = inscriptions pensionnaires de l'année active (requête dans la PR).
+
+Reste : lot G (IHM), puis lot F (suppression des colonnes et routes héritées — APRÈS la migration de l'écran, donc après G).
+
+### Module Internat — modèle Pavillon/Lit, lot D (07/10/2026) — livré (sorties et pointage de nuit)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-d.md`. Branche `feat/internat-leaves-attendance`, **empilée sur le lot C**
+(PR #63), **aucune migration** : les tables `boarding_leaves` et `boarding_attendances` datent du lot A, **aucun script SQL post-déploiement**.
+Routes `/api/v1/boarding/{leaves, leaves/{id}/return, attendance}` (Volume 4 §31.3), mêmes rôles que le lot C
+(`Directeur`, `Secretariat`, `Surveillant`). Le statut d'une sortie est **calculé** (`BoardingLeaveStatus.Of`, et le même prédicat en SQL
+pour le filtre de liste). Un accompagnateur non habilité est **accepté** et tracé (`isCompanionUnlisted`, figé à la déclaration).
+`GET /boarders/{id}` gagne `leaves` (additif) et `GET /boarders` le filtre `status=onLeave`.
+
+**Règles à connaître :** pointage = date ≤ aujourd'hui **et** dans l'année active ; seuls les internes actifs avec un lit du pavillon sont
+pointables ; une sortie non rentrée (même dépassée) compte « dehors », la nuit du retour non ; résultat du pointage **ligne par ligne** (une
+ligne refusée n'en bloque pas d'autres). Codes 409 : `LEAVE_ALREADY_OPEN`, `LEAVE_ALREADY_RETURNED`, `ATTENDANCE_CONFLICT`.
+`openapi.yaml` ne décrit aucune route `boarding` (lots A à D) : à compléter à part.
+
+### Module Internat — modèle Pavillon/Lit, lot E (07/10/2026) — livré (fiche pensionnaire et registre du pavillon en PDF)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-backend-lot-e.md`. Branche `feat/internat-pdf-reports`, **empilée sur le lot D**, **aucune migration**
+ni script post-déploiement. Routes `GET /api/v1/boarding/boarders/{id}/pdf` (fiche, portrait) et `GET /api/v1/boarding/dormitories/{id}/register-pdf?date=`
+(registre d'une nuit, paysage) — Volume 4 §31.4. Chaque impression est auditée (le journal ne retient pas le contenu).
+
+**Confidentialité :** la fiche médicale n'est imprimée que pour le Directeur et le Surveillant (`BoarderDetailReader.CanReadMedical`, source unique) ; le
+registre n'a ni santé ni téléphone (DTO verrouillé par réflexion). Contrôlé sur le **texte extrait des PDF** avec `PdfPig` (paquet NuGet officiel `PdfPig`,
+**tests uniquement** — attention : `UglyToad.PdfPig` sur NuGet est un paquet tiers non vérifié, ne pas l'utiliser). Piège : chercher du texte dans les octets
+d'un PDF QuestPDF ne trouve jamais rien (flux compressé), un test « absent » sur les octets passe à vide ; et `JsonSerializer` échappe les accents.
+
+### Module Internat — modèle Pavillon/Lit, lot G (IHM) — EN COURS (07/10/2026)
+
+Plan : `docs/superpowers/plans/2026-10-07-internat-ui-lot-g.md`. Branche `feat/internat-ui`, empilée sur le lot E. Découpé en PR successives.
+
+- **G1 (fait) — gardes de page par module.** `[PageModule(SchoolModule.X)]` → balise `required-module` → `module-route-guard.js` (redirige si le module est
+  désactivé, **jamais sur un échec de lecture des réglages**, repli neutre anti-boucle). **Correction de la spec §8** : `/internat`, `/halqa`, `/oustaz`,
+  `/suivi-coranique` relèvent du module **Internat** (leur API est `/api/v1/internat/*`) ; `/api/v1/quran` (Coran) n'a aucun consommateur. Garde-fous :
+  `PageModuleTests`, `regression-guards.test.mjs`.
+- **G2 (fait) — onglet Pavillons** de `/internat` (création / modification, chambres avec leurs lits, maintenance, suppression logique, corbeilles). Depuis le
+  lot B c'est le **seul** endroit où créer un pavillon : B, C et G2 doivent être livrés dans la même fenêtre. Écran désormais à onglets
+  (`internatTabs`, fragment `#pavillons`), l'onglet Occupation est conservé tel quel jusqu'à G3.
+- **Piège Razor :** `PagesController` rend `Views/Internat/Index.cshtml` par chemin explicite ; une vue partielle de ce dossier doit être appelée par
+  **chemin complet** (`Html.PartialAsync("~/Views/Internat/_Dormitories.cshtml")`), sinon la recherche par nom n'explore que `Views/Pages` et `Views/Shared` et la
+  page répond 500 — sans qu'aucun test JavaScript puisse le voir (`InternatPageTests`).
+- **G3 (fait) — onglet Occupation sur `/api/v1/boarding`.** Nouvelle route `GET /api/v1/boarding/boardable-students` (décrit le **séjour** et son jeton `xmin`,
+  réutilisable par `assign-bed`). Le tableau de bord se calcule depuis les pavillons ; la modale choisit un **lit** (plus une chambre) ; un demi-pensionnaire s'affecte
+  sans lit ; libération par `unassign-bed`. **L'écran `/internat` n'appelle plus les 3 routes héritées** (`/internat/dashboard`, `/internat/students/search`,
+  `/internat/assignments/{id}`) — **mais `enrollments.js` (`loadAvailableRooms`, sélecteur de chambre du formulaire d'inscription) appelle encore
+  `GET /internat/dashboard`** : le test de dérive de G3 ne scannait que 4 fichiers `internat*.js`. À migrer AVANT le lot F (voir son plan). Piège de test : dans un jeu de données inséré en une seule transaction, tous
+  les `xmin` sont égaux — faire avancer l'un d'eux dans une transaction séparée pour qu'un test de jeton ait un sens.
+- **G4 (fait) — onglets Pensionnaires, Sorties et Pointage, PDF.** `/internat` compte désormais cinq onglets (`#occupation`, `#pavillons`, `#pensionnaires`,
+  `#sorties`, `#pointage`), chacun un composant Alpine et une vue partielle appelée par chemin complet (`_Boarders`, `_Leaves`, `_Attendance`). Aucune route
+  ajoutée, aucune migration.
+  - **Fiche médicale :** affichée et envoyée seulement pour Directeur et Surveillant (miroir de `BoarderDetailReader.CanReadMedical`). La section est derrière un
+    `<template x-if>` — **absente du DOM**, jamais un `x-show` — et `medicalNotes` n'est jamais dans le corps du `PUT …/profile` pour un autre rôle (clé absente :
+    le serveur conserve la fiche). `null` se lit « Non renseignée ». Le serveur reste la barrière (masque, 403).
+  - **PDF :** fiche du pensionnaire et registre du pavillon passent par la modale commune `window.pdfPreview` (jeton, erreurs 403/404/422 affichées), pas de lien
+    `<a href>` (les routes exigent l'en-tête `Authorization`) ni de nouveau mécanisme. Aucun paramètre de rôle n'est envoyé : le masquage du PDF est décidé par le serveur.
+  - **Sorties :** un accompagnateur hors liste est un **avertissement, jamais un blocage** (spec Q5), avec la règle de `CompanionMatcher` (espaces et casse ignorés,
+    accents conservés, nom complet) ; l'écran n'envoie pas `isCompanionUnlisted`. Retour avec le `rowVersion` de la sortie.
+  - **Pointage :** un pensionnaire en permission est verrouillé « absent » ; seules les lignes décidées et modifiées partent ; un résultat mixte garde chaque refus
+    visible sur sa ligne ; changer de pavillon ou de nuit avec une saisie non enregistrée demande confirmation.
+  - **Pièges :** (1) `LEAVE_IN_PROGRESS` garde le message précis du serveur (un test du lot G3 le verrouille) ; (2) les garde-fous de `regression-guards.test.mjs` refusent
+    un `catch` muet sur un `load*()` et un littéral `'/api/v1/boarding'` seul (écrire les chemins complets) ; (3) un composant dont `init()` est appelé par le harnais
+    ne doit pas être ré-initialisé dans les tests ; (4) `Write`/`Edit` décodent `\uXXXX` : pour écrire un échappement dans un fichier source, le construire par code.
+  **Trouvés à la recette navigateur (Playwright, 2026-10-11), invisibles des tests JS :** (5) un aperçu PDF ouvert depuis un bouton DANS une modale : le moteur
+  (`window.closeAllModals`) retire d'abord ce bouton du DOM et Alpine résout `this.$refs` par rapport à l'élément cliqué → conteneur introuvable, rendu abandonné en
+  silence (« Génération… » pour toujours) ; appeler `Alpine.$data(this.$root).openPdfPreview(…)` (composant lié à sa racine). Un appel direct de la méthode, lui,
+  fonctionne : seul un vrai clic reproduit. (6) Chaque onglet de `/internat` recharge ses données à son ouverture (événement `internat-tab-shown`, décision pure
+  `shouldRefreshOnShow`), sauf modale/saisie en cours et données chargées depuis moins de 2 s ; le Pointage ne relit JAMAIS une saisie non enregistrée. Le fragment
+  d'URL est aussi suivi sur `hashchange`.
+- **Reste :** le lot F (suppression des **3** routes Room `dashboard`, `students/search`, `assignments/{id}` et des colonnes héritées — pas tout `/api/v1/internat/*`),
+  puis la recette navigateur des cinq onglets (3 rôles + Enseignant + module désactivé + coupure réseau).
+
+### Module Internat — modèle Pavillon/Lit, lot F (retrait de l'ancien modèle) — EN COURS (07-08/10/2026)
+
+Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.md`. Branche `feat/internat-legacy-cleanup`, empilée sur le lot G. Trois PR : F0 → F1 → F2.
+
+- **F0 (qualifié, `3e3eaefb`) — dernier consommateur de `GET /internat/dashboard`.** Le sélecteur de chambre du formulaire d'inscription (`enrollments.js`) lit
+  `GET /api/v1/boarding/available-rooms` (chambres ayant au moins un lit libre : `Available` et aucun séjour actif ; pavillon, genre, `freeBeds`). Le payload de
+  `POST /enrollments` ne change pas (`boardingStatus` + `roomId`) : `IBoardingAssignmentService` choisit le lit. Le test de dérive scanne **tous** les scripts de
+  `wwwroot/js`. **Suites F0 :** build 0 erreur ; unitaires **2019/2019** ; JS **721/721** ; fonctionnels **943/943** ; intégration **1098/1098**. Recette
+  navigateur du formulaire d'inscription (élève interne) **obligatoire** avant merge F0.
+- **F1 (codé, à qualifier) — retrait du code de l'ancien modèle, sans migration.** Les 3 routes `GET /internat/dashboard`, `GET /internat/students/search`
+  et `POST /internat/assignments/{id}` répondent 404 ; leurs handlers (`GetInternatDashboard`, `SearchBoardableStudents`, `ChangeBoardingAssignment`) et leurs 3 classes
+  de tests d'intégration sont supprimés (chaque scénario avait son équivalent dans `BoardingAssignmentServiceTests`, `BoarderCommandsTests`, `EnrollmentBoardingTests`,
+  `FindBoardableStudentsTests`). `Enrollment.BoardingStatus/RoomId` n'existent plus dans le CLR : les colonnes restent mappées en **propriétés fantômes** EF
+  (`Property<string>("BoardingStatus")`, `Property<Guid?>("RoomId")`, FK composite et index inchangés), donc **modèle identique à l'instantané, aucune migration**
+  (`dotnet ef migrations has-pending-model-changes` : aucun changement). L'enum `BoardingStatus` et les champs `boardingStatus`/`roomId` de `POST /enrollments` et de la
+  fiche élève **restent** (contrat d'API). Le reste de `/api/v1/internat/*` (instructeurs, Halqa, Hizb) est inchangé. Pièges : (1) l'initialisation des tests
+  d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
+  état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
+- **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
+  `LegacyBoardingColumnsGuardTests`).
+
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,

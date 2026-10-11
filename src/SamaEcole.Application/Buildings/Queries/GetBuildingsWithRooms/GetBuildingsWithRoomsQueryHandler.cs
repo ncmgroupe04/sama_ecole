@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,15 @@ public class GetBuildingsWithRoomsQueryHandler(IApplicationDbContext dbContext)
     public async Task<IReadOnlyList<BuildingWithRoomsDto>> Handle(
         GetBuildingsWithRoomsQuery request, CancellationToken cancellationToken)
     {
+        // Décision Q1 (spec Internat 2026-10-06) : les dortoirs se gèrent dans le module Internat. On masque donc les
+        // anciennes salles de type Dortoir ET les bâtiments qui ne contiennent QUE des dortoirs (ce sont devenus des
+        // pavillons). Un bâtiment sans aucune salle reste listé : le GroupBy ne le produit pas.
+        var dormitoryOnlyBuildingIds = dbContext.Rooms
+            .AsNoTracking()
+            .GroupBy(r => r.BuildingId)
+            .Where(g => g.Any(r => r.Type == RoomType.Dortoir) && g.All(r => r.Type == RoomType.Dortoir))
+            .Select(g => g.Key);
+
         // AsNoTracking : lecture pure. Le Global Query Filter + la RLS bornent déjà bâtiments ET
         // salles au tenant courant — la sous-collection Rooms n'a besoin d'aucun filtre manuel.
         //
@@ -19,6 +29,7 @@ public class GetBuildingsWithRoomsQueryHandler(IApplicationDbContext dbContext)
         var buildings = await dbContext.ToListOrEmptyOnMissingTableAsync(
             dbContext.Buildings
                 .AsNoTracking()
+                .Where(b => !dormitoryOnlyBuildingIds.Contains(b.Id))
                 .OrderBy(b => b.Name)
                 .Select(b => new
                 {
@@ -32,6 +43,7 @@ public class GetBuildingsWithRoomsQueryHandler(IApplicationDbContext dbContext)
         var rooms = await dbContext.ToListOrEmptyOnMissingTableAsync(
             dbContext.Rooms
                 .AsNoTracking()
+                .Where(r => r.Type != RoomType.Dortoir)
                 .OrderBy(r => r.Name)
                 .Select(r => new
                 {

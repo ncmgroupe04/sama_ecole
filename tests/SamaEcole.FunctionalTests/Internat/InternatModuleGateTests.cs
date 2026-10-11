@@ -40,8 +40,12 @@ public class InternatModuleGateTests(AuthApiFactory factory) : IClassFixture<Aut
         return await _client.SendAsync(request);
     }
 
-    private Task<HttpResponseMessage> GetDashboardAsync(string accessToken) =>
-        SendAsync(HttpMethod.Get, "/api/v1/internat/dashboard", accessToken);
+    /// <summary>
+    /// Route gardée par [RequireModule(Internat)] qui reste après le lot F (le tableau de bord par chambre, lui, est supprimé). Le garde de module
+    /// s'applique à tout le contrôleur : n'importe quelle route conservée le prouve.
+    /// </summary>
+    private Task<HttpResponseMessage> GetGuardedRouteAsync(string accessToken) =>
+        SendAsync(HttpMethod.Get, "/api/v1/internat/instructors", accessToken);
 
     /// <summary>Corps PUT complet — même convention que SchoolModuleTogglesEndpointsTests : le
     /// formulaire envoie toujours l'objet entier, jamais un correctif partiel.</summary>
@@ -71,11 +75,11 @@ public class InternatModuleGateTests(AuthApiFactory factory) : IClassFixture<Aut
     }
 
     [Fact]
-    public async Task Dashboard_Is_Forbidden_By_Default_With_MODULE_DISABLED()
+    public async Task A_Guarded_Route_Is_Forbidden_By_Default_With_MODULE_DISABLED()
     {
         var directeur = await LoginAsDirecteurAsync();
 
-        var response = await GetDashboardAsync(directeur.AccessToken);
+        var response = await GetGuardedRouteAsync(directeur.AccessToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var error = (await response.Content.ReadFromJsonAsync<ApiError>())!;
@@ -90,8 +94,26 @@ public class InternatModuleGateTests(AuthApiFactory factory) : IClassFixture<Aut
         (await PutSettingsAsync(directeur.AccessToken, ValidBody(isInternatEnabled: true)))
             .StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var response = await GetDashboardAsync(directeur.AccessToken);
+        var response = await GetGuardedRouteAsync(directeur.AccessToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Lot F1 : les trois routes de l'ancien modèle Room n'existent plus (404, module activé, Directeur). Le reste de /api/v1/internat/* (instructeurs,
+    /// Halqa, Hizb) reste en place : voir A_Guarded_Route_*.
+    /// </summary>
+    [Theory]
+    [InlineData("GET", "/api/v1/internat/dashboard")]
+    [InlineData("GET", "/api/v1/internat/students/search?term=abc")]
+    [InlineData("POST", "/api/v1/internat/assignments/3f2c1a40-0000-4000-8000-000000000001")]
+    public async Task The_Three_Legacy_Room_Routes_No_Longer_Exist(string method, string path)
+    {
+        var directeur = await LoginAsDirecteurAsync();
+        (await PutSettingsAsync(directeur.AccessToken, ValidBody(isInternatEnabled: true))).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(new HttpMethod(method), path, directeur.AccessToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, $"{method} {path} a été supprimée au lot F");
     }
 }

@@ -19,6 +19,9 @@ public static class SoftDeleteLifecycle
     public const string ArchivedEntityExists = "ARCHIVED_ENTITY_EXISTS";
     public const string ActiveEntityConflict = "ACTIVE_ENTITY_CONFLICT";
 
+    /// <summary>409 : la ressource a encore des éléments vivants dépendants (ex. un pavillon avec des chambres, un lit occupé).</summary>
+    public const string ResourceInUse = "RESOURCE_IN_USE";
+
     /// <summary>
     /// À appeler avant d'insérer une identité réutilisable. Si une ligne ACTIVE porte déjà l'identité, ne fait
     /// rien : l'index unique partiel arbitre (conflit de doublon existant). Si seule une ligne SUPPRIMÉE la porte,

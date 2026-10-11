@@ -1,3 +1,4 @@
+using SamaEcole.Application.Boarding.Assignments;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -100,7 +101,8 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var handler = new CreateEnrollmentCommandHandler(
             db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System,
-            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole));
+            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole),
+            new BoardingAssignmentService(db, TimeProvider.System));
 
         var receipt = await handler.Handle(new CreateEnrollmentCommand
         {
@@ -287,7 +289,8 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var handler = new CreateEnrollmentCommandHandler(
             db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System,
-            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole));
+            new NoOpKpiCache(), new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole),
+            new BoardingAssignmentService(db, TimeProvider.System));
 
         // Ni la mensualité ni l'inscription ne se « cochent » ni ne se décochent : c'est refusé, pas ignoré.
         var act = async () => await handler.Handle(new CreateEnrollmentCommand

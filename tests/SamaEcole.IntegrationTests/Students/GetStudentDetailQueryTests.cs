@@ -53,9 +53,12 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     // École B : le seul élève dont l'École A ne doit JAMAIS voir la fiche.
     private static readonly Guid EleveEcoleB = Guid.Parse("22222222-0000-0000-0000-0000000000b1");
 
-    // Module Internat : un élève Interne affecté à une chambre, pour vérifier BoardingStatus/RoomLabel
-    // sur l'entrée d'historique de SON inscription.
+    // Module Internat (modèle Pavillon/Lit) : un élève Interne assis sur un lit, un demi-pensionnaire et un ancien interne
+    // (séjour clos d'une année passée), pour vérifier le régime et la chambre lus sur les SÉJOURS.
     private static readonly Guid BatimentA = Guid.Parse("11111111-0000-0000-0000-0000000000c1");
+    private static readonly Guid EleveDemi = Guid.Parse("11111111-0000-0000-0000-0000000000d3");
+    private static readonly Guid EleveAncien = Guid.Parse("11111111-0000-0000-0000-0000000000e3");
+    private static readonly Guid AnneePassee = Guid.Parse("11111111-0000-0000-0000-0000000000f1");
     private static readonly Guid ChambreA = Guid.Parse("11111111-0000-0000-0000-0000000000c2");
     private static readonly Guid EleveInterne = Guid.Parse("11111111-0000-0000-0000-0000000000c3");
     private static readonly Guid InscriptionInterne = Guid.Parse("11111111-0000-0000-0000-0000000000c4");
@@ -121,19 +124,65 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         });
 
         // Module Internat : bâtiment + chambre, et l'inscription Interne affectée à cette chambre.
-        owner.Buildings.Add(new Building { Id = BatimentA, SchoolId = EcoleA, Name = "Pavillon A" });
-        owner.Rooms.Add(new Room
-        {
-            Id = ChambreA, SchoolId = EcoleA, BuildingId = BatimentA, Name = "Chambre 102",
-            Type = RoomType.Dortoir, Capacity = 4
-        });
+        // Module Internat : pavillon, chambre, lit, et le séjour ACTIF de l'inscription Interne ci-dessous.
+        owner.Dormitories.Add(new Dormitory { Id = BatimentA, SchoolId = EcoleA, Name = "Pavillon A", Gender = DormitoryGender.Filles });
+        owner.DormitoryRooms.Add(new DormitoryRoom { Id = ChambreA, SchoolId = EcoleA, DormitoryId = BatimentA, Name = "Chambre 102" });
+        var litInterne = new Bed { SchoolId = EcoleA, DormitoryRoomId = ChambreA, BedNumber = 1 };
+        owner.Beds.Add(litInterne);
         owner.Enrollments.Add(new Enrollment
         {
             Id = InscriptionInterne, SchoolId = EcoleA, StudentId = EleveInterne, SchoolYearId = AnneeA,
             ClassroomId = ClasseA, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed,
             TotalDue = 0m, AmountPaid = 0m, ReceiptNumber = "REC-2026-0003",
-            EnrolledAt = DateTimeOffset.UtcNow,
-            BoardingStatus = BoardingStatus.Interne, RoomId = ChambreA
+            EnrolledAt = DateTimeOffset.UtcNow
+        });
+        owner.BoardingEnrollments.Add(new BoardingEnrollment
+        {
+            SchoolId = EcoleA, StudentId = EleveInterne, EnrollmentId = InscriptionInterne, Regime = BoardingRegime.Interne,
+            BedId = litInterne.Id, StartDate = new DateOnly(2026, 9, 15), IsActive = true
+        });
+
+        // Demi-pensionnaire : un séjour sans lit.
+        var inscriptionDemi = Guid.Parse("11111111-0000-0000-0000-0000000000d4");
+        owner.Students.Add(new Student
+        {
+            Id = EleveDemi, SchoolId = EcoleA, Matricule = "ELEV-2026-0004", FullName = "Cheikh Fall",
+            BirthDate = new DateOnly(2015, 3, 3), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA
+        });
+        owner.Enrollments.Add(new Enrollment
+        {
+            Id = inscriptionDemi, SchoolId = EcoleA, StudentId = EleveDemi, SchoolYearId = AnneeA, ClassroomId = ClasseA,
+            Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = "REC-2026-0004",
+            EnrolledAt = DateTimeOffset.UtcNow
+        });
+        owner.BoardingEnrollments.Add(new BoardingEnrollment
+        {
+            SchoolId = EcoleA, StudentId = EleveDemi, EnrollmentId = inscriptionDemi, Regime = BoardingRegime.DemiPensionnaire,
+            StartDate = new DateOnly(2026, 9, 15), IsActive = true
+        });
+
+        // Ancien interne : inscrit l'an passé avec un séjour CLOS, sans inscription cette année.
+        var inscriptionAncienne = Guid.Parse("11111111-0000-0000-0000-0000000000e4");
+        owner.SchoolYears.Add(new SchoolYear
+        {
+            Id = AnneePassee, SchoolId = EcoleA, Label = "2025-2026",
+            StartDate = new DateOnly(2025, 9, 1), EndDate = new DateOnly(2026, 6, 30), IsActive = false
+        });
+        owner.Students.Add(new Student
+        {
+            Id = EleveAncien, SchoolId = EcoleA, Matricule = "ELEV-2026-0005", FullName = "Ibou Gaye",
+            BirthDate = new DateOnly(2014, 4, 4), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA
+        });
+        owner.Enrollments.Add(new Enrollment
+        {
+            Id = inscriptionAncienne, SchoolId = EcoleA, StudentId = EleveAncien, SchoolYearId = AnneePassee, ClassroomId = ClasseA,
+            Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = "REC-2025-0005",
+            EnrolledAt = new DateTimeOffset(2025, 9, 5, 8, 0, 0, TimeSpan.Zero)
+        });
+        owner.BoardingEnrollments.Add(new BoardingEnrollment
+        {
+            SchoolId = EcoleA, StudentId = EleveAncien, EnrollmentId = inscriptionAncienne, Regime = BoardingRegime.Interne,
+            StartDate = new DateOnly(2025, 9, 10), EndDate = new DateOnly(2026, 6, 30), IsActive = false
         });
 
         owner.Grades.Add(new Grade
@@ -292,6 +341,33 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.AcademicHistory[0].RoomLabel.Should().Be(
             "Chambre 102 — Pavillon A",
             "le format attendu par la fiche élève est \"<Salle> — <Bâtiment>\"");
+    }
+
+    [Fact]
+    public async Task Handle_Reports_A_Half_Boarder_Without_A_Room()
+    {
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db), new SubjectFollowScope(db));
+
+        var detail = await handler.Handle(new GetStudentDetailQuery(EleveDemi), CancellationToken.None);
+
+        detail.Identity.BoardingStatus.Should().Be(nameof(BoardingStatus.DemiPensionnaire));
+        detail.Identity.RoomName.Should().BeNull("un demi-pensionnaire n'a pas de chambre");
+        detail.AcademicHistory.Should().ContainSingle().Which.RoomLabel.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_Reports_The_Regime_Of_A_Closed_Stay_On_A_Past_Year_Without_A_Room()
+    {
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db), new SubjectFollowScope(db));
+
+        var detail = await handler.Handle(new GetStudentDetailQuery(EleveAncien), CancellationToken.None);
+
+        detail.Identity.BoardingStatus.Should().Be(nameof(BoardingStatus.Externe), "pas d'inscription dans l'année active");
+        var past = detail.AcademicHistory.Should().ContainSingle().Subject;
+        past.BoardingStatus.Should().Be(nameof(BoardingStatus.Interne), "régime du dernier séjour de CETTE inscription");
+        past.RoomLabel.Should().BeNull("séjour clos : plus de lit");
     }
 
     // ------------------------------------------------------------------

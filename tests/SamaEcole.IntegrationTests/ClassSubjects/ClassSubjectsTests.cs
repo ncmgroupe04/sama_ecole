@@ -1,3 +1,4 @@
+using SamaEcole.Application.Boarding.Assignments;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.ClassSubjects;
@@ -128,7 +129,8 @@ public class ClassSubjectsTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var receipt = await new CreateEnrollmentCommandHandler(
                 db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(),
-                new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole))
+                new TestCurrentUser(), _db.NewQuotaGuard(db, Ecole),
+                new BoardingAssignmentService(db, TimeProvider.System))
             .Handle(new CreateEnrollmentCommand
             {
                 Type = EnrollmentType.NewEnrollment,

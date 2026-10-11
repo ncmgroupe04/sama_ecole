@@ -10,8 +10,7 @@ namespace SamaEcole.IntegrationTests.Enrollments;
 /// Module Internat (Task 3) — BoardingFeeLineBuilder factorise EXACTEMENT le même calcul que
 /// CreateEnrollmentCommandHandler.BuildFeeLinesAsync (montants copiés depuis ClassFee, mensualité ×
 /// tuitionMonths), restreint aux catégories IsBoardingFee et EXCLUANT celles déjà présentes sur
-/// l'inscription — c'est ce filtre qui garantit qu'un second changement de chambre (Task 7,
-/// ChangeBoardingAssignmentCommandHandler) ne double-facture jamais la pension (spec §5.2).
+/// l'inscription — c'est ce filtre qui garantit qu'un second changement de lit (AssignBed) ne double-facture jamais la pension (spec §5.2).
 ///
 /// Exercé contre un PostgreSQL réel (comme EnrollmentTests) plutôt qu'un fake, car le helper prend
 /// IApplicationDbContext en paramètre et sa requête (jointure ClassFees/FeeCategories) doit être

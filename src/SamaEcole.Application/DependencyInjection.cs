@@ -48,6 +48,10 @@ public static class DependencyInjection
         // Portée d'une Halqa (module Internat/Daara) : un Oustaz ne lit ni n'écrit que le suivi des élèves de sa
         // Halqa. Partagée par la lecture et l'écriture du suivi par Hizb. Scoped — elle lit le compte courant.
         services.AddScoped<Internat.HalqaScopeAuthorizer>();
+
+        // Règle d'affectation Internat (modèle Pavillon/Lit) : unique, partagée par les commandes assign-bed/unassign-bed
+        // et les adaptateurs de l'ancien écran. Scoped — elle lit sous la RLS de la requête courante.
+        services.AddScoped<Boarding.Assignments.IBoardingAssignmentService, Boarding.Assignments.BoardingAssignmentService>();
         services.AddScoped<Grades.GradeCorrectionAuthorizer>();
 
         // Portée de lecture des dossiers d'examen (ticket JGK-J08) : partagée par la liste et la fiche

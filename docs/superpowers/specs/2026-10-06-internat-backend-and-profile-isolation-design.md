@@ -299,10 +299,16 @@ Les PDF sont générés à la demande, jamais stockés ; en-têtes `Cache-Contro
   `EstablishmentProfilePresets`) et `ProfileType` (souscription ; `Elementaire`, `FrancoArabe`, `InternatDaara`,
   `EnseignementGeneral`, `ComptabiliteRapports`), reliés par `ProfileTypeMapping`. Le texte de la feuille de route
   utilise `ProfileType` ; c'est ce vocabulaire qui est employé ci-dessous.
-- **Anomalie à corriger** (`Views/Shared/_Layout.cshtml`, lignes 216, 220, 225) : les menus
-  `/suivi-coranique`, `/oustaz` et `/halqa` sont conditionnés par `internatEnabled`, alors que leur API
-  (`QuranController`) est gardée par `SchoolModule.Coran`. Conséquence : une école Franco-Arabe (Coran activé, Internat
-  désactivé) a l'API mais pas le menu ; une école avec Internat seul voit des menus dont l'API répond 403.
+- **~~Anomalie à corriger~~ — CORRIGÉ le 07/10/2026 (lot G, décision G-D1) : ce constat était inexact.** La première version de cette
+  spec affirmait que les menus `/suivi-coranique`, `/oustaz` et `/halqa` étaient conditionnés par `internatEnabled` alors que
+  leur API serait gardée par `SchoolModule.Coran` (`QuranController`). **Dans le code, c'est l'inverse :** ces écrans appellent
+  `/api/v1/internat/*` (`InternatController`, `[RequireModule(SchoolModule.Internat)]`) ; `/api/v1/quran` (`QuranController`, module
+  **Coran**) n'a **aucun consommateur** dans `wwwroot/js`. Les menus sont donc **déjà correctement** conditionnés par
+  `internatEnabled`. Les conditionner par `coranEnabled`, comme le §8.3-5 le demandait, aurait masqué ces écrans à une école
+  Internat-seul alors que leur API répond, et les aurait montrés à une école Coran-seul dont l'API répond 403. Les quatre pages
+  (`/internat`, `/halqa`, `/oustaz`, `/suivi-coranique`) déclarent donc `[PageModule(SchoolModule.Internat)]`.
+  `coranEnabled` est tout de même ajouté au store `schoolConfig`, prêt pour le jour où un écran consommera `/api/v1/quran` ; des
+  garde-fous (`regression-guards.test.mjs`, `PageModuleTests`) figent cet état.
 
 ### 8.2 Règle de visibilité
 
@@ -317,7 +323,7 @@ partout, API et IHM de façon cohérente. Le tableau ci-dessous décrit donc l'�
 | `Elementaire` | masqué par défaut, route → redirection | masqué par défaut, route → redirection | — |
 | `EnseignementGeneral` | masqué | masqué | — |
 | `ComptabiliteRapports` | masqué | masqué | — |
-| `FrancoArabe` | masqué | **visible** | Coran secondaire |
+| `FrancoArabe` | masqué | **visible** *(voir la correction du §8.1 : les écrans Halqa/Oustaz/Suivi relèvent du module Internat ; aucun écran ne consomme encore le module Coran)* | Coran secondaire |
 | `InternatDaara` | **visible** | **visible** | **Modules principaux** : atterrissage Directeur sur `/suivi-coranique` (déjà en place, `PROFILE_LANDINGS`), groupe « Internat / Coran » remonté en tête de la section « Gestion scolaire » |
 
 Les lignes `EnseignementGeneral`, `ComptabiliteRapports` et `FrancoArabe` découlent des presets existants ; la feuille
@@ -339,11 +345,16 @@ de route ne tranchait que `Elementaire` et `InternatDaara`.
    vérifier les modules activés — Réessayer ». Sinon une coupure réseau (fréquente, cf. `network-guard.js`) éjecterait
    à tort un Directeur de Daara de son module principal. (Même principe que l'état `undefined` de
    `profileEtablissement`, qui ne force jamais une redirection.)
-5. **Navigation** : `/suivi-coranique`, `/oustaz`, `/halqa` conditionnés par `coranEnabled`, `/internat` par
-   `internatEnabled`, aussi dans `_QuickNav.cshtml`. Les autres usages à auditer et aligner (liste vérifiée) :
-   `Enrollments/Index.cshtml` (section régime), `Fees/Index.cshtml` (case pension), `Subjects/Index.cshtml` (blocs
+5. **Navigation** *(corrigé le 07/10/2026, lot G, décision G-D1)* : `/internat`, `/halqa`, `/oustaz` et `/suivi-coranique` sont **tous**
+   conditionnés par `internatEnabled` (menu et `_QuickNav.cshtml`) et déclarent `[PageModule(SchoolModule.Internat)]`, car leur API est
+   `/api/v1/internat/*`. `coranEnabled` n'est utilisé par aucun menu tant qu'aucun écran ne consomme `/api/v1/quran`. Les autres usages à auditer
+   (liste vérifiée) : `Enrollments/Index.cshtml` (section régime), `Fees/Index.cshtml` (case pension), `Subjects/Index.cshtml` (blocs
    conditionnés par `isFrancoArabeProfile || isDaaraInternatProfile`, donc par le **profil** et non par un module : ce sont
    des blocs de pédagogie bilingue, pas des écrans Internat/Coran ; hors périmètre de cette phase, à auditer à part).
+6. **Pas de boucle de redirection** *(ajout du lot G)* : l'atterrissage d'un profil peut être une page gardée (Directeur Daara →
+   `/suivi-coranique`). Une redirection vers la page courante, ou une seconde redirection dans les 15 secondes, utilise un repli neutre
+   (`auth.neutralLandingForRole()`), qui n'est jamais une page gardée. Le message « Ce module n'est pas activé » est mémorisé puis affiché
+   sur la page d'arrivée.
 
 ### 8.4 Ce que cette phase ne garantit pas
 

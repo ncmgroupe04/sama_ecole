@@ -175,6 +175,9 @@ builder.Services
         // application/octet-stream, qu'IDM intercepte aussi — n'est jamais vu comme un fichier.
         // Aucun effet sur les téléchargements normaux, qui n'envoient pas l'en-tête.
         options.Filters.Add<PdfPreviewDispositionFilter>();
+
+        // Module requis d'une page : [PageModule] → ViewData → <meta name="required-module"> (garde de page côté client).
+        options.Filters.Add<PageModuleFilter>();
     }) // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
     .AddJsonOptions(options =>
     {

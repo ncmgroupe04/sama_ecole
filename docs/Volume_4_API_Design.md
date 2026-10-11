@@ -90,6 +90,13 @@ logs serveur (Volume 7).
 | `VALIDATION_ERROR` | Erreur de saisie (FluentValidation) | 422 |
 | `CONCURRENCY_CONFLICT` | Écriture concurrente (RowVersion/xmin) — règle #5 | 409 |
 | `BUSINESS_RULE_VIOLATION` | Règle métier bloquant l'opération vu l'état de la ressource | 409 |
+| `RESOURCE_IN_USE` | La ressource a encore des éléments vivants dépendants : pavillon avec chambres, chambre avec lits, lit occupé (§31) | 409 |
+| `BED_UNAVAILABLE` | Le lit demandé est (ou vient d'être) tenu par un autre pensionnaire — course tranchée par l'index unique du lit (§31) | 409 |
+| `LEAVE_IN_PROGRESS` | Fin de séjour refusée : une sortie est encore ouverte, enregistrez d'abord le retour (§31) | 409 |
+| `LEAVE_ALREADY_OPEN` | Déclaration refusée : ce pensionnaire a déjà une sortie ouverte (§31.3) | 409 |
+| `LEAVE_ALREADY_RETURNED` | Retour refusé : il est déjà enregistré (§31.3) | 409 |
+| `ATTENDANCE_CONFLICT` | Pointage refusé : la même nuit vient d'être saisie par un autre opérateur, rechargez la feuille (§31.3) | 409 |
+| `ARCHIVED_ENTITY_EXISTS` / `ACTIVE_ENTITY_CONFLICT` / `PARENT_ENTITY_ARCHIVED` | Cycle soft delete : l'identité n'existe qu'à l'état supprimé / une ligne active la porte déjà / le parent est supprimé | 409 |
 | `INVALID_CREDENTIALS` | Authentification échouée (message volontairement générique) | 401 |
 | `FORBIDDEN` | Permission insuffisante | 403 |
 | `NOT_FOUND` | Ressource inexistante | 404 |
@@ -521,6 +528,7 @@ Référentiel des locaux : bâtiments de l'établissement et salles qu'ils conti
 **Règles :**
 - La lecture est volontairement ouverte à tous les rôles de l'établissement : un enseignant a besoin de connaître les salles pour lire son emploi du temps (§19).
 - `GET /buildings` renvoie une **liste vide** (`200`), jamais une erreur `500`, sur un établissement dont la migration Infrastructures n'a pas encore été appliquée.
+- **Dortoirs.** Depuis le module Internat « Pavillon/Lit » (§31), les dortoirs ne se gèrent plus ici : `GET /buildings` n'expose ni les salles de type `Dortoir` ni les bâtiments qui ne contiennent que des dortoirs, et `POST`/`PUT /rooms` refusent le type `Dortoir` (`422`).
 
 ---
 
@@ -948,6 +956,116 @@ pour les autres profils. `POST /schools/current/settings/establishment-profile` 
 
 **Confort d'affichage.** Les écrans Classes, Inscriptions et Examens ne proposent que les niveaux, classes et types d'examen
 des cycles gérés ; un niveau ou une classe déjà en usage reste visible. L'API ne refuse pas la création d'une classe hors de ces cycles.
+
+## 31. API Internat — Pavillons, chambres et lits
+
+Contrôleur `BoardingController` (`/api/v1/boarding`), module Internat requis (`403 MODULE_DISABLED` sinon, lecture comprise).
+Spec : `docs/superpowers/specs/2026-10-06-internat-backend-and-profile-isolation-design.md` §6.1. Tables : `dormitories`,
+`dormitory_rooms`, `beds` (Volume 3 §4). Routes plates, comme `/buildings` et `/rooms`. Lecture : Directeur, Secrétariat,
+Surveillant. Écriture et corbeille : Directeur, Secrétariat. Tout `rowVersion` est le jeton `xmin` renvoyé par la lecture
+précédente ; un jeton périmé répond `409 CONCURRENCY_CONFLICT`.
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/boarding/dormitories?gender=` | Lecture | Pavillons triés par nom : `roomCount`, `capacity`, `occupiedBeds`, `maintenanceBeds`, `occupancyRate` (0..1, sur les lits hors maintenance), `supervisorName`. **Capacités dérivées des lits, jamais saisies.** |
+| `GET` | `/api/v1/boarding/dormitories/{id}` | Lecture | Pavillon avec ses chambres et leurs lits : `status` ∈ `Available`, `Occupied`, `Maintenance` (calculé), `occupantName`, `occupantBoarderId`. |
+| `POST` | `/api/v1/boarding/dormitories` | Écriture | `{ name, gender, supervisorName?, supervisorPhone?, supervisorUserId?, notes? }` — `201`. `gender` ∈ `Garcons`, `Filles` ; **`Mixte` est refusé (`422`)**, il n'existe que pour les pavillons repris de l'ancien module. `supervisorUserId` : compte `Surveillant` actif de l'école (`422` sinon) ; le nom affiché est alors celui du compte. `409 ARCHIVED_ENTITY_EXISTS` si le nom n'existe que dans la corbeille. |
+| `PUT` | `/api/v1/boarding/dormitories/{id}` | Écriture | Fiche entière + `rowVersion`. Le genre ne change pas tant que le pavillon héberge des pensionnaires (`422`). |
+| `DELETE` | `/api/v1/boarding/dormitories/{id}?rowVersion=` | Écriture | Suppression logique. `409 RESOURCE_IN_USE` tant que le pavillon a des chambres. |
+| `GET` / `POST` | `/api/v1/boarding/dormitories/deleted` / `.../{id}/restore` | Écriture | Corbeille / restauration. `409 ACTIVE_ENTITY_CONFLICT` si le nom est repris. |
+| `POST` | `/api/v1/boarding/rooms` | Écriture | `{ dormitoryId, name, bedCount 1-40 }` — crée la chambre ET ses lits 1..N en une transaction (`201`). |
+| `PUT` | `/api/v1/boarding/rooms/{id}` | Écriture | `{ name, rowVersion }` — renomme ; ne touche pas aux lits. |
+| `DELETE` | `/api/v1/boarding/rooms/{id}?rowVersion=` | Écriture | `409 RESOURCE_IN_USE` tant que la chambre a des lits vivants. |
+| `GET` / `POST` | `/api/v1/boarding/rooms/deleted` / `.../{id}/restore` | Écriture | `409 PARENT_ENTITY_ARCHIVED` si le pavillon est supprimé. |
+| `POST` | `/api/v1/boarding/beds` | Écriture | `{ dormitoryRoomId, bedNumber? }` — numéro automatique = plus grand numéro de la chambre (lits supprimés compris) + 1. `201`. |
+| `PUT` | `/api/v1/boarding/beds/{id}/status` | Écriture | `{ status, rowVersion }` — `Available` ↔ `Maintenance` seulement (`Occupied` : `422`). `409 RESOURCE_IN_USE` pour un lit occupé. |
+| `DELETE` | `/api/v1/boarding/beds/{id}?rowVersion=` | Écriture | `409 RESOURCE_IN_USE` pour un lit occupé. |
+| `GET` / `POST` | `/api/v1/boarding/beds/deleted` / `.../{id}/restore` | Écriture | `409 ACTIVE_ENTITY_CONFLICT` (numéro repris) ou `PARENT_ENTITY_ARCHIVED` (chambre supprimée). |
+
+**Règle de suppression stricte.** Jamais de cascade : on supprime d'abord les lits, puis la chambre, puis le pavillon (même
+règle que `DELETE /buildings`). Cela rend la restauration non ambiguë.
+
+**Anciennes salles `Dortoir`.** `GET /api/v1/buildings` n'expose plus les salles de type `Dortoir` ni les bâtiments qui ne
+contiennent que des dortoirs ; `POST`/`PUT /api/v1/rooms` refusent `Dortoir` (`422`). Voir §17.
+
+### 31.1 Pensionnaires (lot C)
+
+Un **séjour** (`boarding_enrollments`) rattache l'inscription d'un élève de l'année active à un lit (régime `Interne`) ou à la
+demi-pension (aucun lit). Rôles : lecture et écriture `Directeur`, `Secretariat`, `Surveillant` ; la fiche médicale a sa propre règle (ci-dessous).
+
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/boarding/assign-bed` | `{ enrollmentId, regime, bedId?, includeBoardingFee, rowVersion? }` — `200` avec la ligne du pensionnaire. `Interne` ⇒ `bedId` requis ; `DemiPensionnaire` ⇒ `bedId` interdit. Si l'élève a déjà un séjour actif, c'est un **transfert** : `rowVersion` (jeton du séjour) est requis, `409` s'il est périmé. `409 BED_UNAVAILABLE` si le lit est pris ; `422` si le lit est en maintenance ou si le pavillon n'est pas du genre de l'élève (`Mixte` accepte tout) ; `404` si l'inscription n'est pas de l'année active. `includeBoardingFee` ajoute la ligne de pension **une seule fois**. |
+| `DELETE` | `/api/v1/boarding/unassign-bed/{boarderId}?rowVersion=` | Met fin au séjour : `isActive = false`, `endDate` = aujourd'hui, lit libéré. Rien n'est supprimé et la pension déjà facturée **reste due**. `204` ; `409 LEAVE_IN_PROGRESS` si une sortie est ouverte. |
+| `GET` | `/api/v1/boarding/boardable-students?term=` | **Élèves affectables** pour la modale d'affectation : inscriptions non annulées de l'année active dont le nom ou le matricule contient `term` (2 caractères au moins, sinon liste vide ; 20 résultats au plus, triés par nom). Chaque ligne décrit le **séjour actif** : `boarderId`, `regime`, `bedId`, `bedNumber`, `roomName`, `dormitoryName` et `rowVersion` — le **jeton du séjour**, directement réutilisable par `POST assign-bed` pour un transfert ; tous ces champs sont `null` pour un élève sans séjour actif (externe), et le lit, la chambre et le pavillon sont `null` pour un demi-pensionnaire ou un interne en attente de lit. Remplace `GET /api/v1/internat/students/search` (route héritée). |
+| `GET` | `/api/v1/boarding/available-rooms` | **Chambres ayant au moins un lit libre** (statut `Available` et aucun séjour actif ne le tient) : `{ roomId, roomName, dormitoryId, dormitoryName, gender, freeBeds }`, triées pavillon puis chambre ; pavillons, chambres et lits supprimés exclus. Alimente le sélecteur de chambre du formulaire d'inscription (remplace `GET /internat/dashboard`) ; lecture seule, le lit est choisi et jugé par `POST /enrollments`. Directeur, Secrétariat, Surveillant ; module Internat requis. |
+| `GET` | `/api/v1/boarding/boarders?dormitoryId=&roomId=&regime=&status=&search=&page=&pageSize=` | Pensionnaires de l'année active, triés par nom, paginés (`items`, `totalCount`, `page`, `pageSize` ; 20 par défaut, 100 au plus). `status` ∈ `active` (défaut), `ended`, `awaitingBed` (internes sans lit), `onLeave` (actuellement en sortie : parti et pas encore rentré, retard compris — §31.3) ; autre valeur : `422`. `search` : nom ou matricule, 2 caractères au moins. |
+| `GET` | `/api/v1/boarding/boarders/{id}` | Fiche : ligne du pensionnaire, `medicalNotes`, contact d'urgence, `allowedExitPersons`, et `leaves` (les 10 dernières sorties, la plus récente d'abord — champ **additif** du lot D). |
+| `PUT` | `/api/v1/boarding/boarders/{id}/profile` | `{ medicalNotes?, emergencyContactName?, emergencyContactPhone?, allowedExitPersons[≤10], rowVersion }`. |
+
+**Fiche médicale.** `medicalNotes` est une donnée de santé d'un mineur : renvoyée seulement au `Directeur` et au `Surveillant`, `null` pour
+le `Secretariat`. Le `Secretariat` qui envoie `medicalNotes` reçoit `403` (le message ne reprend jamais la valeur) ; en l'omettant, la
+fiche existante est **conservée** et le reste du profil est mis à jour. Pour les deux autres rôles la fiche est remplacée (vide = effacée).
+
+**Demi-pensionnaire.** Il ne dort pas à l'internat : aucun lit, aucune chambre. Il n'occupe donc aucune place du tableau de bord.
+
+**Pas encore livré** (lots suivants) : IHM.
+
+### 31.2 Compatibilité de l'ancien écran `/internat` — routes retirées (lot F1)
+
+Les trois routes historiques `GET /api/v1/internat/dashboard`, `GET /api/v1/internat/students/search?term=` et
+`POST /api/v1/internat/assignments/{enrollmentId}` ont été **supprimées** (elles répondent 404). Leurs remplaçants :
+`GET /api/v1/boarding/dormitories` (+ `/{id}`) pour l'occupation, `GET /api/v1/boarding/boardable-students` pour la recherche,
+`POST /api/v1/boarding/assign-bed` et `DELETE /api/v1/boarding/unassign-bed/{boarderId}` pour l'affectation, et
+`GET /api/v1/boarding/available-rooms` pour le sélecteur de chambre du formulaire d'inscription. Le reste de `/api/v1/internat/*`
+(instructeurs, Halqa, Hizb, suivi, bulletin coranique) est **inchangé**.
+
+`POST /api/v1/enrollments` garde ses champs `boardingStatus`, `roomId` et `includeBoardingFee` : on envoie une chambre et non un lit, le plus
+petit numéro de lit libre et disponible est choisi (le lit actuel si l'élève est déjà dans cette chambre). Un `Interne` exige une chambre ; un
+`DemiPensionnaire` n'en exige pas et ignore celle qu'on lui envoie. Le séjour est créé dans la **même transaction** que l'inscription.
+Les colonnes `enrollments.BoardingStatus` et `enrollments.RoomId` ne sont plus mappées par le code (propriétés fantômes EF, schéma physique
+inchangé) et seront supprimées par la migration `DropLegacyBoardingColumns` (lot F2).
+
+### 31.3 Sorties et pointage de nuit (lot D)
+
+Rôles : lecture et écriture `Directeur`, `Secretariat`, `Surveillant` ; `Enseignant`/`Finance` → `403` ; module Internat désactivé → `403 MODULE_DISABLED`.
+Aucune route ne renvoie de donnée médicale. Dates en `yyyy-MM-dd`. « Aujourd'hui » = date UTC du serveur.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/boarding/leaves` | `{ boarderId, leaveDate, expectedReturnDate, reason, reasonDetail?, accompaniedBy }` — `reason` ∈ `Weekend`, `Sante`, `Famille`, `Autre`. `201` avec la sortie. Pensionnaire **actif** requis (`404` sinon). `expectedReturnDate ≥ leaveDate` (`422`). `409 LEAVE_ALREADY_OPEN` si une sortie est déjà ouverte (garantie par un index unique : deux déclarations simultanées donnent un seul succès). Un `accompaniedBy` qui ne correspond à aucune personne habilitée (nom complet, casse et espaces ignorés) est **accepté** : `isCompanionUnlisted = true`, **figé** à la déclaration. |
+| `PUT` | `/api/v1/boarding/leaves/{id}/return` | `{ rowVersion, actualReturnDate? }` — date du jour par défaut ; ni dans le futur ni avant la sortie (`422`). `409 LEAVE_ALREADY_RETURNED` si le retour est déjà enregistré ; `409` si `rowVersion` est périmé. Le retour lève le garde `LEAVE_IN_PROGRESS` de la fin de séjour (§31.1). |
+| `GET` | `/api/v1/boarding/leaves?boarderId=&dormitoryId=&status=&from=&to=&unlistedOnly=&page=&pageSize=` | Registre des sorties, plus récentes d'abord, paginé (20 par défaut, 100 au plus). `status` ∈ `Pending`, `Active`, `Overdue`, `Returned` (valeur inconnue : `400`). `dormitoryId` : pavillon **actuel** du pensionnaire. `from`/`to` : sorties dont [sortie, retour prévu] chevauche la période. `unlistedOnly` : accompagnateur non habilité (pastille du registre). |
+| `GET` | `/api/v1/boarding/attendance?dormitoryId=&date=` | Feuille d'appel : les **internes avec un lit** du pavillon, triés par chambre puis lit. Une ligne déjà pointée porte ses valeurs (`recorded = true`) ; un pensionnaire en sortie ce soir-là est pré-rempli `isPresent = false`, `note = "En permission"` ; les autres ont `isPresent = null`. |
+| `POST` | `/api/v1/boarding/attendance` | `{ date, dormitoryId, entries: [{ boarderId, isPresent, note? }] }` — 1 à 200 lignes. **Upsert** par `(pensionnaire, date)`. `200` avec un **résultat par ligne** : `{ saved, rejected, lines: [{ boarderId, outcome, code?, message? }] }` ; une ligne refusée n'empêche pas les autres. |
+
+**Statut d'une sortie (jamais stocké).** `Returned` si un retour est enregistré ; sinon `Pending` avant la date de sortie, `Overdue` après le
+retour prévu, `Active` entre les deux (bornes incluses). Le filtre `status` applique le même verdict en SQL.
+
+**Pointage — règles.**
+- Date : pas dans le futur **et** dans l'année scolaire active (`422` sinon) ; pavillon inconnu ou d'une autre école : `404`. Aucune règle sur le jour de la semaine.
+- Seuls les séjours **actifs `Interne`** ayant un lit dans le pavillon sont pointables : un demi-pensionnaire, un interne sans lit ou d'un autre pavillon est rejeté `NOT_IN_DORMITORY`. Le pointage rétroactif d'un séjour clos n'est pas géré.
+- Un pensionnaire dort **dehors** la nuit `D` s'il est parti (`leaveDate ≤ D`) et pas encore rentré **ce soir-là** (`actualReturnDate` absente ou `> D`) : une sortie dépassée mais non rentrée compte encore, la nuit du retour il dort à l'internat. Déclaré **présent** cette nuit-là : ligne rejetée `BOARDER_ON_LEAVE` ; **absent** sans note : la note `En permission` est posée.
+- Un `boarderId` répété dans la requête : la première ligne l'emporte, les suivantes sont rejetées `DUPLICATE_ENTRY`.
+- Deux premières saisies simultanées de la même nuit : `409 ATTENDANCE_CONFLICT` pour la perdante (rechargez la feuille).
+
+**Codes de refus par ligne** (dans `lines[].code`, pas des erreurs HTTP) : `NOT_IN_DORMITORY`, `DUPLICATE_ENTRY`, `BOARDER_ON_LEAVE`.
+
+### 31.4 Documents PDF (lot E)
+
+Rôles : `Directeur`, `Secretariat`, `Surveillant` ; `Enseignant`/`Finance` → `403` ; module Internat désactivé → `403 MODULE_DISABLED`. Réponse
+`200 application/pdf`, `Content-Disposition: inline; filename="…"` (nom ASCII assaini). **Chaque impression est tracée** dans le journal d'audit (module
+`Boarding`, actions `GetBoarderSheetPdf` / `GetDormitoryRegisterPdf`) ; le journal ne retient jamais le contenu du document.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/boarding/boarders/{id}/pdf` | **Fiche individuelle** (A4 portrait) d'un séjour actif **ou clos** (archive) : identité (nom arabe si renseigné), classe, régime, pavillon / chambre / lit, dates du séjour, contact d'urgence, personnes habilitées, **fiche médicale selon le rôle**, et **toutes les sorties de l'année scolaire active** (statut, pastille « Non habilité »). `404` si le séjour n'est pas de l'école. |
+| `GET` | `/api/v1/boarding/dormitories/{id}/register-pdf?date=` | **Registre du pavillon** (A4 paysage) pour **une nuit** (`date`, aujourd'hui par défaut) : chambre, lit, nom (+ arabe), matricule, classe, présence, observations. Nuit non pointée : deux cases vides à cocher à la main ; nuit pointée : « Présent » / « Absent » ; pensionnaire en sortie : « En permission ». En-tête de tableau répété sur chaque page. `404` pavillon inconnu ; `422` date future ou hors de l'année active (mêmes règles que le pointage, §31.3). |
+
+**Confidentialité (spec §5.2).** La fiche médicale n'est imprimée sur la fiche individuelle que pour le `Directeur` et le `Surveillant` (même règle que
+`GET /boarders/{id}`, `BoarderDetailReader.CanReadMedical`) ; pour le `Secretariat` le **bloc entier, titre compris, disparaît**. Le registre, posé dans le
+pavillon, ne contient **jamais** de donnée de santé ni de numéro de téléphone (celui du surveillant du pavillon non plus : seul son nom figure) ; son DTO est
+verrouillé par un test par réflexion. Les deux contrôles sont faits sur le **texte extrait des PDF** (PdfPig, dépendance de tests uniquement), pas sur les octets.
 
 ---
 

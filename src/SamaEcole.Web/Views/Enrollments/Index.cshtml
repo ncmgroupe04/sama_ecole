@@ -340,10 +340,10 @@
    <label for="enr-room" class="form-label form-label-required">Chambre</label>
    <select-field id="enr-room" model="form.roomId" required="true"
     placeholder="— Choisir une chambre —"
-    options-expr="availableRooms.map(r => ({value: r.roomId, label: r.roomName + ' — ' + r.buildingName + ' (' + (r.capacity - r.occupantsCount) + ' place(s) libre(s))'}))" />
+    options-expr="roomOptions" />
    <p x-show="formErrors.roomid" x-cloak x-text="formErrors.roomid" class="field-error"></p>
    <p x-show="form.boardingStatus !== 'Externe' && availableRooms.length === 0" x-cloak class="mt-1 text-xs text-slate-400">
-    Aucune chambre avec une place libre. Créez ou libérez un dortoir depuis <a href="/internat" class="underline">Internat</a>.
+    Aucune chambre avec un lit libre. Créez un pavillon, ajoutez des lits ou libérez-en depuis <a href="/internat" class="underline">Internat</a>.
    </p>
   </div>
 

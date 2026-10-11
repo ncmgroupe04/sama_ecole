@@ -1,0 +1,189 @@
+@*
+    Onglet « Occupation » de /internat (lot G, tâche 7) — tableau de bord d'occupation et affectation, sur /api/v1/boarding. Composant Alpine
+    `occupationTab` (wwwroot/js/internat-occupation.js). Remplace l'écran historique qui appelait GET /internat/dashboard, GET /internat/students/search et
+    POST /internat/assignments/{id} (trois routes supprimées au lot F).
+
+    Les lits, leur état et leurs occupants viennent des pavillons créés dans l'onglet « Pavillons ». Un demi-pensionnaire n'a pas de lit : il s'affecte
+    sans chambre (bouton « Affecter un élève » de l'en-tête).
+*@
+<div x-data="occupationTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">Occupation des pavillons pour l'année scolaire active.</p>
+        <button type="button" x-show="canAssign" x-cloak class="btn-modal-primary" x-on:click="openAssignModal(null)">
+            <icon name="plus" class="w-4 h-4" />
+            Affecter un élève
+        </button>
+    </div>
+
+    <!-- Barre KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+        <template x-if="loading">
+            <template x-for="i in 5" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+
+        <template x-if="!loading">
+            <stat-card label="Occupation" icon="bed" accent="primary">
+                <span x-text="totals.occupied + ' / ' + totals.capacity">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Internes" icon="users" accent="blue">
+                <span x-text="totals.interne">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Demi-pensionnaires" icon="users" accent="purple">
+                <span x-text="totals.demiPensionnaire">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="En attente de lit" icon="alert-circle" accent="warning">
+                <span x-text="totals.awaitingBed">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading">
+            <stat-card label="Chambres complètes" icon="alert-circle" accent="warning">
+                <span x-text="totals.fullRooms + ' / ' + totals.roomCount">0</span>
+            </stat-card>
+        </template>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <p x-show="notice" x-cloak class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" x-text="notice"></p>
+
+    <!-- Cartes par chambre -->
+    <div class="mt-6">
+        <template x-if="!loading && rooms.length === 0 && !error">
+            <div class="card p-12">
+                <empty-state icon="bed" title="Aucune chambre n'est configurée."
+                             hint="Créez un pavillon et ses chambres depuis l'onglet « Pavillons » pour commencer à affecter des élèves." />
+            </div>
+        </template>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="room in rooms" :key="room.roomId">
+                <div class="card p-4" x-data="{ expanded: false }">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-800 truncate" x-text="room.roomName"></p>
+                            <p class="text-xs text-slate-400 truncate" x-text="room.dormitoryName"></p>
+                        </div>
+                        <badge x-show="room.full" variant="danger">
+                            <span x-text="room.occupied + ' / ' + room.capacity"></span>
+                        </badge>
+                        <badge x-show="!room.full && room.occupied === 0" variant="neutral">
+                            <span x-text="room.occupied + ' / ' + room.capacity"></span>
+                        </badge>
+                        <badge x-show="!room.full && room.occupied > 0" variant="success">
+                            <span x-text="room.occupied + ' / ' + room.capacity"></span>
+                        </badge>
+                    </div>
+
+                    <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden" role="img"
+                         :aria-label="'Occupation : ' + occupancyPercent(room) + ' %'">
+                        <div class="h-full rounded-full transition-all" :class="occupancyColor(room)" :style="'width: ' + occupancyPercent(room) + '%'"></div>
+                    </div>
+
+                    <button type="button" x-show="room.occupants.length > 0" x-cloak
+                            class="mt-3 text-xs font-medium text-primary-600 hover:text-primary-700"
+                            x-on:click="expanded = !expanded">
+                        <span x-text="expanded ? 'Masquer les occupants' : 'Voir les occupants (' + room.occupants.length + ')'"></span>
+                    </button>
+
+                    <ul x-show="expanded" x-cloak class="mt-2 space-y-2 border-t border-slate-100 pt-2">
+                        <template x-for="occupant in room.occupants" :key="occupant.boarderId">
+                            <li class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-slate-700 truncate" x-text="occupant.fullName"></p>
+                                    <p class="text-xs text-slate-400" x-text="'Lit ' + occupant.bedNumber"></p>
+                                </div>
+                                <button type="button" x-show="canAssign" x-cloak class="text-xs text-rose-600 hover:text-rose-700 whitespace-nowrap"
+                                        x-on:click="openChangeOccupantModal(room, occupant)">
+                                    Changer / Libérer
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+
+                    <button type="button" x-show="canAssign" x-cloak
+                            class="mt-3 inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg border border-primary/30 bg-primary-50 text-primary text-xs font-semibold hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="room.full"
+                            x-on:click="openAssignModal(room)">
+                        <icon name="plus" class="w-4 h-4" />
+                        Affecter un élève
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Modale d'affectation : recherche d'élève, situation actuelle, avertissement de transfert, régime, lit, pension -->
+    <modal-shell open="assignModal.open" on-close="closeAssignModal()" size="md" title="Affecter un élève">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-500">
+                <span x-show="assignModal.roomId">Chambre : <strong x-text="assignModal.roomLabel"></strong></span>
+                <span x-show="!assignModal.roomId">Tous les pavillons : le lit se choisit ci-dessous.</span>
+            </p>
+
+            <div class="relative">
+                <label for="assign-search" class="form-label">Élève</label>
+                <input id="assign-search" type="text" x-model="assignModal.searchTerm" x-on:input="onSearchInput()"
+                       placeholder="Nom, prénom ou matricule" class="input-field mt-1" autocomplete="off" />
+                <ul x-show="assignModal.results.length > 0" x-cloak
+                    class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-auto">
+                    <template x-for="student in assignModal.results" :key="student.enrollmentId">
+                        <li class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm" x-on:click="selectStudent(student)">
+                            <span x-text="student.fullName"></span>
+                            <span class="text-xs text-slate-400" x-text="' — ' + student.classroomName"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <template x-if="assignModal.selected">
+                <div class="space-y-3">
+                    <div>
+                        <badge variant="primary"><span x-text="situation"></span></badge>
+                    </div>
+
+                    <p x-show="isTransfer() && !isReleasing()" x-cloak
+                       class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span x-text="assignModal.selected.fullName"></span> sera transféré(e) de son lit actuel vers le lit choisi.
+                    </p>
+
+                    <div>
+                        <label class="form-label">Régime</label>
+                        <select-field model="assignModal.regime" options-expr="regimeChoices" />
+                    </div>
+
+                    <div x-show="needsBed()" x-cloak>
+                        <label class="form-label">Lit</label>
+                        <select-field model="assignModal.bedId" options-expr="bedOptions" placeholder="Choisir un lit disponible…" />
+                        <p x-show="bedOptions.length === 0" x-cloak class="mt-1 text-xs text-amber-700">
+                            Aucun lit disponible<span x-show="assignModal.roomId"> dans cette chambre</span>.
+                        </p>
+                    </div>
+
+                    <div class="flex items-start gap-2" x-show="!isReleasing()" x-cloak>
+                        <input id="assign-boarding-fee" type="checkbox" x-model="assignModal.includeBoardingFee" class="checkbox-field mt-1">
+                        <label for="assign-boarding-fee" class="text-sm text-slate-700">
+                            Ajouter le frais de pension au dossier de l'élève (sans doublon s'il existe déjà)
+                        </label>
+                    </div>
+                </div>
+            </template>
+
+            <p x-show="assignModal.error" x-cloak class="field-error" x-text="assignModal.error"></p>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeAssignModal()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="!canConfirm()" x-on:click="confirmAssignment()">
+                    <span x-text="assignModal.saving ? 'Enregistrement…' : (isReleasing() ? 'Confirmer la libération' : (isTransfer() ? 'Confirmer le transfert' : 'Confirmer l\'affectation'))"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+</div>

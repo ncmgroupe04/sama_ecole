@@ -1,3 +1,4 @@
+using SamaEcole.Application.Boarding.Assignments;
 using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
@@ -34,7 +35,8 @@ public class CreateEnrollmentCommandHandler(
     TimeProvider timeProvider,
     IKpiCacheService kpiCache,
     ICurrentUserService currentUser,
-    StudentQuotaGuard quotaGuard)
+    StudentQuotaGuard quotaGuard,
+    IBoardingAssignmentService boardingAssignments)
     : IRequestHandler<CreateEnrollmentCommand, EnrollmentReceiptDto>
 {
     public async Task<EnrollmentReceiptDto> Handle(CreateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -111,31 +113,6 @@ public class CreateEnrollmentCommandHandler(
                 ]);
             }
 
-            // Capacité revérifiée DANS la transaction (spec §5.1) : réduit la fenêtre de course sans
-            // l'éliminer — un COUNT non verrouillé sous READ COMMITTED n'empêche pas deux transactions
-            // strictement concurrentes de passer toutes les deux. Un verrou de ligne dédié (SELECT ...
-            // FOR UPDATE) a été explicitement écarté pour cette V1 afin de ne pas introduire de nouvelle
-            // mécanique de verrouillage ; à revoir si des dépassements de capacité réels remontent en
-            // production.
-            if (request.RoomId is { } roomId)
-            {
-                var room = await dbContext.Rooms.AsNoTracking()
-                    .FirstOrDefaultAsync(r => r.Id == roomId && r.Type == RoomType.Dortoir, ct)
-                    ?? throw new ValidationException([
-                        new ValidationFailure(nameof(request.RoomId), "La chambre indiquée n'existe pas dans votre établissement.")
-                    ]);
-
-                var occupied = await dbContext.Enrollments.CountAsync(
-                    e => e.RoomId == roomId && e.SchoolYearId == activeYear.Id && e.Status != EnrollmentStatus.Cancelled, ct);
-
-                if (occupied >= room.Capacity)
-                {
-                    throw new ValidationException([
-                        new ValidationFailure(nameof(request.RoomId), "Cette chambre a atteint sa capacité maximale.")
-                    ]);
-                }
-            }
-
             var tuitionMonths = await ResolveTuitionMonthsAsync(ct);
             var lines = await BuildFeeLinesAsync(
                 schoolId, request.ClassroomId, tuitionMonths, request.OptionalFeeCategoryIds, ct);
@@ -169,8 +146,6 @@ public class CreateEnrollmentCommandHandler(
                 PreviousSchoolName = request.IsTransferredIn && !string.IsNullOrWhiteSpace(request.PreviousSchoolName)
                     ? request.PreviousSchoolName.Trim()
                     : null,
-                BoardingStatus = request.BoardingStatus,
-                RoomId = request.RoomId,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
                 // L'inscription n'encaisse rien : la dette est intégralement à régler à la Caisse.
@@ -180,6 +155,18 @@ public class CreateEnrollmentCommandHandler(
             };
 
             dbContext.Enrollments.Add(enrollment);
+
+            // Hébergement (modèle Pavillon/Lit, lot C) : le séjour est créé dans la MÊME transaction que l'inscription, par la
+            // règle d'affectation unique. L'ancien écran envoie une chambre, pas un lit : le plus petit lit libre est choisi.
+            // Chambre pleine, lit en maintenance ou pavillon du mauvais genre → 422, et l'inscription entière est annulée.
+            // Un demi-pensionnaire n'a pas de lit : la chambre éventuelle est ignorée.
+            if (request.BoardingStatus != BoardingStatus.Externe)
+            {
+                await boardingAssignments.AssignAsync(
+                    enrollment,
+                    request.BoardingStatus == BoardingStatus.Interne ? BoardingRegime.Interne : BoardingRegime.DemiPensionnaire,
+                    bedId: null, roomId: request.RoomId, stayRowVersion: null, requireStayRowVersion: false, ct);
+            }
 
             foreach (var line in lines)
             {
@@ -194,7 +181,8 @@ public class CreateEnrollmentCommandHandler(
                 dbContext, schoolId, currentUser.UserId?.ToString() ?? "system", student.Id, request.ClassroomId,
                 activeYear.Id, request.SubjectOptionIds, fillDefaults: true, ct, nameof(request.SubjectOptionIds));
 
-            await dbContext.SaveChangesAsync(ct);
+            // Traduit la course sur le dernier lit en 409 BED_UNAVAILABLE (index unique du lot A), jamais en 500.
+            await BoardingConflicts.SaveAsync(dbContext, ct);
 
             var school = await dbContext.Schools.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == schoolId, ct);

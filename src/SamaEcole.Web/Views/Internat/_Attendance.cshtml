@@ -1,0 +1,143 @@
+@*
+    Onglet « Pointage » de /internat (lot G4, tâche 11) — feuille d'appel du soir d'un pavillon et pointage collectif, sur /api/v1/boarding. Composant
+    Alpine `attendanceTab` (wwwroot/js/internat-attendance.js).
+
+    Un pensionnaire en permission est verrouillé « absent » (le serveur refuserait « présent » : BOARDER_ON_LEAVE). Seules les lignes décidées et modifiées
+    sont envoyées. Un résultat mixte garde chaque refus visible sur sa ligne.
+*@
+<div x-data="attendanceTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
+    <div class="mt-6">
+        <p class="text-sm text-slate-500">Appel du soir par pavillon : choisissez le pavillon et la nuit, pointez chaque interne, puis enregistrez.</p>
+    </div>
+
+    <!-- Pavillon et nuit -->
+    <div class="card mt-4 p-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="sm:col-span-2">
+                <label class="form-label">Pavillon</label>
+                <select-field model="sel.dormitoryId" options-expr="dormitoryOptions" on-change="onSelectionChange()" placeholder="Choisir un pavillon…" />
+            </div>
+            <div>
+                <label class="form-label">Nuit</label>
+                <date-field model="sel.date" required="true" aria-label="Nuit à pointer" class="mt-1" />
+                <button type="button" class="mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700" x-on:click="onSelectionChange()">Charger cette nuit</button>
+            </div>
+        </div>
+        <p x-show="dateError" x-cloak class="field-error mt-2" role="alert" x-text="dateError"></p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <p x-show="notice" x-cloak class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status" x-text="notice"></p>
+
+    <template x-if="loading">
+        <div class="card mt-4 space-y-2 p-4">
+            <template x-for="i in 6" :key="i"><div class="h-10 rounded skeleton"></div></template>
+        </div>
+    </template>
+
+    <template x-if="!loading && !hasSheet && !error">
+        <div class="card mt-4 p-12">
+            <empty-state icon="moon" title="Aucune feuille d'appel affichée."
+                         hint="Choisissez un pavillon pour afficher les internes à pointer." />
+        </div>
+    </template>
+
+    <template x-if="!loading && hasSheet">
+        <div class="mt-4 space-y-4">
+            <!-- Bilan et actions -->
+            <div class="card flex flex-wrap items-center justify-between gap-3 p-4">
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+                    <strong class="text-slate-800" x-text="sheetName"></strong>
+                    <badge variant="success"><span x-text="counts.present + ' présent(s)'"></span></badge>
+                    <badge variant="danger"><span x-text="counts.absent + ' absent(s)'"></span></badge>
+                    <badge variant="neutral"><span x-text="counts.pending + ' à pointer'"></span></badge>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="btn-modal-secondary group" x-on:click="markAllPresent()" :disabled="counts.pending === 0">Tout présent</button>
+                    <button type="button" class="btn-modal-secondary group" x-on:click="openRegisterPdf()">
+                        <icon name="print" class="w-4 h-4" />
+                        Registre PDF
+                    </button>
+                    <button type="button" class="btn-modal-primary group" :disabled="!canSave" x-on:click="save()">
+                        <span x-text="saving ? 'Enregistrement…' : 'Enregistrer le pointage'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Refus du serveur : chaque ligne refusée est détaillée, sans masquer les lignes enregistrées -->
+            <div x-show="rejectedLines.length > 0" x-cloak role="alert" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p class="font-semibold" x-text="rejectedLines.length + ' ligne(s) refusée(s) par le serveur :'"></p>
+                <ul class="mt-1 list-disc space-y-1 pl-5">
+                    <template x-for="line in rejectedLines" :key="line.boarderId">
+                        <li><strong x-text="line.studentName"></strong> — <span x-text="line.rejection"></span></li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Feuille d'appel : chambre → lit -->
+            <div class="card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100 text-sm">
+                        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th scope="col" class="px-4 py-3">Chambre · lit</th>
+                                <th scope="col" class="px-4 py-3">Pensionnaire</th>
+                                <th scope="col" class="px-4 py-3">Présence</th>
+                                <th scope="col" class="px-4 py-3">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="line in lines" :key="line.boarderId">
+                                <tr :class="line.rejection ? 'bg-rose-50/50' : ''">
+                                    <td class="px-4 py-3 text-slate-600 whitespace-nowrap">
+                                        <span x-text="line.roomName"></span> · Lit <span x-text="line.bedNumber"></span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <p class="font-medium text-slate-800" x-text="line.studentName"></p>
+                                        <p class="text-xs text-slate-400">
+                                            <span x-text="line.matricule"></span>
+                                            <badge x-show="line.onLeave" x-cloak variant="warning" class="ml-1">En permission</badge>
+                                            <badge x-show="line.recorded && !logic().isDirty(line)" x-cloak variant="success" class="ml-1">Enregistré</badge>
+                                        </p>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="inline-flex overflow-hidden rounded-lg border border-slate-200" role="group" :aria-label="'Présence de ' + line.studentName">
+                                            <button type="button" class="px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                                                    :class="line.isPresent === true ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                                                    :aria-pressed="line.isPresent === true" :disabled="line.onLeave"
+                                                    :title="line.onLeave ? 'En permission : ne peut être pointé qu\'absent' : ''"
+                                                    x-on:click="setPresence(line, true)">Présent</button>
+                                            <button type="button" class="border-l border-slate-200 px-3 py-1.5 text-xs font-semibold transition-colors"
+                                                    :class="line.isPresent === false ? 'bg-rose-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                                                    :aria-pressed="line.isPresent === false"
+                                                    x-on:click="setPresence(line, false)">Absent</button>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <input type="text" maxlength="300" x-model="line.note" class="input-field" placeholder="Note (facultatif)" :aria-label="'Note pour ' + line.studentName" />
+                                        <p x-show="line.rejection" x-cloak class="mt-1 text-xs text-rose-700" x-text="line.rejection"></p>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Saisie non enregistrée : changer de pavillon ou de nuit la jetterait -->
+    <modal-shell open="discard.open" on-close="cancelDiscard()" size="md" title="Abandonner la saisie ?">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-700">Des pointages de cette feuille n'ont pas été enregistrés. Changer de pavillon ou de nuit les abandonnerait.</p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="cancelDiscard()">Revenir à la feuille</button>
+                <button type="button" class="btn-modal-primary group" x-on:click="confirmDiscard()">Abandonner la saisie</button>
+            </div>
+        </div>
+    </modal-shell>
+
+    @* Après les autres modales dans le DOM : l'aperçu du registre s'ouvre par-dessus. *@
+    @await Html.PartialAsync("_PdfPreviewModal")
+</div>

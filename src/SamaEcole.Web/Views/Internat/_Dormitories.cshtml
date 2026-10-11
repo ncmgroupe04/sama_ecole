@@ -1,0 +1,252 @@
+@*
+    Onglet « Pavillons » de /internat (lot G, tâche 5) — pavillons, chambres et lits (/api/v1/boarding). Composant Alpine `dormitoriesTab`
+    (wwwroot/js/internat-dormitories.js). Depuis le lot B, la création de salles « Dortoir » n'est plus possible depuis /infrastructures : c'est ICI
+    que l'on crée un pavillon.
+
+    Droits : lecture Directeur / Secrétariat / Surveillant ; les boutons d'écriture ne s'affichent qu'au Directeur et au Secrétariat (`canManage`,
+    confort d'affichage : l'API répond 403 aux autres). Capacité et occupation sont DÉRIVÉES des lits, jamais saisies.
+*@
+<div x-data="dormitoriesTab()" x-on:internat-tab-shown.window="onTabShown($event.detail.key)">
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">
+            Pavillons, chambres et lits de l'internat. La capacité est la somme des lits : elle n'est jamais saisie.
+        </p>
+        <button type="button" x-show="canManage" x-cloak class="btn-modal-primary" x-on:click="openCreate()">
+            <icon name="plus" class="w-4 h-4" />
+            Nouveau pavillon
+        </button>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <p x-show="notice" x-cloak class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" x-text="notice"></p>
+
+    <!-- Liste des pavillons -->
+    <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <template x-if="loading">
+            <template x-for="i in 2" :key="i">
+                <div class="card p-5 h-[150px] skeleton"></div>
+            </template>
+        </template>
+
+        <template x-if="!loading && dormitories.length === 0 && !error">
+            <div class="card p-12 lg:col-span-2">
+                <empty-state icon="bed" title="Aucun pavillon n'est configuré."
+                             hint="Créez un pavillon (Garçons ou Filles), puis ajoutez-y des chambres : leurs lits se créent avec elles." />
+            </div>
+        </template>
+
+        <template x-for="d in dormitories" :key="d.id">
+            <div class="card p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="truncate font-semibold text-slate-800" x-text="d.name"></p>
+                        <p class="truncate text-xs text-slate-400">
+                            <span x-text="genderLabel(d.gender)"></span>
+                            <span x-show="d.supervisorName" x-text="' · Surveillant : ' + d.supervisorName"></span>
+                        </p>
+                    </div>
+                    <badge x-show="d.gender === 'Mixte'" variant="warning"><span>À qualifier</span></badge>
+                </div>
+
+                <dl class="mt-4 grid grid-cols-4 gap-2 text-center">
+                    <div><dt class="text-xs text-slate-400">Chambres</dt><dd class="font-semibold text-slate-700" x-text="d.roomCount"></dd></div>
+                    <div><dt class="text-xs text-slate-400">Lits</dt><dd class="font-semibold text-slate-700" x-text="d.capacity"></dd></div>
+                    <div><dt class="text-xs text-slate-400">Occupés</dt><dd class="font-semibold text-slate-700" x-text="d.occupiedBeds"></dd></div>
+                    <div><dt class="text-xs text-slate-400">Maintenance</dt><dd class="font-semibold text-slate-700" x-text="d.maintenanceBeds"></dd></div>
+                </dl>
+
+                <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100" role="img"
+                     :aria-label="'Occupation : ' + occupancyPercent(d.occupiedBeds, d.capacity) + ' %'">
+                    <div class="h-full rounded-full transition-all" :class="occupancyColor(d.occupiedBeds, d.capacity)"
+                         :style="'width: ' + occupancyPercent(d.occupiedBeds, d.capacity) + '%'"></div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <button type="button" class="text-xs font-semibold text-primary-600 hover:text-primary-700" x-on:click="openDetail(d)">
+                        Chambres et lits
+                    </button>
+                    <button type="button" x-show="canManage" x-cloak class="text-xs font-medium text-slate-600 hover:text-slate-800" x-on:click="openEdit(d)">
+                        Modifier
+                    </button>
+                    <button type="button" x-show="canManage" x-cloak class="text-xs font-medium text-rose-600 hover:text-rose-700" x-on:click="openRemoval('dormitory', d)">
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Détail d'un pavillon : chambres et lits -->
+    <section x-show="detail" x-cloak class="card mt-6 p-5" aria-label="Chambres et lits du pavillon">
+        <template x-if="detail">
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-semibold text-slate-800" x-text="detail.name"></h2>
+                        <p class="text-xs text-slate-400" x-text="detail.occupiedBeds + ' / ' + detail.capacity + ' lits occupés'"></p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button type="button" x-show="canManage" x-cloak class="btn-modal-primary" x-on:click="openAddRoom(detail)">
+                            <icon name="plus" class="w-4 h-4" />
+                            Ajouter une chambre
+                        </button>
+                        <button type="button" class="btn-modal-secondary group" x-on:click="closeDetail()">Fermer</button>
+                    </div>
+                </div>
+
+                <p x-show="detail.rooms.length === 0" x-cloak class="mt-4 text-sm text-slate-500">
+                    Ce pavillon n'a pas encore de chambre. Ajoutez-en une : ses lits sont créés avec elle.
+                </p>
+
+                <div class="mt-4 space-y-4">
+                    <template x-for="room in detail.rooms" :key="room.id">
+                        <div class="rounded-lg border border-slate-200 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <p class="font-medium text-slate-700">
+                                    <span x-text="room.name"></span>
+                                    <span class="text-xs font-normal text-slate-400" x-text="' · ' + room.capacity + ' lit(s) utilisable(s)'"></span>
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" x-show="canManage" x-cloak class="text-xs font-medium text-primary-600 hover:text-primary-700" x-on:click="addBed(room)">
+                                        + Lit
+                                    </button>
+                                    <button type="button" x-show="canManage" x-cloak class="text-xs font-medium text-rose-600 hover:text-rose-700" x-on:click="openRemoval('room', room)">
+                                        Supprimer la chambre
+                                    </button>
+                                </div>
+                            </div>
+
+                            <ul class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                <template x-for="bed in room.beds" :key="bed.id">
+                                    <li class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-slate-700" x-text="'Lit ' + bed.bedNumber"></p>
+                                            <p class="truncate text-xs text-slate-400" x-text="bed.occupantName ? bed.occupantName : bedStatusLabel(bed.status)"></p>
+                                        </div>
+                                        <div class="flex shrink-0 items-center gap-2">
+                                            <button type="button" x-show="canToggleMaintenance(bed)" x-cloak
+                                                    class="text-xs font-medium text-slate-600 hover:text-slate-800" x-on:click="toggleMaintenance(bed)"
+                                                    x-text="bed.status === 'Maintenance' ? 'Remettre en service' : 'Maintenance'"></button>
+                                            <button type="button" x-show="canManage && bed.status !== 'Occupied'" x-cloak
+                                                    class="text-xs font-medium text-rose-600 hover:text-rose-700" x-on:click="openRemoval('bed', bed)">
+                                                Supprimer
+                                            </button>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </section>
+
+    <!-- Éléments supprimés (restauration) : Directeur et Secrétariat -->
+    <div x-show="canManage" x-cloak>
+        @await Html.PartialAsync("_TrashPanel", "dormitories")
+        @await Html.PartialAsync("_TrashPanel", "dormitory-rooms")
+        @await Html.PartialAsync("_TrashPanel", "beds")
+    </div>
+
+    <!-- Modale pavillon : création / modification -->
+    <modal-shell open="form.open" on-close="closeForm()" size="md" title="Pavillon">
+        <div class="space-y-4">
+            <div>
+                <label for="dorm-name" class="form-label">Nom du pavillon</label>
+                <input id="dorm-name" type="text" x-model="form.values.name" maxlength="100" class="input-field mt-1" autocomplete="off">
+                <p x-show="form.errors.name" x-cloak class="field-error" x-text="form.errors.name"></p>
+            </div>
+
+            <div>
+                <label class="form-label">Genre</label>
+                <select-field model="form.values.gender" options-expr="genderChoices" placeholder="Choisir…" />
+                <p x-show="form.errors.gender" x-cloak class="field-error" x-text="form.errors.gender"></p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="dorm-supervisor" class="form-label">Surveillant (nom)</label>
+                    <input id="dorm-supervisor" type="text" x-model="form.values.supervisorName" maxlength="150" class="input-field mt-1" autocomplete="off">
+                    <p x-show="form.errors.supervisorName" x-cloak class="field-error" x-text="form.errors.supervisorName"></p>
+                </div>
+                <div>
+                    <label for="dorm-phone" class="form-label">Surveillant (téléphone)</label>
+                    <input id="dorm-phone" type="tel" x-model="form.values.supervisorPhone" maxlength="30" class="input-field mt-1" autocomplete="off">
+                    <p x-show="form.errors.supervisorPhone" x-cloak class="field-error" x-text="form.errors.supervisorPhone"></p>
+                </div>
+            </div>
+
+            <div>
+                <label for="dorm-notes" class="form-label">Notes</label>
+                <textarea id="dorm-notes" rows="3" x-model="form.values.notes" maxlength="1000" class="input-field mt-1"></textarea>
+                <p x-show="form.errors.notes" x-cloak class="field-error" x-text="form.errors.notes"></p>
+            </div>
+
+            <div x-show="form.error" x-cloak class="form-error-banner">
+                <span x-text="form.error"></span>
+                <button type="button" x-show="form.archivedConflict" x-cloak class="ml-2 underline"
+                        x-on:click="showArchivedDuplicate('dormitories', form.values.name)">Voir dans les éléments supprimés</button>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeForm()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="form.saving" x-on:click="saveDormitory()">
+                    <span x-text="form.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+
+    <!-- Modale chambre : création avec ses lits -->
+    <modal-shell open="roomForm.open" on-close="closeRoomForm()" size="md" title="Nouvelle chambre">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-500">
+                Pavillon : <strong x-text="roomForm.dormitory ? roomForm.dormitory.name : ''"></strong>. Les lits sont créés avec la chambre.
+            </p>
+            <div>
+                <label for="room-name" class="form-label">Nom de la chambre</label>
+                <input id="room-name" type="text" x-model="roomForm.values.name" maxlength="100" class="input-field mt-1" autocomplete="off">
+                <p x-show="roomForm.errors.name" x-cloak class="field-error" x-text="roomForm.errors.name"></p>
+            </div>
+            <div>
+                <label for="room-beds" class="form-label">Nombre de lits (1 à 40)</label>
+                <input id="room-beds" type="number" min="1" max="40" step="1" x-model="roomForm.values.bedCount" class="input-field mt-1">
+                <p x-show="roomForm.errors.bedCount" x-cloak class="field-error" x-text="roomForm.errors.bedCount"></p>
+            </div>
+
+            <div x-show="roomForm.error" x-cloak class="form-error-banner">
+                <span x-text="roomForm.error"></span>
+                <button type="button" x-show="roomForm.archivedConflict" x-cloak class="ml-2 underline"
+                        x-on:click="showArchivedDuplicate('dormitory-rooms', roomForm.values.name)">Voir dans les éléments supprimés</button>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeRoomForm()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="roomForm.saving" x-on:click="saveRoom()">
+                    <span x-text="roomForm.saving ? 'Création…' : 'Créer la chambre'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+
+    <!-- Modale de suppression : jamais de confirm() natif -->
+    <modal-shell open="removal.open" on-close="closeRemoval()" size="md" title="Confirmer la suppression">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-600">
+                Supprimer <strong x-text="removalLabel()"></strong> ? L'élément reste restaurable depuis « éléments supprimés ». Un élément qui contient
+                encore des chambres, des lits ou des pensionnaires ne peut pas être supprimé.
+            </p>
+
+            <div x-show="removal.error" x-cloak class="form-error-banner"><span x-text="removal.error"></span></div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeRemoval()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="removal.saving" x-on:click="confirmRemoval()">
+                    <span x-text="removal.saving ? 'Suppression…' : 'Supprimer'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+</div>

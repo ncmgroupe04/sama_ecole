@@ -1,17 +1,14 @@
 using SamaEcole.Application.Internat;
 using SamaEcole.Application.Internat.Commands.AssignInstructor;
-using SamaEcole.Application.Internat.Commands.ChangeBoardingAssignment;
 using SamaEcole.Application.Internat.Commands.CreateInstructor;
 using SamaEcole.Application.Internat.Commands.UpdateInstructor;
 using SamaEcole.Application.Internat.Commands.UpdateHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetInstructorStudents;
-using SamaEcole.Application.Internat.Queries.GetInternatDashboard;
 using SamaEcole.Application.Internat.Queries.GetMyHalqa;
 using SamaEcole.Application.Internat.Queries.GetProgressDashboard;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbReportPdf;
 using SamaEcole.Application.Internat.Queries.ListInstructors;
-using SamaEcole.Application.Internat.Queries.SearchBoardableStudents;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
@@ -47,42 +44,12 @@ public class InternatController(ISender mediator) : ControllerBase
     // (Secrétariat, Surveillant) qui doit reconnaître l'Oustaz d'un élève.
     private const string InstructorWriteRoles = "Directeur";
 
-    [HttpGet("dashboard")]
-    [Authorize(Roles = ManageRoles)]
-    [ProducesResponseType<InternatDashboardDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Dashboard(CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetInternatDashboardQuery(), cancellationToken));
-
-    [HttpGet("students/search")]
-    [Authorize(Roles = ManageRoles)]
-    [ProducesResponseType<IReadOnlyList<BoardableStudentDto>>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> SearchStudents([FromQuery] string term, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new SearchBoardableStudentsQuery(term), cancellationToken));
-
-    public record ChangeBoardingAssignmentRequest(Guid? RoomId, BoardingStatus BoardingStatus, bool IncludeBoardingFee, uint RowVersion);
-
-    [HttpPost("assignments/{enrollmentId:guid}")]
-    [Authorize(Roles = ManageRoles)]
-    [ProducesResponseType<EnrollmentBoardingDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ChangeAssignment(
-        Guid enrollmentId, [FromBody] ChangeBoardingAssignmentRequest request, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(
-            new ChangeBoardingAssignmentCommand(
-                enrollmentId, request.RoomId, request.BoardingStatus, request.IncludeBoardingFee, request.RowVersion),
-            cancellationToken));
-
     // ---------------------------------------------------------------- Tableau de bord de la mémorisation
 
     /// <summary>
     /// Vue de la Direction : progression globale, répartition par tranche, synthèse par Halqa et alertes de stagnation
-    /// (élève non évalué depuis <c>staleDays</c> jours ou jamais évalué). Distinct de GET dashboard, qui est celui de
-    /// l'occupation des dortoirs.
+    /// (élève non évalué depuis <c>staleDays</c> jours ou jamais évalué). L'occupation des pavillons, elle, se lit sous
+    /// /api/v1/boarding (ancien tableau de bord par chambre supprimé au lot F).
     /// </summary>
     [HttpGet("progress-dashboard")]
     [Authorize(Roles = ManageRoles)]

@@ -9,9 +9,9 @@ namespace SamaEcole.Application.Enrollments;
 /// calcul que CreateEnrollmentCommandHandler.BuildFeeLinesAsync (montants COPIÉS depuis ClassFee,
 /// mensualité × tuitionMonths), restreint aux catégories FeeCategory.IsBoardingFee et EXCLUANT
 /// celles déjà présentes sur l'inscription (<paramref name="existingFeeCategoryIds"/>) : c'est ce
-/// filtre qui garantit qu'un second changement de chambre (ChangeBoardingAssignmentCommand) ne
+/// filtre qui garantit qu'un second changement de lit (AssignBedCommand) ne
 /// double-facture jamais la pension. Partagé par CreateEnrollmentCommandHandler (aucune ligne
-/// existante — élève Externe/nouvel Interne) et ChangeBoardingAssignmentCommandHandler (l'inscription
+/// existante — élève Externe/nouvel Interne) et l'affectation d'un lit (l'inscription
 /// existe déjà, ses lignes actuelles bornent ce qui reste à ajouter).
 /// </summary>
 public static class BoardingFeeLineBuilder
