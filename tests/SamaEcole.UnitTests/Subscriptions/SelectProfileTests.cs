@@ -19,6 +19,7 @@ public class SelectProfileTests
     [InlineData(ProfileType.Elementaire, StudentQuotaTier.Tier1_150)]
     [InlineData(ProfileType.EnseignementGeneral, StudentQuotaTier.Tier2_400)]
     [InlineData(ProfileType.InternatDaara, StudentQuotaTier.Tier3_800)]
+    [InlineData(ProfileType.DaaraMemorisation, StudentQuotaTier.Tier1_150)]
     public void A_Known_Profile_With_A_Standard_Tier_Is_Valid(ProfileType profile, StudentQuotaTier tier)
     {
         _validator.Validate(new SelectProfileCommand(profile, tier)).IsValid.Should().BeTrue();
@@ -56,6 +57,7 @@ public class SelectProfileTests
     [InlineData(ProfileType.InternatDaara, ProfileEtablissement.DaaraInternat)]
     [InlineData(ProfileType.EnseignementGeneral, ProfileEtablissement.General)]
     [InlineData(ProfileType.ComptabiliteRapports, ProfileEtablissement.Simplifie)]
+    [InlineData(ProfileType.DaaraMemorisation, ProfileEtablissement.DaaraMemorisation)]
     public void The_Mapping_Matches_The_Correspondence_Used_By_The_Backfill_Migration(
         ProfileType profile, ProfileEtablissement expected)
     {

@@ -44,7 +44,8 @@
     // profils gardent l'atterrissage par rôle ci-dessus (le Directeur d'une école Comptabilité & Rapports y
     // trouve déjà un tableau de bord financier). CONFORT d'ergonomie : l'écran reste protégé côté API.
     const PROFILE_LANDINGS = {
-        InternatDaara: { Directeur: '/suivi-coranique' }
+        InternatDaara: { Directeur: '/suivi-coranique' },
+        DaaraMemorisation: { Directeur: '/suivi-coranique' }
     };
 
     // ProfileEtablissement (réglages, lu par la sidebar) → ProfileType (souscription). Même
@@ -54,7 +55,8 @@
         ElementairePrimaire: 'Elementaire',
         General: 'EnseignementGeneral',
         FrancoArabe: 'FrancoArabe',
-        DaaraInternat: 'InternatDaara'
+        DaaraInternat: 'InternatDaara',
+        DaaraMemorisation: 'DaaraMemorisation'
     };
 
     const STORAGE_KEYS = {
@@ -633,6 +635,7 @@ document.addEventListener('alpine:init', () => {
         get isGeneralProfile() { return this.profileEtablissement === 'General'; },
         get isFrancoArabeProfile() { return this.profileEtablissement === 'FrancoArabe'; },
         get isDaaraInternatProfile() { return this.profileEtablissement === 'DaaraInternat'; },
+        get isDaaraMemorisationProfile() { return this.profileEtablissement === 'DaaraMemorisation'; },
 
         isWorkingDay(isoDate) {
             const [y, m, d] = String(isoDate).split('-').map(Number);
@@ -729,6 +732,7 @@ document.addEventListener('alpine:init', () => {
         get isGeneralProfile() { return Alpine.store('schoolConfig').isGeneralProfile; },
         get isFrancoArabeProfile() { return Alpine.store('schoolConfig').isFrancoArabeProfile; },
         get isDaaraInternatProfile() { return Alpine.store('schoolConfig').isDaaraInternatProfile; },
+        get isDaaraMemorisationProfile() { return Alpine.store('schoolConfig').isDaaraMemorisationProfile; },
 
         init() {
             return Alpine.store('schoolConfig').init();

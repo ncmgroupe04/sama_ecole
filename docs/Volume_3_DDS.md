@@ -587,7 +587,7 @@ durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni l
 | `SubscriptionPaymentMethod` | `MOBILE_MONEY`, `BANK_TRANSFER`, `CARD` |
 | `SubscriptionPaymentStatus` | `INITIATED`, `CONFIRMED`, `FAILED` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR` |
-| `ProfileType` | `Elementaire`, `FrancoArabe`, `InternatDaara`, `EnseignementGeneral`, `ComptabiliteRapports` (texte, `tenant_subscriptions`) |
+| `ProfileType` | `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` (texte, `tenant_subscriptions`) |
 | `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` (texte) |
 | `TenantSubscriptionStatus` | `PendingOnboarding`, `PendingApproval`, `Active`, `Suspended`, `Expired` (texte — axe distinct de `SubscriptionStatus`) |
 

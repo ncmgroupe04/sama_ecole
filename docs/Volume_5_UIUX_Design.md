@@ -54,6 +54,22 @@ Design system unique et partagé (couleurs, polices, espacements, icônes, bouto
 | Rouge | Erreurs, suppression, abonnement expiré/restreint, impayés |
 | Gris | Textes secondaires, séparateurs, arrière-plans |
 
+### 2.1 ter Menu et modules par profil d'établissement
+
+Le profil choisi à l'Onboarding (`EstablishmentProfilePresets`) règle les quatre interrupteurs de modules ; la sidebar, la barre de raccourcis et les gardes de page les suivent. Le Directeur peut ensuite les modifier dans Paramètres › Modules (le profil ne les écrase qu'à sa propre sélection).
+
+| Profil | Pédagogie | Finance | Internat (+ Halqas, suivi coranique, Oustaz) | Coran |
+|---|---|---|---|---|
+| Comptabilité & Rapports | non | oui | non | non |
+| Élémentaire / Primaire, Enseignement Général | oui | oui | non | non |
+| Franco-Arabe (hybride) | oui | oui | **oui** | oui |
+| Internat / Daara Moderne | oui | oui | oui | oui |
+| **Daara — Mémorisation** | **non** | oui | oui | oui |
+
+- **Pédagogie coupée** masque Notes, Examens officiels, Programmes, Cahier de texte, Matières & Coefficients, rapports pédagogiques et toute la Surveillance générale ; l'onglet « Notes & bulletins » de la fiche élève disparaît aussi. Les pages concernées portent `[PageModule(SchoolModule.Pedagogy)]` (redirection ergonomique) ; chaque API répond déjà `403 MODULE_DISABLED`.
+- Les Halqas, le suivi coranique et les Oustaz suivent l'interrupteur **Internat** (décision G-D1). Un profil généraliste qui active Internat à la main les voit donc aussi ; rattacher ces écrans au module Coran est un chantier distinct.
+- Changer le préréglage d'un profil n'affecte que les écoles qui le choisissent ensuite : les réglages existants ne sont pas réécrits.
+
 ### 2.2 Typographie
 
 Police : **Inter** (ou Segoe UI en repli système). Titre 22px, sous-titre 18px, texte courant 14px, tableaux 13px.

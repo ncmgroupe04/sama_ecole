@@ -17,6 +17,7 @@ public static class ProfileTypeMapping
         ProfileType.InternatDaara => ProfileEtablissement.DaaraInternat,
         ProfileType.EnseignementGeneral => ProfileEtablissement.General,
         ProfileType.ComptabiliteRapports => ProfileEtablissement.Simplifie,
+        ProfileType.DaaraMemorisation => ProfileEtablissement.DaaraMemorisation,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Profil inconnu.")
     };
 
@@ -27,6 +28,7 @@ public static class ProfileTypeMapping
         ProfileEtablissement.DaaraInternat => ProfileType.InternatDaara,
         ProfileEtablissement.General => ProfileType.EnseignementGeneral,
         ProfileEtablissement.Simplifie => ProfileType.ComptabiliteRapports,
+        ProfileEtablissement.DaaraMemorisation => ProfileType.DaaraMemorisation,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Profil inconnu.")
     };
 }

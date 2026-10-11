@@ -54,7 +54,14 @@ public enum ProfileEtablissement
     FrancoArabe,
 
     /// <summary>Internat / Daara Moderne : socle académique + Internat (dortoirs, Hifz, tuteurs, pension).</summary>
-    DaaraInternat
+    DaaraInternat,
+
+    /// <summary>
+    /// Daara — Mémorisation : mémorisation coranique pure. Pas de Pédagogie (ni notes, ni compositions, ni bulletins,
+    /// ni matières/coefficients) ; Internat, suivi coranique (Halqas, Hizb), Finance et Élèves restent.
+    /// Distinct de <see cref="DaaraInternat"/>, qui conserve le socle académique.
+    /// </summary>
+    DaaraMemorisation
 }
 
 

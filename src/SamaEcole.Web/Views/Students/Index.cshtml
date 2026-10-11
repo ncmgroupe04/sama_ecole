@@ -523,7 +523,8 @@
             <icon name="clock" class="w-4 h-4" />
             Historique scolaire
         </button>
-        <button type="button" role="tab" @@click="detailTab = 'grades'"
+        @* Masqué quand la Pédagogie est coupée (profil Daara — Mémorisation, Comptabilité & Rapports) : pas de notes à afficher. *@
+        <button type="button" role="tab" x-show="$store.schoolConfig.pedagogyEnabled" x-cloak @@click="detailTab = 'grades'"
                 :aria-selected="detailTab === 'grades'"
                 class="tab-btn flex-1" :class="detailTab === 'grades' ? 'tab-btn-active' : ''">
             <icon name="academic-cap" class="w-4 h-4" />

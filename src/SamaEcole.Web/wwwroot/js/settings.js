@@ -862,7 +862,8 @@ document.addEventListener('alpine:init', () => {
             { key: 'ElementairePrimaire', label: 'Élémentaire / Primaire', icon: 'book' },
             { key: 'General', label: 'Enseignement Général', icon: 'chart-multiple' },
             { key: 'FrancoArabe', label: 'Franco-Arabe', icon: 'globe' },
-            { key: 'DaaraInternat', label: 'Internat / Daara Moderne', icon: 'bed' }
+            { key: 'DaaraInternat', label: 'Internat / Daara Moderne', icon: 'bed' },
+            { key: 'DaaraMemorisation', label: 'Daara — Mémorisation', icon: 'target' }
         ],
 
         profileLabel(key) {

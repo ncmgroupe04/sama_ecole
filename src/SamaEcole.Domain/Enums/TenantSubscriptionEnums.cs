@@ -26,7 +26,14 @@ public enum ProfileType
     EnseignementGeneral,
 
     /// <summary>Comptabilité &amp; Rapports : Pédagogie masquée, Caisse et rapports financiers seuls.</summary>
-    ComptabiliteRapports
+    ComptabiliteRapports,
+
+    /// <summary>
+    /// Daara — Mémorisation : mémorisation coranique pure, sans Pédagogie (notes, compositions, bulletins,
+    /// matières/coefficients). Internat + suivi coranique + Finance + Élèves. Distinct d'<see cref="InternatDaara"/>
+    /// (Daara Moderne), qui garde le socle académique.
+    /// </summary>
+    DaaraMemorisation
 }
 
 /// <summary>

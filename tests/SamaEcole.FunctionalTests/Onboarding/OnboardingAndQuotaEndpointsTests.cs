@@ -95,6 +95,32 @@ public class OnboardingAndQuotaEndpointsTests(AuthApiFactory factory) : IClassFi
     }
 
     [Fact]
+    public async Task Selecting_The_Daara_Memorisation_Profile_Turns_Pedagogy_Off_And_Keeps_Boarding_Quran_And_Finance()
+    {
+        var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
+        await SetSubscriptionAsync("PendingOnboarding", 150, 160);
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/onboarding/select-profile", token,
+            new { profile = "DaaraMemorisation", tier = "Tier1_150" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await ReadJsonAsync(response);
+        dto.GetProperty("profileType").GetString().Should().Be("DaaraMemorisation");
+        dto.GetProperty("isPedagogyEnabled").GetBoolean().Should().BeFalse();
+        dto.GetProperty("isFinanceEnabled").GetBoolean().Should().BeTrue();
+        dto.GetProperty("isInternatEnabled").GetBoolean().Should().BeTrue();
+        dto.GetProperty("isCoranModuleEnabled").GetBoolean().Should().BeTrue();
+
+        // La sidebar (qui lit SchoolSettings) reçoit le même profil et les mêmes modules.
+        var settings = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token));
+        settings.GetProperty("profileEtablissement").GetString().Should().Be("DaaraMemorisation");
+        settings.GetProperty("isPedagogyEnabled").GetBoolean().Should().BeFalse();
+
+        // Et l'API pédagogique est bien fermée pour cette école (le garde de page n'est que de l'ergonomie).
+        (await SendAsync(HttpMethod.Get, "/api/v1/subjects", token)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Selecting_A_Profile_Twice_Is_Refused_And_Keeps_The_First_Choice()
     {
         var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);

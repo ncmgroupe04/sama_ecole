@@ -77,6 +77,26 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Applying_The_Daara_Memorisation_Profile_Turns_Pedagogy_Off_And_Keeps_Boarding_Quran_And_Finance()
+    {
+        await using (var db = _db.NewAppContext(Ecole))
+        {
+            await new ApplyEstablishmentProfileCommandHandler(
+                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                .Handle(new ApplyEstablishmentProfileCommand("DaaraMemorisation"), CancellationToken.None);
+        }
+
+        await using var readDb = _db.NewAppContext(Ecole);
+        var settings = readDb.SchoolSettings.Single();
+
+        settings.ProfileEtablissement.Should().Be(ProfileEtablissement.DaaraMemorisation);
+        settings.IsPedagogyEnabled.Should().BeFalse();
+        settings.IsFinanceEnabled.Should().BeTrue();
+        settings.IsInternatEnabled.Should().BeTrue();
+        settings.IsCoranModuleEnabled.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Changing_The_Profile_Keeps_The_Commercial_Subscription_Aligned_But_Leaves_Tier_And_Status_Alone()
     {
         await using (var owner = _db.NewOwnerContext())
