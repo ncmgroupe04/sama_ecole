@@ -45,6 +45,25 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* --------------------------------------------------------------------------------------------------
+   POLICE ARABE — Cairo (variable, graisses 200–1000), AUTO-HÉBERGÉE, sous-ensemble « arabic » seul.
+
+   Inter n'a aucun glyphe arabe : sans police dédiée, le texte RTL (Halqa, noms arabes) retombait sur la
+   police système, d'un rendu et d'une épaisseur variables d'un appareil à l'autre. Cairo est déclarée
+   juste après Inter dans `fontFamily.sans` (tailwind.config.js) : `unicode-range` la limite aux blocs
+   arabes, donc le latin reste en Inter et le navigateur ne télécharge ce fichier (≈ 30 Ko) que sur une
+   page qui contient de l'arabe. Même raisonnement CSP qu'Inter (`font-src 'self'`) ; licence SIL OFL 1.1
+   dans wwwroot/fonts/Cairo-OFL.txt. Paquet source : `@fontsource-variable/cairo` 5.3.0.
+   -------------------------------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("/fonts/cairo-arabic-wght-normal.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
