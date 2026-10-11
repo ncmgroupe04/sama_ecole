@@ -96,19 +96,30 @@ public class PagesController : Controller
     // JGK-D06 : écran d'appel — roster d'une classe pour une date/matière/créneau, saisie des statuts.
     // C'est AttendanceController qui garde l'accès (saisie : Enseignant borné à ses classes, Directeur,
     // Secrétariat, Surveillant) et la RLS qui isole.
+    // Module Pédagogie : les pages ci-dessous (Surveillance générale, Notes, Matières, Examens, Programmes, rapports
+    // pédagogiques) portent [PageModule(Pedagogy)] — exactement celles que la sidebar masque quand Pédagogie est coupée (profil
+    // Comptabilité & Rapports, Daara — Mémorisation). Ergonomie, pas barrière : chaque API répond 403 MODULE_DISABLED.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/presences")]
     public IActionResult Attendance() => View("~/Views/Attendance/Index.cshtml");
+
+    [PageModule(SchoolModule.Pedagogy)]
 
     [HttpGet("/billets")]
     public IActionResult Billets() => View("~/Views/Absences/Billets.cshtml");
 
+    [PageModule(SchoolModule.Pedagogy)]
+
     [HttpGet("/pointage-profs")]
     public IActionResult PointageProfs() => View("~/Views/Absences/PointageProfs.cshtml");
+
+    [PageModule(SchoolModule.Pedagogy)]
 
     [HttpGet("/discipline")]
     public IActionResult Discipline() => View("~/Views/Discipline/Index.cshtml");
 
     // Convocations de parent/tuteur (module Vie Scolaire) — ParentSummonsController garde l'accès.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/convocations")]
     public IActionResult ParentSummons() => View("~/Views/ParentSummons/Index.cshtml");
 
@@ -117,16 +128,20 @@ public class PagesController : Controller
     // billets.js. Aucune page HTML d'impression n'est donc nécessaire — la vue de remplacement qui
     // occupait cette route n'a jamais eu de contenu.
 
+    [PageModule(SchoolModule.Pedagogy)]
+
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
 
     // JGK-G01/G02 : écran de saisie des notes (Devoir/Composition) par classe, matière et trimestre.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/notes")]
     public IActionResult Grades() => View("~/Views/Grades/Index.cshtml");
 
     // Module Cahier de texte / Journal de classe (ticket JGK-P04) — ClassJournalController garde
     // l'accès (écriture Enseignant sur sa propre séance planifiée, lecture ouverte en plus à
     // Directeur/Secrétariat/Surveillant) et la RLS isole.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/cahier-de-texte")]
     public IActionResult ClassJournal() => View("~/Views/ClassJournal/Index.cshtml");
 
@@ -142,12 +157,14 @@ public class PagesController : Controller
     // JGK-R02 : rapport d'assiduité détaillé par classe et par élève. Comme les autres pages, gabarit
     // [AllowAnonymous] côté vue (le JWT ne voyage pas en navigation) — c'est ReportsController qui garde
     // l'accès (Directeur/Secrétariat/Super Admin) et la RLS qui isole.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/rapports/assiduite")]
     public IActionResult AttendanceReport() => View("~/Views/Reports/Attendance.cshtml");
 
     // Module Examens officiels (CFEE/BFEM/BAC) — ExamsController garde l'accès (Directeur/Secrétariat
     // sur tout le module ; lecture des dossiers ouverte en plus à l'Enseignant, borné à ses classes
     // assignées, ticket JGK-J08) et la RLS isole.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/examens")]
     public IActionResult Exams() => View("~/Views/Exams/Index.cshtml");
 
@@ -174,11 +191,13 @@ public class PagesController : Controller
     // [Authorize(Directeur, Finance)] ET [RequireFeature(AdvancedFinancialReports)].
     // Évolution N°7 : rapports institutionnels (rapport de rentrée IEF, normes d'âge). InstitutionalController
     // garde l'accès (Directeur/Secrétariat) et la RLS isole — gabarit anonyme comme le reste.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/rapports/institutionnels")]
     public IActionResult InstitutionalReports() => View("~/Views/Reports/Institutional.cshtml");
 
     // Évolution N°7 : programmes nationaux (référentiel des chapitres) et avancement pointé au cahier de texte.
     // SyllabusController garde l'accès (écriture Directeur, tableau Directeur/Secrétariat), la RLS isole.
+    [PageModule(SchoolModule.Pedagogy)]
     [HttpGet("/programmes")]
     public IActionResult Syllabus() => View("~/Views/Syllabus/Index.cshtml");
 

@@ -126,6 +126,7 @@ public class TenantSubscriptionProvisioningTests : IAsyncLifetime
     [Theory]
     [InlineData(ProfileType.Elementaire, "Maternelle,Primaire")]
     [InlineData(ProfileType.InternatDaara, "Maternelle,Primaire,College,Lycee")]
+    [InlineData(ProfileType.DaaraMemorisation, "Maternelle,Primaire,College,Lycee")]
     [InlineData(ProfileType.FrancoArabe, "Maternelle,Primaire,College,Lycee")]
     [InlineData(ProfileType.EnseignementGeneral, "Maternelle,Primaire,College,Lycee")]
     [InlineData(ProfileType.ComptabiliteRapports, "Maternelle,Primaire,College,Lycee")]

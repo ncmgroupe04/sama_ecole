@@ -51,6 +51,12 @@ document.addEventListener('alpine:init', () => {
             bullets: ['Dortoirs & hébergement', 'Suivi coranique par Hizb, Halqas & Oustaz', 'Pension & tuteurs de sortie']
         },
         {
+            id: 'DaaraMemorisation', icon: 'target', tag: 'Hifz',
+            title: 'Daara — Mémorisation',
+            description: 'La mémorisation du Coran au centre : suivi des Hizb par Halqa et vie collective, sans notes ni bulletins.',
+            bullets: ['Suivi coranique par Hizb, Halqas & Oustaz', 'Dortoirs, hébergement & sorties', 'Scolarités, caisse & rapports financiers']
+        },
+        {
             id: 'ComptabiliteRapports', icon: 'sparkle', tag: 'Gestion essentielle',
             title: 'Comptabilité & Rapports',
             description: "L'essentiel pour gérer les inscriptions, les encaissements et les rapports financiers, sans notes ni bulletins.",

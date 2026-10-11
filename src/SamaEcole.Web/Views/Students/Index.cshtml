@@ -400,10 +400,13 @@
         @* Module Internat : régime d'hébergement de l'inscription ACTIVE (jamais une année passée de
            l'historique) — activeEnrollment() dans students.js. RoomLabel n'est renseigné que pour un
            Interne effectivement affecté à une chambre. *@
-        <div>
+        @* min-w-0 + badge qui passe à la ligne : « Interne — Chambre 101 — Pavillon … » est plus large que sa colonne ;
+           .status-badge impose whitespace-nowrap, donc sans ça le texte débordait et la fiche affichait une barre de
+           défilement horizontale. *@
+        <div class="min-w-0">
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hébergement</p>
             <template x-if="activeEnrollment() && activeEnrollment().boardingStatus !== 'Externe'">
-                <badge variant="primary" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
+                <badge variant="primary" class="max-w-full whitespace-normal rounded-xl text-start leading-snug" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
             </template>
             <template x-if="!activeEnrollment() || activeEnrollment().boardingStatus === 'Externe'">
                 <span class="text-sm text-slate-400">Externe</span>
@@ -523,7 +526,8 @@
             <icon name="clock" class="w-4 h-4" />
             Historique scolaire
         </button>
-        <button type="button" role="tab" @@click="detailTab = 'grades'"
+        @* Masqué quand la Pédagogie est coupée (profil Daara — Mémorisation, Comptabilité & Rapports) : pas de notes à afficher. *@
+        <button type="button" role="tab" x-show="$store.schoolConfig.pedagogyEnabled" x-cloak @@click="detailTab = 'grades'"
                 :aria-selected="detailTab === 'grades'"
                 class="tab-btn flex-1" :class="detailTab === 'grades' ? 'tab-btn-active' : ''">
             <icon name="academic-cap" class="w-4 h-4" />

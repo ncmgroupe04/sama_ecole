@@ -54,6 +54,32 @@ Design system unique et partagé (couleurs, polices, espacements, icônes, bouto
 | Rouge | Erreurs, suppression, abonnement expiré/restreint, impayés |
 | Gris | Textes secondaires, séparateurs, arrière-plans |
 
+### 2.1 ter Menu et modules par profil d'établissement
+
+Le profil choisi à l'Onboarding (`EstablishmentProfilePresets`) règle les quatre interrupteurs de modules ; la sidebar, la barre de raccourcis et les gardes de page les suivent. Le Directeur peut ensuite les modifier dans Paramètres › Modules (le profil ne les écrase qu'à sa propre sélection).
+
+| Profil | Pédagogie | Finance | Internat (+ Halqas, suivi coranique, Oustaz) | Coran |
+|---|---|---|---|---|
+| Comptabilité & Rapports | non | oui | non | non |
+| Élémentaire / Primaire, Enseignement Général | oui | oui | non | non |
+| Franco-Arabe (hybride) | oui | oui | **oui** | oui |
+| Internat / Daara Moderne | oui | oui | oui | oui |
+| **Daara — Mémorisation** | **non** | oui | oui | oui |
+
+- **Pédagogie coupée** masque Notes, Examens officiels, Programmes, Cahier de texte, Matières & Coefficients, rapports pédagogiques et toute la Surveillance générale ; l'onglet « Notes & bulletins » de la fiche élève disparaît aussi. Les pages concernées portent `[PageModule(SchoolModule.Pedagogy)]` (redirection ergonomique) ; chaque API répond déjà `403 MODULE_DISABLED`.
+- Les Halqas, le suivi coranique et les Oustaz suivent l'interrupteur **Internat** (décision G-D1). Un profil généraliste qui active Internat à la main les voit donc aussi ; rattacher ces écrans au module Coran est un chantier distinct.
+- Changer le préréglage d'un profil n'affecte que les écoles qui le choisissent ensuite : les réglages existants ne sont pas réécrits.
+### 2.1 bis Mode sombre
+
+Le thème (clair / sombre / système) se choisit dans le menu de la carte de profil (« Apparence ») et se mémorise dans le navigateur (`localStorage` « sama-theme »). Par défaut : clair (`DEFAULT` dans `theme-boot.js` et `theme.js` — passer à `system` pour suivre le thème du système).
+
+- **Aucune classe `dark:` dans les vues.** Les vues écrivent toujours `bg-white`, `text-slate-700`, `border-slate-200`… ; `tailwind.dark-theme.js` redéfinit la valeur de ces classes en sombre (variables CSS échangées par la classe `.dark` posée sur `<html>`). Les opacités (`bg-white/85`) fonctionnent.
+- **Règle des trois jeux** : *fond* (`bg`, dégradés, `fill`) — les teintes claires 50–300 deviennent sombres, les aplats 600+ restent (un bouton `bg-emerald-600 text-white` reste plein) ; *encre* (`text`, `placeholder`) — les teintes foncées 600–900 deviennent claires ; *trait* (`border`, `divide`, `ring`, `stroke`).
+- **Surfaces** : page `bg-*-50` → slate-950, carte `bg-white` → slate-900, fond discret `bg-*-100` → slate-800. Toutes les familles neutres (slate, gray, zinc, stone) visent l'échelle slate.
+- Jetons de statut : `success` / `warning` / `danger` gardent leur aplat, leur texte s'éclaircit et leur fond `-bg` devient une teinte sombre.
+- Hors périmètre : la console super-admin (déjà sombre) et les pages publiques (`_LayoutPublic`, `_AuthLayout`), qui ne chargent pas `theme-boot.js`.
+- Écran qui ne passe pas bien en sombre (couleur écrite en dur, graphique) : corriger la vue en utilisant une classe de palette plutôt qu'un hexadécimal, ou ajouter un `dark:` ponctuel.
+
 ### 2.2 Typographie
 
 Police : **Inter** (ou Segoe UI en repli système). Titre 22px, sous-titre 18px, texte courant 14px, tableaux 13px.

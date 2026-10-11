@@ -23,13 +23,20 @@ public static class EstablishmentProfilePresets
         ProfileEtablissement.General => new ModulePreset(
             IsPedagogyEnabled: true, IsFinanceEnabled: true, IsInternatEnabled: false, IsCoranModuleEnabled: false),
 
-        // Franco-Arabe : socle académique + filière Coranique/Franco-Arabe (bilinguisme, matières arabes).
+        // Franco-Arabe / hybride : TOUS les modules — socle académique (notes et bulletins bilingues) + Halqas et
+        // suivi coranique + Internat. Les Halqas, le suivi coranique et les Oustaz sont derrière le module
+        // Internat (décision G-D1) : sans lui, un profil Franco-Arabe n'aurait jamais accès aux Halqas.
         ProfileEtablissement.FrancoArabe => new ModulePreset(
-            IsPedagogyEnabled: true, IsFinanceEnabled: true, IsInternatEnabled: false, IsCoranModuleEnabled: true),
+            IsPedagogyEnabled: true, IsFinanceEnabled: true, IsInternatEnabled: true, IsCoranModuleEnabled: true),
 
         // Daara/Internat : socle académique + Internat (dortoirs, tuteurs, pension) + Coran (Hifz).
         ProfileEtablissement.DaaraInternat => new ModulePreset(
             IsPedagogyEnabled: true, IsFinanceEnabled: true, IsInternatEnabled: true, IsCoranModuleEnabled: true),
+
+        // Daara — Mémorisation : mémorisation coranique pure. Pédagogie coupée (donc ni Notes, ni Examens, ni
+        // Bulletins, ni Matières/Coefficients, ni Surveillance générale) ; Internat + Coran + Finance conservés.
+        ProfileEtablissement.DaaraMemorisation => new ModulePreset(
+            IsPedagogyEnabled: false, IsFinanceEnabled: true, IsInternatEnabled: true, IsCoranModuleEnabled: true),
 
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Profil d'établissement inconnu.")
     };

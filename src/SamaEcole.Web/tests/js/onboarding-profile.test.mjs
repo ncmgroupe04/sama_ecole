@@ -55,10 +55,29 @@ test('le store garde les modules de l\'API ET mémorise le profil Daara pour l\'
     assert.equal(ctx.window.auth.rememberedProfile(), 'InternatDaara');
 });
 
+test('Daara — Mémorisation : Pédagogie coupée, Internat et Coran actifs, drapeau de profil exposé à la sidebar', async () => {
+    const ctx = bootAuth({
+        settings: SETTINGS({
+            isPedagogyEnabled: false, isInternatEnabled: true, isCoranModuleEnabled: true,
+            profileEtablissement: 'DaaraMemorisation'
+        })
+    });
+    const store = ctx.store('schoolConfig');
+
+    await store.init();
+
+    assert.equal(store.pedagogyEnabled, false, 'ni notes, ni bulletins, ni matières : la sidebar les masque via ce drapeau');
+    assert.equal(store.internatEnabled, true);
+    assert.equal(store.coranEnabled, true);
+    assert.equal(store.isDaaraMemorisationProfile, true);
+    assert.equal(store.isDaaraInternatProfile, false, 'distinct du Daara Moderne');
+    assert.equal(ctx.window.auth.rememberedProfile(), 'DaaraMemorisation');
+});
+
 test('chaque profil des réglages se traduit vers le ProfileType de la souscription', async () => {
     const expected = {
         Simplifie: 'ComptabiliteRapports', ElementairePrimaire: 'Elementaire', General: 'EnseignementGeneral',
-        FrancoArabe: 'FrancoArabe', DaaraInternat: 'InternatDaara'
+        FrancoArabe: 'FrancoArabe', DaaraInternat: 'InternatDaara', DaaraMemorisation: 'DaaraMemorisation'
     };
 
     for (const [establishment, profileType] of Object.entries(expected)) {
@@ -91,8 +110,10 @@ test('le Directeur d\'un Daara atterrit sur le suivi coranique, les autres profi
 
     assert.equal(ctx.window.auth.defaultLandingForRole(), '/tableau-de-bord', 'sans profil mémorisé');
 
-    ctx.window.auth.rememberProfile('InternatDaara');
-    assert.equal(ctx.window.auth.defaultLandingForRole(), '/suivi-coranique');
+    for (const daara of ['InternatDaara', 'DaaraMemorisation']) {
+        ctx.window.auth.rememberProfile(daara);
+        assert.equal(ctx.window.auth.defaultLandingForRole(), '/suivi-coranique', daara);
+    }
 
     for (const profile of ['Elementaire', 'FrancoArabe', 'EnseignementGeneral', 'ComptabiliteRapports']) {
         ctx.window.auth.rememberProfile(profile);
@@ -184,11 +205,11 @@ function bootWizard({ role = 'Directeur', subscription = { status: 'PendingOnboa
     return { wizard: ctx.component('onboardingWizard'), calls, redirects, remembered: () => remembered };
 }
 
-test('l\'assistant propose les 5 profils de l\'API et 3 tranches (le sur-mesure n\'est jamais proposé)', () => {
+test('l\'assistant propose les 6 profils de l\'API et 3 tranches (le sur-mesure n\'est jamais proposé)', () => {
     const { wizard } = bootWizard();
 
     assert.deepEqual(plain(wizard.profiles.map((p) => p.id).sort()),
-        ['ComptabiliteRapports', 'Elementaire', 'EnseignementGeneral', 'FrancoArabe', 'InternatDaara']);
+        ['ComptabiliteRapports', 'DaaraMemorisation', 'Elementaire', 'EnseignementGeneral', 'FrancoArabe', 'InternatDaara']);
     assert.deepEqual(plain(wizard.tiers.map((t) => t.id)), ['Tier1_150', 'Tier2_400', 'Tier3_800']);
 });
 
