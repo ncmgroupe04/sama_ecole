@@ -23,18 +23,25 @@
     un formulaire. Chaque rangée gagnée ici est une rangée d'élèves visible sans défiler. *@
  <div class="card mt-4 p-4">
  <div class="flex flex-col gap-3">
- <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div class="grid grid-cols-1 gap-4" :class="hasPoles ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'">
  <div>
  <label for="grades-classroom" class="form-label">Classe</label>
  <select-field id="grades-classroom" model="selectedClassroomId" on-change="reload()"
  placeholder="Sélectionnez une classe…"
  options-expr="[{value:'', label:'Sélectionnez une classe…'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' — ' + c.level})))" />
  </div>
+ @* Pôle (Franco-Arabe) : sépare les grilles de la section française et de la section arabe. Absent pour
+    une école dont toutes les matières sont françaises — l'écran reste alors celui d'avant. *@
+ <div x-show="hasPoles" x-cloak>
+ <label for="grades-pole" class="form-label">Pôle</label>
+ <select-field id="grades-pole" model="selectedPole" on-change="onPoleChange()"
+ placeholder="Tous les pôles" options-expr="poleOptions" />
+ </div>
  <div>
  <label for="grades-subject" class="form-label">Matière</label>
  <select-field id="grades-subject" model="selectedSubjectId" on-change="reload()"
  placeholder="Sélectionnez une matière…"
- options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(gradableSubjects.map(s => ({value: s.id, label: subjectLabel(s)})))" />
+ options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(visibleSubjects.map(s => ({value: s.id, label: subjectLabel(s)})))" />
  </div>
  <div>
  <label for="grades-term" class="form-label">Période</label>
@@ -144,17 +151,21 @@
  </div>
 
  <!-- Tableau de saisie -->
- <div x-show="hasSelection && !isLoadingRows && rows.length > 0" x-cloak class="card mt-6 relative">
+ @* Grille RTL pour les matières de la section arabe : le sens de lecture suit la MATIÈRE (dir/lang posés ici,
+    pas sur la page — filtres et boutons restent en français). font-arabic met Cairo en tête ; les cellules de
+    saisie restent dir="ltr" pour que les chiffres s'écrivent normalement. *@
+ <div x-show="hasSelection && !isLoadingRows && rows.length > 0" x-cloak class="card mt-6 relative"
+ :dir="gridDir" :lang="isRtlGrid ? 'ar' : 'fr'" :class="isRtlGrid && 'font-arabic'" data-testid="grades-grid">
  <div class="overflow-x-auto">
- <table class="w-full text-left border-collapse">
+ <table class="w-full text-start border-collapse">
  <thead>
  <tr class="table-head">
- <th class="py-3 px-4 w-12 text-center">N°</th>
- <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
- <th class="py-3 px-4">Élève</th>
- <th class="py-3 px-4 w-40 text-center">Devoir 1 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
- <th class="py-3 px-4 w-40 text-center">Devoir 2 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
- <th class="py-3 px-4 w-40 text-center">Composition <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-12 text-center" x-text="gridLabels.rank"></th>
+ <th class="py-3 px-4 whitespace-nowrap" x-text="gridLabels.matricule"></th>
+ <th class="py-3 px-4" x-text="gridLabels.student"></th>
+ <th class="py-3 px-4 w-40 text-center"><span x-text="gridLabels.devoir1"></span> <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center"><span x-text="gridLabels.devoir2"></span> <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center"><span x-text="gridLabels.composition"></span> <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
@@ -162,12 +173,12 @@
  <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-2 px-4 text-center text-slate-400 font-medium" x-text="index + 1"></td>
  <td class="py-2 px-4 text-xs font-mono text-slate-500 whitespace-nowrap" x-text="row.matricule"></td>
- <td class="py-2 px-4 font-medium text-slate-900" x-text="row.fullName"></td>
+ <td class="py-2 px-4 font-medium text-slate-900" x-text="studentLabel(row)"></td>
 
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
+ dir="ltr" class="input-field mt-0 w-20 text-center"
  :class="row.devoir1.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir1"
  :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !row.devoir1.canEdit : !canEnterGrades)"
@@ -185,7 +196,7 @@
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
+ dir="ltr" class="input-field mt-0 w-20 text-center"
  :class="row.devoir2.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir2"
  :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !row.devoir2.canEdit : !canEnterGrades)"
@@ -203,7 +214,7 @@
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
+ dir="ltr" class="input-field mt-0 w-20 text-center"
  :class="row.composition.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="composition"
  :disabled="row.composition.status === 'saving' || (row.composition.id ? !row.composition.canEdit : !canEnterGrades)"

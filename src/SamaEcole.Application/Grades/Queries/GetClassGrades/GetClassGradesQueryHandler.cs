@@ -31,7 +31,7 @@ public class GetClassGradesQueryHandler(
         var students = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == request.ClassroomId)
             .OrderBy(s => s.FullName)
-            .Select(s => new { s.Id, s.Matricule, s.FullName })
+            .Select(s => new { s.Id, s.Matricule, s.FullName, s.FullNameAr })
             .ToListAsync(cancellationToken);
 
         // Matière optionnelle (Évolution N°6) : la grille ne liste que les élèves qui l'ont choisie — le professeur
@@ -79,7 +79,8 @@ public class GetClassGradesQueryHandler(
                     s.FullName,
                     devoir1 is null ? null : new GradeCellDto(devoir1.Id, devoir1.Value, devoir1.RowVersion, scope.CanCorrect(devoir1.CreatedAt, devoir1.CreatedBy)),
                     devoir2 is null ? null : new GradeCellDto(devoir2.Id, devoir2.Value, devoir2.RowVersion, scope.CanCorrect(devoir2.CreatedAt, devoir2.CreatedBy)),
-                    composition is null ? null : new GradeCellDto(composition.Id, composition.Value, composition.RowVersion, scope.CanCorrect(composition.CreatedAt, composition.CreatedBy)));
+                    composition is null ? null : new GradeCellDto(composition.Id, composition.Value, composition.RowVersion, scope.CanCorrect(composition.CreatedAt, composition.CreatedBy)),
+                    s.FullNameAr);
             })
             .ToList();
     }
