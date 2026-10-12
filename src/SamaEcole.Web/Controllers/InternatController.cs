@@ -8,6 +8,7 @@ using SamaEcole.Application.Internat.Queries.GetMyHalqa;
 using SamaEcole.Application.Internat.Queries.GetProgressDashboard;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbReportPdf;
+using SamaEcole.Application.Internat.Queries.ListAssignableStudents;
 using SamaEcole.Application.Internat.Queries.ListInstructors;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
@@ -134,6 +135,25 @@ public class InternatController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetInstructorStudents(Guid instructorId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetInstructorStudentsQuery(instructorId), cancellationToken));
+
+    /// <summary>
+    /// Les élèves affectables à une Halqa, avec leur Oustaz actuel (écran d'affectation de /oustaz). <c>scope</c> :
+    /// <c>unassigned</c> (défaut) ou <c>all</c>. Directeur uniquement, comme l'écriture qu'il prépare.
+    /// </summary>
+    [HttpGet("assignable-students")]
+    [Authorize(Roles = AssignRoles)]
+    [ProducesResponseType<PaginatedAssignableStudents>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ListAssignableStudents(
+        [FromQuery] string? search, [FromQuery] string? scope,
+        CancellationToken cancellationToken, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await mediator.Send(
+            new ListAssignableStudentsQuery
+            {
+                Search = search, Scope = scope ?? ListAssignableStudentsQuery.ScopeUnassigned,
+                Page = page, PageSize = pageSize
+            }, cancellationToken));
 
     /// <summary>Affecte (ou détache, <c>instructorId</c> null) un lot d'élèves à un Oustaz. Directeur uniquement.</summary>
     [HttpPost("students/assign-instructor")]

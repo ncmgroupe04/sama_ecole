@@ -73,6 +73,7 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
     private static string Halqa(Guid instructor) => $"/api/v1/internat/instructors/{instructor}/students";
     private static string Hizb(Guid student) => $"/api/v1/internat/students/{student}/hizb-progress";
     private const string Assign = "/api/v1/internat/students/assign-instructor";
+    private const string Assignable = "/api/v1/internat/assignable-students";
 
     private static object HizbBody(int hizb = 1, int quarters = 2, int? rating = 3) =>
         new { hizbNumber = hizb, completedQuarters = quarters, rating, rowVersion = (uint?)null };
@@ -96,6 +97,7 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
         (await SendAsync(HttpMethod.Post, Assign, null, new { studentIds = new[] { Guid.NewGuid() } })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await SendAsync(HttpMethod.Get, Hizb(Guid.NewGuid()), null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await SendAsync(HttpMethod.Put, Hizb(Guid.NewGuid()), null, HizbBody())).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await SendAsync(HttpMethod.Get, Assignable, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -170,6 +172,41 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
         var response = await SendAsync(HttpMethod.Put, Hizb(Guid.NewGuid()), directeur, HizbBody(hizb, quarters, rating));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Only_The_Director_Can_List_The_Students_To_Assign()
+    {
+        var directeur = await DirecteurAsync();
+        await EnableInternatAsync(directeur);
+
+        (await SendAsync(HttpMethod.Get, Assignable, await EnseignantAsync())).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Get, Assignable, await SecretaireAsync())).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var response = await SendAsync(HttpMethod.Get, Assignable + "?scope=all&page=1&pageSize=5", directeur);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        page.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+        page.GetProperty("page").GetInt32().Should().Be(1);
+        page.GetProperty("pageSize").GetInt32().Should().Be(5);
+    }
+
+    [Fact]
+    public async Task The_Assignable_Students_Route_Is_Locked_By_The_Internat_Module_Gate_By_Default()
+    {
+        var response = await SendAsync(HttpMethod.Get, Assignable, await DirecteurAsync());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("MODULE_DISABLED");
+    }
+
+    [Fact]
+    public async Task An_Unknown_Scope_Is_A_422()
+    {
+        var directeur = await DirecteurAsync();
+        await EnableInternatAsync(directeur);
+
+        (await SendAsync(HttpMethod.Get, Assignable + "?scope=everyone", directeur)).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]

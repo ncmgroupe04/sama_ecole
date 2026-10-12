@@ -596,6 +596,17 @@ répartition par tranche d'avancement, synthèse par Halqa, alertes de stagnatio
 **Pas encore livré :** courbe de progression dans le temps (journal des évaluations requis), bulletin PDF accessible
 depuis la tablette de l'Oustaz.
 
+**Écran d'affectation des élèves à un Oustaz (12/10/2026, branche `feat/oustaz-student-assignment`)** : jusque-là
+`POST students/assign-instructor` n'existait qu'en API. `/oustaz` porte maintenant un bouton « Élèves » par Oustaz
+(Directeur seul) qui ouvre une fenêtre à deux colonnes : la Halqa actuelle (avec « Retirer », après confirmation, qui
+DÉTACHE sans supprimer — le suivi Hizb est conservé) et les élèves à lui rattacher (recherche nom/nom arabe/matricule,
+périmètre « Sans Oustaz » par défaut ou « Tous », pages de 20, case « tout sélectionner » de la page, sélection conservée
+d'une recherche à l'autre, 200 élèves au plus par envoi). Un élève d'une autre Halqa est affectable : l'écran avertit
+« sera déplacé ». Un Oustaz suspendu ne reçoit pas d'élèves (le serveur le refuse aussi). Nouvelle route
+`GET /api/v1/internat/assignable-students?scope=unassigned|all&search=&page=&pageSize=` (Directeur seul, module Internat ;
+tous les élèves de l'école, pas seulement ceux de l'année active — même périmètre que le tableau de bord du suivi
+coranique). L'écriture reste `POST students/assign-instructor`, inchangée.
+
 ### Module Internat (18/09/2026) — livré
 
 Régime d'hébergement (Externe / Demi-pensionnaire / Interne) et affectation de chambre, module
