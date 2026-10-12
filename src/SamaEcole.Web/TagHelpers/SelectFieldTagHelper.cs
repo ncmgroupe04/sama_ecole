@@ -111,6 +111,11 @@ public class SelectFieldTagHelper : TagHelper
         // `mt-1` reste piloté par defaultMt, la vue pouvant l'annuler (mt-0) — d'où le !mt-0 possible.
         var buttonClass = $"input-field flex items-center justify-between gap-2 text-left {defaultMt}{extraClass}".Trim();
 
+        // Le menu est TÉLÉPORTÉ sous <body> (x-teleport) : `position: fixed` n'est relatif au viewport que si
+        // AUCUN ancêtre ne crée de repère (backdrop-filter, filter, transform...) ni ne rogne (overflow).
+        // Le panneau de <modal-shell> a `backdrop-blur-xl` + `overflow-hidden` : sans téléportation, le menu
+        // se repère sur le panneau, est décalé de la distance écran→fenêtre (énorme sur grand écran) et rogné.
+        // z-[55] : au-dessus de la modale (z-50), sous les notifications (z-[60]).
         output.Content.SetHtmlContent($$"""
             <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}">
                 <input type="text" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
@@ -124,29 +129,31 @@ public class SelectFieldTagHelper : TagHelper
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}
                 </button>
 
-                <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
-                     x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     :style="floatingStyle"
-                     class="fixed z-30 overflow-y-auto rounded-lg bg-white p-2 shadow-lg ring-1 ring-gray-100">
-                    <div class="relative mb-2">
-                        <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
-                            {{Svg("search", "w-4 h-4 text-gray-300")}}
-                        </span>
-                        <input type="text" x-ref="search" x-model="search" placeholder="{{searchPlaceholder}}"
-                               class="w-full rounded-md border border-gray-200 py-1.5 pl-9 pr-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
-                    </div>
+                <template x-teleport="body">
+                    <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
+                         x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                         :style="floatingStyle"
+                         class="fixed z-[55] overflow-y-auto rounded-lg bg-white p-2 shadow-lg ring-1 ring-gray-100">
+                        <div class="relative mb-2">
+                            <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                {{Svg("search", "w-4 h-4 text-gray-300")}}
+                            </span>
+                            <input type="text" x-ref="search" x-model="search" placeholder="{{searchPlaceholder}}"
+                                   class="w-full rounded-md border border-gray-200 py-1.5 pl-9 pr-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                        </div>
 
-                    <ul role="listbox" class="select-field-list max-h-56 space-y-0.5 overflow-y-auto pr-1">
-                        <template x-for="option in filteredOptions" :key="option.value">
-                            <li role="option" :aria-selected="({{Model}} === option.value).toString()">
-                                <button type="button" x-on:click="{{Model}} = option.value; close(){{onChange}}"
-                                        :class="{{Model}} === option.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'"
-                                        class="w-full truncate rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors" x-text="option.label" :title="option.label"></button>
-                            </li>
-                        </template>
-                        <li x-show="filteredOptions.length === 0" x-cloak class="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>
-                    </ul>
-                </div>
+                        <ul role="listbox" class="select-field-list max-h-56 space-y-0.5 overflow-y-auto pr-1">
+                            <template x-for="option in filteredOptions" :key="option.value">
+                                <li role="option" :aria-selected="({{Model}} === option.value).toString()">
+                                    <button type="button" x-on:click="{{Model}} = option.value; close(){{onChange}}"
+                                            :class="{{Model}} === option.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'"
+                                            class="w-full truncate rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors" x-text="option.label" :title="option.label"></button>
+                                </li>
+                            </template>
+                            <li x-show="filteredOptions.length === 0" x-cloak class="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>
+                        </ul>
+                    </div>
+                </template>
             </div>
             """);
     }
