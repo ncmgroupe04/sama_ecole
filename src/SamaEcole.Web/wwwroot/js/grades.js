@@ -29,6 +29,35 @@
 // endroit du front qui décide du barème affiché.
 const SIMPLIFIED_GRADING_CYCLES = ['Primaire', 'Maternelle'];
 
+// Miroir client de Domain.Enums.SectionType (module Franco-Arabe), sérialisé en chaîne. Les matières de
+// ces deux pôles se saisissent dans une grille de droite à gauche ; « French » et « Common » restent en LTR.
+const ARABIC_SECTIONS = ['Arabic', 'IslamicStudies'];
+
+// Filtre « pôle » : la section arabe regroupe Arabic ET IslamicStudies (le pôle fin reste visible sur
+// l'écran des matières). Il n'agit que sur la liste des matières proposées, jamais sur les notes.
+const POLE_FILTERS = [
+    { value: '', label: 'Tous les pôles' },
+    { value: 'French', label: 'Section française' },
+    { value: 'Arabic', label: 'Section arabe' },
+    { value: 'Common', label: 'Pôle commun' }
+];
+
+function poleOf(subject) {
+    const section = (subject && subject.sectionType) || 'French';
+    return ARABIC_SECTIONS.includes(section) ? 'Arabic' : section;
+}
+
+// En-têtes de la grille : en arabe quand la matière est arabe (orientation ET langue suivent la matière,
+// jamais une préférence globale — un même enseignant saisit parfois des matières des deux sections).
+const GRID_LABELS_LTR = {
+    rank: 'N°', matricule: 'Matricule', student: 'Élève',
+    devoir1: 'Devoir 1', devoir2: 'Devoir 2', composition: 'Composition'
+};
+const GRID_LABELS_RTL = {
+    rank: 'الرقم', matricule: 'رقم التسجيل', student: 'التلميذ',
+    devoir1: 'الفرض 1', devoir2: 'الفرض 2', composition: 'الامتحان'
+};
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
         // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : previewClassBulletinsMergedPdf() appelle
@@ -67,6 +96,7 @@ document.addEventListener('alpine:init', () => {
         classBulletinsError: null,
 
         selectedClassroomId: '',
+        selectedPole: '',
         selectedSubjectId: '',
         selectedTermId: '',
 
@@ -130,12 +160,58 @@ document.addEventListener('alpine:init', () => {
             return this.subjects.filter(s => !domainIds.has(s.id));
         },
 
+        /** Le filtre de pôle n'a de sens que si l'école a au moins une matière hors section française. */
+        get hasPoles() {
+            return this.gradableSubjects.some(s => poleOf(s) !== 'French');
+        },
+
+        get poleOptions() {
+            return POLE_FILTERS;
+        },
+
+        /** Matières proposées au sélecteur : les notables, restreintes au pôle choisi. */
+        get visibleSubjects() {
+            if (!this.selectedPole) return this.gradableSubjects;
+            return this.gradableSubjects.filter(s => poleOf(s) === this.selectedPole);
+        },
+
+        get selectedSubject() {
+            return this.subjects.find(s => s.id === this.selectedSubjectId) || null;
+        },
+
+        /** La grille se lit de droite à gauche quand la matière notée est de la section arabe. */
+        get isRtlGrid() {
+            const subject = this.selectedSubject;
+            return Boolean(subject && ARABIC_SECTIONS.includes(subject.sectionType));
+        },
+
+        get gridDir() {
+            return this.isRtlGrid ? 'rtl' : 'ltr';
+        },
+
+        get gridLabels() {
+            return this.isRtlGrid ? GRID_LABELS_RTL : GRID_LABELS_LTR;
+        },
+
+        /** Nom affiché dans la grille : l'arabe quand elle est RTL et que le nom est saisi, sinon le français. */
+        studentLabel(row) {
+            return this.isRtlGrid && row.fullNameAr ? row.fullNameAr : row.fullName;
+        },
+
+        /** Changer de pôle ne doit jamais laisser une matière d'un autre pôle sélectionnée. */
+        onPoleChange() {
+            const stillVisible = this.visibleSubjects.some(s => s.id === this.selectedSubjectId);
+            if (!stillVisible) this.selectedSubjectId = '';
+            return this.reload();
+        },
+
         /** « Français › Ressources » : sans son domaine, « Ressources » apparaîtrait plusieurs fois
          *  à l'identique dans la liste, une par domaine qui en porte une. */
         subjectLabel(subject) {
-            if (!subject.parentSubjectId) return subject.name;
+            const arabic = this.hasPoles && subject.nameAr ? ` — ${subject.nameAr}` : '';
+            if (!subject.parentSubjectId) return subject.name + arabic;
             const domain = this.subjects.find(s => s.id === subject.parentSubjectId);
-            return domain ? `${domain.name} › ${subject.name}` : subject.name;
+            return (domain ? `${domain.name} › ${subject.name}` : subject.name) + arabic;
         },
 
         async init() {
@@ -178,6 +254,7 @@ document.addEventListener('alpine:init', () => {
                     studentId: r.studentId,
                     matricule: r.matricule,
                     fullName: r.fullName,
+                    fullNameAr: r.fullNameAr || null,
                     devoir1: this.toCell(r.devoir1),
                     devoir2: this.toCell(r.devoir2),
                     composition: this.toCell(r.composition)

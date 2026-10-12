@@ -35,7 +35,7 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record StudentDto(Guid Id, string Matricule);
     private record GradeCellDto(Guid Id, decimal Value, uint RowVersion);
     private record StudentGradeRowDto(
-        Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir1, GradeCellDto? Devoir2, GradeCellDto? Composition);
+        Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir1, GradeCellDto? Devoir2, GradeCellDto? Composition, string? FullNameAr = null);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -159,5 +159,40 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var response = await _client.GetAsync(ListUrl(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ---------------------------------------------------------------- Grille RTL (Franco-Arabe)
+
+    [Fact]
+    public async Task The_Grid_Carries_The_Student_Arabic_Name_For_The_Rtl_View()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = (await (await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
+            new { name = "3e AR", level = "Collège", capacity = 40 })).Content.ReadFromJsonAsync<ClassroomDto>())!;
+        var subject = (await (await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeur,
+            new { name = "Fiqh", nameAr = "الفقه", level = "Collège", coefficient = 2, sectionType = "IslamicStudies" }))
+            .Content.ReadFromJsonAsync<SubjectDto>())!;
+        await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Moussa Diop", fullNameAr = "موسى ديوب", birthDate = "2012-01-01",
+            birthPlace = "Dakar", gender = "M", classroomId = classroom.Id
+        });
+        await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Awa Ndiaye", birthDate = "2012-02-02", birthPlace = "Dakar", gender = "F", classroomId = classroom.Id
+        });
+        var year = (await (await SendAsync(HttpMethod.Post, "/api/v1/school-years", directeur,
+            new { label = "2026-2027", startDate = "2026-10-01", endDate = "2027-06-30" }))
+            .Content.ReadFromJsonAsync<SchoolYearDto>())!;
+        var terms = (await (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{year.Id}/terms", directeur))
+            .Content.ReadFromJsonAsync<List<TermDto>>())!;
+
+        var response = await SendAsync(HttpMethod.Get, ListUrl(classroom.Id, subject.Id, terms[0].Id), directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var rows = (await response.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
+        rows.Single(r => r.FullName == "Moussa Diop").FullNameAr.Should().Be("موسى ديوب");
+        rows.Single(r => r.FullName == "Awa Ndiaye").FullNameAr
+            .Should().BeNull("aucune traduction automatique : la grille retombe alors sur le nom français");
     }
 }

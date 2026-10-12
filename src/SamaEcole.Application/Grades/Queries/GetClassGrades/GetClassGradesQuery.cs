@@ -31,4 +31,7 @@ public record StudentGradeRowDto(
     string FullName,
     GradeCellDto? Devoir1,
     GradeCellDto? Devoir2,
-    GradeCellDto? Composition);
+    GradeCellDto? Composition,
+
+    /// <summary>Nom de l'élève en arabe (module Franco-Arabe) — null tant que non saisi ; la grille RTL retombe alors sur <see cref="FullName"/>.</summary>
+    string? FullNameAr = null);

@@ -85,7 +85,10 @@ module.exports = {
         // de nombres — matricules, montants FCFA, n° de reçu, dates, ~22 vues) sont ajoutés via une
         // règle `.font-mono { font-variant-numeric: tabular-nums }` dans Styles/input.css. Une seule
         // redéfinition ici plutôt que 22 vues éditées, et tout futur `font-mono` hérite du bon rendu.
-        mono: ["Inter", "Segoe UI", "system-ui", "sans-serif"]
+        mono: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+        // Grilles de saisie RTL (notes des matières arabes) : Cairo EN TÊTE, Inter derrière. Cairo n'étant
+        // déclarée que sur les blocs arabes (unicode-range), les chiffres et le latin restent rendus en Inter.
+        arabic: ["Cairo", "Inter", "Segoe UI", "system-ui", "sans-serif"]
       },
       fontSize: {
         "jgk-title": ["22px", { lineHeight: "1.3" }],
