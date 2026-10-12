@@ -4,8 +4,9 @@ using QuestPDF.Infrastructure;
 namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
-/// Bulletins de toute une classe fusionnés en UN SEUL document PDF, une page A5 par élève dans l'ordre
-/// fourni par l'appelant — pratique pour l'impression papier en lot (bac à imprimante unique) plutôt que
+/// Bulletins de toute une classe fusionnés en UN SEUL document PDF, une page A5 par élève (A4 paysage pour
+/// l'élève dont le bulletin franco-arabe est découpé en deux sections — le format suit l'élève, voir
+/// <see cref="ReportCardDocument"/>) dans l'ordre fourni par l'appelant — pratique pour l'impression papier en lot (bac à imprimante unique) plutôt que
 /// d'ouvrir un fichier par élève. Réutilise EXACTEMENT <see cref="ReportCardDocument.ComposePage"/> pour
 /// chaque élève : même mise en page que le bulletin individuel, aucune logique dupliquée.
 /// </summary>
