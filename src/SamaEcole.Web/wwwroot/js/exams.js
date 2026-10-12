@@ -798,6 +798,29 @@ document.addEventListener('alpine:init', () => {
                 `Convocation-${dossier.candidateNumber || dossier.studentFullName}.pdf`);
         },
 
+        /**
+         * Fiche synthétique d'un candidat (module Franco-Arabe) : identité en français et en arabe, IEN, centre et
+         * table, moyennes annuelles par section, résultat. Bilingue côté serveur si l'école active le module — l'écran
+         * n'a rien à décider. Proposée quel que soit le statut du dossier.
+         */
+        async printCandidateSynthesis(dossier) {
+            await this.openPdfPreview(
+                `/api/v1/exams/dossiers/${dossier.id}/synthesis/pdf`,
+                `Fiche synthétique — ${dossier.studentFullName}`,
+                `Fiche-Synthetique-${dossier.candidateNumber || dossier.studentFullName}.pdf`);
+        },
+
+        /**
+         * PV de la session : un candidat par ligne (table, IEN, nom, moyennes par section, résultat). Le serveur
+         * répond 422 s'il n'y a aucun dossier Complet/Transmis/Valide — le message s'affiche dans l'aperçu.
+         */
+        async printSessionPv(session) {
+            await this.openPdfPreview(
+                `/api/v1/exams/sessions/${session.id}/pv/pdf`,
+                `PV de session — ${session.examType}${session.series ? ' ' + session.series : ''}`,
+                `PV-${session.examType}${session.series ? '-' + session.series : ''}.pdf`);
+        },
+
         // ------------------------------------------------------------ Impression par lot
         isBatchPrintOpen: false,
         isBatchPrinting: false,

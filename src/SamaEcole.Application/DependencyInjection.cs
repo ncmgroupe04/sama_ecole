@@ -66,6 +66,9 @@ public static class DependencyInjection
         // bulletins de classe (ZIP, PDF fusionné). Scoped — elle lit sous la RLS de la requête courante.
         services.AddScoped<ReportCardDataService>();
 
+        // Données du PV de session et de la fiche synthétique d'examen (module Franco-Arabe, bloc 4).
+        services.AddScoped<SamaEcole.Application.Exams.Common.ExamSynthesisBuilder>();
+
         // Point de passage unique de tout SMS sortant (formule, commutateur d'école, solde,
         // historique) — voir SmsDispatcher. Scoped : il écrit sous la RLS de la requête courante.
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
