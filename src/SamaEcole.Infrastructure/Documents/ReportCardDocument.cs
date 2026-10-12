@@ -37,7 +37,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// SchoolSettings) s'impriment dans le pied de page quand disponibles ; sinon on retombe sur les
 /// emplacements vides/en pointillés d'origine — jamais une image inventée.
 /// </summary>
-public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null) : IDocument
+public partial class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null) : IDocument
 {
     /// <summary>Filet noir standard de la référence (tableaux, encadrés).</summary>
     private const float RuleThickness = 0.75f;
@@ -197,6 +197,14 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// </summary>
     internal void ComposePage(IDocumentContainer container)
     {
+        // Bulletin franco-arabe à deux sections : gabarit A4 paysage dédié (ReportCardDocument.Sections.cs). Les
+        // autres bulletins — TOUS ceux d'une école sans matière arabe — passent par le gabarit A5 ci-dessous.
+        if (UsesSections)
+        {
+            ComposeSectionedPage(container);
+            return;
+        }
+
         // Le logo est volontairement ignoré (voir remarque de classe) : la référence n'en montre pas.
         _ = logo;
 
@@ -281,8 +289,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 });
                 if (reportCard.IsBilingualArabic)
                 {
-                    right.Item().AlignRight().Element(c => Bilingual.ArabicBlock(
-                        c, $"{BulletinArabicLabels.SchoolYear} : {reportCard.SchoolYearLabel}", fontSize: 8.5f, bold: true));
+                    right.Item().AlignRight().Element(ComposeArabicSchoolYear);
                 }
                 right.Item().AlignRight().Text(reportCard.TermLabel).Bold().FontSize(8.5f);
             });
@@ -873,15 +880,36 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
         {
             row.RelativeItem(1.1f).Column(left =>
             {
-                left.Item().Text("Observations du conseil des professeurs").Bold();
+                if (UsesSections)
+                {
+                    left.Item().Row(label =>
+                    {
+                        label.RelativeItem().Text("Observations du conseil des professeurs").Bold();
+                        label.AutoItem().Element(c => Bilingual.ArabicBlock(c, BulletinArabicLabels.CouncilObservations, fontSize: 7.5f, bold: true));
+                    });
+                }
+                else
+                {
+                    left.Item().Text("Observations du conseil des professeurs").Bold();
+                }
 
                 // AlignMiddle sur le CONTENEUR (centrage vertical dans le cadre) + AlignCenter sur le
                 // TEXTE lui-même (chaque ligne centrée horizontalement, y compris si le texte passe
                 // sur plusieurs lignes) — centrer le conteneur au lieu du texte donnerait une largeur
                 // "naturelle" non contrainte au bloc de texte et l'empêcherait de retourner à la ligne.
-                left.Item().PaddingTop(2).Border(0.5f).BorderColor(Colors.Black).MinHeight(48)
-                    .Padding(3).AlignMiddle()
-                    .Text(reportCard.CouncilObservations ?? "").Bold().FontSize(9.5f).AlignCenter();
+                var observationsBox = left.Item().PaddingTop(2).Border(0.5f).BorderColor(Colors.Black).MinHeight(48)
+                    .Padding(3).AlignMiddle();
+
+                // Le conseil peut rédiger son observation en arabe : Times New Roman n'a aucun glyphe arabe, le
+                // texte doit donc passer par un bloc RTL complet. Une observation française est rendue comme avant.
+                if (Bilingual.ContainsArabic(reportCard.CouncilObservations))
+                {
+                    observationsBox.AlignCenter().Element(c => Bilingual.ArabicBlock(c, reportCard.CouncilObservations, fontSize: 10f, bold: true));
+                }
+                else
+                {
+                    observationsBox.Text(reportCard.CouncilObservations ?? "").Bold().FontSize(9.5f).AlignCenter();
+                }
             });
 
             row.ConstantItem(10);
@@ -896,6 +924,10 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 }
 
                 right.Item().PaddingTop(directorSignature is not null ? 1 : 0).AlignCenter().Text("Le Chef d'Établissement").Bold();
+                if (UsesSections)
+                {
+                    right.Item().AlignCenter().Element(c => Bilingual.ArabicBlock(c, BulletinArabicLabels.SchoolHead, fontSize: 7.5f, bold: true));
+                }
 
                 right.Item().PaddingTop(3).AlignCenter().Height(46).Width(46).Element(stamp =>
                 {

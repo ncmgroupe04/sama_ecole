@@ -21,6 +21,15 @@ public static class Bilingual
     public const float DefaultArabicFontSize = 8.5f;
 
     /// <summary>
+    /// Vrai si le texte contient au moins une lettre arabe (blocs Arabic, Arabic Supplement et formes de
+    /// présentation). Sert à choisir le moteur de rendu d'un texte LIBRE saisi par l'école — une observation du
+    /// conseil peut être rédigée en français ou en arabe — sans jamais faire passer du français par un bloc RTL.
+    /// </summary>
+    public static bool ContainsArabic(string? text) =>
+        !string.IsNullOrEmpty(text) && text.Any(c =>
+            c is >= '\u0600' and <= '\u06FF' or >= '\u0750' and <= '\u077F' or >= '\uFB50' and <= '\uFDFF' or >= '\uFE70' and <= '\uFEFF');
+
+    /// <summary>
     /// Un paragraphe arabe autonome : direction RTL, police <see cref="PdfFonts.Arabic"/>. À poser SOUS
     /// ou À CÔTÉ d'un bloc français existant (jamais À L'INTÉRIEUR du même <c>Text()</c> — voir la
     /// remarque de classe). Vide si <paramref name="arabicText"/> est vide : jamais une case vide qui

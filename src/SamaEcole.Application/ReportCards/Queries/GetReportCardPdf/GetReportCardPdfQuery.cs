@@ -66,6 +66,26 @@ public record EvaluationStructureDto(
 }
 
 /// <summary>
+/// Résultat d'UNE section du bulletin franco-arabe. <see cref="Average"/> et <see cref="Rank"/> sont null tant que
+/// l'élève n'a aucune matière notée dans la section — jamais un zéro ni un rang inventés.
+/// </summary>
+public record SectionResultDto(decimal TotalCoefficients, decimal TotalPoints, decimal? Average, int? Rank);
+
+/// <summary>
+/// Découpage du bulletin en section française et section arabe (module Franco-Arabe). Null sur
+/// <see cref="ReportCardDto.Sections"/> — et c'est le cas de TOUT bulletin d'une école sans matière arabe — laisse
+/// le bulletin sur sa mise en page d'origine, inchangée.
+///
+/// <see cref="SubjectSections"/> couvre les matières notées ET dispensées de l'élève : une matière dispensée garde
+/// sa ligne dans le tableau de SA section. L'ensemble des deux sections redonne exactement la moyenne générale du
+/// bulletin (voir SectionAverageCalculator).
+/// </summary>
+public record BilingualSectionsDto(
+    IReadOnlyDictionary<Guid, SectionType> SubjectSections,
+    SectionResultDto French,
+    SectionResultDto Arabic);
+
+/// <summary>
 /// Toutes les données du bulletin, déjà résolues et classées — <see cref="ReportCardPdfGenerator"/> (ou
 /// son équivalent Infrastructure) n'a plus qu'à mettre en page, aucun calcul ne s'y trouve.
 ///
@@ -202,7 +222,12 @@ public record ReportCardDto(
     // « Dispensé(e) », coefficient barré, hors totaux (spécification §4.4 — écart assumé et validé à la règle
     // n°12, consigné dans docs/design-references/README.md). Le motif n'est jamais porté ici. Null/vide — le
     // cas de tout élève sans dispense — : le bulletin est strictement celui d'avant.
-    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null,
+
+    // Bulletin franco-arabe à deux sections (moyenne française, moyenne arabe, rang par section). Renseigné
+    // seulement si le module est activé ET que l'élève a au moins une matière de la section arabe — sinon null,
+    // et le bulletin reste celui d'avant, au caractère près (AGENTS.md règle #12).
+    BilingualSectionsDto? Sections = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -401,12 +426,33 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // pour l'école — inutile pour l'immense majorité des établissements.
         var isBilingualArabic = settings?.IsCoranModuleEnabled ?? false;
         IReadOnlyDictionary<Guid, string?>? subjectNamesAr = null;
+        BilingualSectionsDto? sections = null;
         if (isBilingualArabic)
         {
-            var subjectIds = summary.Subjects.Select(s => s.SubjectId).Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? []).ToList();
-            subjectNamesAr = await dbContext.Subjects.AsNoTracking()
-                .Where(s => subjectIds.Contains(s.Id))
-                .ToDictionaryAsync(s => s.Id, s => s.NameAr, cancellationToken);
+            var ownSubjectIds = summary.Subjects.Select(s => s.SubjectId)
+                .Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? [])
+                .ToHashSet();
+
+            // Les matières de TOUTE la classe, pas seulement les siennes : le rang par section compare l'élève à
+            // des camarades qui peuvent suivre des matières qu'il ne suit pas (option, dispense).
+            var classSubjectIds = summariesThisTerm.Values
+                .SelectMany(s => s.Subjects.Select(x => x.SubjectId))
+                .Concat(ownSubjectIds)
+                .Distinct()
+                .ToList();
+
+            var subjectInfo = await dbContext.Subjects.AsNoTracking()
+                .Where(s => classSubjectIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.NameAr, s.SectionType })
+                .ToListAsync(cancellationToken);
+
+            subjectNamesAr = subjectInfo
+                .Where(s => ownSubjectIds.Contains(s.Id))
+                .ToDictionary(s => s.Id, s => s.NameAr);
+
+            sections = BuildSections(
+                summary, ownSubjectIds, summariesThisTerm.Values,
+                subjectInfo.ToDictionary(s => s.Id, s => s.SectionType));
         }
 
         var dto = new ReportCardDto(
@@ -460,9 +506,47 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             student.Gender,
             councilRules.SuggestDecision(annualAverage, gradingScale),
             summary.Subjects.Any(s => s.Composition is not null),
-            ExemptSubjects: summary.ExemptSubjects);
+            ExemptSubjects: summary.ExemptSubjects,
+            Sections: sections);
 
         return dto;
+    }
+
+    /// <summary>
+    /// Découpe le bulletin en section française / arabe et classe l'élève DANS chaque section. Null si aucune de
+    /// ses matières (notées ou dispensées) n'est de la section arabe : un bulletin d'école franco-arabe qui n'a
+    /// encore aucune matière arabe pour cet élève ne change pas de mise en page.
+    /// </summary>
+    private static BilingualSectionsDto? BuildSections(
+        GradeSummaryDto summary,
+        IReadOnlySet<Guid> ownSubjectIds,
+        IEnumerable<GradeSummaryDto> classSummaries,
+        IReadOnlyDictionary<Guid, SectionType> sectionTypes)
+    {
+        if (!ownSubjectIds.Any(id => ReportSections.Of(id, sectionTypes) == ReportSection.Arabic))
+        {
+            return null;
+        }
+
+        var mine = SectionAverageCalculator.Compute(summary.Subjects, sectionTypes);
+        var classmates = classSummaries
+            .Select(s => SectionAverageCalculator.Compute(s.Subjects, sectionTypes))
+            .ToList();
+
+        SectionResultDto Result(ReportSection section)
+        {
+            var totals = mine.For(section);
+            var rank = totals.Average is { } average
+                ? SectionAverageCalculator.RankOf(average, classmates.Select(c => c.For(section).Average))
+                : (int?)null;
+
+            return new SectionResultDto(totals.TotalCoefficients, totals.TotalPoints, totals.Average, rank);
+        }
+
+        return new BilingualSectionsDto(
+            ownSubjectIds.ToDictionary(id => id, id => sectionTypes.GetValueOrDefault(id)),
+            Result(ReportSection.French),
+            Result(ReportSection.Arabic));
     }
 
     /// <summary>
