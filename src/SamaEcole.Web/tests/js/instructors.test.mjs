@@ -22,6 +22,18 @@ const USERS = [
     { id: 'u5', fullName: 'Bloqué', email: 'blo@daara.sn', role: 'Enseignant', status: 'Blocked' }    // compte bloqué
 ];
 
+// Halqa de i1 (élèves déjà rattachés) et élèves affectables (certains sans Oustaz, un déjà chez i1, un chez un autre Oustaz).
+const MEMBERS = [
+    { studentId: 'm1', matricule: 'ELEV-0001', fullName: 'Awa Diop', fullNameAr: 'عائشة', completedHizbs: 3, progressPercent: 5.4 },
+    { studentId: 'm2', matricule: 'ELEV-0002', fullName: 'Binta Fall', fullNameAr: null, completedHizbs: 0, progressPercent: 0 }
+];
+const CANDIDATES = [
+    { studentId: 'c1', matricule: 'ELEV-0010', fullName: 'Cheikh Ba', fullNameAr: null, classroomName: 'CM1', instructorId: null, instructorName: null },
+    { studentId: 'c2', matricule: 'ELEV-0011', fullName: 'Demba Sy', fullNameAr: null, classroomName: 'CM1', instructorId: null, instructorName: null },
+    { studentId: 'm1', matricule: 'ELEV-0001', fullName: 'Awa Diop', fullNameAr: 'عائشة', classroomName: 'CM2', instructorId: 'i1', instructorName: 'Serigne Modou' },
+    { studentId: 'c3', matricule: 'ELEV-0012', fullName: 'Fatou Ndiaye', fullNameAr: null, classroomName: 'CE2', instructorId: 'i2', instructorName: 'Oustaz Fall' }
+];
+
 function boot(role = 'Directeur', options = {}) {
     const calls = [];
     const ctx = loadScripts(['instructors.js'], {
@@ -37,6 +49,15 @@ function boot(role = 'Directeur', options = {}) {
                     if (endpoint === '/users') {
                         if (options.usersError) throw options.usersError;
                         return structuredClone(USERS);
+                    }
+                    if (/^\/internat\/instructors\/[^/]+\/students$/.test(endpoint)) {
+                        if (options.membersError) throw options.membersError;
+                        return structuredClone({ instructorId: 'i1', students: options.members ?? MEMBERS });
+                    }
+                    if (endpoint.startsWith('/internat/assignable-students')) {
+                        if (options.candidatesError) throw options.candidatesError;
+                        const items = options.candidates ?? CANDIDATES;
+                        return structuredClone({ items, totalCount: options.total ?? items.length, page: 1, pageSize: 20 });
                     }
                     return null;
                 },
@@ -295,4 +316,285 @@ test('un refus du serveur garde la confirmation ouverte avec son message, et un 
     assert.equal(page.confirm.error, 'Fiche modifiée.');
     assert.equal(page.confirm.saving, false);
     assert.equal(calls.filter((c) => c.method === 'GET' && c.endpoint === '/internat/instructors').length, readsBefore + 1);
+});
+
+// ------------------------------------------------------------------------------- affectation des élèves à une Halqa
+
+test('l\'URL de la liste des élèves affectables porte le périmètre, la page et la recherche nettoyée', () => {
+    const { logic } = boot();
+    assert.equal(logic.assignableUrl({ scope: 'unassigned', search: '', page: 1, pageSize: 20 }),
+        '/internat/assignable-students?scope=unassigned&page=1&pageSize=20');
+    assert.equal(logic.assignableUrl({ scope: 'all', search: '  Awa Diop ', page: 3, pageSize: 20 }),
+        '/internat/assignable-students?scope=all&page=3&pageSize=20&search=Awa%20Diop');
+    assert.equal(logic.assignableUrl({ scope: 'all', search: 'عائشة', page: 1, pageSize: 20 }),
+        '/internat/assignable-students?scope=all&page=1&pageSize=20&search=' + encodeURIComponent('عائشة'));
+});
+
+test('les corps d\'affectation et de retrait sont ceux de POST assign-instructor', () => {
+    const { logic } = boot();
+    assert.deepEqual(plain(logic.assignBody('i1', ['c1', 'c2'])), { instructorId: 'i1', studentIds: ['c1', 'c2'] });
+    assert.deepEqual(plain(logic.detachBody('m2')), { instructorId: null, studentIds: ['m2'] }, 'retirer = détacher, jamais supprimer');
+});
+
+test('on prévient quand affecter un élève le déplace d\'une autre Halqa', () => {
+    const { logic } = boot();
+    assert.equal(logic.moveWarning({ instructorId: null, instructorName: null }, 'i1'), null);
+    assert.equal(logic.moveWarning({ instructorId: 'i1', instructorName: 'Serigne Modou' }, 'i1'), null, 'déjà dans cette Halqa');
+    assert.equal(logic.moveWarning({ instructorId: 'i2', instructorName: 'Oustaz Fall' }, 'i1'), 'Actuellement chez Oustaz Fall : sera déplacé.');
+});
+
+test('le nombre de pages suit le total et la taille de page', () => {
+    const { logic } = boot();
+    assert.equal(logic.pageCount(0, 20), 1);
+    assert.equal(logic.pageCount(20, 20), 1);
+    assert.equal(logic.pageCount(21, 20), 2);
+});
+
+test('« Élèves » ouvre la Halqa : ses élèves actuels et les élèves sans Oustaz, relus au serveur', async () => {
+    const { page, calls } = boot();
+    await page.init();
+
+    await page.openHalqa(page.instructors[0]);
+
+    assert.equal(page.halqa.open, true);
+    assert.ok(calls.some((c) => c.method === 'GET' && c.endpoint === '/internat/instructors/i1/students'));
+    assert.ok(calls.some((c) => c.method === 'GET' && c.endpoint === '/internat/assignable-students?scope=unassigned&page=1&pageSize=20'));
+    assert.deepEqual(page.halqa.members.map((m) => m.studentId), ['m1', 'm2']);
+    assert.equal(page.halqa.candidates.length, 4);
+});
+
+test('hors Directeur, l\'écran d\'affectation ne s\'ouvre pas et ne lit rien', async () => {
+    const { page, calls } = boot('Secretariat');
+    await page.init();
+    const readsBefore = calls.length;
+
+    await page.openHalqa(page.instructors[0]);
+
+    assert.equal(page.halqa.open, false);
+    assert.equal(calls.length, readsBefore);
+});
+
+test('un élève déjà dans cette Halqa n\'est pas sélectionnable, les autres le sont', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+
+    const byId = Object.fromEntries(page.halqa.candidates.map((c) => [c.studentId, c]));
+    assert.equal(page.isSelectable(byId.m1), false, 'déjà chez i1');
+    assert.equal(page.isSelectable(byId.c1), true);
+    assert.equal(page.isSelectable(byId.c3), true, 'chez un autre Oustaz : sélectionnable, avec avertissement');
+    page.toggleSelect(byId.m1);
+    assert.equal(page.selectedCount, 0, 'un élève non sélectionnable ne se coche pas');
+});
+
+test('cocher et décocher met à jour le compteur, et la sélection survit à une nouvelle recherche', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    const [c1, c2] = page.halqa.candidates;
+
+    page.toggleSelect(c1);
+    page.toggleSelect(c2);
+    assert.equal(page.selectedCount, 2);
+    page.toggleSelect(c1);
+    assert.equal(page.selectedCount, 1);
+    assert.equal(page.isSelected('c2'), true);
+
+    page.halqa.search = 'demba';
+    await page.searchCandidates();
+    assert.equal(page.isSelected('c2'), true, 'la sélection n\'est pas perdue en cherchant');
+});
+
+test('« Tout sélectionner » coche les élèves affectables de la page, et seulement eux', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+
+    page.toggleSelectPage();
+    assert.equal(page.selectedCount, 3, 'c1, c2, c3 — pas m1, déjà dans la Halqa');
+    page.toggleSelectPage();
+    assert.equal(page.selectedCount, 0, 'second appel : tout décocher');
+});
+
+test('la case « tout sélectionner » reflète l\'état réel de la page', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    assert.equal(page.pageFullySelected, false);
+
+    page.toggleSelect(page.halqa.candidates[0]);
+    assert.equal(page.pageFullySelected, false, 'un seul sur trois');
+    page.toggleSelectPage();
+    assert.equal(page.pageFullySelected, true);
+});
+
+test('affecter envoie les élèves cochés à l\'Oustaz, puis relit la Halqa, la liste et les compteurs', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    page.toggleSelect(page.halqa.candidates[0]);
+    page.toggleSelect(page.halqa.candidates[1]);
+    const instructorReads = () => calls.filter((c) => c.method === 'GET' && c.endpoint === '/internat/instructors').length;
+    const before = { instructors: instructorReads(), members: calls.filter((c) => c.endpoint === '/internat/instructors/i1/students').length };
+
+    await page.assignSelected();
+
+    const post = calls.find((c) => c.method === 'POST');
+    assert.equal(post.endpoint, '/internat/students/assign-instructor');
+    assert.deepEqual(post.body, { instructorId: 'i1', studentIds: ['c1', 'c2'] });
+    assert.equal(page.selectedCount, 0, 'la sélection est vidée');
+    assert.equal(page.halqa.notice, '2 élèves affectés à Serigne Modou.');
+    assert.equal(page.halqa.error, null);
+    assert.equal(calls.filter((c) => c.endpoint === '/internat/instructors/i1/students').length, before.members + 1, 'la Halqa est relue');
+    assert.equal(instructorReads(), before.instructors + 1, 'les effectifs de la liste sont relus');
+    assert.equal(page.halqa.saving, false);
+});
+
+test('un seul élève affecté s\'écrit au singulier', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    page.toggleSelect(page.halqa.candidates[0]);
+
+    await page.assignSelected();
+
+    assert.equal(page.halqa.notice, '1 élève affecté à Serigne Modou.');
+});
+
+test('sans élève coché, rien n\'est envoyé', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+
+    await page.assignSelected();
+
+    assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+test('au-delà de 200 élèves, l\'envoi est refusé avant l\'appel avec un message clair', async () => {
+    const many = Array.from({ length: 201 }, (_, i) => ({ studentId: 's' + i, matricule: 'E' + i, fullName: 'Élève ' + i, fullNameAr: null, classroomName: 'CM1', instructorId: null, instructorName: null }));
+    const { page, calls } = boot('Directeur', { candidates: many });
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    many.forEach((s) => page.toggleSelect(s));
+    assert.equal(page.selectedCount, 201);
+
+    await page.assignSelected();
+
+    assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+    assert.match(page.halqa.error, /200/);
+    assert.equal(page.selectedCount, 201, 'la sélection est conservée pour que la Direction l\'allège');
+});
+
+test('une erreur du serveur s\'affiche dans la fenêtre et garde la sélection', async () => {
+    const { page } = boot('Directeur', { writeError: httpError(422, { message: 'Cet Oustaz n\'est pas actif : réactivez-le avant de lui affecter des élèves.' }) });
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    page.toggleSelect(page.halqa.candidates[0]);
+
+    await page.assignSelected();
+
+    assert.equal(page.halqa.error, 'Cet Oustaz n\'est pas actif : réactivez-le avant de lui affecter des élèves.');
+    assert.equal(page.halqa.notice, null);
+    assert.equal(page.selectedCount, 1);
+    assert.equal(page.halqa.saving, false, 'le bouton redevient actif');
+    assert.equal(page.error, null, 'l\'erreur de la fenêtre n\'est pas celle de la page');
+});
+
+test('un Oustaz suspendu ne peut pas recevoir d\'élèves : l\'écran l\'explique et n\'envoie rien', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[1]);   // i2, Suspended
+    assert.equal(page.canAssign, false);
+    page.toggleSelect(page.halqa.candidates[0]);
+
+    await page.assignSelected();
+
+    assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+test('retirer un élève demande confirmation, puis le détache sans le supprimer', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+
+    page.askRemove(page.halqa.members[1]);
+    assert.equal(page.halqa.pendingRemoval, 'm2');
+    assert.equal(calls.filter((c) => c.method === 'POST').length, 0, 'rien n\'est envoyé avant confirmation');
+
+    await page.confirmRemove();
+
+    const post = calls.find((c) => c.method === 'POST');
+    assert.equal(post.endpoint, '/internat/students/assign-instructor');
+    assert.deepEqual(post.body, { instructorId: null, studentIds: ['m2'] });
+    assert.equal(page.halqa.pendingRemoval, null);
+    assert.equal(page.halqa.notice, 'Binta Fall n\'est plus dans cette Halqa.');
+});
+
+test('annuler un retrait n\'envoie rien', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    page.askRemove(page.halqa.members[0]);
+
+    page.cancelRemove();
+
+    assert.equal(page.halqa.pendingRemoval, null);
+    assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+test('chercher revient à la première page et lit avec le terme ; « Tous les élèves » élargit le périmètre', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    page.halqa.page = 3;
+    page.halqa.search = 'Awa';
+
+    await page.searchCandidates();
+    assert.equal(page.halqa.page, 1);
+    assert.ok(calls.some((c) => c.endpoint === '/internat/assignable-students?scope=unassigned&page=1&pageSize=20&search=Awa'));
+
+    page.halqa.scope = 'all';
+    await page.searchCandidates();
+    assert.ok(calls.some((c) => c.endpoint === '/internat/assignable-students?scope=all&page=1&pageSize=20&search=Awa'));
+});
+
+test('changer de page relit la page demandée, bornée au nombre de pages', async () => {
+    const { page, calls } = boot('Directeur', { total: 45 });
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    assert.equal(page.pageCount, 3);
+
+    await page.goToCandidatePage(2);
+    assert.ok(calls.some((c) => c.endpoint === '/internat/assignable-students?scope=unassigned&page=2&pageSize=20'));
+
+    const reads = calls.length;
+    await page.goToCandidatePage(9);
+    assert.equal(calls.length, reads, 'une page hors bornes ne lit rien');
+});
+
+test('une erreur de chargement des élèves affectables s\'affiche dans la fenêtre, la page reste intacte', async () => {
+    const { page } = boot('Directeur', { candidatesError: httpError(500, { message: 'Erreur serveur' }) });
+    await page.init();
+
+    await page.openHalqa(page.instructors[0]);
+
+    assert.equal(page.candidatesError, 'Erreur serveur');
+    assert.equal(page.halqa.candidatesLoading, false);
+    assert.deepEqual(plain(page.halqa.candidates), []);
+    assert.equal(page.error, null);
+    assert.equal(page.instructors.length, 3, 'la liste des Oustaz reste affichée');
+});
+
+test('fermer la fenêtre relit la liste des Oustaz pour que les effectifs soient à jour', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openHalqa(page.instructors[0]);
+    const reads = () => calls.filter((c) => c.method === 'GET' && c.endpoint === '/internat/instructors').length;
+    const before = reads();
+
+    await page.closeHalqa();
+
+    assert.equal(page.halqa.open, false);
+    assert.equal(reads(), before + 1);
 });

@@ -74,7 +74,7 @@
                     <tr x-show="!loading && filtered.length === 0" x-cloak>
                         <td colspan="6">
                             <empty-state icon="users" title="Aucun Oustaz à afficher."
-                                         hint="Créez la fiche d'un Oustaz. L'affectation des élèves à sa Halqa se fait pour l'instant par l'API (POST /api/v1/internat/students/assign-instructor) : l'écran d'affectation n'existe pas encore." />
+                                         hint="Créez la fiche d'un Oustaz, puis rattachez-lui ses élèves avec le bouton « Élèves » de sa ligne." />
                         </td>
                     </tr>
                     <template x-for="instructor in filtered" :key="instructor.id">
@@ -95,6 +95,7 @@
                                 <badge x-show="instructor.status === 'Blocked'" variant="danger"><span>Bloqué</span></badge>
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap" x-show="canWrite" x-cloak>
+                                <button type="button" class="mr-3 text-sm font-medium text-primary-600 hover:text-primary-700" x-on:click="openHalqa(instructor)">Élèves</button>
                                 <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-700" x-on:click="openEdit(instructor)">Modifier</button>
                                 <button type="button" x-show="instructor.status === 'Active'"
                                         class="ml-3 text-sm font-medium text-rose-600 hover:text-rose-700"
@@ -162,6 +163,131 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    @* ------------------------------------------------------------------ Élèves d'une Halqa : affecter, retirer (Directeur) *@
+    @* À gauche la Halqa actuelle, à droite les élèves à lui rattacher. Aucune écriture n'a lieu avant un clic explicite : « Affecter »
+       envoie les élèves cochés (200 au plus), « Retirer » détache un élève après confirmation. Le serveur garde les droits et les règles. *@
+    <modal-shell size="5xl" open="halqa.open" on-close="closeHalqa()" title="Élèves de la Halqa">
+        <div class="space-y-4">
+            <div>
+                <p class="text-lg font-semibold text-slate-800" x-text="halqa.instructor ? halqa.instructor.fullName : ''"></p>
+                <p x-show="halqa.instructor && halqa.instructor.fullNameAr" x-cloak dir="rtl" class="text-sm text-slate-500" x-text="halqa.instructor ? halqa.instructor.fullNameAr : ''"></p>
+            </div>
+
+            <div x-show="halqa.notice" x-cloak role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" x-text="halqa.notice"></div>
+            <div x-show="halqa.error" x-cloak role="alert" class="form-error-banner"><span x-text="halqa.error"></span></div>
+            <div x-show="halqa.instructor && !canAssign" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Cet Oustaz n'est pas actif : réactivez-le pour lui affecter des élèves. Vous pouvez en revanche retirer ceux qu'il a déjà.
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-2">
+
+                @* ---------------------------------------------- Halqa actuelle *@
+                <section aria-labelledby="halqa-members-title">
+                    <h3 id="halqa-members-title" class="text-sm font-semibold text-slate-700">
+                        Dans la Halqa <span class="text-slate-400" x-text="'(' + halqa.members.length + ')'"></span>
+                    </h3>
+                    <p x-show="halqa.membersLoading" x-cloak class="mt-3 text-sm text-slate-500">Chargement…</p>
+                    <p x-show="membersError" x-cloak role="alert" class="mt-3 text-sm text-rose-700" x-text="membersError"></p>
+                    <p x-show="!halqa.membersLoading && !membersError && halqa.members.length === 0" x-cloak class="mt-3 text-sm text-slate-500">
+                        Aucun élève dans cette Halqa pour l'instant.
+                    </p>
+                    <ul class="mt-3 max-h-[26rem] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+                        <template x-for="member in halqa.members" :key="member.studentId">
+                            <li class="flex items-center justify-between gap-3 px-3 py-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium text-slate-800" x-text="member.fullName"></p>
+                                    <p class="text-xs text-slate-500">
+                                        <span x-text="member.matricule"></span>
+                                        <span x-text="' · ' + member.completedHizbs + ' Hizb · ' + member.progressPercent + ' %'"></span>
+                                    </p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <button type="button" x-show="halqa.pendingRemoval !== member.studentId"
+                                            class="text-sm font-medium text-rose-600 hover:text-rose-700"
+                                            :aria-label="'Retirer ' + member.fullName + ' de la Halqa'"
+                                            x-on:click="askRemove(member)">Retirer</button>
+                                    <span x-show="halqa.pendingRemoval === member.studentId" x-cloak class="whitespace-nowrap text-xs">
+                                        <span class="text-slate-600">Retirer ?</span>
+                                        <button type="button" class="ml-2 font-semibold text-rose-600 hover:text-rose-700" :disabled="halqa.saving" x-on:click="confirmRemove()">Oui</button>
+                                        <button type="button" class="ml-2 font-medium text-slate-500 hover:text-slate-700" x-on:click="cancelRemove()">Non</button>
+                                    </span>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                    <p class="mt-2 text-xs text-slate-400">Retirer un élève le détache de la Halqa ; son suivi de mémorisation est conservé.</p>
+                </section>
+
+                @* ---------------------------------------------- Élèves à affecter *@
+                <section aria-labelledby="halqa-add-title">
+                    <h3 id="halqa-add-title" class="text-sm font-semibold text-slate-700">Ajouter des élèves</h3>
+
+                    <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <input type="search" x-model="halqa.search" x-on:input.debounce.300ms="searchCandidates()"
+                               placeholder="Nom, nom arabe ou matricule" aria-label="Rechercher un élève" class="input-field sm:flex-1">
+                        <select x-model="halqa.scope" x-on:change="searchCandidates()" aria-label="Élèves à afficher" class="input-field sm:max-w-[190px]">
+                            <option value="unassigned">Sans Oustaz</option>
+                            <option value="all">Tous les élèves</option>
+                        </select>
+                    </div>
+
+                    <p x-show="halqa.candidatesLoading" x-cloak class="mt-3 text-sm text-slate-500">Chargement…</p>
+                    <p x-show="candidatesError" x-cloak role="alert" class="mt-3 text-sm text-rose-700" x-text="candidatesError"></p>
+                    <p x-show="!halqa.candidatesLoading && !candidatesError && halqa.candidates.length === 0" x-cloak class="mt-3 text-sm text-slate-500">
+                        Aucun élève ne correspond.
+                    </p>
+
+                    <div x-show="halqa.candidates.length > 0" x-cloak class="mt-3">
+                        <label class="mb-2 flex items-center gap-2 text-xs text-slate-600">
+                            <input type="checkbox" class="checkbox-field" :disabled="!canAssign" x-on:change="toggleSelectPage()"
+                                   :checked="pageFullySelected">
+                            Sélectionner les élèves de cette page
+                        </label>
+                        <ul class="max-h-[22rem] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+                            <template x-for="student in halqa.candidates" :key="student.studentId">
+                                <li class="px-3 py-2">
+                                    <label class="flex items-start gap-3" :class="isSelectable(student) && canAssign ? 'cursor-pointer' : 'opacity-60'">
+                                        <input type="checkbox" class="checkbox-field mt-1"
+                                               :checked="isSelected(student.studentId)"
+                                               :disabled="!isSelectable(student) || !canAssign"
+                                               x-on:change="toggleSelect(student)">
+                                        <span class="min-w-0">
+                                            <span class="block truncate text-sm font-medium text-slate-800" x-text="student.fullName"></span>
+                                            <span class="block text-xs text-slate-500" x-text="student.matricule + ' · ' + student.classroomName"></span>
+                                            <span x-show="student.instructorId && student.instructorId === halqa.instructor.id" x-cloak class="block text-xs text-emerald-700">Déjà dans cette Halqa</span>
+                                            <span x-show="moveWarning(student)" x-cloak class="block text-xs text-amber-700" x-text="moveWarning(student)"></span>
+                                        </span>
+                                    </label>
+                                </li>
+                            </template>
+                        </ul>
+
+                        <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                            <span x-text="halqa.total + (halqa.total === 1 ? ' élève' : ' élèves')"></span>
+                            <span class="flex items-center gap-2" x-show="pageCount > 1" x-cloak>
+                                <button type="button" class="font-medium text-primary-600 disabled:text-slate-300" :disabled="halqa.page <= 1" x-on:click="goToCandidatePage(halqa.page - 1)">Précédent</button>
+                                <span x-text="'Page ' + halqa.page + ' / ' + pageCount"></span>
+                                <button type="button" class="font-medium text-primary-600 disabled:text-slate-300" :disabled="halqa.page >= pageCount" x-on:click="goToCandidatePage(halqa.page + 1)">Suivant</button>
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex flex-wrap items-center justify-between gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <p class="text-sm text-slate-600" aria-live="polite">
+                <span x-text="selectedCount"></span> <span x-text="selectedCount === 1 ? 'élève sélectionné' : 'élèves sélectionnés'"></span>
+            </p>
+            <div class="flex gap-3">
+                <button type="button" x-on:click="closeHalqa()" class="btn-modal-secondary group">Fermer</button>
+                <button type="button" x-on:click="assignSelected()" :disabled="halqa.saving || selectedCount === 0 || !canAssign" class="btn-modal-primary group">
+                    <span x-text="halqa.saving ? 'Enregistrement...' : 'Affecter à ' + (halqa.instructor ? halqa.instructor.fullName : '')"></span>
+                </button>
+            </div>
+        </div>
     </modal-shell>
 
     @* ------------------------------------------------------------------ Confirmation de suspension / réactivation *@
