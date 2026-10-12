@@ -565,6 +565,13 @@ compte ; écriture Directeur seul, lecture Secrétariat et Surveillant ; les com
 répartition par tranche d'avancement, synthèse par Halqa, alertes de stagnation, bulletin coranique PDF par élève ;
 `GET progress-dashboard` et `GET students/{id}/hizb-report/pdf`, bilingue français/arabe, QuestPDF).
 
+**Accès au bulletin coranique PDF (12/10/2026, branche `fix/coran-bulletin-universal-access`)** : le bouton « PDF » n'existait
+que dans la liste « Élèves à relancer » — un élève à jour de ses évaluations n'avait donc aucun bulletin atteignable. Il est
+maintenant aussi (1) sur `/suivi-coranique`, dans chaque Halqa dépliable de la synthèse (« Voir les élèves », liste complète
+via `GET instructors/{id}/students`), et (2) sur `/halqa`, sur la fiche d'un élève (« كشف الحفظ (PDF) »). Aucun changement de
+back-end : les routes et la portée (un Oustaz ne tire que le bulletin de SES élèves) existaient déjà. Reste sans accès : un
+élève sans Oustaz (aucune Halqa à déplier). Suite prévue : écran d'affectation des élèves à un Oustaz (aujourd'hui API seule).
+
 **Arbitrages actés, à ne pas rouvrir sans raison :**
 
 1. **L'Oustaz se connecte avec le rôle `Enseignant`** — aucun rôle dédié (un nouveau rôle toucherait le JWT, les

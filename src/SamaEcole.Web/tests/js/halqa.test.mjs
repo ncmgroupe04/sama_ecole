@@ -42,6 +42,12 @@ function boot(options = {}) {
     const calls = [];
     const ctx = loadScripts(['halqa.js'], {
         preload: {
+            pdfPreview: {
+                // Doublure de la modale PDF commune : on ne teste pas pdf-preview.js ici, seulement l'appel qu'on lui adresse.
+                state: () => ({
+                    openPdfPreview: async (url, title, downloadName) => { calls.push({ method: 'PDF', url, title, downloadName }); }
+                })
+            },
             api: {
                 get: async (endpoint) => {
                     calls.push({ method: 'GET', endpoint });
@@ -338,4 +344,37 @@ test('enregistrer sans rien changer n\'envoie rien', async () => {
     await page.save();
 
     assert.equal(calls.filter((c) => c.method === 'PUT').length, 0);
+});
+
+// ------------------------------------------------------------------------------------------- bulletin coranique PDF
+
+test('« كشف الحفظ » ouvre le bulletin PDF de l\'élève ouvert, sans attendre sa grille', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    await page.openReport();
+
+    assert.deepEqual(calls.find((c) => c.method === 'PDF'), {
+        method: 'PDF',
+        url: '/api/v1/internat/students/s1/hizb-report/pdf',
+        title: 'Bulletin coranique — Awa Diop',
+        downloadName: 'Bulletin-Coranique-ELEV-1.pdf'
+    });
+});
+
+test('sans élève ouvert, aucun bulletin n\'est demandé', async () => {
+    const { page, calls } = boot();
+    await page.init();
+
+    await page.openReport();
+
+    assert.equal(calls.filter((c) => c.method === 'PDF').length, 0);
+});
+
+test('le nom du fichier du bulletin ne garde que des caractères sûrs', () => {
+    const { logic } = boot();
+    assert.equal(logic.reportUrl('abc'), '/api/v1/internat/students/abc/hizb-report/pdf');
+    assert.equal(logic.reportFileName('ELEV-2026/0001 é'), 'Bulletin-Coranique-ELEV-20260001.pdf');
+    assert.equal(logic.reportFileName(null), 'Bulletin-Coranique-.pdf');
 });

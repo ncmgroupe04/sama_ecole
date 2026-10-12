@@ -99,10 +99,13 @@
                             <th class="py-3 px-4">Progression moyenne</th>
                             <th class="py-3 px-4 text-right">Hizb complets</th>
                             <th class="py-3 px-4 text-right">À relancer</th>
+                            <th class="py-3 px-4 text-right"><span class="sr-only">Élèves de la Halqa</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <template x-for="halqa in (data ? data.halqas : [])" :key="halqa.instructorId">
+                    @* Un <tbody> par Halqa : Alpine exige une racine unique par itération, et la ligne dépliée (élèves + bulletins)
+                       doit rester attachée à sa Halqa. Le <template> est un enfant valide de <table>. *@
+                    <template x-for="halqa in (data ? data.halqas : [])" :key="halqa.instructorId">
+                        <tbody class="border-t border-slate-100">
                             <tr>
                                 <td class="py-3 px-4">
                                     <p class="font-semibold text-slate-800" x-text="halqa.instructorName"></p>
@@ -126,9 +129,58 @@
                                 <td class="py-3 px-4 text-right">
                                     <span class="font-semibold" :class="halqa.stagnantCount > 0 ? 'text-amber-700' : 'text-slate-400'" x-text="halqa.stagnantCount"></span>
                                 </td>
+                                <td class="py-3 px-4 text-right">
+                                    <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-700 whitespace-nowrap"
+                                            :aria-expanded="isHalqaOpen(halqa.instructorId).toString()"
+                                            x-on:click="toggleHalqa(halqa)"
+                                            x-text="isHalqaOpen(halqa.instructorId) ? 'Masquer les élèves' : 'Voir les élèves'"></button>
+                                </td>
                             </tr>
-                        </template>
-                    </tbody>
+
+                            @* Élèves de la Halqa, TOUS (pas seulement ceux à relancer), chacun avec son bulletin coranique PDF. *@
+                            <tr x-show="isHalqaOpen(halqa.instructorId)" x-cloak class="bg-slate-50/60">
+                                <td colspan="7" class="px-4 py-4">
+                                    <p x-show="halqaPanel(halqa.instructorId).loading" x-cloak class="text-sm text-slate-500">Chargement des élèves…</p>
+                                    <p x-show="halqaPanel(halqa.instructorId).error" x-cloak role="alert" class="text-sm text-rose-700" x-text="halqaPanel(halqa.instructorId).error"></p>
+                                    <p x-show="!halqaPanel(halqa.instructorId).loading && !halqaPanel(halqa.instructorId).error && halqaPanel(halqa.instructorId).students.length === 0"
+                                       x-cloak class="text-sm text-slate-500">Aucun élève dans cette Halqa.</p>
+
+                                    <table x-show="halqaPanel(halqa.instructorId).students.length > 0" x-cloak class="w-full text-left border-collapse bg-white rounded-lg">
+                                        <thead>
+                                            <tr class="table-head">
+                                                <th class="py-2 px-3">Élève</th>
+                                                <th class="py-2 px-3 text-right">Hizb complets</th>
+                                                <th class="py-2 px-3 text-right">Progression</th>
+                                                <th class="py-2 px-3">Dernière évaluation</th>
+                                                <th class="py-2 px-3 text-right">Bulletin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            <template x-for="student in halqaPanel(halqa.instructorId).students" :key="student.studentId">
+                                                <tr>
+                                                    <td class="py-2 px-3">
+                                                        <p class="font-medium text-slate-800" x-text="student.fullName"></p>
+                                                        <p class="text-xs text-slate-500">
+                                                            <span x-text="student.matricule"></span>
+                                                            <span x-show="student.fullNameAr" x-cloak dir="rtl" class="ml-2" x-text="student.fullNameAr"></span>
+                                                        </p>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-right text-sm text-slate-700" x-text="student.completedHizbs"></td>
+                                                    <td class="py-2 px-3 text-right text-sm text-slate-700" x-text="student.progressPercent + ' %'"></td>
+                                                    <td class="py-2 px-3 text-sm text-slate-600" x-text="evaluationDateLabel(student.lastEvaluatedAt)"></td>
+                                                    <td class="py-2 px-3 text-right">
+                                                        <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-700"
+                                                                :aria-label="'Bulletin coranique de ' + student.fullName"
+                                                                x-on:click="openReport(student)">PDF</button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
                 </table>
             </div>
         </div>

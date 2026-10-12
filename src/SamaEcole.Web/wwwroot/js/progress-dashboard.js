@@ -5,6 +5,9 @@
  *
  * Consomme GET /api/v1/internat/progress-dashboard?staleDays=N (Directeur, Secrétariat, Surveillant) et ouvre le
  * bulletin par la modale PDF commune (pdf-preview.js) sur GET /api/v1/internat/students/{id}/hizb-report/pdf.
+ * Le bulletin est accessible de deux endroits : la liste des alertes (élèves à relancer) ET chaque Halqa dépliée dans
+ * la synthèse (GET /api/v1/internat/instructors/{id}/students) — sans ce second accès, un élève à jour de ses
+ * évaluations n'aurait aucun bulletin atteignable depuis l'écran.
  *
  * Tout est calculé par le serveur — tranches, moyennes, stagnation, jamais d'évaluation. Ce fichier n'affiche que ce
  * qu'il renvoie. Il n'y a volontairement PAS de courbe d'évolution dans le temps : le suivi conserve un état courant par
@@ -39,6 +42,15 @@
     }
 
     /** Alerte « forte » : jamais évalué, ou sans évaluation depuis plus de deux fois le seuil. */
+    /**
+     * Date de dernière évaluation d'un élève d'une Halqa (la liste d'une Halqa ne renvoie pas de nombre de jours, à la différence
+     * des alertes de stagnation). Calée sur UTC, comme le serveur : la date ne dépend pas du fuseau du poste.
+     */
+    function evaluationDateLabel(lastEvaluatedAt) {
+        if (lastEvaluatedAt == null) return 'Jamais évalué';
+        return new Date(lastEvaluatedAt).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
+    }
+
     function isSevere(student, staleDays) {
         return student.lastEvaluatedAt == null || student.daysSinceEvaluation == null || student.daysSinceEvaluation >= staleDays * 2;
     }
@@ -57,7 +69,7 @@
     }
 
     window.progressDashboardLogic = {
-        DEFAULT_STALE_DAYS, STALE_OPTIONS, bandLabel, barPercent, stagnationLabel, isSevere, pickName, reportUrl, reportFileName
+        DEFAULT_STALE_DAYS, STALE_OPTIONS, bandLabel, barPercent, stagnationLabel, evaluationDateLabel, isSevere, pickName, reportUrl, reportFileName
     };
 
     document.addEventListener('alpine:init', () => {
@@ -71,8 +83,12 @@
             // Modale de prévisualisation PDF commune (wwwroot/js/pdf-preview.js).
             ...window.pdfPreview.state(),
 
+            // Élèves de chaque Halqa dépliée, par identifiant d'Oustaz : { open, loading, error, students }.
+            halqaPanels: {},
+
             bandLabel,
             stagnationLabel,
+            evaluationDateLabel,
             pickName,
 
             async init() {
@@ -110,6 +126,37 @@
 
             severe(student) {
                 return isSevere(student, this.staleDays);
+            },
+
+            // --- Élèves d'une Halqa --------------------------------------------------------------------
+            // La liste des « Élèves à relancer » ne montre que ceux qui n'ont pas été évalués récemment : sans cette liste,
+            // un élève à jour n'aurait aucun bulletin accessible. On déplie donc la Halqa pour tous ses élèves.
+
+            halqaPanel(instructorId) {
+                return this.halqaPanels[instructorId] || { open: false, loading: false, error: null, students: [] };
+            },
+
+            isHalqaOpen(instructorId) {
+                return this.halqaPanel(instructorId).open;
+            },
+
+            /** Déplie (en relisant la liste : une évaluation a pu changer) ou replie la Halqa. Replier ne lit rien. */
+            async toggleHalqa(halqa) {
+                const id = halqa.instructorId;
+                if (this.isHalqaOpen(id)) {
+                    this.halqaPanels[id] = { ...this.halqaPanel(id), open: false };
+                    return;
+                }
+                this.halqaPanels[id] = { open: true, loading: true, error: null, students: this.halqaPanel(id).students };
+                try {
+                    const result = await window.api.get(`/internat/instructors/${id}/students`);
+                    this.halqaPanels[id] = { open: true, loading: false, error: null, students: result.students };
+                } catch (err) {
+                    this.halqaPanels[id] = {
+                        open: true, loading: false, students: [],
+                        error: window.api.toMessage(err, 'Erreur lors du chargement des élèves de cette Halqa.')
+                    };
+                }
             },
 
             async openReport(student) {
