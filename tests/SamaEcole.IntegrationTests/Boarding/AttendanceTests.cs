@@ -151,8 +151,16 @@ public class AttendanceTests : LeaveTestBase
                 }
             }));
 
-        attempts.Where(e => e is not null).Should().OnlyContain(
-            e => e is BusinessRuleException && ((BusinessRuleException)e).Code == "ATTENDANCE_CONFLICT");
+        // Deux issues légitimes : (1) les deux écritures se chevauchent → la seconde heurte l'index unique et reçoit
+        // ATTENDANCE_CONFLICT ; (2) la seconde lit la ligne APRÈS le commit de la première → c'est une mise à jour
+        // (upsert), donc AUCUNE erreur. Ce qui est interdit : toute autre erreur (brute) ou une seconde ligne.
+        // `OnlyContain` ne convient pas : il échoue sur une liste VIDE, c.-à-d. précisément l'issue (2) — le test
+        // échouait donc au hasard de l'ordonnancement (vu en CI le 11/10/2026).
+        var errors = attempts.Where(e => e is not null).ToList();
+        errors.Should().NotContain(
+            e => !(e is BusinessRuleException) || ((BusinessRuleException)e).Code != "ATTENDANCE_CONFLICT",
+            "toute erreur autre qu'un conflit métier serait une erreur brute exposée à l'utilisateur");
+        errors.Count.Should().BeLessThan(2, "une seule des deux saisies simultanées peut perdre la course");
         (await RowsAsync(Night)).Should().ContainSingle();
     }
 
