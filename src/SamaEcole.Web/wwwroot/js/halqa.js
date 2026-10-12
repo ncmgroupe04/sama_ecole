@@ -4,7 +4,8 @@
  *
  * Consomme GET /api/v1/internat/my-halqa (la Halqa de l'Oustaz connecté, résolue côté serveur depuis son compte —
  * aucun identifiant n'est passé), GET /api/v1/internat/students/{id}/hizb-progress (la grille) et
- * PUT /api/v1/internat/students/{id}/hizb-progress (un Hizb à la fois). La portée (un Oustaz ne voit et n'écrit que
+ * PUT /api/v1/internat/students/{id}/hizb-progress (un Hizb à la fois), plus GET .../students/{id}/hizb-report/pdf pour
+ * le bulletin coranique de l'élève ouvert (bouton « كشف الحفظ », modale PDF commune). La portée (un Oustaz ne voit et n'écrit que
  * SA Halqa), l'état d'un Hizb (déduit des quarts) et la date d'évaluation sont décidés par le SERVEUR : ce fichier
  * n'affiche que ce qu'il renvoie, et n'envoie ni état ni date.
  *
@@ -105,13 +106,29 @@
         return (cells || []).map((c) => (c.hizbNumber === saved.hizbNumber ? saved : c));
     }
 
+    /**
+     * Bulletin coranique PDF d'un élève : même route et même nom de fichier que sur /suivi-coranique (progress-dashboard.js).
+     * Les deux écrans ne chargent pas les mêmes scripts, d'où ces deux lignes répétées plutôt qu'un couplage entre eux.
+     */
+    function reportUrl(studentId) {
+        return `/api/v1/internat/students/${studentId}/hizb-report/pdf`;
+    }
+
+    function reportFileName(matricule) {
+        return 'Bulletin-Coranique-' + String(matricule || '').replace(/[^A-Za-z0-9_-]/g, '') + '.pdf';
+    }
+
     window.halqaLogic = {
         HIZB_COUNT, TOTAL_QUARTERS, LABELS,
-        pickName, juzOfHizb, groupByJuz, quarterLabel, summarize, cellClasses, quarterFilled, replaceCell
+        pickName, juzOfHizb, groupByJuz, quarterLabel, summarize, cellClasses, quarterFilled, replaceCell,
+        reportUrl, reportFileName
     };
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('halqaPage', () => ({
+            // Modale de prévisualisation PDF commune (wwwroot/js/pdf-preview.js) : bulletin coranique de l'élève ouvert.
+            ...window.pdfPreview.state(),
+
             labels: LABELS,
             loading: true,
             error: null,
@@ -183,6 +200,19 @@
                 } finally {
                     this.gridLoading = false;
                 }
+            },
+
+            /**
+             * Bulletin PDF de l'élève ouvert. Indépendant de la grille : le document est produit par le serveur, qui applique
+             * la même portée que l'écran (un Oustaz ne tire que le bulletin de SES élèves, 403 sinon).
+             */
+            async openReport() {
+                if (!this.selected) return;
+                await this.openPdfPreview(
+                    reportUrl(this.selected.studentId),
+                    'Bulletin coranique — ' + this.selected.fullName,
+                    reportFileName(this.selected.matricule)
+                );
             },
 
             // --- Tiroir de saisie -------------------------------------------------------------------

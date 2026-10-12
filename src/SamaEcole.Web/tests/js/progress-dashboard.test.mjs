@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadScripts } from './harness.mjs';
+import { loadScripts, plain } from './harness.mjs';
 
 const BANDS = [
     { min: 0, max: 0, studentCount: 1 },
@@ -31,6 +31,17 @@ function dashboard(overrides = {}) {
     };
 }
 
+function halqaOf(overrides = {}) {
+    return {
+        instructorId: 'i1', instructorName: 'Serigne Modou', instructorNameAr: 'سيرين مودو', studentCount: 2, averageProgressPercent: 5.4,
+        students: [
+            { studentId: 's10', matricule: 'ELEV-2026-0010', fullName: 'Awa Diop', fullNameAr: 'عائشة جوب', completedHizbs: 3, inProgressHizbs: 1, completedQuarters: 13, progressPercent: 5.4, lastEvaluatedAt: '2026-10-01T10:00:00Z' },
+            { studentId: 's11', matricule: 'ELEV-2026-0011', fullName: 'Moussa Ba', fullNameAr: null, completedHizbs: 0, inProgressHizbs: 0, completedQuarters: 0, progressPercent: 0, lastEvaluatedAt: null }
+        ],
+        ...overrides
+    };
+}
+
 function boot(options = {}) {
     const calls = [];
     const ctx = loadScripts(['progress-dashboard.js'], {
@@ -44,6 +55,10 @@ function boot(options = {}) {
             api: {
                 get: async (endpoint) => {
                     calls.push({ method: 'GET', endpoint });
+                    if (endpoint.startsWith('/internat/instructors/')) {
+                        if (options.halqaError) throw options.halqaError;
+                        return options.halqa ?? halqaOf();
+                    }
                     if (options.error) throw options.error;
                     return options.data ?? dashboard();
                 },
@@ -180,4 +195,93 @@ test('la sévérité d\'une alerte suit le seuil choisi', async () => {
     assert.equal(page.severe(page.data.stagnant[1]), true, '60 jours, seuil 30');
     await page.changeStaleDays('90');
     assert.equal(page.severe(page.data.stagnant[1]), false, '60 jours, seuil 90');
+});
+
+// ------------------------------------------------------------------------- bulletin de TOUS les élèves d'une Halqa
+
+test('ouvrir une Halqa liste tous ses élèves, y compris ceux qui n\'ont rien à relancer', async () => {
+    const { page, calls } = boot();
+    await page.init();
+
+    await page.toggleHalqa(page.data.halqas[0]);
+
+    assert.ok(calls.some((c) => c.method === 'GET' && c.endpoint === '/internat/instructors/i1/students'));
+    assert.equal(page.isHalqaOpen('i1'), true);
+    const students = page.halqaPanel('i1').students;
+    assert.deepEqual(students.map((s) => s.studentId), ['s10', 's11']);
+    assert.ok(!page.data.stagnant.some((s) => s.studentId === 's10'), 's10 n\'est pas dans les alertes : c\'est tout l\'objet');
+});
+
+test('refermer une Halqa ne relance aucune requête, la rouvrir relit la liste', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    const reads = () => calls.filter((c) => c.endpoint === '/internat/instructors/i1/students').length;
+
+    await page.toggleHalqa(page.data.halqas[0]);
+    await page.toggleHalqa(page.data.halqas[0]);
+    assert.equal(page.isHalqaOpen('i1'), false);
+    assert.equal(reads(), 1, 'refermer ne lit rien');
+
+    await page.toggleHalqa(page.data.halqas[0]);
+    assert.equal(page.isHalqaOpen('i1'), true);
+    assert.equal(reads(), 2, 'une évaluation a pu changer : on relit');
+});
+
+test('une Halqa dont le chargement échoue affiche son erreur sans casser le tableau', async () => {
+    const { page } = boot({ halqaError: Object.assign(new Error('HTTP 500'), { status: 500 }) });
+    await page.init();
+
+    await page.toggleHalqa(page.data.halqas[0]);
+
+    assert.equal(page.isHalqaOpen('i1'), true, 'la ligne reste ouverte pour montrer l\'erreur');
+    assert.equal(page.halqaPanel('i1').error, 'HTTP 500');
+    assert.equal(page.halqaPanel('i1').loading, false);
+    assert.equal(page.error, null, 'le tableau de bord, lui, reste affiché');
+    assert.ok(page.data, 'les chiffres globaux sont conservés');
+});
+
+test('la dernière évaluation d\'un élève de Halqa s\'affiche en date, ou « Jamais évalué »', () => {
+    const { logic } = boot();
+    assert.equal(logic.evaluationDateLabel('2026-10-01T10:00:00Z'), '01/10/2026');
+    assert.equal(logic.evaluationDateLabel('2026-10-01T23:30:00Z'), '01/10/2026', 'la date est celle du serveur (UTC), pas celle du poste');
+    assert.equal(logic.evaluationDateLabel(null), 'Jamais évalué');
+    assert.equal(logic.evaluationDateLabel(undefined), 'Jamais évalué');
+});
+
+test('une Halqa jamais ouverte a un panneau vide, sans erreur', async () => {
+    const { page } = boot();
+    await page.init();
+
+    assert.equal(page.isHalqaOpen('i1'), false);
+    assert.deepEqual(plain(page.halqaPanel('i1')), { open: false, loading: false, error: null, students: [] });
+});
+
+test('« PDF » d\'un élève de la Halqa ouvre SON bulletin, même s\'il est à jour', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.toggleHalqa(page.data.halqas[0]);
+
+    await page.openReport(page.halqaPanel('i1').students[0]);
+
+    assert.deepEqual(calls.find((c) => c.method === 'PDF'), {
+        method: 'PDF',
+        url: '/api/v1/internat/students/s10/hizb-report/pdf',
+        title: 'Bulletin coranique — Awa Diop',
+        downloadName: 'Bulletin-Coranique-ELEV-2026-0010.pdf'
+    });
+});
+
+test('deux Halqa ouvertes ensemble ne se mélangent pas', async () => {
+    const { page } = boot({ data: dashboard({ halqas: [
+        { instructorId: 'i1', instructorName: 'A', instructorNameAr: null, instructorStatus: 'Active', studentCount: 2, averageProgressPercent: 5, completedHizbs: 3, stagnantCount: 0 },
+        { instructorId: 'i2', instructorName: 'B', instructorNameAr: null, instructorStatus: 'Active', studentCount: 2, averageProgressPercent: 5, completedHizbs: 3, stagnantCount: 0 }
+    ] }) });
+    await page.init();
+
+    await page.toggleHalqa(page.data.halqas[0]);
+    await page.toggleHalqa(page.data.halqas[1]);
+    await page.toggleHalqa(page.data.halqas[0]);
+
+    assert.equal(page.isHalqaOpen('i1'), false);
+    assert.equal(page.isHalqaOpen('i2'), true, 'refermer l\'une n\'affecte pas l\'autre');
 });
