@@ -59,6 +59,26 @@ public class QuranCoreSchemaTests : IAsyncLifetime
         reloaded.SectionType.Should().Be(SectionType.French);
     }
 
+    [Theory]
+    [InlineData(SectionType.Arabic)]
+    [InlineData(SectionType.IslamicStudies)]
+    [InlineData(SectionType.Common)]
+    public async Task A_Subject_Keeps_Its_Pole_Through_A_Database_Round_Trip(SectionType pole)
+    {
+        await using var ctx = _db.NewAppContext(Ecole);
+        var subject = new Subject
+        {
+            SchoolId = Ecole, Name = $"Matière {pole}", Level = "Primaire", Coefficient = 2, SectionType = pole
+        };
+        ctx.Subjects.Add(subject);
+        await ctx.SaveChangesAsync(CancellationToken.None);
+
+        await using var reload = _db.NewAppContext(Ecole);
+        var reloaded = await reload.Subjects.FirstAsync(s => s.Id == subject.Id);
+
+        reloaded.SectionType.Should().Be(pole);
+    }
+
     [Fact]
     public async Task School_Settings_Inserted_Without_SchoolType_Reads_Back_As_Standard()
     {

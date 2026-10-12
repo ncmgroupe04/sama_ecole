@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Subjects.Commands.UpdateSubject;
 
@@ -30,7 +31,15 @@ public record UpdateSubjectCommand(
     string? Column2Header = null,
 
     /// <summary>Nom en arabe (module Coran/Franco-Arabe), saisi librement — null si non renseigné.</summary>
-    string? NameAr = null)
+    string? NameAr = null,
+
+    /// <summary>
+    /// Pôle pédagogique (module Franco-Arabe). NULL = « ne pas toucher au pôle » : un client antérieur à
+    /// cette option, qui ne l'envoie pas, ne doit pas remettre toutes ses matières en section française
+    /// à chaque correction de libellé — à la différence des champs de structure, un pôle n'a pas de
+    /// valeur neutre qui signifie « absent ».
+    /// </summary>
+    SectionType? SectionType = null)
     : IRequest<UpdateSubjectResult>;
 
 public record UpdateSubjectResult(
@@ -42,4 +51,5 @@ public record UpdateSubjectResult(
     Guid? ParentSubjectId = null,
     decimal? MaxScore = null,
     int DisplayOrder = 0,
-    string? NameAr = null);
+    string? NameAr = null,
+    SectionType SectionType = SectionType.French);

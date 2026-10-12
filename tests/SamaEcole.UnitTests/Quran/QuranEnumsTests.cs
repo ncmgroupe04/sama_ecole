@@ -20,6 +20,22 @@ public class QuranEnumsTests
     }
 
     [Fact]
+    public void SectionType_Members_Should_Keep_Their_Stored_Order()
+    {
+        // L'ordre fige le défaut (premier membre) : « Common » doit rester AJOUTÉ EN DERNIER, jamais
+        // inséré devant une valeur existante.
+        Enum.GetValues<SectionType>().Should().Equal(
+            SectionType.French, SectionType.Arabic, SectionType.IslamicStudies, SectionType.Common);
+    }
+
+    [Fact]
+    public void SectionType_Names_Should_Fit_The_Database_Column()
+    {
+        // subjects.section_type : varchar(20), voir SubjectConfiguration.
+        Enum.GetNames<SectionType>().Should().OnlyContain(name => name.Length <= 20);
+    }
+
+    [Fact]
     public void SchoolType_Default_Should_Be_Standard()
     {
         default(SchoolType).Should().Be(SchoolType.Standard);

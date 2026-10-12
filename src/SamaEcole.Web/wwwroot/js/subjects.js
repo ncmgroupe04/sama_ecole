@@ -105,6 +105,34 @@ document.addEventListener('alpine:init', () => {
         return match ? match[1] : name;
     }
 
+    // ── Pôle pédagogique (module Franco-Arabe) ──
+    // Valeurs = Domain.Enums.SectionType, sérialisées en chaîne (JsonStringEnumConverter global).
+    // Purement descriptif côté serveur : le pôle ne modifie ni le coefficient ni le calcul du bulletin.
+    // Libellés de la pastille ; les <option> des modales (Index.cshtml) portent les mêmes, avec l'arabe.
+    const SECTION_LABELS = {
+        French: 'Section française',
+        Arabic: 'Section arabe',
+        IslamicStudies: 'Sciences islamiques',
+        Common: 'Pôle commun'
+    };
+
+    // SUGGESTIONS de noms à la création, jamais enregistrées d'office : un clic recopie le nom français
+    // et le nom arabe dans le formulaire, que l'école corrige librement. Aucune colonne « type de
+    // matière arabe » n'existe (décision actée) — le pôle seul classe la matière.
+    const SECTION_SUGGESTIONS = {
+        Arabic: [
+            { name: 'Langue arabe', nameAr: 'اللغة العربية' }
+        ],
+        IslamicStudies: [
+            { name: 'Fiqh', nameAr: 'الفقه' },
+            { name: 'Hadith', nameAr: 'الحديث' },
+            { name: 'Tajwid', nameAr: 'التجويد' },
+            { name: 'Sirah', nameAr: 'السيرة النبوية' },
+            { name: 'Aqidah', nameAr: 'العقيدة' },
+            { name: 'Tarbiya', nameAr: 'التربية الإسلامية' }
+        ]
+    };
+
     /**
      * Un champ de formulaire laissé vide vaut '' en HTML — y compris le <select> « Aucun domaine » et
      * les champs nombre. Le serveur, lui, distingue « absent » (null) de « vide » : un '' sur
@@ -162,7 +190,7 @@ document.addEventListener('alpine:init', () => {
 
         isCreateOpen: false,
         isSubmitting: false,
-        newSubject: { name: '', nameAr: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
+        newSubject: { name: '', nameAr: '', sectionType: 'French', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
         createErrors: {},
 
         // ── Structure d'évaluation (grilles APC du primaire) ──
@@ -462,12 +490,30 @@ document.addEventListener('alpine:init', () => {
                 : `Sur ${Number(maxScore).toLocaleString('fr-FR')}`;
         },
 
+        /** Pastille de pôle : seules les matières HORS section française en portent une — une école
+         *  non franco-arabe, dont tout est « French », garde exactement la liste d'avant. */
+        sectionBadge(subject) {
+            if (!subject || !subject.sectionType || subject.sectionType === 'French') return '';
+            return SECTION_LABELS[subject.sectionType] || '';
+        },
+
+        /** Noms proposés pour le pôle choisi dans la modale de création (aucun pour Français/Commun). */
+        get sectionSuggestions() {
+            return SECTION_SUGGESTIONS[this.newSubject.sectionType] || [];
+        },
+
+        applySectionSuggestion(suggestion) {
+            this.newSubject.name = suggestion.name;
+            this.newSubject.nameAr = suggestion.nameAr;
+        },
+
         /** Ouvre la création d'une ACTIVITÉ sous un domaine : le niveau et le parent sont imposés. */
         openCreateActivity(root) {
             const siblings = (this.structureGroups.find((g) => g.root.id === root.id) || {}).children || [];
             this.newSubject = {
                 name: '',
                 nameAr: '',
+                sectionType: root.sectionType || 'French',
                 level: root.level,
                 coefficient: root.coefficient,
                 parentSubjectId: root.id,
@@ -485,6 +531,7 @@ document.addEventListener('alpine:init', () => {
             this.newSubject = {
                 name: '',
                 nameAr: '',
+                sectionType: 'French',
                 level: this.structureLevel,
                 coefficient: 1,
                 parentSubjectId: '',
@@ -612,6 +659,7 @@ document.addEventListener('alpine:init', () => {
             const payload = {
                 name: subject.name,
                 nameAr: subject.nameAr,
+                sectionType: subject.sectionType,
                 level: subject.level,
                 coefficient: subject.coefficient,
                 rowVersion: subject.rowVersion,
@@ -662,7 +710,7 @@ document.addEventListener('alpine:init', () => {
             const source = pool.length ? pool : this.subjects;
             const lastLevel = source.length ? source[source.length - 1].level : '';
             this.newSubject = {
-                name: '', nameAr: '', level: lastLevel, coefficient: 1,
+                name: '', nameAr: '', sectionType: 'French', level: lastLevel, coefficient: 1,
                 parentSubjectId: '', maxScore: '', displayOrder: 0
             };
             this.createErrors = {};
@@ -717,7 +765,8 @@ document.addEventListener('alpine:init', () => {
                 displayOrder: subject.displayOrder ?? 0,
                 column1Header: subject.column1Header ?? null,
                 column2Header: subject.column2Header ?? null,
-                nameAr: subject.nameAr ?? ''
+                nameAr: subject.nameAr ?? '',
+                sectionType: subject.sectionType || 'French'
             };
             this.editErrors = {};
         },

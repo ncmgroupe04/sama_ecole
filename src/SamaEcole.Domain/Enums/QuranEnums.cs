@@ -7,12 +7,18 @@ namespace SamaEcole.Domain.Enums;
 /// calcul du bulletin restent inchangés. <see cref="French"/> en premier membre et valeur par
 /// défaut : toute matière existante avant cette migration reste tacitement "française", sans
 /// changement de comportement.
+///
+/// <see cref="Common"/> (ajouté en dernier : les valeurs déjà stockées ne bougent pas) désigne le pôle
+/// COMMUN du franco-arabe — la matière suivie par tous les élèves, qui n'appartient ni à la section
+/// française ni à la section arabe (EPS, arts, vie scolaire…). Stocké en chaîne ≤ 20 caractères :
+/// aucune migration n'est nécessaire.
 /// </summary>
 public enum SectionType
 {
     French,
     Arabic,
-    IslamicStudies
+    IslamicStudies,
+    Common
 }
 
 /// <summary>

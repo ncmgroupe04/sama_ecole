@@ -35,7 +35,8 @@ public class SubjectsController(ISender mediator) : ControllerBase
         int DisplayOrder = 0,
         string? Column1Header = null,
         string? Column2Header = null,
-        string? NameAr = null);
+        string? NameAr = null,
+        SectionType? SectionType = null);
 
     /// <summary>
     /// ÉCRITURE : Directeur, Secrétariat et Enseignant — accès inconditionnel, sans le garde-fou par
@@ -80,7 +81,7 @@ public class SubjectsController(ISender mediator) : ControllerBase
             new UpdateSubjectCommand(
                 id, request.Name, request.Level, request.Coefficient, request.RowVersion,
                 request.ParentSubjectId, request.MaxScore, request.DisplayOrder,
-                request.Column1Header, request.Column2Header, request.NameAr),
+                request.Column1Header, request.Column2Header, request.NameAr, request.SectionType),
             cancellationToken));
 
     /// <summary>
