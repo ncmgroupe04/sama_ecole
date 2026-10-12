@@ -863,6 +863,15 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - Un cours **déjà couvert** par un billet actif du même élève le même jour n'est ni re-justifié ni re-visé. Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le billet reste possible **sans heure d'arrivée** : minutes saisies à la main, comme avant.
 - Le billet imprimé porte l'heure d'arrivée, la durée régularisée et le cours manqué (nommé s'il est seul, résumé sinon) — toujours **une seule page A5**.
 
+### 21.5 Alternance français / arabe (module Franco-Arabe, bloc 4)
+
+**Statut : livré (API en lecture seule).** Pour un établissement franco-arabe, `GET /api/v1/schedules/classroom/{id}/sections` et `GET /api/v1/schedules/teacher/{id}/sections` décrivent la répartition des deux sections dans la semaine d'une classe ou d'un enseignant.
+
+- La **section** d'un créneau est celle du **pôle de sa matière** (`Subject.SectionType`, §8) : français et pôle commun d'un côté, arabe et sciences islamiques de l'autre. Aucune donnée nouvelle à saisir ; une matière jamais classée est française.
+- La réponse donne les **heures par section**, les heures de chaque **demi-journée** (matin avant 13 h, après-midi à partir de 13 h, d'après l'heure de DÉBUT du créneau) et un **motif** : `MorningFrenchAfternoonArabic`, `MorningArabicAfternoonFrench`, `AlternatingDays` (journées entières alternées), `SingleSection`, `Mixed` ou `NoSlots`. Les demi-journées que les deux sections se partagent sont signalées en clair.
+- `coversBothSections` repère l'**enseignant bilingue**, qui enseigne dans les deux sections.
+- C'est un **constat, jamais un refus** : un établissement organise l'alternance comme il l'entend, et aucun réglage d'école n'est introduit. Le refus des **chevauchements** reste celui du §21.1 (enseignant, classe, salle — quelle que soit la section) : un enseignant bilingue n'est pas plus à deux endroits à la fois qu'un autre. Une règle d'alternance imposée par l'école demanderait un réglage persistant (migration) et n'est pas construite.
+
 ---
 
 ## 22. Examens officiels (CFEE/BFEM/BAC)
@@ -903,6 +912,17 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 - Après délibération, le résultat (admis/non admis), la mention le cas échéant (BFEM/BAC — le CFEE n'attribue pas de mention) et, si transmise, la moyenne obtenue sont saisis sur le dossier.
 - Les statistiques (taux de réussite par série, par classe, comparaison interannuelle) ne portent que sur les dossiers `Transmis` ou `Valide` d'une session close — un dossier encore en préparation ne doit jamais fausser un taux de réussite affiché en cours d'année.
+
+### 22.7 Documents bilingues d'examen (module Franco-Arabe, bloc 4)
+
+**Statut : livré.** Deux PDF, bilingues français / arabe quand le module Coran/Franco-Arabe est activé (français seul sinon), construits sur les mêmes données :
+
+- **PV de session** — `GET /api/v1/exams/sessions/{id}/pv/pdf` (A4 paysage) : un candidat par ligne — numéro de table, **IEN**, nom en français et en arabe, classe, **moyenne annuelle de la section française, de la section arabe et générale**, résultat et mention. Ne retient que les dossiers `Complet`, `Transmis` ou `Valide` (422 s'il n'y en a aucun).
+- **Fiche synthétique du candidat** — `GET /api/v1/exams/dossiers/{id}/synthesis/pdf` (A4 portrait, une page) : identité, IEN, centre et numéro de table, moyennes par section, résultat de la délibération ; quel que soit le statut du dossier.
+- Les **moyennes annuelles** sont la moyenne des moyennes de période où la section a des notes (même règle que la moyenne annuelle du bulletin, §8) ; une section sans aucune note imprime « — », jamais un zéro.
+- **Aucun identifiant n'est inventé** : l'IEN s'imprime tel qu'il est sur la fiche élève, ou « — (non attribué) ». Le **CFEE n'imprime jamais de mention** (§22.6). Un candidat dont le jury n'a rien saisi n'est ni « admis » ni « non admis » : « — ».
+- **Pas d'intégration au SIMEN** : le §23 reste vrai — aucune API publique n'existe, ces documents sont des **pièces à remettre par la voie habituelle**, pas une transmission. L'export Planète et le relevé ministériel (§22.5, §23) restent les fichiers de référence.
+- Traductions arabes des libellés (`ExamArabicLabels`, dont l'intitulé des trois diplômes) : **à faire relire par un locuteur arabe avant mise en production.**
 
 ---
 

@@ -24,6 +24,22 @@ public class SchedulesController(ISender mediator) : ControllerBase
         return Ok(await mediator.Send(new GetClassroomScheduleQuery(classroomId), cancellationToken));
     }
 
+    /// <summary>Alternance français / arabe d'une classe (module Franco-Arabe) — constat en lecture seule.</summary>
+    [HttpGet("classroom/{classroomId:guid}/sections")]
+    [ProducesResponseType<SectionScheduleDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetClassroomSections(Guid classroomId, CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetClassroomSectionScheduleQuery(classroomId), cancellationToken));
+    }
+
+    /// <summary>Alternance français / arabe d'un enseignant ; repère l'enseignant qui couvre les deux sections.</summary>
+    [HttpGet("teacher/{teacherId:guid}/sections")]
+    [ProducesResponseType<SectionScheduleDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTeacherSections(Guid teacherId, CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetTeacherSectionScheduleQuery(teacherId), cancellationToken));
+    }
+
     [HttpPost]
     [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateSlot(

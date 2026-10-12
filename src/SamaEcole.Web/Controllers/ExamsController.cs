@@ -7,6 +7,7 @@ using SamaEcole.Application.Exams.Commands.TransmitExamDossier;
 using SamaEcole.Application.Exams.Commands.UpdateExamDossier;
 using SamaEcole.Application.Exams.Commands.UpdateExamSession;
 using SamaEcole.Application.Exams.Queries.GetExamCandidateFormPdf;
+using SamaEcole.Application.Exams.Queries.GetExamSynthesisPdf;
 using SamaEcole.Application.Exams.Queries.GetExamCandidateFormsBatchPdf;
 using SamaEcole.Application.Exams.Queries.GetExamConvocationPdf;
 using SamaEcole.Application.Exams.Queries.GetExamDossierAudit;
@@ -286,6 +287,32 @@ public class ExamsController(ISender mediator) : ControllerBase
     {
         var pdf = await mediator.Send(query, cancellationToken);
         return this.InlinePdf(pdf, "Fiches-Candidature.pdf");
+    }
+
+    /// <summary>
+    /// Fiche synthétique d'un candidat (module Franco-Arabe) : identité en français et en arabe, IEN, centre et table,
+    /// moyennes annuelles par section, résultat. Bilingue quand l'école active le module ; quel que soit le statut du dossier.
+    /// </summary>
+    [HttpGet("dossiers/{id:guid}/synthesis/pdf")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCandidateSynthesisPdf(Guid id, CancellationToken cancellationToken)
+    {
+        var pdf = await mediator.Send(new GetExamCandidateSynthesisPdfQuery(id), cancellationToken);
+        return this.InlinePdf(pdf, "Fiche-Synthetique-Candidat.pdf");
+    }
+
+    /// <summary>Procès-verbal de la session : un candidat par ligne. 422 si aucun dossier Complet/Transmis/Valide.</summary>
+    [HttpGet("sessions/{id:guid}/pv/pdf")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetSessionPvPdf(Guid id, CancellationToken cancellationToken)
+    {
+        var pdf = await mediator.Send(new GetExamSessionPvPdfQuery(id), cancellationToken);
+        return this.InlinePdf(pdf, "PV-Session-Examen.pdf");
     }
 
     /// <summary>Refusée (409) tant que centre et numéro de table ne sont pas attribués.</summary>

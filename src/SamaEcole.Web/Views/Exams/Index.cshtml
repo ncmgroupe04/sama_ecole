@@ -115,6 +115,7 @@
                                     <row-actions>
                                         <row-action icon="pencil" label="Modifier" on-click="openEditSession(session)" />
                                         <row-action icon="download" label="Exporter (relevé ministériel)" on-click="exportMinisterial(session)" />
+                                        <row-action icon="document-text" label="PV de session (PDF)" on-click="printSessionPv(session)" />
                                         <row-action icon="envelope" label="Envoyer les convocations" on-click="openDispatchConvocations(session)" />
                                     </row-actions>
                                 </td>
@@ -221,6 +222,7 @@
                                         <row-action icon="checkmark-circle" label="Saisir le résultat" on-click="openRecordResult(dossier)"
                                                     show="canManage && (dossier.status === 'Transmis' || dossier.status === 'Valide')" />
                                         <row-action icon="print" label="Fiche de candidature (PDF)" on-click="printCandidateForm(dossier)" show="canManage" />
+                                        <row-action icon="document-text" label="Fiche synthétique (PDF)" on-click="printCandidateSynthesis(dossier)" show="canManage" />
                                         <row-action icon="document-text" label="Convocation (PDF)" on-click="printConvocation(dossier)"
                                                     show="canManage && dossier.candidateNumber && dossier.examCenterName" />
                                     </row-actions>
