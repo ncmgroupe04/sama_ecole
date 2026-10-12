@@ -26,8 +26,8 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null);
-    private record SubjectUpdateResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null);
+    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null, string? SectionType = null);
+    private record SubjectUpdateResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null, string? SectionType = null);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -448,5 +448,112 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await FetchSubjectAsync(directeur, created.Id)).NameAr.Should().BeNull();
+    }
+
+    // ---------------------------------------------------------------- Pôle pédagogique (SectionType)
+
+    [Fact]
+    public async Task A_Subject_Created_Without_A_Pole_Should_Be_In_The_French_Section()
+    {
+        var token = await DirecteurTokenAsync();
+
+        var created = await CreateSubjectAsync(token, "Histoire", "Collège", 2);
+
+        created.SectionType.Should().Be("French", "un client antérieur à l'option garde le comportement d'avant");
+        (await FetchSubjectAsync(token, created.Id)).SectionType.Should().Be("French");
+    }
+
+    [Theory]
+    [InlineData("Arabic")]
+    [InlineData("IslamicStudies")]
+    [InlineData("Common")]
+    public async Task A_Subject_Can_Be_Created_In_Any_Pole(string pole)
+    {
+        var token = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
+            new { name = $"Matière {pole}", level = "Collège", coefficient = 2, sectionType = pole });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await response.Content.ReadFromJsonAsync<SubjectDto>())!;
+        created.SectionType.Should().Be(pole);
+
+        // Relu depuis la base, pas seulement renvoyé par le POST.
+        (await FetchSubjectAsync(token, created.Id)).SectionType.Should().Be(pole);
+    }
+
+    [Fact]
+    public async Task An_Unknown_Pole_Should_Return_422_On_Create()
+    {
+        var token = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
+            new { name = "Fiqh", level = "Collège", coefficient = 2, sectionType = 42 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task A_Directeur_Can_Move_A_Subject_To_Another_Pole()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Éducation physique", "Collège", 1);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Éducation physique",
+            level = "Collège",
+            coefficient = 1,
+            rowVersion = subject.RowVersion,
+            sectionType = "Common"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<SubjectUpdateResult>())!.SectionType.Should().Be("Common");
+        (await FetchSubjectAsync(directeur, created.Id)).SectionType.Should().Be("Common");
+    }
+
+    [Fact]
+    public async Task Updating_Without_A_Pole_Should_Leave_The_Pole_Untouched()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var response1 = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeur,
+            new { name = "Hadith", level = "Collège", coefficient = 2, sectionType = "IslamicStudies" });
+        var created = (await response1.Content.ReadFromJsonAsync<SubjectDto>())!;
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        // Un ancien client (ou un script) corrige le coefficient sans connaître le pôle.
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Hadith",
+            level = "Collège",
+            coefficient = 3,
+            rowVersion = subject.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await FetchSubjectAsync(directeur, created.Id)).SectionType.Should().Be("IslamicStudies",
+            "omettre le pôle ne doit pas ramener la matière en section française");
+    }
+
+    [Fact]
+    public async Task An_Unknown_Pole_Should_Return_422_On_Update()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Tarbiya", "Collège", 1);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Tarbiya",
+            level = "Collège",
+            coefficient = 1,
+            rowVersion = subject.RowVersion,
+            sectionType = 42
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await FetchSubjectAsync(directeur, created.Id)).SectionType.Should().Be("French");
     }
 }

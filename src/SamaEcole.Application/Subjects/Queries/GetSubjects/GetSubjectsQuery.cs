@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Subjects.Queries.GetSubjects;
 
@@ -35,4 +36,7 @@ public record SubjectDto(
     string? Column2Header = null,
 
     /// <summary>Nom en arabe (module Coran/Franco-Arabe) — null tant que non saisi.</summary>
-    string? NameAr = null);
+    string? NameAr = null,
+
+    /// <summary>Pôle pédagogique (module Franco-Arabe) — « French » pour toute matière jamais classée.</summary>
+    SectionType SectionType = SectionType.French);

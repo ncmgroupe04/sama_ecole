@@ -12,6 +12,10 @@ public class CreateSubjectCommandValidator : AbstractValidator<CreateSubjectComm
         // Module Coran/Franco-Arabe : optionnel, texte libre (aucune traduction automatique).
         RuleFor(x => x.NameAr).MaximumLength(80).NoHtml();
 
+        // JsonStringEnumConverter accepte un entier hors domaine : sans cette garde, « 42 » atteindrait
+        // la base et ferait échouer toute lecture ultérieure de la colonne.
+        RuleFor(x => x.SectionType).IsInEnum();
+
         // Niveau LIBRE, comme pour les classes (openapi.yaml) : primaire, collège et lycée ne
         // découpent pas leur scolarité de la même façon. Imposer une énumération exclurait des écoles.
         RuleFor(x => x.Level).NotEmpty().MaximumLength(50).NoHtml();

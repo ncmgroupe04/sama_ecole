@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SamaEcole.Application.Subjects.Commands.CreateSubject;
+using SamaEcole.Domain.Enums;
 using Xunit;
 
 namespace SamaEcole.UnitTests.Subjects;
@@ -29,6 +30,23 @@ public class CreateSubjectCommandValidatorTests
     {
         // Un coefficient décimal est légitime (1,5 existe dans certains barèmes).
         _validator.Validate(Valid() with { Coefficient = (decimal)coefficient }).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(SectionType.French)]
+    [InlineData(SectionType.Arabic)]
+    [InlineData(SectionType.IslamicStudies)]
+    [InlineData(SectionType.Common)]
+    public void Every_Pole_Or_None_Should_Be_Accepted(SectionType? pole)
+    {
+        _validator.Validate(Valid() with { SectionType = pole }).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_Pole_Outside_The_Enum_Should_Fail()
+    {
+        _validator.Validate(Valid() with { SectionType = (SectionType)42 }).IsValid.Should().BeFalse();
     }
 
     [Fact]

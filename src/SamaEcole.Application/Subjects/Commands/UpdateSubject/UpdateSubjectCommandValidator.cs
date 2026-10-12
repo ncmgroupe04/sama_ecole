@@ -13,6 +13,9 @@ public class UpdateSubjectCommandValidator : AbstractValidator<UpdateSubjectComm
         // Module Coran/Franco-Arabe : optionnel, texte libre (aucune traduction automatique).
         RuleFor(x => x.NameAr).MaximumLength(80).NoHtml();
 
+        // Null = pôle inchangé ; une valeur fournie doit appartenir à l'enum (voir CreateSubjectCommandValidator).
+        RuleFor(x => x.SectionType).IsInEnum();
+
         // Niveau LIBRE, comme à la création : aucune liste figée de niveaux.
         RuleFor(x => x.Level).NotEmpty().MaximumLength(50).NoHtml();
 

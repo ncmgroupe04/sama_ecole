@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Subjects.Commands.CreateSubject;
 
@@ -16,6 +17,12 @@ public record CreateSubjectCommand : IRequest<SubjectResult>
 
     public required string Level { get; init; }
     public decimal Coefficient { get; init; }
+
+    /// <summary>
+    /// Pôle pédagogique (module Franco-Arabe) — purement descriptif. Null — le défaut, et ce qu'envoie
+    /// tout client antérieur à cette option — crée une matière de la section française, comme avant.
+    /// </summary>
+    public SectionType? SectionType { get; init; }
 
     /// <summary>
     /// Domaine auquel rattacher cette ligne d'évaluation (grilles APC du primaire). Null — le défaut, et
@@ -48,4 +55,5 @@ public record SubjectResult(
     Guid? ParentSubjectId = null,
     decimal? MaxScore = null,
     int DisplayOrder = 0,
-    string? NameAr = null);
+    string? NameAr = null,
+    SectionType SectionType = SectionType.French);

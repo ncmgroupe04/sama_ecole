@@ -252,6 +252,7 @@
          <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400 shrink-0"></span>
          <span class="font-semibold text-slate-800 break-words" x-text="displayName(subject.name)" :title="subject.name"></span>
          <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
+        <badge x-show="sectionBadge(subject)" x-cloak variant="neutral" class="shrink-0 text-[10px]" x-text="sectionBadge(subject)"></badge>
         </div>
 
         @* Jauge de poids relatif du coefficient *@
@@ -318,6 +319,7 @@
         <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400"></span>
         <span class="font-semibold text-slate-800" x-text="displayName(subject.name)" :title="subject.name"></span>
         <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
+        <badge x-show="sectionBadge(subject)" x-cloak variant="neutral" class="shrink-0 text-[10px]" x-text="sectionBadge(subject)"></badge>
        </div>
        <div class="mt-1.5">
         <span class="text-[11px] font-medium text-slate-400">
@@ -573,6 +575,28 @@
     <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="field-error"></p>
    </div>
 
+   @* Pôle pédagogique (module Franco-Arabe) : descriptif — ne change ni le coefficient ni la moyenne.
+      Même gabarit de profil que le nom arabe. Les suggestions ne s'affichent qu'à la création et
+      recopient seulement des noms dans le formulaire ; rien n'est enregistré avant « Ajouter ». *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
+    <label for="subject-section-type" class="form-label">Pôle pédagogique</label>
+    <select id="subject-section-type" x-model="newSubject.sectionType" class="input-field font-semibold">
+     <option value="French">Section française — القسم الفرنسي</option>
+     <option value="Arabic">Section arabe — القسم العربي</option>
+     <option value="IslamicStudies">Sciences islamiques — العلوم الإسلامية</option>
+     <option value="Common">Pôle commun — المشترك</option>
+    </select>
+    <div x-show="sectionSuggestions.length" x-cloak class="mt-2 flex flex-wrap items-center gap-1.5">
+     <span class="text-[11px] font-medium text-slate-400">Suggestions :</span>
+     <template x-for="suggestion in sectionSuggestions" :key="suggestion.name">
+      <button type="button" x-on:click="applySectionSuggestion(suggestion)"
+       class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+       <span x-text="suggestion.name"></span> <span dir="rtl" lang="ar" x-text="suggestion.nameAr"></span>
+      </button>
+     </template>
+    </div>
+   </div>
+
    @* Module Coran/Franco-Arabe : facultatif, imprimé sur le bulletin bilingue seulement si renseigné —
       dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique.
       Masqué hors profil Franco-Arabe/Internat-Daara (retour utilisateur du 29/09/2026) : un champ
@@ -670,6 +694,17 @@
     <label for="edit-subject-name" class="form-label form-label-required">Nom de la matière</label>
     <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field" :class="editErrors.name && 'input-field-error'">
     <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
+   </div>
+
+   @* Pôle pédagogique (module Franco-Arabe) : même champ que la création, sans suggestions. *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
+    <label for="edit-subject-section-type" class="form-label">Pôle pédagogique</label>
+    <select id="edit-subject-section-type" x-model="editing.sectionType" class="input-field font-semibold">
+     <option value="French">Section française — القسم الفرنسي</option>
+     <option value="Arabic">Section arabe — القسم العربي</option>
+     <option value="IslamicStudies">Sciences islamiques — العلوم الإسلامية</option>
+     <option value="Common">Pôle commun — المشترك</option>
+    </select>
    </div>
 
    @* Module Coran/Franco-Arabe : facultatif, même champ que la création — même gabarit de profil. *@
