@@ -86,7 +86,7 @@ public class DateFieldTagHelper : TagHelper
         // se repère sur le panneau, est décalé de la distance écran→fenêtre (énorme sur grand écran) et rogné.
         // z-[55] : au-dessus de la modale (z-50), sous les notifications (z-[60]).
         output.Content.SetHtmlContent($$"""
-            <div class="relative" x-data="dateField()" x-effect="text = {{Model}} ? formatInput({{Model}}) : text">
+            <div class="relative" x-data="dateField()" x-effect="text = {{Model}} ? formatInput({{Model}}) : text" x-on:keydown.escape.window.capture="open && ($event.stopPropagation(), close())">
                 <input type="date" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
                        class="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none -z-10" />
                 <div class="input-field{{extraClass}} w-full flex items-center gap-1 bg-white p-0 pr-2">

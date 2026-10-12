@@ -616,7 +616,7 @@
                                placeholder="Rechercher par nom ou matricule…" class="input-field"
                                :class="createDossierErrors.studentid && 'input-field-error'">
                         <div x-show="dossierStudentResults.length > 0" x-cloak
-                             class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-white shadow-lg ring-1 ring-gray-100">
+                             class="mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-white shadow-sm ring-1 ring-gray-100">
                             <template x-for="student in dossierStudentResults" :key="student.id">
                                 <button type="button" x-on:click="selectDossierStudent(student)"
                                         class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">

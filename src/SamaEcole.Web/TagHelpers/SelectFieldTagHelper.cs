@@ -117,7 +117,7 @@ public class SelectFieldTagHelper : TagHelper
         // se repère sur le panneau, est décalé de la distance écran→fenêtre (énorme sur grand écran) et rogné.
         // z-[55] : au-dessus de la modale (z-50), sous les notifications (z-[60]).
         output.Content.SetHtmlContent($$"""
-            <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}">
+            <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}" x-on:keydown.escape.window.capture="open && ($event.stopPropagation(), close())">
                 <input type="text" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
                        class="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none -z-10" />
                 <button type="button" {{idAttr}}x-on:click="!({{disabled}}) && toggle()" :aria-expanded="open" aria-haspopup="listbox"
