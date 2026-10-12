@@ -80,6 +80,11 @@ public class DateFieldTagHelper : TagHelper
             Enumerable.Range(currentYear - 100, 106).Reverse()
                 .Select(year => $"""<option value="{year}" class="font-semibold">{year}</option>"""));
 
+        // Le menu est TÉLÉPORTÉ sous <body> (x-teleport) : `position: fixed` n'est relatif au viewport que si
+        // AUCUN ancêtre ne crée de repère (backdrop-filter, filter, transform...) ni ne rogne (overflow).
+        // Le panneau de <modal-shell> a `backdrop-blur-xl` + `overflow-hidden` : sans téléportation, le menu
+        // se repère sur le panneau, est décalé de la distance écran→fenêtre (énorme sur grand écran) et rogné.
+        // z-[55] : au-dessus de la modale (z-50), sous les notifications (z-[60]).
         output.Content.SetHtmlContent($$"""
             <div class="relative" x-data="dateField()" x-effect="text = {{Model}} ? formatInput({{Model}}) : text">
                 <input type="date" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
@@ -97,58 +102,60 @@ public class DateFieldTagHelper : TagHelper
                     </button>
                 </div>
 
-                <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
-                     x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     :style="floatingStyle"
-                     class="fixed z-30 w-[300px] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
-                    <div class="flex items-center justify-between gap-1 pb-3 mb-2 border-b border-gray-100">
-                        <button type="button" x-on:click="prevMonth()" aria-label="Mois précédent"
-                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
-                            {{Svg("chevron-left", "w-5 h-5")}}
-                        </button>
-                        <!-- Navigation rapide : sélection directe du mois/année plutôt que de défiler
-                             chevron par chevron jusqu'à une date lointaine (ex. une date de naissance). -->
-                        <div class="flex items-center gap-1 min-w-0">
-                            <select x-model.number="viewMonth" aria-label="Mois"
-                                    class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
-                                {{monthOptions}}
-                            </select>
-                            <select x-model.number="viewYear" aria-label="Année"
-                                    class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
-                                {{yearOptions}}
-                            </select>
+                <template x-teleport="body">
+                    <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
+                         x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                         :style="floatingStyle"
+                         class="fixed z-[55] w-[300px] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
+                        <div class="flex items-center justify-between gap-1 pb-3 mb-2 border-b border-gray-100">
+                            <button type="button" x-on:click="prevMonth()" aria-label="Mois précédent"
+                                    class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
+                                {{Svg("chevron-left", "w-5 h-5")}}
+                            </button>
+                            <!-- Navigation rapide : sélection directe du mois/année plutôt que de défiler
+                                 chevron par chevron jusqu'à une date lointaine (ex. une date de naissance). -->
+                            <div class="flex items-center gap-1 min-w-0">
+                                <select x-model.number="viewMonth" aria-label="Mois"
+                                        class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
+                                    {{monthOptions}}
+                                </select>
+                                <select x-model.number="viewYear" aria-label="Année"
+                                        class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
+                                    {{yearOptions}}
+                                </select>
+                            </div>
+                            <button type="button" x-on:click="nextMonth()" aria-label="Mois suivant"
+                                    class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
+                                {{Svg("chevron-right", "w-5 h-5")}}
+                            </button>
                         </div>
-                        <button type="button" x-on:click="nextMonth()" aria-label="Mois suivant"
-                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
-                            {{Svg("chevron-right", "w-5 h-5")}}
-                        </button>
-                    </div>
 
-                    <div class="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 mb-1">
-                        <template x-for="wd in weekdayLabels" :key="wd">
-                            <span x-text="wd"></span>
-                        </template>
-                    </div>
+                        <div class="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 mb-1">
+                            <template x-for="wd in weekdayLabels" :key="wd">
+                                <span x-text="wd"></span>
+                            </template>
+                        </div>
 
-                    <div class="grid grid-cols-7 gap-y-1 text-center text-sm">
-                        <template x-for="day in days" :key="day.iso">
-                            <button type="button" :disabled="!day.currentMonth"
-                                    x-on:click="day.currentMonth && ({{Model}} = day.iso, close())"
-                                    :class="{
-                                        'text-gray-300 cursor-default': !day.currentMonth,
-                                        'text-gray-900 hover:bg-gray-50': day.currentMonth && {{Model}} !== day.iso,
-                                        'bg-primary-600 text-white font-semibold hover:bg-primary-600': {{Model}} === day.iso,
-                                        'ring-1 ring-inset ring-primary-600': isToday(day.iso) && {{Model}} !== day.iso
-                                    }"
-                                    class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-semibold transition-colors"
-                                    x-text="day.label"></button>
-                        </template>
-                    </div>
+                        <div class="grid grid-cols-7 gap-y-1 text-center text-sm">
+                            <template x-for="day in days" :key="day.iso">
+                                <button type="button" :disabled="!day.currentMonth"
+                                        x-on:click="day.currentMonth && ({{Model}} = day.iso, close())"
+                                        :class="{
+                                            'text-gray-300 cursor-default': !day.currentMonth,
+                                            'text-gray-900 hover:bg-gray-50': day.currentMonth && {{Model}} !== day.iso,
+                                            'bg-primary-600 text-white font-semibold hover:bg-primary-600': {{Model}} === day.iso,
+                                            'ring-1 ring-inset ring-primary-600': isToday(day.iso) && {{Model}} !== day.iso
+                                        }"
+                                        class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-semibold transition-colors"
+                                        x-text="day.label"></button>
+                            </template>
+                        </div>
 
-                    <div class="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                        <button type="button" x-on:click="close()" class="btn-primary px-4 py-2 text-sm">Terminé</button>
+                        <div class="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                            <button type="button" x-on:click="close()" class="btn-primary px-4 py-2 text-sm">Terminé</button>
+                        </div>
                     </div>
-                </div>
+                </template>
             </div>
             """);
     }
