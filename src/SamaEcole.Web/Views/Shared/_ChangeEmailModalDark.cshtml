@@ -12,13 +12,9 @@
     compris celle qui vient de faire la demande : le succès redirige donc vers /login plutôt que de
     simplement fermer la modale — même comportement que la variante claire.
 *@
-<div x-show="$store.changeEmailModal.isOpen" x-cloak
-     class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-     x-on:keydown.escape.window="$store.changeEmailModal.close()">
-    <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-
+<modal-shell open="$store.changeEmailModal.isOpen" on-close="$store.changeEmailModal.close()" size="md" theme="dark">
+    <modal-title><span x-show="!$store.changeEmailModal.done">Changer mon e-mail</span><span x-show="$store.changeEmailModal.done" x-cloak>E-mail changé</span></modal-title>
         <div x-show="!$store.changeEmailModal.done" x-cloak>
-            <h2 class="text-base font-semibold text-white">Changer mon e-mail</h2>
 
             <div x-show="$store.changeEmailModal.errors.global" x-cloak
                  class="mt-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300"
@@ -71,5 +67,4 @@
                 </a>
             </div>
         </div>
-    </div>
-</div>
+</modal-shell>

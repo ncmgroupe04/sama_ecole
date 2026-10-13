@@ -90,15 +90,34 @@ public class ModalShellTagHelper : TagHelper
     /// </summary>
     public bool Dismissible { get; set; } = true;
 
+    /// <summary>
+    /// <c>light</c> (défaut) ou <c>dark</c>. MÊME fenêtre en verre dépoli (flou, coins 3xl, en-tête, pied) dans les deux cas ; seule
+    /// la palette change. <c>dark</c> sert la console SuperAdmin, dont toute l'interface est sombre (<c>_SuperAdminLayout</c>) : une
+    /// fenêtre claire y jurerait. Choix explicite par attribut, jamais par le thème du système (voir Styles/input.css : pas de
+    /// classes <c>dark:</c>).
+    /// </summary>
+    public string Theme { get; set; } = "light";
+
+    /// <summary>
+    /// Crée l'objet partagé où les enfants (<c>modal-title</c>, <c>modal-subtitle</c>, <c>modal-footer</c>) déposent leur contenu.
+    ///
+    /// POURQUOI UN OBJET ET PAS DES CLÉS DE <c>context.Items</c> : ce dictionnaire est en COPIE À L'ÉCRITURE — ce qu'un enfant y
+    /// écrit n'est visible que de SES propres descendants, jamais de son parent. L'ancienne version écrivait le titre sous une
+    /// clé de <c>Items</c> depuis l'enfant et le relisait dans le parent : elle ne trouvait jamais rien, et tous les titres,
+    /// sous-titres et pieds déclarés par ces balises disparaissaient (la fenêtre se rendait sans en-tête). Le sens PARENT → ENFANT
+    /// est, lui, garanti : une référence posée ici, dans <c>Init</c>, est lue par les enfants, qui MODIFIENT l'objet pointé.
+    /// </summary>
+    public override void Init(TagHelperContext context) => context.Items[ModalSlots.ItemsKey] = new ModalSlots();
+
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
-        // GetChildContentAsync exécute aussi les <modal-subtitle>/<modal-title> imbriqués, qui écrivent
-        // dans context.Items (partagé par référence tout au long de l'arborescence) avant que ce parent
-        // ne le relise juste après — le patron documenté de communication enfant → ancêtre des Tag Helpers.
+        // GetChildContentAsync exécute aussi les <modal-subtitle>/<modal-title>/<modal-footer> imbriqués : ils remplissent
+        // `slots` avant que ce parent ne le relise, juste après.
         var body = (await output.GetChildContentAsync()).GetContent();
-        var subtitle = context.Items.TryGetValue(ModalSubtitleTagHelper.ItemsKey, out var value) ? (string)value! : null;
-        var titleSlot = context.Items.TryGetValue(ModalTitleTagHelper.ItemsKey, out var t) ? (string)t! : null;
-        var footer = context.Items.TryGetValue(ModalFooterTagHelper.ItemsKey, out var f) ? (string)f! : null;
+        var slots = (ModalSlots)context.Items[ModalSlots.ItemsKey];
+        var subtitle = slots.Subtitle;
+        var titleSlot = slots.Title;
+        var footer = slots.Footer;
         var close = string.IsNullOrWhiteSpace(OnClose) ? $"{Open} = false" : OnClose;
 
         // Fermeture "accidentelle" (fond + Échap) : retirée quand Dismissible est faux. Le ✕ de
@@ -116,6 +135,19 @@ public class ModalShellTagHelper : TagHelper
         // une modale sans titre (guidage, confirmation nue) affichait une bande blanche vide d'une
         // centaine de pixels, là juste pour loger la croix. HideHeader=true reste un cas distinct :
         // la vue fournit alors son propre en-tête dans le corps (fiche élève…), on n'y touche pas.
+        var dark = string.Equals(Theme, "dark", StringComparison.OrdinalIgnoreCase);
+        var overlayClass = dark ? "bg-black/60" : "bg-slate-900/50";
+        var surfaceClass = dark
+            ? "border border-white/10 bg-zinc-900/85 text-zinc-100 shadow-2xl shadow-black/40 backdrop-blur-xl"
+            : "border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl";
+        var headerBorderClass = dark ? "border-white/10" : "border-slate-200/60";
+        var titleClass = dark ? "text-white" : "text-slate-900";
+        var subtitleClass = dark ? "text-zinc-300" : "text-slate-700";
+        var closeClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-900/5 hover:text-slate-600";
+        var cornerCloseClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-600";
+        var bodyTintClass = dark ? "" : " bg-slate-50/30";
+        var footerClass = dark ? "border-white/10 bg-black/20" : "border-slate-200/60 bg-white/60";
+
         var hasHeader = !HideHeader && (!string.IsNullOrWhiteSpace(titleHtml) || subtitle is not null);
         var headerlessDialog = !HideHeader && !hasHeader;
 
@@ -124,7 +156,7 @@ public class ModalShellTagHelper : TagHelper
         var cornerClose = headerlessDialog
             ? $"""
                 <button type="button" x-on:click="{close}" aria-label="Fermer"
-                        class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary">
+                        class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg {cornerCloseClass} transition-colors focus:outline-none focus:ring-2 focus:ring-primary">
                     <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                 </button>
                 """
@@ -133,7 +165,7 @@ public class ModalShellTagHelper : TagHelper
         // Corps : fond teinté + space-y-6 pour un FORMULAIRE ; pour un dialogue compact sans en-tête
         // (guidage, confirmation) on retire la teinte et l'inter-espace — confirm-dialog-body porte
         // déjà son propre rythme vertical, resserré.
-        var bodyClasses = NoPadding ? "" : headerlessDialog ? "p-6" : "p-6 space-y-6 bg-slate-50/30";
+        var bodyClasses = NoPadding ? "" : headerlessDialog ? "p-6" : "p-6 space-y-6" + bodyTintClass;
 
         output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
 
@@ -166,30 +198,30 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                     class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"{backdropClose}></div>
+                     class="fixed inset-0 {overlayClass} backdrop-blur-sm"{backdropClose}></div>
 
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-3xl"{panelStyleAttr}>
+                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-3xl"{panelStyleAttr}>
                     {cornerClose}
                     {(hasHeader ? $"""
-                    <div class="flex-shrink-0 border-b border-slate-200/60 p-6">
+                    <div class="flex-shrink-0 border-b {headerBorderClass} p-6">
                         <div class="flex items-center justify-between gap-4">
-                            <h2 class="text-2xl font-bold text-slate-900">{titleHtml}</h2>
-                            <button type="button" x-on:click="{close}" class="shrink-0 rounded-2xl p-2 text-slate-400 transition-colors hover:bg-slate-900/5 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary">
+                            <h2 class="text-2xl font-bold {titleClass}">{titleHtml}</h2>
+                            <button type="button" x-on:click="{close}" class="shrink-0 rounded-2xl p-2 {closeClass} transition-colors focus:outline-none focus:ring-2 focus:ring-primary">
                                 <span class="sr-only">Fermer</span>
                                 <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        {(subtitle is null ? "" : $"""<div class="mt-2 text-base font-medium leading-relaxed text-slate-700">{subtitle}</div>""")}
+                        {(subtitle is null ? "" : $"""<div class="mt-2 text-base font-medium leading-relaxed {subtitleClass}">{subtitle}</div>""")}
                     </div>
                     """ : "")}
                     <div class="relative flex-1 overflow-y-auto min-h-0 {bodyClasses}">
                         {body}
                     </div>
                     {(footer is null ? "" : $"""
-                    <div class="flex-shrink-0 border-t border-slate-200/60 bg-white/60 p-4 px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div class="flex-shrink-0 border-t {footerClass} p-4 px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         {footer}
                     </div>
                     """)}
@@ -224,14 +256,14 @@ public class ModalShellTagHelper : TagHelper
 /// N'émet rien à sa propre place : son contenu est absorbé par <see cref="ModalShellTagHelper"/> parent,
 /// qui le replace dans l'en-tête.
 /// </summary>
-[HtmlTargetElement("modal-subtitle", ParentTag = "modal-shell")]
+[HtmlTargetElement("modal-subtitle")]
 public class ModalSubtitleTagHelper : TagHelper
 {
-    internal const string ItemsKey = "SamaEcole.ModalSubtitle";
-
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
-        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        // Hors <modal-shell> : aucun objet partagé, la balise est rendue telle quelle.
+        if (!context.Items.TryGetValue(ModalSlots.ItemsKey, out var shared) || shared is not ModalSlots slots) return;
+        slots.Subtitle = (await output.GetChildContentAsync()).GetContent();
         output.SuppressOutput();
     }
 }
@@ -242,14 +274,13 @@ public class ModalSubtitleTagHelper : TagHelper
 /// mécanisme que <see cref="ModalSubtitleTagHelper"/> : le contenu est absorbé par le parent et replacé
 /// dans le &lt;h2&gt; de l'en-tête. S'il est présent, il l'emporte sur l'attribut <c>title</c>.
 /// </summary>
-[HtmlTargetElement("modal-title", ParentTag = "modal-shell")]
+[HtmlTargetElement("modal-title")]
 public class ModalTitleTagHelper : TagHelper
 {
-    internal const string ItemsKey = "SamaEcole.ModalTitle";
-
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
-        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        if (!context.Items.TryGetValue(ModalSlots.ItemsKey, out var shared) || shared is not ModalSlots slots) return;
+        slots.Title = (await output.GetChildContentAsync()).GetContent();
         output.SuppressOutput();
     }
 }
@@ -258,14 +289,23 @@ public class ModalTitleTagHelper : TagHelper
 /// Footer de la modale. Extrait de son emplacement et positionné en bas de la modale de manière "sticky",
 /// hors de la zone scrollable.
 /// </summary>
-[HtmlTargetElement("modal-footer", ParentTag = "modal-shell")]
+[HtmlTargetElement("modal-footer")]
 public class ModalFooterTagHelper : TagHelper
 {
-    internal const string ItemsKey = "SamaEcole.ModalFooter";
-
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
-        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        if (!context.Items.TryGetValue(ModalSlots.ItemsKey, out var shared) || shared is not ModalSlots slots) return;
+        slots.Footer = (await output.GetChildContentAsync()).GetContent();
         output.SuppressOutput();
     }
+}
+
+/// <summary>Contenu déposé par les balises enfants d'un <c>&lt;modal-shell&gt;</c>, relu par lui (voir <see cref="ModalShellTagHelper.Init"/>).</summary>
+internal sealed class ModalSlots
+{
+    internal const string ItemsKey = "SamaEcole.ModalSlots";
+
+    public string? Title { get; set; }
+    public string? Subtitle { get; set; }
+    public string? Footer { get; set; }
 }

@@ -58,6 +58,21 @@ il devra respecter à la lettre la règle #2 d'`AGENTS.md` (Global Query Filter 
 
 ## 2. Modules livrés et intégrés
 
+**Fenêtres et listes déroulantes — une seule apparence, aucun débordement (12/10/2026, branche `fix/glass-modals-and-floating-lists`)** :
+- *Débordement* : le panneau de `<modal-shell>` (verre dépoli `backdrop-blur-xl` + `overflow-hidden`) devient le repère de tout
+  descendant `position: fixed` : le menu de `<select-field>` / le calendrier de `<date-field>` étaient décalés puis rognés (liste
+  « Régime », « Lit », « Niveau » invisibles sur grand écran). Menus téléportés sous `<body>` (`x-teleport`, `z-[55]`) — reprise du
+  correctif de la PR #81. Échap ferme d'abord la liste ouverte (écouteur en phase de capture, `stopPropagation`), puis la fenêtre.
+  Les listes d'autocomplétion des fenêtres (Occupation, Sorties, Examens) sont « dans le flux » : plus de `absolute z-*`.
+- *Titres perdus (défaut de `main`)* : `<modal-title>`, `<modal-subtitle>`, `<modal-footer>` écrivaient dans `context.Items`, dictionnaire en
+  copie à l'écriture que le parent ne relit pas : ~40 fenêtres se rendaient sans titre ni sous-titre. Corrigé par un objet partagé créé
+  dans `Init` du parent (`ModalSlots`) ; ces balises fonctionnent aussi dans un `<form>` du corps (plus de `ParentTag`).
+- *Une seule fenêtre* : `<modal-shell theme="dark">` (même verre dépoli, palette sombre) remplace les 12 fenêtres artisanales de la
+  console SuperAdmin et des modales de compte sombres ; la fiche publique de l'annuaire reprend la même surface. Exceptions documentées :
+  le tiroir de saisie de la Halqa (déjà en verre dépoli) et la fiche publique (pas de `ui-components.js`).
+- Garde-fous : `tests/js/modal-floating-guards.test.mjs` (pas de liste absolue dans une fenêtre, Échap, aucune fenêtre artisanale),
+  `floating-popover-teleport.test.mjs`, `ModalShellRenderTests` (titres rendus, variante sombre, palette claire intacte).
+
 Livrés, câblés à l'IHM, et couverts par la suite de tests :
 
 | Module | Écran | Backend |

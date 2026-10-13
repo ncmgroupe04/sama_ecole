@@ -197,18 +197,8 @@
     </div>
 
     @* ---------------------------------------------------------------- Détail d'une demande *@
-    <div x-show="detailTarget" x-cloak
-         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-         x-on:keydown.escape.window="closeDetail()">
-        <div class="w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div class="flex items-start justify-between gap-4">
-                <h2 class="text-base font-semibold text-white">Détail de la demande</h2>
-                <button type="button" x-on:click="closeDetail()" aria-label="Fermer"
-                        class="shrink-0 rounded-xl p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors">
-                    <icon name="x" class="w-4 h-4" />
-                </button>
-            </div>
-
+    <modal-shell open="detailTarget" on-close="closeDetail()" size="2xl" theme="dark">
+        <modal-title>Détail de la demande</modal-title>
             <template x-if="detailTarget">
                 <div class="mt-4 space-y-5">
                     <div class="flex items-center justify-between gap-4">
@@ -262,16 +252,12 @@
                     </div>
                 </div>
             </template>
-        </div>
-    </div>
+    </modal-shell>
 
     @* ---------------------------------------------------------------- Confirmation d'approbation *@
-    <div x-show="approveTarget" x-cloak
-         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-         x-on:keydown.escape.window="closeApprove()">
-        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h2 class="text-base font-semibold text-white">Approuver la demande</h2>
-            <p class="mt-2 text-sm text-zinc-400">
+    <modal-shell open="approveTarget" on-close="closeApprove()" size="md" theme="dark">
+        <modal-title>Approuver la demande</modal-title>
+            <p class="text-sm text-zinc-400">
                 Cette action crée l'établissement, le compte Directeur et son abonnement (en attente
                 de paiement). Le Directeur pourra alors se connecter. Confirmez-vous ?
             </p>
@@ -293,16 +279,12 @@
                     <span x-text="isApproving ? 'Création en cours…' : 'Approuver et créer'"></span>
                 </button>
             </div>
-        </div>
-    </div>
+    </modal-shell>
 
     @* ---------------------------------------------------------------- Rejet (motif obligatoire) *@
-    <div x-show="rejectTarget" x-cloak
-         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-         x-on:keydown.escape.window="closeReject()">
-        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h2 class="text-base font-semibold text-white">Rejeter la demande</h2>
-            <p class="mt-2 text-sm text-zinc-400">
+    <modal-shell open="rejectTarget" on-close="closeReject()" size="md" theme="dark">
+        <modal-title>Rejeter la demande</modal-title>
+            <p class="text-sm text-zinc-400">
                 Le motif ci-dessous sera communiqué au demandeur. Aucune école n'est créée.
             </p>
 
@@ -326,16 +308,12 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
+    </modal-shell>
 
     @* ---------------------------------------------------------------- Confirmation : demande approuvée *@
-    <div x-show="approvedResult" x-cloak
-         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-         x-on:keydown.escape.window="approvedResult = null">
-        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h2 class="text-base font-semibold text-white">Demande approuvée</h2>
-            <p class="mt-2 text-sm text-zinc-400">
+    <modal-shell open="approvedResult" on-close="approvedResult = null" size="md" theme="dark">
+        <modal-title>Demande approuvée</modal-title>
+            <p class="text-sm text-zinc-400">
                 L'établissement
                 <span class="font-medium text-zinc-100" x-text="approvedResult ? approvedResult.schoolName : ''"></span>
                 a été créé.
@@ -353,16 +331,12 @@
                     Fermer
                 </button>
             </div>
-        </div>
-    </div>
+    </modal-shell>
 
     @* ---------------------------------------------------------------- Confirmation : demande rejetée *@
-    <div x-show="rejectedResult" x-cloak
-         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-         x-on:keydown.escape.window="rejectedResult = null">
-        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <h2 class="text-base font-semibold text-white">Demande rejetée</h2>
-            <p class="mt-2 text-sm text-zinc-400">
+    <modal-shell open="rejectedResult" on-close="rejectedResult = null" size="md" theme="dark">
+        <modal-title>Demande rejetée</modal-title>
+            <p class="text-sm text-zinc-400">
                 La demande de
                 <span class="font-medium text-zinc-100" x-text="rejectedResult ? rejectedResult.schoolName : ''"></span>
                 a bien été rejetée.
@@ -373,6 +347,5 @@
                     Fermer
                 </button>
             </div>
-        </div>
-    </div>
+    </modal-shell>
 </div>
