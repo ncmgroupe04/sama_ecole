@@ -7339,7 +7339,7 @@ components:
 
     RegistrationRequestCreate:
       type: object
-      required: [directorFullName, directorEmail, directorPhone, directorPassword, schoolName, ownership, cycleProfile]
+      required: [directorFullName, directorEmail, directorPhone, directorPassword, schoolName, ownership]
       properties:
         directorFullName: { type: string, maxLength: 200 }
         directorEmail: { type: string, format: email, maxLength: 200 }
@@ -7351,7 +7351,11 @@ components:
         region: { type: string, maxLength: 100 }
         estimatedStudentCount: { type: integer, minimum: 1 }
         ownership: { type: string, enum: [Private, Public], description: "Établissement privé ou public — première entrée de la grille tarifaire de la vitrine. Aucune valeur par défaut : 422 si absent." }
-        cycleProfile: { type: string, enum: [Primaire, College, Lycee, Bicycle, Complexe], description: "Cycles gérés. Un public gère un seul cycle (Primaire, College, Lycee) ; Bicycle et Complexe sont réservés au privé." }
+        cycleProfile: { type: string, enum: [Primaire, College, Lycee, Bicycle, Complexe], description: "Cycles gérés (grille historique) — obligatoire SANS profil ni tranche. Un public gère un seul cycle (Primaire, College, Lycee) ; Bicycle et Complexe sont réservés au privé. Avec une offre par tranche, il est déduit des cycles cochés." }
+        profile: { type: string, enum: [Elementaire, FrancoArabe, InternatDaara, EnseignementGeneral, ComptabiliteRapports, DaaraMemorisation], nullable: true, description: "Offre par tranche d'effectif (privé) : profil d'enseignement. Va avec `tier`." }
+        hasBoarding: { type: boolean, default: false, description: "L'école héberge des élèves : active le module Internat et la majoration Internat de la grille." }
+        cycles: { type: array, nullable: true, items: { type: string, enum: [Maternelle, Primaire, College, Lycee] }, description: "Cycles cochés (Préscolaire, Élémentaire, Moyen, Secondaire). Obligatoires pour un profil académique." }
+        tier: { type: string, enum: [Tier_100, Tier1_150, Tier_250, Tier2_400], nullable: true, description: "Tranche d'effectif choisie. Doit couvrir `estimatedStudentCount` (obligatoire avec une tranche) ; au-delà de 400 élèves : offre Grand Groupe, sur devis (422)." }
         sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true, description: "Palier de taille du forfait PRIVÉ (obligatoire pour un privé, ignoré pour un public). Seuils : bicycle 400 / 800 élèves, grand complexe 500 / 1 000 ; monocycles petit / moyen / grand sans seuil chiffré." }
         website: { type: string, description: "Honeypot anti-spam : champ leurre, DOIT rester vide. Rempli, la soumission est ignorée sans être enregistrée." }
 
@@ -7428,6 +7432,10 @@ components:
         ownership: { type: string, enum: [Private, Public] }
         cycleProfile: { type: string, enum: [Primaire, College, Lycee, Bicycle, Complexe] }
         sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true }
+        profile: { type: string, nullable: true, description: "Offre par tranche : profil d'enseignement demandé." }
+        hasBoarding: { type: boolean }
+        cycles: { type: string, nullable: true, description: "Cycles cochés, séparés par des virgules (forme canonique)." }
+        tier: { type: string, nullable: true, description: "Offre par tranche : tranche d'effectif choisie." }
         directorFullName: { type: string }
         directorEmail: { type: string, format: email }
         directorPhone: { type: string }

@@ -4228,6 +4228,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Primaire");
 
+                    b.Property<string>("Cycles")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -4257,6 +4261,11 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int?>("EstimatedStudentCount")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasBoarding")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -4266,6 +4275,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Private");
+
+                    b.Property<string>("Profile")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Region")
                         .HasMaxLength(100)
@@ -4300,6 +4313,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Tier")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 

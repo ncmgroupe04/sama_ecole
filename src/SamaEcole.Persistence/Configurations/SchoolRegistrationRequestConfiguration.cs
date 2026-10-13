@@ -44,6 +44,12 @@ public class SchoolRegistrationRequestConfiguration : IEntityTypeConfiguration<S
             .HasDefaultValue(SchoolCycleProfile.Primaire);
         builder.Property(r => r.SizeTier).HasConversion<string>().HasMaxLength(20);
 
+        // Offre par tranche d'effectif : NULL pour toute demande antérieure (grille historique). Enums en texte.
+        builder.Property(r => r.Profile).HasConversion<string>().HasMaxLength(30);
+        builder.Property(r => r.HasBoarding).IsRequired().HasDefaultValue(false);
+        builder.Property(r => r.Cycles).HasMaxLength(60);
+        builder.Property(r => r.Tier).HasConversion<string>().HasMaxLength(20);
+
         builder.Property(r => r.RequestedPlan).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.RejectionReason).HasColumnType("text");

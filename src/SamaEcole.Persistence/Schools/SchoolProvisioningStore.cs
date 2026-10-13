@@ -92,6 +92,32 @@ public class SchoolProvisioningStore(ApplicationDbContext dbContext) : ISchoolPr
         return result is Guid id ? id : null;
     }
 
+    public async Task<Guid?> CreateConfiguredTenantSubscriptionAsync(
+        Guid schoolId, ConfiguredTenantSubscription configuration, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT provision_configured_tenant_subscription(@schoolId, @profile, @establishmentProfile, @tier, @max, @soft, " +
+            "@pedagogy, @finance, @internat, @coran, @managedCycles)",
+            cancellationToken);
+
+        command.Parameters.AddWithValue("schoolId", schoolId);
+        command.Parameters.AddWithValue("profile", configuration.Profile.ToString());
+        command.Parameters.AddWithValue("establishmentProfile", configuration.EstablishmentProfile.ToString());
+        command.Parameters.AddWithValue("tier", configuration.Tier.ToString());
+        command.Parameters.AddWithValue("max", configuration.MaxStudentLimit);
+        command.Parameters.AddWithValue("soft", configuration.SoftQuotaLimit);
+        command.Parameters.AddWithValue("pedagogy", configuration.IsPedagogyEnabled);
+        command.Parameters.AddWithValue("finance", configuration.IsFinanceEnabled);
+        command.Parameters.AddWithValue("internat", configuration.IsInternatEnabled);
+        command.Parameters.AddWithValue("coran", configuration.IsCoranModuleEnabled);
+        command.Parameters.AddWithValue("managedCycles", configuration.ManagedCycles);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+
+        // NULL = l'école a déjà une souscription : garde anti-escalade, pas une erreur technique.
+        return result is Guid id ? id : null;
+    }
+
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
     {
         // Réutilise la fonction du chemin de login : elle voit TOUS les comptes, toutes écoles

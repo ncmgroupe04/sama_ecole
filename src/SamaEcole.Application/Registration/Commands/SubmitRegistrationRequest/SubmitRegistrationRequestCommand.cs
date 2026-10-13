@@ -33,8 +33,27 @@ public record SubmitRegistrationRequestCommand : IRequest<SubmitRegistrationRequ
     public SchoolOwnership? Ownership { get; init; }
     public SchoolCycleProfile? CycleProfile { get; init; }
 
-    /// <summary>Palier de taille — obligatoire pour un établissement privé, ignoré (mis à null) pour un public.</summary>
+    /// <summary>
+    /// Palier de taille de la grille HISTORIQUE — obligatoire pour un établissement privé qui ne choisit pas de tranche
+    /// d'effectif, ignoré (mis à null) pour un public et pour une offre par tranche.
+    /// </summary>
     public SchoolSizeTier? SizeTier { get; init; }
+
+    /// <summary>
+    /// OFFRE PAR TRANCHE D'EFFECTIF (établissements privés) : profil d'enseignement, internat, cycles cochés et tranche.
+    /// <see cref="Profile"/> et <see cref="Tier"/> vont ensemble ; renseignés, ils remplacent <see cref="CycleProfile"/> (déduit
+    /// des cycles cochés) et <see cref="SizeTier"/>. <see cref="EstimatedStudentCount"/> devient alors obligatoire : c'est lui
+    /// qui borne la tranche (anti-fraude). Le serveur recalcule tout montant ; aucun prix ne vient du client.
+    /// </summary>
+    public ProfileType? Profile { get; init; }
+
+    /// <summary>L'école héberge des élèves (Internat) — active le module et la majoration Internat de la grille.</summary>
+    public bool HasBoarding { get; init; }
+
+    /// <summary>Cycles académiques gérés ; obligatoire pour un profil académique, facultatif pour un Daara de mémorisation ou une Comptabilité.</summary>
+    public IReadOnlyList<CycleType>? Cycles { get; init; }
+
+    public StudentQuotaTier? Tier { get; init; }
 }
 
 /// <summary>

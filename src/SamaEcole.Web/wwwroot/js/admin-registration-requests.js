@@ -80,6 +80,10 @@ document.addEventListener('alpine:init', () => {
          * serveur (il ne se choisit plus) et n'est donc plus affiché comme un choix du demandeur.
          */
         offerLabel(request) {
+            // Offre par tranche d'effectif : profil, tranche, internat et cycles cochés (le profil de cycles de la grille
+            // historique, déduit côté serveur, ne dit plus rien d'utile ici).
+            if (request.profile && request.tier) return this.tieredOfferLabel(request);
+
             const isPublic = request.ownership === 'Public';
             const cycles = {
                 Primaire: isPublic ? 'École élémentaire' : 'Primaire',
@@ -98,6 +102,32 @@ document.addEventListener('alpine:init', () => {
                     : { Small: 'petit', Medium: 'moyen', Large: 'grand' };
 
             return `Privé · ${cycles}${request.sizeTier ? ' · ' + sizes[request.sizeTier] : ''}`;
+        },
+
+        /** « Privé · Franco-Arabe · jusqu'à 150 élèves · Internat · Primaire, Collège ». */
+        tieredOfferLabel(request) {
+            const profiles = {
+                EnseignementGeneral: 'Enseignement général',
+                FrancoArabe: 'Franco-Arabe',
+                Elementaire: 'Élémentaire',
+                InternatDaara: 'Daara moderne (internat)',
+                DaaraMemorisation: 'Daara — Mémorisation',
+                ComptabiliteRapports: 'Comptabilité & rapports'
+            };
+            const tiers = {
+                Tier_100: "jusqu'à 100 élèves",
+                Tier1_150: "jusqu'à 150 élèves",
+                Tier_250: "jusqu'à 250 élèves",
+                Tier2_400: "jusqu'à 400 élèves",
+                Tier3_800: "jusqu'à 800 élèves (sur devis)",
+                Tier4_Custom: 'sur mesure (sur devis)'
+            };
+            const cycleNames = { Maternelle: 'Préscolaire', Primaire: 'Élémentaire', College: 'Moyen', Lycee: 'Secondaire' };
+            const cycles = (request.cycles || '').split(',').filter(Boolean).map((c) => cycleNames[c] || c).join(', ');
+
+            return ['Privé', profiles[request.profile] || request.profile, tiers[request.tier] || request.tier]
+                .concat(request.hasBoarding ? ['Internat'] : [], cycles ? [cycles] : [])
+                .join(' · ');
         },
 
         formatDate(iso) {

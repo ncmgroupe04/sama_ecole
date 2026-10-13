@@ -937,6 +937,25 @@ softQuotaLimit, remainingBeforeBlock }` (absent sinon) ; au-delà : 422 `STUDENT
 ou absente : 422 `SUBSCRIPTION_NOT_ACTIVE`. Le contrôle précède la transaction et ne la verrouille pas : deux créations
 strictement concurrentes à la limite peuvent dépasser la tolérance d'un ou deux élèves.
 
+### 29.0 Offre par tranche d'effectif à l'inscription
+
+`POST /api/v1/registration-requests` accepte, **en plus** des champs historiques, `profile` (`ProfileType`), `hasBoarding`
+(bool), `cycles` (liste de `Maternelle`, `Primaire`, `College`, `Lycee` — respectivement Préscolaire, Élémentaire, Moyen,
+Secondaire) et `tier` (`Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`). `profile` et `tier` vont ensemble ; renseignés,
+`cycleProfile` et `sizeTier` deviennent inutiles (le premier est déduit des cycles). Règles, toutes en 422 sur le champ concerné :
+`ownership` = `Private` ; `estimatedStudentCount` obligatoire (effectif exact) ; `cycles` obligatoires pour un profil académique
+(tous sauf `DaaraMemorisation` et `ComptabiliteRapports`), sans doublon, limités à `Maternelle`/`Primaire` pour `Elementaire` ;
+**anti-fraude** : `tier` doit couvrir `estimatedStudentCount` (le message nomme la tranche minimale) ; au-delà de 400 élèves ou avec
+`Tier3_800`/`Tier4_Custom`, le message oriente vers l'offre « Grand Groupe » (sur devis). Sans `profile` ni `tier`, la grille
+historique s'applique, inchangée. La liste Super Admin (`GET /admin/registration-requests`) expose `profile`, `hasBoarding`,
+`cycles` et `tier`.
+
+`POST /admin/registration-requests/{id}/approve` : pour une offre par tranche, l'offre est **re-contrôlée** (422 sinon, la demande
+reste en attente), le tarif de la tranche doit exister (409 `PRICING_NOT_CONFIGURED` sinon) et l'école naît **configurée** :
+souscription commerciale `Active` (profil, tranche, plafonds, modules) et réglages alignés — le Directeur n'a pas
+d'Onboarding à faire. L'abonnement de facturation reste `AwaitingPayment` jusqu'au premier paiement, dont le montant (mensuel
+ou annuel) vient de la grille par tranche (§29.1), majoration Internat comprise si `hasBoarding`.
+
 ### 29.1 Grille tarifaire par tranche d'effectif
 
 Table : `quota_tier_prices` (Volume 3 §5.16). Le montant facturé n'est jamais celui que le client renvoie : il est recalculé

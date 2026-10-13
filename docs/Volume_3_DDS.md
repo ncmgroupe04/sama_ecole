@@ -325,13 +325,20 @@ Deux demandes **en attente** peuvent partager le même `DirectorEmail` (« une �
 | `SchoolName` | `varchar(200)` | NOT NULL |
 | `SchoolAddress` | `varchar(300)` | NULL |
 | `City`, `Region` | `varchar(100)` | NULL |
-| `EstimatedStudentCount` | `int` | NULL |
+| `EstimatedStudentCount` | `int` | NULL — **obligatoire** (> 0) pour une offre par tranche : il borne la tranche choisie |
+| `Ownership`, `CycleProfile`, `SizeTier` | `varchar(20)` | Offre de la grille **historique** (privé/public × cycles × taille Petit/Moyen/Grand). Pour une offre par tranche, `CycleProfile` est **déduit** des cycles cochés (aucun → `Primaire`, un seul → ce cycle, deux → `Bicycle`, trois ou quatre → `Complexe`) et `SizeTier` reste NULL |
+| `Profile` | `varchar(30)` | NULL — `ProfileType` (§6). Avec `Tier`, signe une **offre par tranche d'effectif** (privé uniquement) ; NULL pour toute demande antérieure et pour un public |
+| `HasBoarding` | `bool` | NOT NULL, défaut `false` — l'école héberge des élèves : active le module Internat et la majoration Internat de `quota_tier_prices` |
+| `Cycles` | `varchar(60)` | NULL — cycles académiques cochés (« Maternelle,Primaire,… », forme canonique) ; NULL pour un Daara de mémorisation ou une Comptabilité (l'école démarre alors avec tous les cycles) |
+| `Tier` | `varchar(20)` | NULL — `StudentQuotaTier` choisie, parmi les quatre tranches tarifées. Règle : tranche ≥ tranche minimale de `EstimatedStudentCount` ; au-delà de 400 élèves (ou `Tier3_800`/`Tier4_Custom`) : « Grand Groupe », sur devis, refusé en libre-service |
 | `RequestedPlanId` | `uuid` | FK `SubscriptionPlans.Id` |
 | `Status` | `varchar(20)` | CHECK IN (`PENDING`,`APPROVED`,`REJECTED`) |
 | `RejectionReason` | `text` | NULL, obligatoire applicativement si `Status = REJECTED` |
 | `ReviewedBy` | `uuid` | FK `Users.Id` (Super Admin), NULL tant que `Status = PENDING` |
 | `ReviewedAt` | `timestamptz` | NULL tant que `Status = PENDING` |
 | `CreatedSchoolId` | `uuid` | FK `Schools.Id`, NULL, renseigné uniquement après approbation effective |
+
+**Approbation d'une offre par tranche.** La soumission et l'approbation appliquent la même règle (`RegistrationOffer.Check`) : la demande a pu attendre. Au lieu de `provision_tenant_subscription` (souscription `PendingOnboarding`), l'approbation appelle `provision_configured_tenant_subscription(...)` (migration `AddRegistrationOfferAndConfiguredProvisioning`, `SECURITY DEFINER`, `search_path` figé, `EXECUTE` retiré à `PUBLIC` et accordé au seul rôle applicatif) : elle insère la souscription **`Active`** avec le profil, la tranche, ses plafonds et les quatre modules, et aligne la ligne `school_settings` créée par `provision_school_director` (profil, modules, `ManagedCycles`). Garde : elle renvoie `NULL` si l'école a déjà une souscription vivante et lève une exception (donc annule la transaction) si les réglages sont introuvables ou ont déjà un profil. Modules : preset du profil, auquel l'Internat s'**ajoute** si `HasBoarding` (il n'en retire jamais un : les Halqas vivent derrière le module Internat) ; la majoration de la grille, elle, ne dépend que de `HasBoarding`. Le montant facturé vient de `SubscriptionPricingEngine` (§5.16) quand `Tier` est renseigné, de la grille historique sinon.
 
 ### 5.8 `SubscriptionPayments` (table plateforme)
 
