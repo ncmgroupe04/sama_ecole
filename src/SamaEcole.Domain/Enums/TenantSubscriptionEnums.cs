@@ -52,7 +52,18 @@ public enum StudentQuotaTier
     Tier3_800,
 
     /// <summary>Plafond sur mesure fixé par le Super Admin — illimité (<see cref="int.MaxValue"/>) tant qu'il n'a rien fixé.</summary>
-    Tier4_Custom
+    Tier4_Custom,
+
+    /// <summary>
+    /// Jusqu'à 100 élèves (tolérance 110) — tarif d'appel des petites structures et petits daaras.
+    /// AJOUTÉE EN FIN d'énumération à dessein, comme <see cref="Tier_250"/> : <c>default(StudentQuotaTier)</c>
+    /// reste <see cref="Tier1_150"/>. La colonne étant persistée en texte, l'ordre n'a aucune incidence en
+    /// base ; l'ordre croissant des tranches est porté par <c>QuotaTierResolver.Ladder</c>.
+    /// </summary>
+    Tier_100,
+
+    /// <summary>Jusqu'à 250 élèves (tolérance 260).</summary>
+    Tier_250
 }
 
 /// <summary>

@@ -59,7 +59,9 @@ public static class StudentQuotaDefaults
     /// <summary>Plafonds (nominal, tolérance) d'une tranche. La tranche sur mesure est illimitée par défaut.</summary>
     public static (int Max, int Soft) For(StudentQuotaTier tier) => tier switch
     {
+        StudentQuotaTier.Tier_100 => (100, 110),
         StudentQuotaTier.Tier1_150 => (150, 160),
+        StudentQuotaTier.Tier_250 => (250, 260),
         StudentQuotaTier.Tier2_400 => (400, 420),
         StudentQuotaTier.Tier3_800 => (800, 830),
         StudentQuotaTier.Tier4_Custom => (Unlimited, Unlimited),
