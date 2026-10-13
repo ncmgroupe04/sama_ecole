@@ -48,7 +48,7 @@
             </stat-card>
         </div>
 
-        <div class="contents" x-show="analyticsRole">
+        <div class="contents" x-show="analyticsRole && $store.schoolConfig.pedagogyEnabled">
             <stat-card label="Taux de présence (Mois)" icon="checkmark-circle" accent="success">
                 <span x-text="formatPercent(analyticsData?.attendanceRate)">—</span>
             </stat-card>
@@ -122,7 +122,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- COLONNE GAUCHE : Vie Scolaire & Planning -->
-        <div class="card w-full p-6" x-show="analyticsRole">
+        <div class="card w-full p-6" x-show="analyticsRole && $store.schoolConfig.pedagogyEnabled">
             <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-4">
                 <h2 class="text-[19px] font-bold text-slate-900">Vie Scolaire & Planning</h2>
             </div>
