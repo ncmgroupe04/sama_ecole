@@ -5,6 +5,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Internat;
 using SamaEcole.Application.Internat.Queries.GetProgressDashboard;
+using SamaEcole.Application.Internat.Queries.GetStudentHizbHistory;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbReport;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbReportPdf;
@@ -119,7 +120,7 @@ public class ProgressDashboardAndReportTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// ISender minimal : route les deux requêtes que le bulletin enchaîne vers leurs VRAIS Handlers (même contexte, même
+    /// ISender minimal : route les requêtes que le bulletin enchaîne (grille, évolution) vers leurs VRAIS Handlers (même contexte, même
     /// compte courant), sans monter tout MediatR.
     /// </summary>
     private sealed class ChainSender(ApplicationDbContext db, HalqaScopeAuthorizer scope) : ISender
@@ -129,6 +130,7 @@ public class ProgressDashboardAndReportTests : IAsyncLifetime
             object result = request switch
             {
                 GetStudentHizbProgressQuery q => new GetStudentHizbProgressQueryHandler(db, scope).Handle(q, cancellationToken),
+                GetStudentHizbHistoryQuery q => new GetStudentHizbHistoryQueryHandler(db, scope).Handle(q, cancellationToken),
                 GetStudentHizbReportQuery q => new GetStudentHizbReportQueryHandler(this, db, new FixedTimeProvider(Now)).Handle(q, cancellationToken),
                 _ => throw new NotSupportedException(request.GetType().Name)
             };
