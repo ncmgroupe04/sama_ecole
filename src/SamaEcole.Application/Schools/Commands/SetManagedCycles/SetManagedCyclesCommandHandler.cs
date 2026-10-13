@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions.Changes;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 
@@ -15,10 +16,15 @@ namespace SamaEcole.Application.Schools.Commands.SetManagedCycles;
 /// Compte les classes VIVANTES : <c>Classroom</c> est une ITenantEntity, son Global Query Filter écarte déjà les
 /// classes d'une autre école et les classes supprimées logiquement. Le cycle d'une classe est
 /// <c>Classroom.Cycle</c> (structuré, dérivé de son niveau), jamais son libellé libre.
+///
+/// VERROU D'ABONNEMENT : les cycles gérés sont ceux que l'école a souscrits. En ajouter (montée en gamme) ou en retirer
+/// (réduction, qui doit passer par le support pour ne rien effacer par mégarde) est INTERCEPTÉ avant toute écriture
+/// (SubscriptionChangeRequiredException, 409) et devient une demande. Redéclarer les cycles actuels reste sans effet.
 /// </summary>
 public class SetManagedCyclesCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
+    SubscriptionChangeService subscriptionChanges,
     ILogger<SetManagedCyclesCommandHandler> logger)
     : IRequestHandler<SetManagedCyclesCommand, SchoolSettingsDto>
 {
@@ -63,6 +69,10 @@ public class SetManagedCyclesCommandHandler(
                 };
             }
         }
+
+        // Verrou, APRÈS le contrôle des classes : retirer un cycle qui en contient reste d'abord refusé pour cette raison, plus
+        // précise que « passez par le support ».
+        await subscriptionChanges.EnsureNoChangeAsync(new SubscriptionChangeSet(Cycles: requested.ToList()), cancellationToken);
 
         settings.ManagedCycles = ManagedCycleSet.Serialize(requested);
 

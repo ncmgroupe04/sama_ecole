@@ -97,7 +97,7 @@ public class SchoolProvisioningStore(ApplicationDbContext dbContext) : ISchoolPr
     {
         await using var command = await CreateCommandAsync(
             "SELECT provision_configured_tenant_subscription(@schoolId, @profile, @establishmentProfile, @tier, @max, @soft, " +
-            "@pedagogy, @finance, @internat, @coran, @managedCycles)",
+            "@pedagogy, @finance, @internat, @coran, @managedCycles, @hasBoarding)",
             cancellationToken);
 
         command.Parameters.AddWithValue("schoolId", schoolId);
@@ -111,6 +111,7 @@ public class SchoolProvisioningStore(ApplicationDbContext dbContext) : ISchoolPr
         command.Parameters.AddWithValue("internat", configuration.IsInternatEnabled);
         command.Parameters.AddWithValue("coran", configuration.IsCoranModuleEnabled);
         command.Parameters.AddWithValue("managedCycles", configuration.ManagedCycles);
+        command.Parameters.AddWithValue("hasBoarding", configuration.HasBoarding);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 

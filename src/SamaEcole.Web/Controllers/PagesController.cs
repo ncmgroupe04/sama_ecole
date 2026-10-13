@@ -229,6 +229,11 @@ public class PagesController : Controller
     [HttpGet("/admin/tarification")]
     public IActionResult SuperAdminPricing() => View("~/Views/SuperAdmin/Pricing.cshtml");
 
+    // Changements d'abonnement : demandes des Directeurs (profil, cycles, tranche, modules) et écoles en dépassement de quota —
+    // AdminSubscriptionChangeRequestsController / AdminOverQuotaSchoolsController (Roles = SuperAdmin) gardent l'accès aux données.
+    [HttpGet("/admin/changements-abonnement")]
+    public IActionResult SuperAdminSubscriptionChanges() => View("~/Views/SuperAdmin/SubscriptionChanges.cshtml");
+
     [HttpGet("/admin/securite")]
     public IActionResult SuperAdminSecurity() => View("~/Views/SuperAdmin/Security.cshtml");
 

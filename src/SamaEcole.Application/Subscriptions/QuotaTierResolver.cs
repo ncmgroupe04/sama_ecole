@@ -51,7 +51,8 @@ public static class QuotaTierResolver
     public static bool RequiresQuote(StudentQuotaTier tier) =>
         Rank(tier) > Rank(StudentQuotaTier.Tier2_400);
 
-    private static int Rank(StudentQuotaTier tier)
+    /// <summary>Rang de la tranche dans l'échelle croissante (0 = la plus petite) ; lève pour une valeur inconnue.</summary>
+    public static int Rank(StudentQuotaTier tier)
     {
         var index = Ladder.IndexOf(tier);
 

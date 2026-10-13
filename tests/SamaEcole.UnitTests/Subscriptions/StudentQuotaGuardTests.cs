@@ -2,6 +2,7 @@ using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Subscriptions;
+using SamaEcole.Application.Subscriptions.Changes;
 using SamaEcole.Domain.Enums;
 using Xunit;
 
@@ -13,8 +14,9 @@ namespace SamaEcole.UnitTests.Subscriptions;
 /// </summary>
 public class StudentQuotaGuardTests
 {
-    private static StudentQuotaGuard GuardFor(int current, int max, int soft, TenantSubscriptionStatus? status = TenantSubscriptionStatus.Active) =>
-        new(new FixedQuotaService(current, max, soft, status));
+    private static StudentQuotaGuard GuardFor(
+        int current, int max, int soft, TenantSubscriptionStatus? status = TenantSubscriptionStatus.Active, RecordingTracker? tracker = null) =>
+        new(new FixedQuotaService(current, max, soft, status), tracker ?? new RecordingTracker());
 
     [Fact]
     public async Task Within_The_Nominal_Limit_Nothing_Is_Raised_And_No_Warning_Is_Returned()
@@ -109,6 +111,50 @@ public class StudentQuotaGuardTests
         var warning = await GuardFor(current: 50_000, max: int.MaxValue, soft: int.MaxValue).EnsureCanAddAsync(1000, CancellationToken.None);
 
         warning.Should().BeNull();
+    }
+
+    // ------------------------------------------------------------------ Date du premier dépassement (OverQuotaSince)
+
+    [Fact]
+    public async Task Every_Evaluation_Records_The_Quota_State_So_That_The_First_Overrun_Is_Dated()
+    {
+        var tracker = new RecordingTracker();
+
+        await GuardFor(current: 155, max: 150, soft: 160, tracker: tracker).EnsureCanAddAsync(1, CancellationToken.None);
+
+        tracker.States.Should().Equal(StudentQuotaState.InTolerance);
+    }
+
+    [Fact]
+    public async Task The_State_Is_Recorded_Even_When_The_Creation_Is_Refused()
+    {
+        var tracker = new RecordingTracker();
+
+        var act = async () => await GuardFor(current: 170, max: 150, soft: 160, tracker: tracker).EnsureCanAddAsync(1, CancellationToken.None);
+
+        await act.Should().ThrowAsync<QuotaExceededException>();
+        tracker.States.Should().Equal(StudentQuotaState.Exceeded);
+    }
+
+    [Fact]
+    public async Task A_School_Within_Its_Quota_Is_Recorded_As_Such_So_That_The_Marker_Is_Cleared()
+    {
+        var tracker = new RecordingTracker();
+
+        await GuardFor(current: 40, max: 150, soft: 160, tracker: tracker).EnsureCanAddAsync(1, CancellationToken.None);
+
+        tracker.States.Should().Equal(StudentQuotaState.WithinQuota);
+    }
+
+    private sealed class RecordingTracker : IOverQuotaTracker
+    {
+        public List<StudentQuotaState> States { get; } = [];
+
+        public Task RecordAsync(StudentQuotaStatus quota, CancellationToken cancellationToken)
+        {
+            States.Add(quota.State);
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>Service figé : le verdict vient de <see cref="StudentQuotaEvaluator"/>, la vraie règle.</summary>

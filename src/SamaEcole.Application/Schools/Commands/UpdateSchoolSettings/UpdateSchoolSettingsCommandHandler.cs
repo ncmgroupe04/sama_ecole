@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions.Changes;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -15,10 +16,16 @@ namespace SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
 ///
 /// L'INSERT passe la policy RLS sans porte dérobée : un Directeur A UN tenant, contrairement au
 /// Super Admin — le WITH CHECK est donc satisfait par construction.
+///
+/// VERROU D'ABONNEMENT : activer un module que l'abonnement ne comprend pas (l'Internat, par exemple) est une montée en
+/// gamme, pas un réglage. La tentative est INTERCEPTÉE avant toute écriture (SubscriptionChangeRequiredException, 409) et
+/// devient une demande que le Super Admin valide. Couper un module, ou réactiver un module souscrit, reste un réglage
+/// libre ; un module déjà actif dans les réglages n'est pas « activé » à nouveau par un simple enregistrement.
 /// </summary>
 public class UpdateSchoolSettingsCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
+    SubscriptionChangeService subscriptionChanges,
     ILogger<UpdateSchoolSettingsCommandHandler> logger)
     : IRequestHandler<UpdateSchoolSettingsCommand, SchoolSettingsDto>
 {
@@ -36,6 +43,16 @@ public class UpdateSchoolSettingsCommandHandler(
             settings = new SchoolSettings { SchoolId = schoolId };
             dbContext.SchoolSettings.Add(settings);
         }
+
+        // Verrou : seules les ACTIVATIONS nouvelles de module sont soumises à l'abonnement. Le planificateur les compare aux
+        // modules souscrits : un module inclus passe, un module non souscrit déclenche l'aperçu du tarif ajusté.
+        await subscriptionChanges.EnsureNoChangeAsync(
+            new SubscriptionChangeSet(
+                IsPedagogyEnabled: request.IsPedagogyEnabled && !settings.IsPedagogyEnabled ? true : null,
+                IsFinanceEnabled: request.IsFinanceEnabled && !settings.IsFinanceEnabled ? true : null,
+                IsInternatEnabled: request.IsInternatEnabled && !settings.IsInternatEnabled ? true : null,
+                IsCoranModuleEnabled: request.IsCoranModuleEnabled && !settings.IsCoranModuleEnabled ? true : null),
+            cancellationToken);
 
         // Le barème est validé en amont : à ce stade, il vaut « 10 » ou « 20 ».
         settings.GradingScale = int.Parse(request.GradingScale);

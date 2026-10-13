@@ -78,4 +78,5 @@ public sealed record ConfiguredTenantSubscription(
     bool IsFinanceEnabled,
     bool IsInternatEnabled,
     bool IsCoranModuleEnabled,
-    string ManagedCycles);
+    string ManagedCycles,
+    bool HasBoarding);

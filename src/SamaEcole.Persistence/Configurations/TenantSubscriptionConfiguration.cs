@@ -28,6 +28,9 @@ public class TenantSubscriptionConfiguration : IEntityTypeConfiguration<TenantSu
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
         builder.Property(s => s.MaxStudentLimit).IsRequired();
+
+        // Drapeau de facturation « l'école héberge des élèves » : faux pour toute école déjà en base.
+        builder.Property(s => s.HasBoarding).IsRequired().HasDefaultValue(false);
         builder.Property(s => s.SoftQuotaLimit).IsRequired();
 
         // Une seule souscription VIVANTE par école. Index filtré sur IsDeleted : une ligne supprimée

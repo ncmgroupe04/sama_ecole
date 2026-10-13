@@ -13,7 +13,7 @@ namespace SamaEcole.Application.Subscriptions;
 /// commerciale, pas une invariante d'intégrité — le même compromis que la capacité des chambres
 /// (CreateEnrollmentCommandHandler).
 /// </summary>
-public class StudentQuotaGuard(ITenantSubscriptionService subscriptionService)
+public class StudentQuotaGuard(ITenantSubscriptionService subscriptionService, Changes.IOverQuotaTracker overQuotaTracker)
 {
     /// <summary>
     /// Refuse (<see cref="QuotaExceededException"/>) si <paramref name="additionalStudents"/> élèves de plus
@@ -22,6 +22,10 @@ public class StudentQuotaGuard(ITenantSubscriptionService subscriptionService)
     public async Task<StudentQuotaWarning?> EnsureCanAddAsync(int additionalStudents, CancellationToken cancellationToken)
     {
         var quota = await subscriptionService.GetQuotaStatusAsync(additionalStudents, cancellationToken);
+
+        // Date du premier constat de dépassement (relance par le Super Admin) : posée ICI, avant un éventuel refus — c'est
+        // précisément à la première création bloquée ou tolérée que l'école devient « en dépassement ».
+        await overQuotaTracker.RecordAsync(quota, cancellationToken);
 
         if (!quota.CanAddStudent)
         {

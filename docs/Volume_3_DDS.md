@@ -553,7 +553,9 @@ Distincte de `subscriptions` (§5.6, facturation : formule, expiration, paiement
 | `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (100, 150, 250, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
 | `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (110, 160, 260, 420, 830, ou calculée) |
 | `Status` | `varchar(20)` | NOT NULL — `TenantSubscriptionStatus` (§6) |
-| `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés |
+| `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés, tels que SOUSCRITS (**droits**) : les réglages de l'école (`school_settings`) en sont les préférences. Le Directeur active ou coupe librement un module souscrit ; en activer un qui ne l'est pas passe par une demande de changement (§5.17) |
+| `HasBoarding` | `bool` | NOT NULL, défaut `false` — drapeau de FACTURATION « l'école héberge des élèves » (majoration Internat de `quota_tier_prices`), distinct du module Internat que les profils Franco-Arabe et Daara incluent sans pensionnaires |
+| `OverQuotaSince` | `timestamptz` | NULL — date du premier constat de dépassement du plafond nominal ; posée et levée par les évaluations de quota (création d'élève, import, `GET /tenant-subscription/quota`), jamais à chaque appel ; sert à relancer les écoles en dépassement |
 
 Règle de quota : effectif ≤ `MaxStudentLimit` → admis ; entre `MaxStudentLimit` (exclu) et `SoftQuotaLimit` (inclus) →
 admis avec avertissement ; au-delà → refusé. Aucune création d'élève tant que `Status ≠ Active` (en particulier
@@ -593,6 +595,36 @@ en dur) et accorde `SELECT, UPDATE` seulement au rôle applicatif : les lignes n
 Distincte de la grille historique `SubscriptionPricing:Grid` (cycles × taille Petit/Moyen/Grand, `appsettings.json`), qui
 continue de facturer les demandes d'inscription antérieures aux tranches. Aucune entrée `audit_logs` (ce journal est
 rattaché à une école) : la trace d'une modification est `UpdatedAt`/`UpdatedBy` de la ligne et le journal applicatif.
+
+### 5.17 Demandes de changement d'abonnement — `subscription_change_requests`
+
+Table **tenant** (RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE`, aucun `DELETE`, non purgée par `reset_school_data`) :
+une demande par changement de profil, de cycles, de tranche ou d'activation d'un module non souscrit. Le Directeur ne modifie
+**jamais** ces choix directement : sa tentative est interceptée (`409 SUBSCRIPTION_CHANGE_REQUIRED`, rien n'est écrit) et devient
+une demande que le Super Admin valide, une fois le règlement convenu. Index unique partiel `UX_subscription_change_requests_pending_school`
+(`WHERE Status = 'Pending' AND NOT IsDeleted`) : une seule demande en attente par école.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id`, `SchoolId` | `uuid` | PK ; FK `schools.Id` RESTRICT |
+| `Status` | `varchar(20)` | `SubscriptionChangeStatus` : `Pending`, `Approved`, `Rejected`, `Cancelled` |
+| `IsDowngrade` | `bool` | Réduction (tranche inférieure, cycle retiré, module souscrit qui disparaît) : traitée par le support |
+| `Current*` | `ProfileType`, `StudentQuotaTier`, `Cycles`, `HasBoarding`, 4 modules | État de l'école AU MOMENT de la demande |
+| `Target*` | idem + `EstablishmentProfile`, `MaxStudentLimit`, `SoftQuotaLimit` | État COMPLET demandé : c'est lui que la validation écrit (`CHECK` plafond > 0, tolérance ≥ plafond, cycles non vides) |
+| `CurrentMonthlyXof`, `CurrentAnnualXof`, `TargetMonthlyXof`, `TargetAnnualXof` | `numeric(12,2)` | NULL — tarifs de la grille par tranche annoncés au Directeur ; NULL si sur devis (« Grand Groupe ») ou si l'école suit encore l'ancienne grille |
+| `RequestedBy`, `DirectorNote` | `uuid`, `varchar(500)` | Demandeur et précision facultative |
+| `RequestedByName`, `RequestedByEmail` | `varchar(200)` | NULL — nom et adresse du demandeur, FIGÉS à la demande (la table des comptes est sous RLS : le Super Admin ne peut pas les relire) ; c'est à cette adresse que part l'e-mail de décision. Migration `AddSubscriptionChangeRequestRequesterContact` |
+| `ReviewedBy`, `ReviewedAt`, `ReviewNote` | `uuid`, `timestamptz`, `varchar(500)` | Décision du Super Admin ; motif obligatoire d'un rejet |
+
+Les lectures et la décision du Super Admin (sans `SchoolId` de session) passent par des fonctions `SECURITY DEFINER` (`search_path`
+figé, `EXECUTE` retiré à `PUBLIC`, accordé au seul rôle applicatif) : `list_subscription_change_requests(text, uuid)`,
+`resolve_subscription_change_request(uuid, boolean, uuid, text)` et `list_over_quota_schools()`. `resolve_…` applique l'état cible
+stocké à `tenant_subscriptions` et `school_settings` dans une seule instruction, après trois gardes : `STALE_CHANGE_REQUEST` (profil,
+tranche ou cycles de l'école ont changé depuis la demande), `TARGET_TIER_TOO_SMALL` (l'effectif dépasse déjà la tranche demandée),
+`CYCLE_HAS_CLASSROOMS` (un cycle retiré contient des classes vivantes). Elle renvoie `NULL` si la demande n'est plus en attente.
+La facturation suit alors la tranche COURANTE de la souscription (`SubscriptionAmountResolver`), tant que l'école est facturée par
+tranche (inscrite avec une tranche, ou demande validée). La migration `AddSubscriptionChangeRequests` élargit les droits de chaque
+école existante à ses réglages actuels (jamais l'inverse), pour ne rien retirer à ce qu'elle utilise déjà.
 
 ## 6. Dictionnaire des énumérations
 

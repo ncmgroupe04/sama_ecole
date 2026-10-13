@@ -241,7 +241,8 @@ public class ApproveRegistrationRequestHandler(
         return new ConfiguredTenantSubscription(
             profile, establishmentProfile, tier, max, soft,
             modules.IsPedagogyEnabled, modules.IsFinanceEnabled, modules.IsInternatEnabled, modules.IsCoranModuleEnabled,
-            RegistrationOffer.ManagedCyclesFor(RegistrationOffer.ParseCycles(snapshot.Cycles)));
+            RegistrationOffer.ManagedCyclesFor(RegistrationOffer.ParseCycles(snapshot.Cycles)),
+            snapshot.HasBoarding);
     }
 
     private async Task SendApprovalEmailAsync(

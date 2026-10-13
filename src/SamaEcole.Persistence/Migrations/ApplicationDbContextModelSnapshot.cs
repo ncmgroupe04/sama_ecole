@@ -5507,6 +5507,173 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("subscriptions", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SubscriptionChangeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("CurrentAnnualXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("CurrentCycles")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<bool>("CurrentHasBoarding")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CurrentIsCoranModuleEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CurrentIsFinanceEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CurrentIsInternatEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CurrentIsPedagogyEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("CurrentMonthlyXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("CurrentProfile")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("CurrentTier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DirectorNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDowngrade")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedByEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RequestedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal?>("TargetAnnualXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("TargetCycles")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("TargetEstablishmentProfile")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<bool>("TargetHasBoarding")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("TargetIsCoranModuleEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("TargetIsFinanceEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("TargetIsInternatEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("TargetIsPedagogyEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TargetMaxStudentLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("TargetMonthlyXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("TargetProfile")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("TargetSoftQuotaLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetTier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_subscription_change_requests_pending_school")
+                        .HasFilter("\"Status\" = 'Pending' AND NOT \"IsDeleted\"");
+
+                    b.ToTable("subscription_change_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_subscription_change_requests_target_cycles_not_empty", "\"TargetCycles\" <> ''");
+
+                            t.HasCheckConstraint("CK_subscription_change_requests_target_max_positive", "\"TargetMaxStudentLimit\" > 0");
+
+                            t.HasCheckConstraint("CK_subscription_change_requests_target_soft_gte_max", "\"TargetSoftQuotaLimit\" >= \"TargetMaxStudentLimit\"");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.SubscriptionPayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6114,6 +6281,11 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
+                    b.Property<bool>("HasBoarding")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsCoranModuleEnabled")
                         .HasColumnType("boolean");
 
@@ -6131,6 +6303,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<int>("MaxStudentLimit")
                         .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("OverQuotaSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ProfileType")
                         .IsRequired()
@@ -7688,6 +7863,15 @@ namespace SamaEcole.Persistence.Migrations
                         .HasForeignKey("PromoCodeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SubscriptionChangeRequest", b =>
+                {
                     b.HasOne("SamaEcole.Domain.Entities.School", null)
                         .WithMany()
                         .HasForeignKey("SchoolId")

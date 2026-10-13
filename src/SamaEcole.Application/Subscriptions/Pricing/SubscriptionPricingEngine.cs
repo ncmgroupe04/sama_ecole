@@ -24,6 +24,17 @@ public class SubscriptionPricingEngine(IApplicationDbContext dbContext)
         return QuotaTierPricing.Quote(tier, row is null ? null : ToTierPrice(row), hasBoarding);
     }
 
+    /// <summary>
+    /// Vrai si l'école est facturée d'après la grille par TRANCHE : elle s'est inscrite avec une tranche, ou une demande
+    /// de changement d'abonnement a été validée. Les autres suivent l'ancienne grille (cycles × taille) ou la tarification
+    /// par formule, et n'ont pas de tarif comparable.
+    /// </summary>
+    public async Task<bool> IsBilledByTierAsync(Guid schoolId, CancellationToken cancellationToken) =>
+        await dbContext.SchoolRegistrationRequests.AsNoTracking()
+            .AnyAsync(r => r.CreatedSchoolId == schoolId && r.Status == RegistrationRequestStatus.Approved && r.Tier != null, cancellationToken)
+        || await dbContext.SubscriptionChangeRequests.AsNoTracking()
+            .AnyAsync(r => r.SchoolId == schoolId && r.Status == SubscriptionChangeStatus.Approved, cancellationToken);
+
     /// <summary>La grille complète, de la plus petite tranche à la plus grande.</summary>
     public async Task<IReadOnlyList<TierPrice>> GetGridAsync(CancellationToken cancellationToken) =>
         Order(await dbContext.QuotaTierPrices.AsNoTracking().ToListAsync(cancellationToken))

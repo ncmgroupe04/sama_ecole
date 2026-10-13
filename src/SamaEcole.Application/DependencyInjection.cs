@@ -29,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<Subscriptions.SubscriptionAmountResolver>();
         services.AddScoped<Subscriptions.Pricing.SubscriptionPricingEngine>();
         services.AddScoped<ITenantSubscriptionService, Subscriptions.TenantSubscriptionService>();
+        services.AddScoped<Subscriptions.Changes.IOverQuotaTracker, Subscriptions.Changes.OverQuotaTracker>();
+        services.AddScoped<Subscriptions.Changes.SubscriptionChangeService>();
         services.AddScoped<Subscriptions.StudentQuotaGuard>();
         services.AddScoped<Attendance.EntryTickets.EntryTicketRegister>();
         services.AddScoped<Attendance.EntryTickets.ArrivalPlanner>();

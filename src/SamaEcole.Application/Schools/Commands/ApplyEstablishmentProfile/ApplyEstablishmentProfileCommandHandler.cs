@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions.Changes;
 using SamaEcole.Application.Subscriptions;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -12,10 +13,15 @@ namespace SamaEcole.Application.Schools.Commands.ApplyEstablishmentProfile;
 /// Onboarding — enregistre le profil choisi par le Directeur ET applique le PRESET de modules associé
 /// (voir EstablishmentProfilePresets) en une seule transaction : un profil sans son preset laisserait
 /// l'établissement dans un état incohérent (ex. Daara/Internat choisi mais Internat resté désactivé).
+///
+/// VERROU D'ABONNEMENT : une fois la souscription active, le profil n'est plus modifiable librement. Changer de profil est
+/// INTERCEPTÉ avant toute écriture (SubscriptionChangeRequiredException, 409) et devient une demande que le Super Admin
+/// valide. Redemander le profil actuel ne fait rien : réappliquer son preset effacerait les modules souscrits en plus.
 /// </summary>
 public class ApplyEstablishmentProfileCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
+    SubscriptionChangeService subscriptionChanges,
     ILogger<ApplyEstablishmentProfileCommandHandler> logger)
     : IRequestHandler<ApplyEstablishmentProfileCommand, SchoolSettingsDto>
 {
@@ -31,6 +37,21 @@ public class ApplyEstablishmentProfileCommandHandler(
         var preset = EstablishmentProfilePresets.For(profile);
 
         var settings = await dbContext.SchoolSettings.FirstOrDefaultAsync(cancellationToken);
+
+        // Verrou : un changement de profil devient une demande. Même profil (ou école sans souscription à protéger) : on continue.
+        var evaluation = await subscriptionChanges.EvaluateAsync(
+            new SubscriptionChangeSet(Profile: ProfileTypeMapping.FromEstablishmentProfile(profile)), cancellationToken);
+
+        if (evaluation is { Plan.IsNoOp: false })
+        {
+            throw new SamaEcole.Application.Common.Exceptions.SubscriptionChangeRequiredException(evaluation.Preview);
+        }
+
+        // Profil déjà celui de la souscription : rien à réappliquer (le preset effacerait les modules souscrits en plus).
+        if (evaluation is not null && settings is not null)
+        {
+            return SchoolSettingsDtoMapper.From(settings);
+        }
 
         if (settings is null)
         {

@@ -86,3 +86,18 @@ public enum TenantSubscriptionStatus
     Suspended,
     Expired
 }
+
+/// <summary>Cycle de vie d'une <see cref="Entities.SubscriptionChangeRequest"/>. Persisté en TEXTE.</summary>
+public enum SubscriptionChangeStatus
+{
+    /// <summary>Envoyée par le Directeur, en attente de décision du Super Admin. Une seule par école à la fois.</summary>
+    Pending,
+
+    /// <summary>Validée : l'abonnement et les réglages de l'école ont été mis à jour.</summary>
+    Approved,
+
+    Rejected,
+
+    /// <summary>Retirée par le Directeur avant décision.</summary>
+    Cancelled
+}
