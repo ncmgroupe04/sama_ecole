@@ -619,6 +619,36 @@ back-end : les routes et la portée (un Oustaz ne tire que le bulletin de SES é
 - **Déploiement** : sauvegarder la base avant la migration ; `Down()` est testée sur Testcontainers et sur une copie de la
   base de démo.
 
+**Pointage par sessions configurables (13/10/2026, branche `feat/internat-attendance-sessions`, empilée sur le journal Hizb)** — spec,
+partie 2 : `docs/superpowers/specs/2026-10-13-journal-hizb-et-pointage-configurable-design.md`.
+- **Principe :** « l'appel de nuit » devient une **session** que la Direction crée, nomme, active et ordonne (« Appel de nuit », « Déjeuner »,
+  « Appel de la Halqa »…). Table `attendance_sessions` (par école : `Name` unique sans casse, `Audience` `Interns` / `HalfBoarders` / `AllBoarders` /
+  `Halqa`, `Days` en masque de bits ISO lundi = 1, `TimeLabel` purement informatif, `IsActive`, `SortOrder`, suppression logique). Six **modèles**
+  servis par `GET boarding/attendance/session-templates` (rien n'est imposé). Au plus 30 sessions.
+- **`boarding_attendances` étendue, pas dupliquée** : `SessionId` et `StudentId` obligatoires, `BoardingEnrollmentId` facultatif (une session de Halqa ne passe
+  pas par un séjour), unicité `(StudentId, SessionId, Date)` à la place de `(séjour, date)` — `UX_boarding_attendances_session_day`. Migration
+  `AddAttendanceSessions` : toute école qui avait des pointages reçoit une session « Appel de nuit » (internes, tous les jours) à laquelle sont rattachées
+  TOUTES ses lignes (supprimées logiquement comprises) ; `StudentId` est déduit du séjour.
+- **Déploiement progressif :** un déclencheur `boarding_attendances_fill_defaults` (BEFORE INSERT) complète `StudentId` et `SessionId` pour l'ancienne
+  révision qui écrit encore sans eux pendant la bascule (session « Appel de nuit » de l'école, créée au besoin). **`Down()` supprime les pointages que l'ancien
+  modèle ne sait pas porter** (autres sessions que la première des internes, appels de Halqa) : sauvegarde obligatoire avant de la jouer. Testée sur
+  Testcontainers (reprise, retour, nouvelle montée, déclencheur, RLS, CHECK des jours, unicité du nom, aucune suppression physique).
+- **Qui pointe quoi :** internes (par pavillon) = feuille d'origine `GET/POST boarding/attendance` (avec `sessionId` facultatif : sans lui, la première session
+  des internes ; une école sans session obtient « Appel de nuit » à la volée au premier pointage) ; autres publics = `GET/POST boarding/attendance/sheet`
+  (groupe = classe ou Oustaz) avec la liste des groupes `GET boarding/attendance/groups?sessionId=` (sans le module Pédagogie) ; **l'Oustaz** pointe SA Halqa par
+  `/api/v1/internat/attendance/{sessions, sheet, ""}` (groupe imposé par `HalqaScopeAuthorizer`, 403 sur la Halqa d'un autre ou sur une session de classe).
+  Réponses LIGNE PAR LIGNE ; un pensionnaire en sortie est pré-noté « En permission » (absent) sur toute session de pensionnaires, pas sur la Halqa ;
+  session désactivée = lisible mais plus pointable (`ATTENDANCE_SESSION_INACTIVE`) ; un jour hors des jours de la session est SIGNALÉ, jamais bloqué.
+- **Récapitulatif mensuel :** `GET boarding/attendance/monthly-summary?month=AAAA-MM&sessionId=&groupId=` (+ `/pdf`, A4 portrait, tracé à l'audit) : par élève
+  présents / absents / en permission / non pointés sur les jours où la session a été pointée pour le groupe ; une absence notée « En permission » compte en
+  permission. Un PDF par session et par groupe (pas de multi-sessions dans un même document : lot suivant si besoin).
+- **Configuration :** `GET/POST/PUT/DELETE boarding/attendance/sessions` + `PUT .../sessions/order` (liste complète) — **Directeur seul** ; lecture ouverte au
+  Secrétariat et au Surveillant. L'audience ne change plus dès qu'un pointage existe (`ATTENDANCE_SESSION_AUDIENCE_LOCKED`) ; une session pointée ne se supprime
+  pas (409 `RESOURCE_IN_USE`) : on la désactive.
+- **Écrans :** `/internat` › Pointage (sélecteur de session, groupe, jour, « Récapitulatif du mois », « Configurer les sessions » pour le Directeur) ; `/halqa`
+  (bouton « إجراء النداء » seulement s'il existe une session de Halqa active ; fenêtre arabe RTL). Logique pure partagée `wwwroot/js/attendance-logic.js`.
+- **Hors périmètre (questions ouvertes de la spec) :** statut « excusé », fiche annuelle par élève, alertes aux familles.
+
 **Écran d'affectation des élèves à un Oustaz (12/10/2026, branche `feat/oustaz-student-assignment`)** : jusque-là
 `POST students/assign-instructor` n'existait qu'en API. `/oustaz` porte maintenant un bouton « Élèves » par Oustaz
 (Directeur seul) qui ouvre une fenêtre à deux colonnes : la Halqa actuelle (avec « Retirer », après confirmation, qui

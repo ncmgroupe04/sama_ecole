@@ -10,6 +10,8 @@
    un binding Alpine y reste inerte (même piège que celui documenté dans Internat/Index.cshtml). *@
 @section Scripts {
     <script src="~/js/trend-chart.js" asp-append-version="true"></script>
+    <script src="~/js/attendance-logic.js" asp-append-version="true"></script>
+    <script src="~/js/halqa-roll.js" asp-append-version="true"></script>
     <script src="~/js/halqa.js" asp-append-version="true"></script>
 }
 
@@ -33,6 +35,9 @@
     </div>
 
     @await Html.PartialAsync("_ErrorBanner")
+
+    @* Appel de la Halqa : le bouton n'apparaît que si la Direction a activé une session de Halqa. *@
+    @await Html.PartialAsync("~/Views/Internat/_HalqaRoll.cshtml")
 
     @* Conflit d'écriture résolu par rechargement : information, pas une erreur bloquante. *@
     <div x-show="notice" x-cloak class="mt-6 rounded-xl border-l-4 border-warning bg-warning-bg p-4" role="status">

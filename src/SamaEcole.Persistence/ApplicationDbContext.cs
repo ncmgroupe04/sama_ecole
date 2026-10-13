@@ -67,6 +67,7 @@ public class ApplicationDbContext(
     public DbSet<BoardingEnrollment> BoardingEnrollments => Set<BoardingEnrollment>();
     public DbSet<BoardingLeave> BoardingLeaves => Set<BoardingLeave>();
     public DbSet<BoardingAttendance> BoardingAttendances => Set<BoardingAttendance>();
+    public DbSet<AttendanceSession> AttendanceSessions => Set<AttendanceSession>();
     public DbSet<GradeAgeNorm> GradeAgeNorms => Set<GradeAgeNorm>();
     public DbSet<SyllabusUnit> SyllabusUnits => Set<SyllabusUnit>();
     public DbSet<ClassJournalEntryUnit> ClassJournalEntryUnits => Set<ClassJournalEntryUnit>();

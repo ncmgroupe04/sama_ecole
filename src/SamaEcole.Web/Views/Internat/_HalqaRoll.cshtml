@@ -1,0 +1,113 @@
+@*
+    Appel de la Halqa (espace de l'Oustaz, arabe, de droite à gauche). Composant Alpine `halqaRoll` (wwwroot/js/halqa-roll.js), posé DANS `halqaPage` : il
+    hérite du sens RTL de la racine et de `selected` (l'élève ouvert). Le bouton n'existe que s'il y a au moins une session de Halqa active ; la fenêtre
+    reprend l'apparence « verre dépoli » de la fenêtre de saisie des quarts.
+*@
+<div x-data="halqaRoll()">
+    <button type="button" x-show="canRoll && !selected" x-cloak
+            class="mt-6 inline-flex min-h-[56px] items-center gap-3 rounded-2xl bg-primary-700 px-6 text-lg font-bold text-white shadow-lg shadow-primary/20 transition hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            x-on:click="openRoll()">
+        <icon name="checkmark-circle" class="h-6 w-6" />
+        <span>إجراء النداء</span>
+    </button>
+
+    <div x-show="isOpen" x-cloak class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="halqa-roll-title"
+         x-on:keydown.escape.window="closeRoll()">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" x-on:click="closeRoll()" x-show="isOpen" x-transition.opacity.duration.200ms></div>
+
+        <div class="relative flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:rounded-3xl"
+             x-show="isOpen" x-transition:enter="transition duration-200 ease-out motion-reduce:transition-none" x-transition:enter-start="translate-y-6 opacity-0 sm:translate-y-2 sm:scale-95"
+             x-transition:enter-end="translate-y-0 opacity-100 sm:scale-100">
+
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/60 px-6 py-5">
+                <h2 id="halqa-roll-title" class="text-2xl font-bold text-slate-900">النداء</h2>
+                <button type="button" class="min-h-[48px] min-w-[48px] shrink-0 rounded-2xl text-slate-400 transition-colors hover:bg-slate-900/5 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label="إغلاق" x-on:click="closeRoll()">
+                    <icon name="x" class="mx-auto h-6 w-6" />
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-5">
+                @* Session (si la Direction en a activé plusieurs) et jour *@
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div x-show="sessions.length > 1" x-cloak>
+                        <label for="halqa-roll-session" class="text-sm font-semibold text-slate-600">الجلسة</label>
+                        <select id="halqa-roll-session" class="input-field mt-1 min-h-[48px]" x-model="sessionId" x-on:change="onSelectionChange()">
+                            <template x-for="s in sessions" :key="s.id">
+                                <option :value="s.id" x-text="s.timeLabel ? s.name + ' · ' + s.timeLabel : s.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="halqa-roll-date" class="text-sm font-semibold text-slate-600">اليوم</label>
+                        <input id="halqa-roll-date" type="date" dir="ltr" class="input-field mt-1 min-h-[48px]" x-model="date" :max="today()" x-on:change="onSelectionChange()">
+                    </div>
+                </div>
+                <p x-show="sessions.length === 1" x-cloak class="mt-2 text-sm text-slate-500" x-text="selectedSession ? selectedSession.name : ''"></p>
+                <p x-show="dateError" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert" x-text="dateError"></p>
+
+                <p x-show="outsideDays" x-cloak class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                    هذا اليوم ليس ضمن أيام هذه الجلسة. يمكنك التسجيل مع ذلك.
+                </p>
+                <p x-show="error" x-cloak class="mt-4 rounded-2xl bg-danger-bg p-3 text-sm text-danger" role="alert" x-text="error"></p>
+                <p x-show="notice" x-cloak class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800" role="status" x-text="notice"></p>
+
+                <div x-show="loading" x-cloak class="mt-4 space-y-2"><div class="h-16 rounded-2xl skeleton"></div><div class="h-16 rounded-2xl skeleton"></div><div class="h-16 rounded-2xl skeleton"></div></div>
+
+                <template x-if="hasSheet && !loading">
+                    <div class="mt-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-slate-600">
+                                <span class="text-emerald-700" x-text="counts.present + ' حاضر'"></span>
+                                · <span class="text-rose-700" x-text="counts.absent + ' غائب'"></span>
+                                · <span x-text="counts.pending + ' لم يُسجَّل'"></span>
+                            </p>
+                            <button type="button" class="min-h-[48px] rounded-2xl border border-slate-300/80 bg-white/70 px-4 text-base font-semibold text-slate-700 transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40"
+                                    :disabled="counts.pending === 0" x-on:click="markAllPresent()">الكل حاضر</button>
+                        </div>
+
+                        <p x-show="lines.length === 0" x-cloak class="mt-6 text-center text-base text-slate-500">لا يوجد طلاب في حلقتك.</p>
+
+                        <ul class="mt-3 space-y-3">
+                            <template x-for="line in lines" :key="line.boarderId">
+                                <li class="rounded-2xl border bg-white/70 p-3" :class="line.rejection ? 'border-rose-300 bg-rose-50/60' : 'border-slate-200/80'">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-lg font-bold text-slate-900" x-text="displayName(line)"></p>
+                                            <p class="text-xs text-slate-500">
+                                                <span dir="ltr" x-text="line.matricule"></span>
+                                                <span x-show="line.onLeave" x-cloak class="me-2 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">في إجازة</span>
+                                                <span x-show="line.recorded && !logic().isDirty(line)" x-cloak class="me-2 rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">محفوظ</span>
+                                            </p>
+                                        </div>
+                                        <div class="flex gap-2" role="group" :aria-label="displayName(line)">
+                                            <button type="button" class="min-h-[48px] min-w-[84px] rounded-2xl px-4 text-base font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                                    :class="line.isPresent === true ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'"
+                                                    :aria-pressed="line.isPresent === true" :disabled="line.onLeave" x-on:click="setPresence(line, true)">حاضر</button>
+                                            <button type="button" class="min-h-[48px] min-w-[84px] rounded-2xl px-4 text-base font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                                                    :class="line.isPresent === false ? 'bg-rose-600 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'"
+                                                    :aria-pressed="line.isPresent === false" x-on:click="setPresence(line, false)">غائب</button>
+                                        </div>
+                                    </div>
+                                    <input type="text" maxlength="300" x-model="line.note" class="input-field mt-2" placeholder="ملاحظة (اختياري)" :aria-label="'ملاحظة — ' + displayName(line)">
+                                    <p x-show="line.rejection" x-cloak class="mt-1 text-sm font-medium text-rose-700" x-text="line.rejection"></p>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+            </div>
+
+            <div class="grid grid-cols-5 gap-3 border-t border-slate-200/60 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button type="button"
+                        class="col-span-3 min-h-[56px] rounded-2xl bg-primary-700 text-lg font-bold text-white shadow-lg shadow-primary/20 transition hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                        :disabled="!canSave" x-on:click="save()">
+                    <span x-show="!saving">حفظ</span>
+                    <span x-show="saving" x-cloak>جارٍ الحفظ…</span>
+                </button>
+                <button type="button" class="col-span-2 min-h-[56px] rounded-2xl border border-slate-300/80 bg-white/70 text-lg font-semibold text-slate-700 transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                        x-on:click="closeRoll()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>

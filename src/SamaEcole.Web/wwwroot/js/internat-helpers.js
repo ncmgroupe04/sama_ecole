@@ -206,11 +206,22 @@ window.internatHelpers = (() => {
         return boarderId ? `/api/v1/boarding/boarders/${boarderId}/pdf` : '';
     }
 
-    /** GET /boarding/dormitories/{id}/register-pdf?date= — registre d'une nuit. Sans date valide, le serveur prend aujourd'hui. */
-    function registerPdfUrl(dormitoryId, date) {
+    /**
+     * GET /boarding/dormitories/{id}/register-pdf?date=[&sessionId=] — registre d'une nuit. Sans date valide, le serveur prend aujourd'hui ;
+     * sans session, la première session des internes (l'appel de nuit d'origine).
+     */
+    function registerPdfUrl(dormitoryId, date, sessionId) {
         if (!dormitoryId) return '';
         const day = isoDate(date);
-        return `/api/v1/boarding/dormitories/${dormitoryId}/register-pdf${day ? `?date=${day}` : ''}`;
+        const query = [day ? `date=${day}` : '', sessionId ? `sessionId=${encodeURIComponent(sessionId)}` : ''].filter(Boolean).join('&');
+        return `/api/v1/boarding/dormitories/${dormitoryId}/register-pdf${query ? `?${query}` : ''}`;
+    }
+
+    /** GET /boarding/attendance/monthly-summary[/pdf]?month=AAAA-MM&sessionId=&groupId= — récapitulatif du mois d'une session pour un groupe. */
+    function monthlySummaryUrl(month, sessionId, groupId, pdf = false) {
+        if (!/^\d{4}-\d{2}$/.test(String(month || '')) || !sessionId) return '';
+        const query = `month=${month}&sessionId=${encodeURIComponent(sessionId)}${groupId ? `&groupId=${encodeURIComponent(groupId)}` : ''}`;
+        return `/api/v1/boarding/attendance/monthly-summary${pdf ? '/pdf' : ''}?${query}`;
     }
 
     /** Nom de téléchargement ASCII : accents ramenés à leur lettre, espaces en tirets, tout autre caractère retiré (jamais de « ../ »). */
@@ -236,6 +247,9 @@ window.internatHelpers = (() => {
         LEAVE_ALREADY_OPEN: "Ce pensionnaire a déjà une sortie en cours : enregistrez d'abord son retour.",
         LEAVE_ALREADY_RETURNED: 'Le retour de cette sortie est déjà enregistré. Le registre a été rechargé.',
         ATTENDANCE_CONFLICT: "Le pointage de cette nuit a été modifié par une autre personne. La feuille d'appel a été rechargée : vérifiez puis recommencez.",
+        ATTENDANCE_SESSION_INACTIVE: "Cette session est désactivée : réactivez-la dans « Configurer les sessions » pour pointer.",
+        ATTENDANCE_SESSION_AUDIENCE_LOCKED: "Des pointages existent déjà pour cette session : son public ne peut plus changer. Créez une nouvelle session et désactivez celle-ci.",
+        ATTENDANCE_SESSION_LIMIT: "Le nombre de sessions maximal est atteint : supprimez ou fusionnez celles qui ne servent plus.",
         BED_UNAVAILABLE: "Ce lit vient d'être attribué à un autre pensionnaire.",
         MODULE_DISABLED: "Le module Internat n'est pas activé pour votre établissement."
     };
@@ -261,7 +275,7 @@ window.internatHelpers = (() => {
         buildDormitoryBody, buildRoomBody,
         validateDormitory, validateRoom,
         LEAVE_REASONS, leaveStatusLabel, leaveReasonLabel, today,
-        isoDate, boarderPdfUrl, registerPdfUrl, pdfFileName,
+        isoDate, boarderPdfUrl, registerPdfUrl, monthlySummaryUrl, pdfFileName,
         ERROR_MESSAGES, errorMessage
     };
 })();

@@ -10,10 +10,10 @@ public record AttendanceEntryInput(Guid BoarderId, bool IsPresent, string? Note)
 public record AttendanceLineResult(Guid BoarderId, string Outcome, string? Code, string? Message);
 
 public record RecordAttendanceResult(
-    DateOnly Date, Guid DormitoryId, int Saved, int Rejected, IReadOnlyList<AttendanceLineResult> Lines);
+    DateOnly Date, Guid DormitoryId, int Saved, int Rejected, IReadOnlyList<AttendanceLineResult> Lines, Guid? SessionId = null);
 
 /// <summary>
-/// Ligne de la feuille d'appel du soir. <see cref="IsPresent"/> est <c>null</c> tant que rien n'est saisi ; un pensionnaire
+/// Ligne de la feuille d'appel d'un pavillon. <see cref="IsPresent"/> est <c>null</c> tant que rien n'est saisi ; un pensionnaire
 /// en sortie ce soir-là est pré-rempli « absent — En permission » (<see cref="OnLeave"/>).
 /// </summary>
 public record AttendanceSheetLineDto(
@@ -27,4 +27,15 @@ public record AttendanceSheetLineDto(
     bool? IsPresent,
     string? Note);
 
-public record AttendanceSheetDto(DateOnly Date, Guid DormitoryId, string DormitoryName, IReadOnlyList<AttendanceSheetLineDto> Lines);
+/// <summary>
+/// Feuille d'appel d'un pavillon. <paramref name="SessionId"/> / <paramref name="SessionName"/> : la session pointée (nulle tant que
+/// l'école n'en a aucune) ; <paramref name="OutsideSessionDays"/> signale un jour que la session ne couvre pas — information, pas un blocage.
+/// </summary>
+public record AttendanceSheetDto(
+    DateOnly Date,
+    Guid DormitoryId,
+    string DormitoryName,
+    IReadOnlyList<AttendanceSheetLineDto> Lines,
+    Guid? SessionId = null,
+    string? SessionName = null,
+    bool OutsideSessionDays = false);
