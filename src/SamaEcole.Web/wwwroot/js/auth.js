@@ -637,6 +637,14 @@ document.addEventListener('alpine:init', () => {
         get isDaaraInternatProfile() { return this.profileEtablissement === 'DaaraInternat'; },
         get isDaaraMemorisationProfile() { return this.profileEtablissement === 'DaaraMemorisation'; },
 
+        /**
+         * Entrée « Classes » de la sidebar et de la navigation rapide. Les classes ne relèvent PAS du module Pédagogie
+         * (Inscriptions, Frais par classe et Paie en dépendent : leur API reste donc ouverte) ; mais un Daara —
+         * Mémorisation travaille en Halqas, pas en classes de collège/lycée : l'entrée y est du bruit. CONFORT
+         * d'affichage, jamais une barrière. Profil inconnu (`undefined`/`null`) → visible, comme avant.
+         */
+        get classesNavVisible() { return !this.isDaaraMemorisationProfile; },
+
         isWorkingDay(isoDate) {
             const [y, m, d] = String(isoDate).split('-').map(Number);
             if (!y || !m || !d) return true; // date illisible : on ne bloque pas, le serveur juge
@@ -733,6 +741,7 @@ document.addEventListener('alpine:init', () => {
         get isFrancoArabeProfile() { return Alpine.store('schoolConfig').isFrancoArabeProfile; },
         get isDaaraInternatProfile() { return Alpine.store('schoolConfig').isDaaraInternatProfile; },
         get isDaaraMemorisationProfile() { return Alpine.store('schoolConfig').isDaaraMemorisationProfile; },
+        get classesNavVisible() { return Alpine.store('schoolConfig').classesNavVisible; },
 
         init() {
             return Alpine.store('schoolConfig').init();

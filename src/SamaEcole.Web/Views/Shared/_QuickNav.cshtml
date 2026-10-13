@@ -13,7 +13,7 @@
  var items = new (string Href, string Icon, string Label, string[] Roles, string? Flag)[]
  {
   ("/eleves", "users", "Élèves", new[] { "SuperAdmin", "Directeur", "Secretariat", "Finance", "Enseignant" }, null),
-  ("/classes", "building", "Classes", new[] { "Directeur", "Secretariat", "Enseignant" }, null),
+  ("/classes", "building", "Classes", new[] { "Directeur", "Secretariat", "Enseignant" }, "classesNavVisible"),
   ("/enseignants", "users", "Enseignants", new[] { "SuperAdmin", "Directeur", "Secretariat" }, null),
   ("/notes", "document", "Notes et bulletins", new[] { "Directeur", "Secretariat", "Enseignant" }, "pedagogyEnabled"),
   ("/caisse", "payment", "Caisse", new[] { "Directeur", "Secretariat", "Finance" }, "financeEnabled"),

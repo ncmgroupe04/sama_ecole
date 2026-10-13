@@ -11,6 +11,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadScripts, flush, plain } from './harness.mjs';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 function fakeJwt(claims) {
     const b64url = Buffer.from(JSON.stringify(claims), 'utf8')
@@ -286,4 +288,35 @@ test('un clic pendant l\'envoi n\'envoie pas une seconde fois', async () => {
     await flush();
 
     assert.equal(calls.filter((c) => c[0] === 'POST').length, 1);
+});
+
+// ---------------------------------------------------------------- 5. entrée « Classes » de la navigation
+
+test('Classes : l\'entrée de navigation est masquée en Daara — Mémorisation et visible partout ailleurs', async () => {
+    for (const [profile, visible] of [
+        ['DaaraMemorisation', false], ['DaaraInternat', true], ['FrancoArabe', true],
+        ['General', true], ['ElementairePrimaire', true], ['Simplifie', true], [null, true]
+    ]) {
+        const ctx = bootAuth({ settings: SETTINGS({ profileEtablissement: profile }) });
+        const store = ctx.store('schoolConfig');
+        await store.init();
+        assert.equal(store.classesNavVisible, visible, `profil ${profile}`);
+    }
+});
+
+test('Classes : avant le chargement des réglages (profil inconnu) l\'entrée reste visible', () => {
+    const ctx = bootAuth({ settings: SETTINGS({}) });
+    assert.equal(ctx.store('schoolConfig').classesNavVisible, true);
+});
+
+test('Classes : la sidebar ET la navigation rapide lisent classesNavVisible', () => {
+    const shared = (name) => readFileSync(fileURLToPath(new URL(`../../Views/Shared/${name}`, import.meta.url)), 'utf8');
+
+    const sidebarLink = shared('_Layout.cshtml').match(/<a href="\/classes"[^>]*>/);
+    assert.ok(sidebarLink, 'le lien /classes doit exister dans la sidebar');
+    assert.match(sidebarLink[0], /classesNavVisible/);
+
+    const quickNavLine = shared('_QuickNav.cshtml').split('\n').find((l) => l.includes('("/classes"'));
+    assert.ok(quickNavLine, 'l\'entrée /classes doit exister dans la navigation rapide');
+    assert.match(quickNavLine, /"classesNavVisible"/);
 });
