@@ -11,6 +11,10 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Export PDF des élèves (GET /students/export/pdf) : un tableau listant les élèves du périmètre
 /// filtré (classe et/ou année active). Document de travail interne (pas une pièce officielle) — même
 /// style épuré que <see cref="AttendanceReportDocument"/> : pas de logo ni de cachet.
+///
+/// Sans filtre de classe (<see cref="StudentsExportModel.GroupByClassroom"/>), chaque classe démarre sur
+/// sa propre page avec son en-tête (classe, année, effectif) — registres d'appel de la rentrée. Avec un
+/// filtre de classe, c'est un seul tableau continu.
 /// </summary>
 public class StudentsExportDocument(StudentsExportModel model) : IDocument
 {
@@ -22,19 +26,35 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
 
     public void Compose(IDocumentContainer container)
     {
+        // Liste vide : une seule page « Aucun élève… », jamais un PDF sans page (le rendu lèverait).
+        if (!model.GroupByClassroom || model.Students.Count == 0)
+        {
+            ComposePage(container, model.ClassName ?? "Toutes les classes", model.Students);
+            return;
+        }
+
+        // GroupBy conserve l'ordre de première apparition : le Handler a déjà trié par classe.
+        foreach (var classroom in model.Students.GroupBy(s => s.ClassroomName))
+        {
+            ComposePage(container, classroom.Key, classroom.ToList());
+        }
+    }
+
+    private void ComposePage(IDocumentContainer container, string classLabel, IReadOnlyList<StudentExportRow> students)
+    {
         container.Page(page =>
         {
             page.Size(PageSizes.A4);
             page.Margin(1.5f, Unit.Centimetre);
             page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black).DisableFontFeature(FontFeatures.StandardLigatures));
 
-            page.Header().Element(ComposeHeader);
-            page.Content().PaddingTop(8).Element(ComposeTable);
+            page.Header().Element(c => ComposeHeader(c, classLabel, students.Count));
+            page.Content().PaddingTop(8).Element(c => ComposeTable(c, students));
             page.Footer().Element(ComposeFooter);
         });
     }
 
-    private void ComposeHeader(IContainer container)
+    private void ComposeHeader(IContainer container, string classLabel, int headcount)
     {
         container.BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(4).Column(column =>
         {
@@ -49,7 +69,7 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
                 row.RelativeItem().Text(t =>
                 {
                     t.Span("Classe : ").SemiBold();
-                    t.Span(model.ClassName ?? "Toutes les classes");
+                    t.Span(classLabel);
                 });
                 row.RelativeItem().Text(t =>
                 {
@@ -59,13 +79,13 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
                 row.RelativeItem().AlignRight().Text(t =>
                 {
                     t.Span("Effectif : ").SemiBold();
-                    t.Span(model.Students.Count.ToString(CultureInfo.InvariantCulture)).Bold();
+                    t.Span(headcount.ToString(CultureInfo.InvariantCulture)).Bold();
                 });
             });
         });
     }
 
-    private void ComposeTable(IContainer container)
+    private static void ComposeTable(IContainer container, IReadOnlyList<StudentExportRow> students)
     {
         container.Table(table =>
         {
@@ -95,14 +115,14 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
                 header.Cell().Element(HeaderCell).Text("Tél. tuteur").Bold().FontSize(8);
             });
 
-            if (model.Students.Count == 0)
+            if (students.Count == 0)
             {
                 table.Cell().ColumnSpan(7).Element(BodyCell).AlignCenter().PaddingVertical(8)
                     .Text("Aucun élève pour ce périmètre.").FontColor(Colors.Grey.Darken1);
                 return;
             }
 
-            foreach (var s in model.Students)
+            foreach (var s in students)
             {
                 table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(s.Matricule)).FontSize(8);
                 table.Cell().Element(BodyCell).Text(s.FullName);

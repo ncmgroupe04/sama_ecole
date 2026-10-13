@@ -185,8 +185,18 @@
        </div>
 
        @* Actions (toujours visibles pour accès direct) *@
-       <template x-if="canManage">
-        <div class="shrink-0 flex items-center gap-1">
+       <div class="shrink-0 flex items-center gap-1">
+        @* Imprimer la liste : mêmes rôles que l'export PDF de l'écran Élèves (Directeur, Secrétariat, Finance). *@
+        <template x-if="canExportStudents">
+         <button type="button" @@click="classroom.studentCount > 0 ? printClassroomList(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Imprimer la liste des élèves'" aria-label="Imprimer la liste des élèves"
+          :disabled="!classroom.studentCount"
+          :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-600 hover:bg-primary-50'"
+          class="p-1.5 rounded-lg text-slate-400 transition-colors">
+          <icon name="document-text" class="w-4 h-4" />
+         </button>
+        </template>
+        <template x-if="canManage">
+        <div class="contents">
          <button type="button" @@click="classroom.studentCount > 0 ? downloadSchoolCards(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Cartes scolaires'" aria-label="Télécharger les cartes scolaires"
           :disabled="!classroom.studentCount"
           :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-blue-600 hover:bg-blue-50'"
@@ -202,7 +212,8 @@
           <icon name="trash-2" class="w-4 h-4" />
          </button>
         </div>
-       </template>
+        </template>
+       </div>
       </div>
      </template>
 
@@ -258,8 +269,18 @@
          </span>
         </div>
        </div>
-       <template x-if="canManage">
-        <div class="shrink-0 flex items-center gap-1">
+       <div class="shrink-0 flex items-center gap-1">
+        @* Imprimer la liste : mêmes rôles que l'export PDF de l'écran Élèves (Directeur, Secrétariat, Finance). *@
+        <template x-if="canExportStudents">
+         <button type="button" @@click="classroom.studentCount > 0 ? printClassroomList(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Imprimer la liste des élèves'" aria-label="Imprimer la liste des élèves"
+          :disabled="!classroom.studentCount"
+          :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-600 hover:bg-primary-50'"
+          class="p-1.5 rounded-lg text-slate-400 transition-colors">
+          <icon name="document-text" class="w-4 h-4" />
+         </button>
+        </template>
+        <template x-if="canManage">
+        <div class="contents">
          <button type="button" @@click="classroom.studentCount > 0 ? downloadSchoolCards(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Cartes scolaires'" aria-label="Télécharger les cartes scolaires"
           :disabled="!classroom.studentCount"
           :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-blue-600 hover:bg-blue-50'"
@@ -275,7 +296,8 @@
           <icon name="trash-2" class="w-4 h-4" />
          </button>
         </div>
-       </template>
+        </template>
+       </div>
       </div>
      </template>
     </div>

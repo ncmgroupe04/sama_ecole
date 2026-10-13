@@ -138,4 +138,25 @@ public class StudentsExportPdfEndpointsTests : IClassFixture<AuthApiFactory>, IA
         var bytes = await response.Content.ReadAsByteArrayAsync();
         Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
     }
+
+    [Fact]
+    public async Task The_Unfiltered_Export_Starts_Each_Classroom_On_Its_Own_Page()
+    {
+        // Sans classroomId, le PDF est découpé une page par classe (GroupByClassroom). Le nombre de
+        // pages se lit dans l'objet racine `/Type /Pages /Count N` — au moins une page par classe créée.
+        var directeur = await DirecteurTokenAsync();
+        var classroomA = await CreateClassroomAsync(directeur, "CI Export Pages A");
+        var classroomB = await CreateClassroomAsync(directeur, "CI Export Pages B");
+        await CreateStudentAsync(directeur, classroomA.Id, "Élève Page A");
+        await CreateStudentAsync(directeur, classroomB.Id, "Élève Page B");
+
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/students/export/pdf", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pdf = Encoding.ASCII.GetString(await response.Content.ReadAsByteArrayAsync());
+        var match = System.Text.RegularExpressions.Regex.Match(pdf, @"/Type\s*/Pages[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages");
+        match.Success.Should().BeTrue("le PDF expose son nombre de pages");
+        int.Parse(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value)
+            .Should().BeGreaterThanOrEqualTo(2);
+    }
 }

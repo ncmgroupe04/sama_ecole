@@ -11,7 +11,12 @@ public record StudentsExportModel(
     string? ClassName,
     /// <summary>Année scolaire active, ou null si le filtre ActiveYearOnly n'est pas appliqué.</summary>
     string? SchoolYearLabel,
-    IReadOnlyList<StudentExportRow> Students);
+    IReadOnlyList<StudentExportRow> Students,
+    /// <summary>
+    /// Vrai quand aucune classe n'est filtrée : le PDF commence alors chaque classe sur sa propre page,
+    /// avec son en-tête (classe, année, effectif). <see cref="Students"/> est déjà trié par classe.
+    /// </summary>
+    bool GroupByClassroom = false);
 
 public record StudentExportRow(
     string Matricule,
