@@ -18,7 +18,8 @@ public class SelectProfileTests
     [Theory]
     [InlineData(ProfileType.Elementaire, StudentQuotaTier.Tier1_150)]
     [InlineData(ProfileType.EnseignementGeneral, StudentQuotaTier.Tier2_400)]
-    [InlineData(ProfileType.InternatDaara, StudentQuotaTier.Tier3_800)]
+    [InlineData(ProfileType.InternatDaara, StudentQuotaTier.Tier_250)]
+    [InlineData(ProfileType.EnseignementGeneral, StudentQuotaTier.Tier_100)]
     [InlineData(ProfileType.DaaraMemorisation, StudentQuotaTier.Tier1_150)]
     public void A_Known_Profile_With_A_Standard_Tier_Is_Valid(ProfileType profile, StudentQuotaTier tier)
     {
@@ -32,6 +33,18 @@ public class SelectProfileTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.PropertyName == nameof(SelectProfileCommand.Tier));
+    }
+
+    [Theory]
+    [InlineData(StudentQuotaTier.Tier3_800)]
+    [InlineData(StudentQuotaTier.Tier4_Custom)]
+    public void Tiers_Above_400_Students_Are_On_Quote_And_Cannot_Be_Chosen_By_The_School(StudentQuotaTier tier)
+    {
+        var result = _validator.Validate(new SelectProfileCommand(ProfileType.EnseignementGeneral, tier));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.PropertyName == nameof(SelectProfileCommand.Tier))
+            .Which.ErrorMessage.Should().Contain("Grand Groupe");
     }
 
     [Fact]

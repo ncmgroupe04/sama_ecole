@@ -915,10 +915,10 @@ choisit son profil et sa tranche d'effectif, ce qui la passe en `Active`.
 | Méthode | Route | Rôles | Description |
 |---|---|---|---|
 | `GET` | `/api/v1/onboarding/subscription` | Tout rôle de l'école | Souscription courante : `status`, `profileType`, `studentQuotaTier`, `maxStudentLimit`, `softQuotaLimit`, `isPedagogyEnabled`, `isFinanceEnabled`, `isInternatEnabled`, `isCoranModuleEnabled`. 404 si l'école n'a pas de souscription. |
-| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`, `Tier3_800` (`Tier4_Custom` est réservé au Super Admin : 422). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
+| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400` (`Tier3_800` et `Tier4_Custom` sont sur devis, réservés au Super Admin : 422, message « Grand Groupe »). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
 | `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
 
-Pages : `/onboarding/select-profile` (assistant en deux choix — 5 profils, puis 3 tranches ; le sur-mesure est affiché à titre
+Pages : `/onboarding/select-profile` (assistant en deux choix — 6 profils, puis 4 tranches : 100, 150, 250 et 400 ; le sur-mesure est affiché à titre
 informatif, jamais sélectionnable). `/onboarding` redirige vers elle. Le client (`api.js`) y renvoie toute réponse
 `403 ONBOARDING_REQUIRED` (destination lue dans `details.redirectTo`). L'ancienne route
 `POST /schools/current/settings/establishment-profile` reste disponible mais l'interface ne l'utilise plus ; elle maintient
@@ -968,6 +968,12 @@ côté serveur par `SubscriptionPricingEngine` (prix de la tranche + majoration 
 | `PUT` | `/api/v1/admin/pricing-grid/{tier}` | Super Admin | `{ monthlyXof, annualXof, boardingSurchargeMonthlyXof, boardingSurchargeAnnualXof }` — entiers de FCFA, base > 0, `annualXof ≤ 12 × monthlyXof`, majoration annuelle ≤ 12 × mensuelle, plafond 50 000 000. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400` (`Tier3_800` / `Tier4_Custom` sont sur devis : 422). 404 si la ligne n'existe pas, 409 en cas de modification concurrente. Vaut pour les nouvelles demandes et les prochains paiements. |
 
 Écran : `/admin/tarification` (section « Grille tarifaire par effectif », au-dessus des codes promo).
+
+Pages publiques qui lisent cette grille : le formulaire d'inscription `/inscription` (cartes de tranche, présélection d'après
+l'effectif, tranches trop petites grisées, « Grand Groupe » au-delà de 400, prix = lecture de `GET /api/v1/public/pricing-grid`) et
+la vitrine `/vitrine` (onglet « Établissements privés », rendu **côté serveur** par le composant de vue `PrivatePricing`, d'après
+la même requête `GetPublicPricingGridQuery` : un prix modifié par le Super Admin y apparaît immédiatement, sans JavaScript).
+Les liens de la vitrine préremplissent le formulaire : `/inscription?type=prive&tranche={tier}` (et `&profil={profile}`).
 
 ## 30. API Cycles gérés par l'établissement
 

@@ -20,9 +20,11 @@ document.addEventListener('alpine:init', () => {
     // Plafonds affichés : MIROIR de StudentQuotaDefaults (Domain). Le serveur reste maître — c'est lui qui
     // pose les chiffres à partir de la tranche, ceux-ci ne servent qu'à l'affichage.
     const TIERS = [
+        { id: 'Tier_100', label: '100', hint: "élèves (tolérance jusqu'à 110)" },
         { id: 'Tier1_150', label: '150', hint: "élèves (tolérance jusqu'à 160)" },
-        { id: 'Tier2_400', label: '400', hint: "élèves (tolérance jusqu'à 420)" },
-        { id: 'Tier3_800', label: '800', hint: "élèves (tolérance jusqu'à 830)" }
+        { id: 'Tier_250', label: '250', hint: "élèves (tolérance jusqu'à 260)" },
+        { id: 'Tier2_400', label: '400', hint: "élèves (tolérance jusqu'à 420)" }
+        // Au-delà de 400 élèves : offre « Grand Groupe », sur devis — jamais choisie ici (refusée en 422 par l'API).
     ];
 
     const PROFILES = [

@@ -259,8 +259,9 @@ public class PagesController : Controller
 
     // ------------------------------------------------------------------ Vitrine publique (marketing)
 
-    // Page vitrine B2B : présente le logiciel aux directeurs/gérants d'établissement. Contenu
-    // statique, aucun appel API — donc rien à garder côté serveur au-delà de [AllowAnonymous].
+    // Page vitrine B2B : présente le logiciel aux directeurs/gérants d'établissement. Contenu statique, SAUF la grille
+    // tarifaire privée, rendue d'après la grille en base (ViewComponent PrivatePricing) : un prix modifié par le Super
+    // Admin y apparaît tout de suite. Aucun appel API côté navigateur.
     [HttpGet("/vitrine")]
     public IActionResult LandingB2B() => View("~/Views/Home/LandingB2B.cshtml");
 

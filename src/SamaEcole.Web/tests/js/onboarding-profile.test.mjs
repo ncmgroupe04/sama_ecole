@@ -205,12 +205,12 @@ function bootWizard({ role = 'Directeur', subscription = { status: 'PendingOnboa
     return { wizard: ctx.component('onboardingWizard'), calls, redirects, remembered: () => remembered };
 }
 
-test('l\'assistant propose les 6 profils de l\'API et 3 tranches (le sur-mesure n\'est jamais proposé)', () => {
+test('l\'assistant propose les 6 profils de l\'API et 4 tranches (le Grand Groupe sur devis n\'est jamais proposé)', () => {
     const { wizard } = bootWizard();
 
     assert.deepEqual(plain(wizard.profiles.map((p) => p.id).sort()),
         ['ComptabiliteRapports', 'DaaraMemorisation', 'Elementaire', 'EnseignementGeneral', 'FrancoArabe', 'InternatDaara']);
-    assert.deepEqual(plain(wizard.tiers.map((t) => t.id)), ['Tier1_150', 'Tier2_400', 'Tier3_800']);
+    assert.deepEqual(plain(wizard.tiers.map((t) => t.id)), ['Tier_100', 'Tier1_150', 'Tier_250', 'Tier2_400']);
 });
 
 test('l\'envoi exige un profil ET une tranche, puis poste les deux et redirige selon le profil', async () => {
