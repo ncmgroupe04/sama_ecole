@@ -411,6 +411,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Internat/Daara : le suivi par Hizb référence les élèves et les Oustaz référencent un compte, donc AVANT la purge
         // des comptes et des élèves plus bas. students.InstructorId est détaché d'abord (FK vers instructors). Sans cette
         // purge, un test qui crée une Halqa ferait échouer le nettoyage du suivant en 23503.
+        // Journal des évaluations Hizb : FK vers students ET instructors, donc supprimé avant eux (le rôle propriétaire peut DELETE).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_hizb_evaluations;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_hizb_statuses;");
         await owner.Database.ExecuteSqlRawAsync("""UPDATE students SET "InstructorId" = NULL WHERE "InstructorId" IS NOT NULL;""");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM instructors;");

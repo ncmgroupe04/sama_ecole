@@ -32,6 +32,17 @@
             4: 'الحزب كامل'
         },
         loadError: 'تعذّر تحميل الحلقة.',
+        historyError: 'تعذّر تحميل التطور.',
+        historyChart: 'منحنى تطور الحفظ',
+        periods: [
+            { key: '3m', label: '3 أشهر' },
+            { key: '6m', label: '6 أشهر' },
+            { key: '12m', label: '12 شهرًا' },
+            { key: 'all', label: 'الكل' }
+        ],
+        hizb: 'الحزب',
+        from: 'من',
+        to: 'إلى',
         gridError: 'تعذّر تحميل جدول الأحزاب.',
         saveError: 'تعذّر حفظ التقييم.',
         conflict: 'عُدّل هذا الحزب من طرف آخر قبل حفظك. تم تحديث الجدول، يمكنك إعادة المحاولة.'
@@ -87,6 +98,28 @@
         };
     }
 
+    /** Pourcentage du Coran pour un total de quarts : même règle que le serveur (quarts sur 240, une décimale). */
+    function percentOfQuarters(quarters) {
+        return Math.round((quarters * 100 / TOTAL_QUARTERS) * 10) / 10;
+    }
+
+    /** Date lisible (jj/mm/aaaa), calée sur UTC comme le serveur : elle ne dépend pas du fuseau de la tablette. */
+    function formatDate(iso) {
+        return new Date(iso).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
+    }
+
+    /** Une évaluation du journal, prête à afficher en arabe : Hizb, passage d'un état à l'autre, note, auteur. */
+    function describeEvaluation(entry) {
+        return {
+            title: LABELS.hizb + ' ' + entry.hizbNumber,
+            change: LABELS.from + ' ' + (quarterLabel(entry.quartersBefore)) + ' ' + LABELS.to + ' ' + (quarterLabel(entry.quartersAfter)),
+            rating: entry.rating == null ? null : entry.rating + '/5',
+            by: entry.evaluatedBy || null,
+            baseline: !!entry.isBaseline,
+            date: formatDate(entry.evaluatedAt)
+        };
+    }
+
     /** Classes Tailwind d'une case de Hizb selon son état — trois états, trois teintes, jamais une couleur seule. */
     function cellClasses(state) {
         switch (state) {
@@ -121,7 +154,7 @@
     window.halqaLogic = {
         HIZB_COUNT, TOTAL_QUARTERS, LABELS,
         pickName, juzOfHizb, groupByJuz, quarterLabel, summarize, cellClasses, quarterFilled, replaceCell,
-        reportUrl, reportFileName
+        reportUrl, reportFileName, percentOfQuarters, formatDate, describeEvaluation
     };
 
     document.addEventListener('alpine:init', () => {
@@ -142,6 +175,13 @@
             groups: [],          // la grille regroupée par Juz
 
             drawer: { open: false, cell: null, juz: null, quarters: 0, rating: null, saving: false, error: null },
+
+            // Évolution de l'élève ouvert (journal des évaluations) : courbe + dernières évaluations, période au choix.
+            history: null,
+            historyLoading: false,
+            historyError: null,
+            historyPeriod: '6m',
+            periods: LABELS.periods,
 
             name: pickName,
             quarterLabel,
@@ -174,8 +214,11 @@
             async openStudent(student) {
                 this.selected = student;
                 this.notice = null;
+                this.history = null;
+                this.historyError = null;
                 this.closeDrawer();
-                await this.loadGrid();
+                // La grille de saisie ne dépend pas de l'évolution : une panne du journal ne la bloque pas.
+                await Promise.all([this.loadGrid(), this.loadHistory()]);
             },
 
             /** Retour à la liste : on relit la Halqa, car les indicateurs des cartes ont pu changer pendant la saisie. */
@@ -183,6 +226,9 @@
                 this.selected = null;
                 this.grid = null;
                 this.groups = [];
+                this.history = null;
+                this.historyError = null;
+                this.historyLoading = false;
                 this.notice = null;
                 this.closeDrawer();
                 await this.loadHalqa();
@@ -200,6 +246,67 @@
                 } finally {
                     this.gridLoading = false;
                 }
+            },
+
+            async loadHistory() {
+                if (!this.selected) return;
+                const studentId = this.selected.studentId;
+                const { from, to } = window.trendChart.periodRange(this.historyPeriod);
+                this.historyLoading = true;
+                this.historyError = null;
+                try {
+                    const query = (from ? 'from=' + from + '&' : '') + 'to=' + to;
+                    const result = await window.api.get(`/internat/students/${studentId}/hizb-history?${query}`);
+                    // Réponse tardive d'un élève déjà refermé ou remplacé : on ne l'affiche pas chez le suivant.
+                    if (this.selected && this.selected.studentId === studentId) this.history = result;
+                } catch (err) {
+                    this.historyError = LABELS.historyError;
+                } finally {
+                    this.historyLoading = false;
+                }
+            },
+
+            async setHistoryPeriod(key) {
+                if (key === this.historyPeriod) return;
+                this.historyPeriod = key;
+                await this.loadHistory();
+            },
+
+            /** Tracé de la courbe : niveau d'ouverture de la période (s'il existe), puis un point par jour de saisie. */
+            get historyChart() {
+                const h = this.history;
+                if (!h) return window.trendChart.build([]);
+                const at = (day) => Date.parse(day + 'T12:00:00Z');
+                const points = h.points.map((p) => ({ t: at(p.date), v: p.progressPercent }));
+                if (h.from && h.openingTotalQuarters != null) {
+                    points.unshift({ t: Date.parse(h.from + 'T00:00:00Z'), v: percentOfQuarters(h.openingTotalQuarters) });
+                }
+                return window.trendChart.build(points, {
+                    fromMs: h.from ? Date.parse(h.from + 'T00:00:00Z') : undefined,
+                    toMs: h.to ? Date.parse(h.to + 'T23:59:59Z') : undefined,
+                    formatX: (t) => formatDate(new Date(t).toISOString())
+                });
+            },
+
+            /** La courbe en balise <svg> (chaîne pour x-html) : une <template x-for> ne marche pas dans un SVG. */
+            get historySvg() {
+                return window.trendChart.svg(this.historyChart, { label: LABELS.historyChart });
+            },
+
+            /** Aucune évaluation à tracer : on le dit plutôt que de dessiner une ligne plate à 0 %. */
+            get historyEmpty() {
+                return !!this.history && this.historyChart.dots.length === 0;
+            },
+
+            /** Date de début du journal, quand elle tombe DANS la période : avant, il n'y a pas d'historique à montrer. */
+            get historySince() {
+                const h = this.history;
+                if (!h || !h.firstEvaluationAt || !h.from) return null;
+                return new Date(h.firstEvaluationAt) > new Date(h.from + 'T00:00:00Z') ? formatDate(h.firstEvaluationAt) : null;
+            },
+
+            get historyEntries() {
+                return this.history ? this.history.recent.map(describeEvaluation) : [];
             },
 
             /**
@@ -265,12 +372,13 @@
                     this.grid.summary = summarize(this.grid.hizbs);
                     this.groups = groupByJuz(this.grid.hizbs);
                     this.closeDrawer();
+                    await this.loadHistory();
                 } catch (err) {
                     if (err && err.status === 409) {
                         // Quelqu'un d'autre a modifié ce Hizb : on ne réécrit pas par-dessus, on relit la grille.
                         this.closeDrawer();
                         this.notice = LABELS.conflict;
-                        await this.loadGrid();
+                        await Promise.all([this.loadGrid(), this.loadHistory()]);
                         return;
                     }
                     d.error = window.api.toMessage(err, LABELS.saveError);

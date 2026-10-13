@@ -102,7 +102,7 @@ public class HalqaHandlersTests : IAsyncLifetime
     }
 
     /// <summary>Un contexte applicatif de l'école A + le compte courant simulé.</summary>
-    private sealed record Session(ApplicationDbContext Db, HalqaScopeAuthorizer Scope) : IAsyncDisposable
+    private sealed record Session(ApplicationDbContext Db, HalqaScopeAuthorizer Scope, TestCurrentUser User) : IAsyncDisposable
     {
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
@@ -110,13 +110,14 @@ public class HalqaHandlersTests : IAsyncLifetime
     private Session AsUser(Guid userId, Role role, Guid? school = null)
     {
         var db = _db.NewAppContext(school ?? EcoleA);
-        return new Session(db, new HalqaScopeAuthorizer(db, new TestCurrentUser(userId, role)));
+        var user = new TestCurrentUser(userId, role);
+        return new Session(db, new HalqaScopeAuthorizer(db, user), user);
     }
 
     private Session AsDirecteur(Guid? school = null) => AsUser(UserDirecteur, Role.Directeur, school);
 
     private static UpdateHizbProgressCommandHandler UpdateHandler(Session s, Guid? school = null) =>
-        new(s.Db, new StubTenantProvider(school ?? EcoleA), s.Scope, TimeProvider.System);
+        new(s.Db, new StubTenantProvider(school ?? EcoleA), s.Scope, TimeProvider.System, s.User);
 
     private async Task SeedHizbAsync(Guid student, int hizb, int quarters, int? rating = null)
     {

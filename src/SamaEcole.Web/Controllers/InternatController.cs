@@ -6,6 +6,8 @@ using SamaEcole.Application.Internat.Commands.UpdateHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetInstructorStudents;
 using SamaEcole.Application.Internat.Queries.GetMyHalqa;
 using SamaEcole.Application.Internat.Queries.GetProgressDashboard;
+using SamaEcole.Application.Internat.Queries.GetProgressHistory;
+using SamaEcole.Application.Internat.Queries.GetStudentHizbHistory;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbReportPdf;
 using SamaEcole.Application.Internat.Queries.ListAssignableStudents;
@@ -177,6 +179,34 @@ public class InternatController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHizbProgress(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentHizbProgressQuery(studentId), cancellationToken));
+
+    /// <summary>
+    /// L'historique des évaluations Hizb d'un élève : points de sa courbe et dernières évaluations, sur la période demandée
+    /// (<c>from</c> / <c>to</c>, jours). Même portée que la grille : un Oustaz ne lit que sa Halqa. Le journal commence au
+    /// déploiement : <c>firstEvaluationAt</c> dit d'où part l'historique.
+    /// </summary>
+    [HttpGet("students/{studentId:guid}/hizb-history")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<StudentHizbHistoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetHizbHistory(
+        Guid studentId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetStudentHizbHistoryQuery(studentId, from, to), cancellationToken));
+
+    /// <summary>
+    /// Progression moyenne par mois, pour toute l'école ou pour une Halqa (<c>instructorId</c>). Un Oustaz ne peut demander que la
+    /// sienne. Six derniers mois par défaut, 24 au plus.
+    /// </summary>
+    [HttpGet("progress-history")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<ProgressHistoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetProgressHistory(
+        [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? instructorId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetProgressHistoryQuery(from, to, instructorId), cancellationToken));
 
     /// <summary>
     /// Le bulletin coranique d'un élève en PDF. Même portée que la grille : un Oustaz ne tire que le bulletin de ses

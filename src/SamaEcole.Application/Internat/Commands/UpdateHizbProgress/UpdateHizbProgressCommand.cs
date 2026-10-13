@@ -46,7 +46,8 @@ public class UpdateHizbProgressCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     HalqaScopeAuthorizer scopeAuthorizer,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ICurrentUserService currentUser)
     : IRequestHandler<UpdateHizbProgressCommand, HizbCellDto>
 {
     public async Task<HizbCellDto> Handle(UpdateHizbProgressCommand request, CancellationToken cancellationToken)
@@ -98,10 +99,41 @@ public class UpdateHizbProgressCommandHandler(
             dbContext.SetOriginalConcurrencyToken(status, request.RowVersion.Value);
         }
 
+        var quartersBefore = status.CompletedQuarters;
+        var ratingBefore = status.Rating;
+        var newRating = evaluated ? request.Rating : null;
+        var now = timeProvider.GetUtcNow();
+
         status.CompletedQuarters = request.CompletedQuarters;
         status.State = HizbRules.StateFor(request.CompletedQuarters);
-        status.Rating = evaluated ? request.Rating : null;
-        status.LastEvaluatedAt = evaluated ? timeProvider.GetUtcNow() : null;
+        status.Rating = newRating;
+        status.LastEvaluatedAt = evaluated ? now : null;
+
+        // Journal des évaluations : une ligne par saisie qui CHANGE quelque chose, écrite dans la MÊME transaction que l'état
+        // courant (un seul SaveChanges). Une saisie identique à l'état en place n'écrit rien : le journal ne se remplit pas de
+        // doublons quand l'Oustaz ré-enregistre sans rien modifier.
+        if (quartersBefore != request.CompletedQuarters || ratingBefore != newRating)
+        {
+            // Total de l'élève après la saisie : les quarts des AUTRES Hizb + ceux de celui-ci. La courbe se lit ainsi dans le
+            // journal sans recalculer l'état des 60 Hizb à chaque date.
+            var otherQuarters = await dbContext.StudentHizbStatuses
+                .Where(h => h.StudentId == request.StudentId && h.HizbNumber != request.HizbNumber)
+                .SumAsync(h => (int?)h.CompletedQuarters, cancellationToken) ?? 0;
+
+            dbContext.StudentHizbEvaluations.Add(new StudentHizbEvaluation
+            {
+                SchoolId = schoolId,
+                StudentId = request.StudentId,
+                HizbNumber = request.HizbNumber,
+                QuartersBefore = quartersBefore,
+                QuartersAfter = request.CompletedQuarters,
+                Rating = newRating,
+                TotalQuartersAfter = otherQuarters + request.CompletedQuarters,
+                EvaluatedAt = now,
+                EvaluatedByUserId = currentUser.UserId,
+                InstructorId = student.InstructorId
+            });
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
