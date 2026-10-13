@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Internat.Queries.GetStudentHizbHistory;
 using SamaEcole.Application.Internat.Queries.GetStudentHizbProgress;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -35,11 +36,18 @@ public record HizbReportDto(
     HizbSummaryDto Summary,
     decimal? AverageRating,
     DateTimeOffset? LastEvaluatedAt,
-    IReadOnlyList<HizbCellDto> Hizbs);
+    IReadOnlyList<HizbCellDto> Hizbs,
+    HizbEvolutionDto? Evolution = null);
 
 public class GetStudentHizbReportQueryHandler(ISender mediator, IApplicationDbContext dbContext, TimeProvider timeProvider)
     : IRequestHandler<GetStudentHizbReportQuery, HizbReportDto>
 {
+    /// <summary>Période de la courbe imprimée, en mois.</summary>
+    public const int EvolutionMonths = 12;
+
+    /// <summary>Dernières évaluations listées sous la courbe.</summary>
+    public const int EvolutionEntries = 10;
+
     public async Task<HizbReportDto> Handle(GetStudentHizbReportQuery request, CancellationToken cancellationToken)
     {
         // 404 (élève hors école) et 403 (Oustaz hors de sa Halqa) sont levés ici, avant toute autre lecture.
@@ -80,11 +88,20 @@ public class GetStudentHizbReportQueryHandler(ISender mediator, IApplicationDbCo
 
         var lastEvaluatedAt = progress.Hizbs.Where(c => c.LastEvaluatedAt is not null).Max(c => c.LastEvaluatedAt);
 
+        // Évolution sur les douze derniers mois (journal des évaluations). Même portée que la grille : la lecture repasse par la
+        // requête d'historique, qui applique HalqaScopeAuthorizer.
+        var now = timeProvider.GetUtcNow();
+        var to = DateOnly.FromDateTime(now.UtcDateTime);
+        var from = to.AddMonths(-EvolutionMonths);
+        var history = await mediator.Send(new GetStudentHizbHistoryQuery(request.StudentId, from, to), cancellationToken);
+        var evolution = new HizbEvolutionDto(
+            from, to, history.OpeningTotalQuarters, history.FirstEvaluationAt, history.Points, history.Recent.Take(EvolutionEntries).ToList());
+
         return new HizbReportDto(
             school.Name, school.Address, school.LogoUrl,
             request.StudentId, student.Matricule, student.FullName, student.FullNameAr,
             student.BirthDate, student.BirthPlace, classroomName, yearLabel,
             instructor?.FullName, instructor?.FullNameAr,
-            timeProvider.GetUtcNow(), progress.Summary, averageRating, lastEvaluatedAt, progress.Hizbs);
+            now, progress.Summary, averageRating, lastEvaluatedAt, progress.Hizbs, evolution);
     }
 }

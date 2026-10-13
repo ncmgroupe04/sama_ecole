@@ -593,15 +593,31 @@ back-end : les routes et la portée (un Oustaz ne tire que le bulletin de SES é
 7. **Alertes = stagnation, pas retard.** Un élève est signalé quand il n'a pas été évalué depuis N jours (30 par
    défaut, réglable de 1 à 365) ou jamais, sauf s'il a terminé les 60 Hizb. « En retard » supposerait un rythme attendu
    que personne n'a fixé. Le tableau de bord ne porte que sur les élèves rattachés à une Halqa.
-8. **Pas de courbe d'évolution dans le temps.** Le suivi est un état courant par Hizb (la ligne est mise à jour sur
-   place) : l'historique passé n'existe pas, une courbe serait inventée. Elle exigerait un journal des évaluations
-   (table append-only, écrit à chaque saisie) — à décider séparément, c'est une évolution de schéma.
+8. **Courbe d'évolution : voir « Journal des évaluations Hizb » plus bas (13/10/2026).** Avant lui, le suivi n'était
+   qu'un état courant par Hizb (mis à jour sur place) : aucun historique n'existait, une courbe aurait été inventée.
 9. **Le bulletin n'invente aucune appréciation** : il affiche la note (1 à 5) par Hizb, sa moyenne, la dernière
    évaluation, et laisse un cadre pour l'appréciation manuscrite de l'Oustaz et les signatures. L'impression est
    tracée au journal d'audit, et un Oustaz ne tire que le bulletin de SES élèves.
 
-**Pas encore livré :** courbe de progression dans le temps (journal des évaluations requis), bulletin PDF accessible
-depuis la tablette de l'Oustaz.
+**Pas encore livré :** (rien de ce paragraphe : courbe de progression et bulletin PDF sont livrés, voir ci-dessous).
+
+**Journal des évaluations Hizb (13/10/2026, branche `feat/internat-hizb-journal`)** — spec :
+`docs/superpowers/specs/2026-10-13-journal-hizb-et-pointage-configurable-design.md`.
+- Table **append-only** `student_hizb_evaluations` (migration `AddHizbEvaluationJournal`, RLS, `GRANT SELECT, INSERT`
+  seulement : l'application ne peut ni modifier ni effacer une ligne — sqlstate 42501). Une ligne par saisie qui CHANGE
+  quelque chose (quarts ou note) : Hizb, quarts avant/après, note, total de quarts après, auteur, Oustaz. `StudentHizbStatus`
+  reste l'état courant ; le journal s'écrit dans la même transaction (`UpdateHizbProgressCommand`).
+- **Reprise** : la migration insère une ligne « point de départ » (`IsBaseline`) par Hizb déjà évalué, avec un total
+  cumulé. L'historique réel commence donc au déploiement : les écrans le disent (« Journal démarré le … ») au lieu de
+  tracer un zéro inventé. `Down()` retire la table, la policy et le correctif de `reset_school_data` (testé).
+- Lectures : `GET internat/students/{id}/hizb-history?from&to` (courbe d'un élève : un point par jour = dernière saisie du
+  jour, niveau d'ouverture de la période, 20 dernières évaluations) et `GET internat/progress-history?from&to&instructorId`
+  (moyenne mensuelle du total de quarts, sur 24 mois au plus, Oustaz limité à sa Halqa).
+- Écrans : Ma Halqa (carte « التطور » dans la fiche élève, périodes 3/6/12 mois et « الكل »), `/suivi-coranique` (carte
+  « Progression moyenne par mois », filtre par Halqa), bulletin PDF (section « Évolution sur 12 mois » : courbe SVG sans
+  texte + 10 dernières évaluations). Tracé commun `wwwroot/js/trend-chart.js` (axe arrondi à 10/20/25/50/75/100 %).
+- **Déploiement** : sauvegarder la base avant la migration ; `Down()` est testée sur Testcontainers et sur une copie de la
+  base de démo.
 
 **Écran d'affectation des élèves à un Oustaz (12/10/2026, branche `feat/oustaz-student-assignment`)** : jusque-là
 `POST students/assign-instructor` n'existait qu'en API. `/oustaz` porte maintenant un bouton « Élèves » par Oustaz

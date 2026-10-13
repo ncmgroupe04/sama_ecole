@@ -32,6 +32,18 @@ public record StudentHizbHistoryDto(
     IReadOnlyList<HizbHistoryPointDto> Points,
     IReadOnlyList<HizbEvaluationEntryDto> Recent);
 
+/// <summary>
+/// Évolution d'un élève sur la période imprimée dans le bulletin coranique : mêmes données que l'écran
+/// (<see cref="StudentHizbHistoryDto"/>), réduites à ce que le document affiche.
+/// </summary>
+public record HizbEvolutionDto(
+    DateOnly From,
+    DateOnly To,
+    int? OpeningTotalQuarters,
+    DateTimeOffset? FirstEvaluationAt,
+    IReadOnlyList<HizbHistoryPointDto> Points,
+    IReadOnlyList<HizbEvaluationEntryDto> Recent);
+
 /// <summary>Progression moyenne d'un mois : moyenne, sur les élèves du périmètre, du total de quarts à la fin du mois (sur 240).</summary>
 public record ProgressMonthDto(DateOnly MonthStart, decimal AverageProgressPercent, int EvaluationCount, int StudentsEvaluated);
 
