@@ -65,6 +65,9 @@ public interface IApplicationDbContext
     /// <summary>Codes promo (module Tarification &amp; Promotions) : table plateforme, comme Subscriptions/Schools.</summary>
     DbSet<PromoCode> PromoCodes { get; }
 
+    /// <summary>Prix publié de chaque tranche d'effectif tarifée : table plateforme, éditée par le Super Admin.</summary>
+    DbSet<QuotaTierPrice> QuotaTierPrices { get; }
+
     /// <summary>Historique des SMS envoyés (offre Premium) : table tenant, une ligne par tentative.</summary>
     DbSet<SmsMessage> SmsMessages { get; }
 

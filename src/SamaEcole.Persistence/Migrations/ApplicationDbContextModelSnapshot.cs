@@ -3624,6 +3624,73 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToView("public_school_directory", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.QuotaTierPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AnnualXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("BoardingSurchargeAnnualXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal>("BoardingSurchargeMonthlyXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MonthlyXof")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Tier")
+                        .IsUnique();
+
+                    b.ToTable("quota_tier_prices", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_quota_tier_prices_prices_positive", "\"MonthlyXof\" > 0 AND \"AnnualXof\" > 0");
+
+                            t.HasCheckConstraint("CK_quota_tier_prices_surcharges_not_negative", "\"BoardingSurchargeMonthlyXof\" >= 0 AND \"BoardingSurchargeAnnualXof\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.QuranEvaluation", b =>
                 {
                     b.Property<Guid>("Id")

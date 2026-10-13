@@ -543,8 +543,8 @@ Distincte de `subscriptions` (§5.6, facturation : formule, expiration, paiement
 | `SchoolId` | `uuid` | FK `schools.Id` RESTRICT, NOT NULL ; index unique partiel `UX_tenant_subscriptions_SchoolId WHERE NOT IsDeleted` |
 | `ProfileType` | `varchar(30)` | NOT NULL — `ProfileType` (§6), enum stocké en texte |
 | `StudentQuotaTier` | `varchar(20)` | NOT NULL — `StudentQuotaTier` (§6) |
-| `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (150, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
-| `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (160, 420, 830, ou calculée) |
+| `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (100, 150, 250, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
+| `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (110, 160, 260, 420, 830, ou calculée) |
 | `Status` | `varchar(20)` | NOT NULL — `TenantSubscriptionStatus` (§6) |
 | `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés |
 
@@ -567,6 +567,26 @@ durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni l
 `DaaraInternat` → `InternatDaara`) ; sans profil → `EnseignementGeneral`. Les 4 modules sont recopiés depuis
 `school_settings` (source de vérité de l'affichage tant que la sidebar n'est pas rebranchée).
 
+### 5.16 Grille tarifaire par tranche d'effectif — `quota_tier_prices`
+
+Table **plateforme** (comme `promo_codes`) : aucun `SchoolId`, ni Global Query Filter tenant ni RLS. Une ligne par tranche
+**tarifée** (`Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`) ; au-delà, offre « Grand Groupe » sur devis, donc aucune ligne.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `Tier` | `varchar(20)` | NOT NULL, index unique — `StudentQuotaTier` (§6) |
+| `MonthlyXof` | `numeric(12,2)` | NOT NULL — tarif mensuel standard (FCFA) |
+| `AnnualXof` | `numeric(12,2)` | NOT NULL — tarif annuel d'engagement ; saisi, jamais déduit du mensuel (10 mois payés, 2 offerts) |
+| `BoardingSurchargeMonthlyXof`, `BoardingSurchargeAnnualXof` | `numeric(12,2)` | NOT NULL, `CHECK >= 0` — majoration si l'école a un Internat (0 = aucune) |
+
+`CHECK MonthlyXof > 0 AND AnnualXof > 0`. Verrou optimiste `xmin`. La migration `AddQuotaTierPrices` sème la grille de départ
+du 2026-10-13 (5 000 / 10 000 / 15 000 / 25 000 FCFA par mois ; 50 000 / 100 000 / 150 000 / 250 000 par an, valeurs
+en dur) et accorde `SELECT, UPDATE` seulement au rôle applicatif : les lignes ne sont jamais créées par l'application.
+Distincte de la grille historique `SubscriptionPricing:Grid` (cycles × taille Petit/Moyen/Grand, `appsettings.json`), qui
+continue de facturer les demandes d'inscription antérieures aux tranches. Aucune entrée `audit_logs` (ce journal est
+rattaché à une école) : la trace d'une modification est `UpdatedAt`/`UpdatedBy` de la ligne et le journal applicatif.
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |
@@ -588,7 +608,7 @@ durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni l
 | `SubscriptionPaymentStatus` | `INITIATED`, `CONFIRMED`, `FAILED` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR` |
 | `ProfileType` | `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` (texte, `tenant_subscriptions`) |
-| `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` (texte) |
+| `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom`, `Tier_100`, `Tier_250` (texte). L'ordre de l'enum ne signifie rien (les deux dernières ont été ajoutées en fin pour conserver `default = Tier1_150`) ; l'échelle croissante est `QuotaTierResolver.Ladder` : `Tier_100` (100/110), `Tier1_150` (150/160), `Tier_250` (250/260), `Tier2_400` (400/420), `Tier3_800` (800/830), `Tier4_Custom`. Au-delà de 400 : offre « Grand Groupe », sur devis. |
 | `TenantSubscriptionStatus` | `PendingOnboarding`, `PendingApproval`, `Active`, `Suspended`, `Expired` (texte — axe distinct de `SubscriptionStatus`) |
 
 Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou type `enum` PostgreSQL), le domaine C# (`enum` typé) et le contrat API (Volume 4) — aucune chaîne de caractère magique ne doit être dupliquée entre ces trois couches.

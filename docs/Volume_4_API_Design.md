@@ -915,8 +915,8 @@ choisit son profil et sa tranche d'effectif, ce qui la passe en `Active`.
 | Méthode | Route | Rôles | Description |
 |---|---|---|---|
 | `GET` | `/api/v1/onboarding/subscription` | Tout rôle de l'école | Souscription courante : `status`, `profileType`, `studentQuotaTier`, `maxStudentLimit`, `softQuotaLimit`, `isPedagogyEnabled`, `isFinanceEnabled`, `isInternatEnabled`, `isCoranModuleEnabled`. 404 si l'école n'a pas de souscription. |
-| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800` (`Tier4_Custom` est réservé au Super Admin : 422). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
-| `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
+| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`, `Tier3_800` (`Tier4_Custom` est réservé au Super Admin : 422). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
+| `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
 
 Pages : `/onboarding/select-profile` (assistant en deux choix — 5 profils, puis 3 tranches ; le sur-mesure est affiché à titre
 informatif, jamais sélectionnable). `/onboarding` redirige vers elle. Le client (`api.js`) y renvoie toute réponse
@@ -936,6 +936,19 @@ jusqu'à `softQuotaLimit` inclus : admis et la réponse porte `quotaWarning` `{ 
 softQuotaLimit, remainingBeforeBlock }` (absent sinon) ; au-delà : 422 `STUDENT_QUOTA_EXCEEDED`. Souscription non `Active`
 ou absente : 422 `SUBSCRIPTION_NOT_ACTIVE`. Le contrôle précède la transaction et ne la verrouille pas : deux créations
 strictement concurrentes à la limite peuvent dépasser la tolérance d'un ou deux élèves.
+
+### 29.1 Grille tarifaire par tranche d'effectif
+
+Table : `quota_tier_prices` (Volume 3 §5.16). Le montant facturé n'est jamais celui que le client renvoie : il est recalculé
+côté serveur par `SubscriptionPricingEngine` (prix de la tranche + majoration Internat éventuelle ; tranche > 400 : sur devis).
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/public/pricing-grid` | Anonyme (limité en débit) | `{ currency: "XOF", quoteAboveStudents: 400, tiers: [{ tier, maxStudents, softLimit, monthlyXof, annualXof, boardingSurchargeMonthlyXof, boardingSurchargeAnnualXof }] }`, de la plus petite tranche à la plus grande. Source du formulaire d'inscription. |
+| `GET` | `/api/v1/admin/pricing-grid` | Super Admin | Mêmes lignes, enveloppées `{ price, updatedAt, updatedBy }`. |
+| `PUT` | `/api/v1/admin/pricing-grid/{tier}` | Super Admin | `{ monthlyXof, annualXof, boardingSurchargeMonthlyXof, boardingSurchargeAnnualXof }` — entiers de FCFA, base > 0, `annualXof ≤ 12 × monthlyXof`, majoration annuelle ≤ 12 × mensuelle, plafond 50 000 000. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400` (`Tier3_800` / `Tier4_Custom` sont sur devis : 422). 404 si la ligne n'existe pas, 409 en cas de modification concurrente. Vaut pour les nouvelles demandes et les prochains paiements. |
+
+Écran : `/admin/tarification` (section « Grille tarifaire par effectif », au-dessus des codes promo).
 
 ## 30. API Cycles gérés par l'établissement
 

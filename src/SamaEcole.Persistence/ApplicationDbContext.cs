@@ -40,6 +40,7 @@ public class ApplicationDbContext(
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
+    public DbSet<QuotaTierPrice> QuotaTierPrices => Set<QuotaTierPrice>();
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<UserSchool> UserSchools => Set<UserSchool>();
     public DbSet<ScheduleSlot> ScheduleSlots => Set<ScheduleSlot>();
