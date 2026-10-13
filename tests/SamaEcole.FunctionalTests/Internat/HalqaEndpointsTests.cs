@@ -74,6 +74,8 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
     private static string Hizb(Guid student) => $"/api/v1/internat/students/{student}/hizb-progress";
     private const string Assign = "/api/v1/internat/students/assign-instructor";
     private const string Assignable = "/api/v1/internat/assignable-students";
+    private static string HizbHistory(Guid student, string query = "") => $"/api/v1/internat/students/{student}/hizb-history{query}";
+    private const string ProgressHistory = "/api/v1/internat/progress-history";
 
     private static object HizbBody(int hizb = 1, int quarters = 2, int? rating = 3) =>
         new { hizbNumber = hizb, completedQuarters = quarters, rating, rowVersion = (uint?)null };
@@ -98,6 +100,8 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
         (await SendAsync(HttpMethod.Get, Hizb(Guid.NewGuid()), null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await SendAsync(HttpMethod.Put, Hizb(Guid.NewGuid()), null, HizbBody())).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await SendAsync(HttpMethod.Get, Assignable, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await SendAsync(HttpMethod.Get, HizbHistory(Guid.NewGuid()), null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await SendAsync(HttpMethod.Get, ProgressHistory, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -198,6 +202,48 @@ public class HalqaEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApi
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await response.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("MODULE_DISABLED");
+    }
+
+    [Fact]
+    public async Task The_History_Routes_Are_Locked_By_The_Internat_Module_Gate_By_Default()
+    {
+        var directeur = await DirecteurAsync();
+
+        foreach (var path in new[] { HizbHistory(Guid.NewGuid()), ProgressHistory })
+        {
+            var response = await SendAsync(HttpMethod.Get, path, directeur);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await response.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("MODULE_DISABLED");
+        }
+    }
+
+    [Fact]
+    public async Task The_Secretary_Can_Read_The_Progress_History_And_An_Unknown_Student_Is_A_404()
+    {
+        var directeur = await DirecteurAsync();
+        await EnableInternatAsync(directeur);
+        var secretaire = await SecretaireAsync();
+
+        var progress = await SendAsync(HttpMethod.Get, ProgressHistory, secretaire);
+        progress.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await progress.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("months").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+        body.GetProperty("studentsInScope").GetInt32().Should().BeGreaterThanOrEqualTo(0);
+
+        (await SendAsync(HttpMethod.Get, HizbHistory(Guid.NewGuid()), directeur)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task An_Inverted_History_Period_Is_A_422()
+    {
+        var directeur = await DirecteurAsync();
+        await EnableInternatAsync(directeur);
+
+        (await SendAsync(HttpMethod.Get, ProgressHistory + "?from=2026-10-10&to=2026-10-01", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await SendAsync(HttpMethod.Get, HizbHistory(Guid.NewGuid(), "?from=2026-10-10&to=2026-10-01"), directeur))
+            .StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]

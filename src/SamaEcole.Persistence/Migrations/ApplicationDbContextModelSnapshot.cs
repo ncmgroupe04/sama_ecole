@@ -4889,6 +4889,88 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("student_attendances", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentHizbEvaluation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("EvaluatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("HizbNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("InstructorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsBaseline")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QuartersAfter")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuartersBefore")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalQuartersAfter")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "InstructorId", "EvaluatedAt")
+                        .HasDatabaseName("IX_student_hizb_evaluations_instructor_time");
+
+                    b.HasIndex("SchoolId", "StudentId", "EvaluatedAt")
+                        .HasDatabaseName("IX_student_hizb_evaluations_student_time");
+
+                    b.ToTable("student_hizb_evaluations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_student_hizb_evaluations_hizb_range", "\"HizbNumber\" BETWEEN 1 AND 60");
+
+                            t.HasCheckConstraint("CK_student_hizb_evaluations_quarters_range", "\"QuartersBefore\" BETWEEN 0 AND 4 AND \"QuartersAfter\" BETWEEN 0 AND 4");
+
+                            t.HasCheckConstraint("CK_student_hizb_evaluations_rating_needs_quarters", "\"QuartersAfter\" > 0 OR \"Rating\" IS NULL");
+
+                            t.HasCheckConstraint("CK_student_hizb_evaluations_rating_range", "\"Rating\" IS NULL OR \"Rating\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_student_hizb_evaluations_total_range", "\"TotalQuartersAfter\" BETWEEN 0 AND 240");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.StudentHizbStatus", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7444,6 +7526,28 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "StudentId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentHizbEvaluation", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Instructor", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "InstructorId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SamaEcole.Domain.Entities.Student", null)
                         .WithMany()
