@@ -133,7 +133,7 @@
                 <input id="assign-search" type="text" x-model="assignModal.searchTerm" x-on:input="onSearchInput()"
                        placeholder="Nom, prénom ou matricule" class="input-field mt-1" autocomplete="off" />
                 <ul x-show="assignModal.results.length > 0" x-cloak
-                    class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-auto">
+                    class="w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-sm max-h-48 overflow-auto">
                     <template x-for="student in assignModal.results" :key="student.enrollmentId">
                         <li class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm" x-on:click="selectStudent(student)">
                             <span x-text="student.fullName"></span>

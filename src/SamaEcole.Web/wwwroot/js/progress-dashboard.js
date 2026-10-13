@@ -20,6 +20,14 @@
     const DEFAULT_STALE_DAYS = 30;
     const STALE_OPTIONS = [14, 30, 60, 90];
 
+    /** Périodes de la courbe de progression mensuelle (le serveur plafonne à 24 mois). */
+    const TREND_PERIODS = [
+        { key: '3m', label: '3 mois' },
+        { key: '6m', label: '6 mois' },
+        { key: '12m', label: '12 mois' },
+        { key: '24m', label: '24 mois' }
+    ];
+
     /** Libellé d'une tranche. La tranche 0-0 ne contient que les élèves à 0 % ; les autres sont (min, max]. */
     function bandLabel(band) {
         if (band.min === band.max) return '0 %';
@@ -55,6 +63,11 @@
         return student.lastEvaluatedAt == null || student.daysSinceEvaluation == null || student.daysSinceEvaluation >= staleDays * 2;
     }
 
+    /** Libellé d'un mois (« oct. 2026 »), calé sur UTC comme le serveur. */
+    function monthLabel(monthStart) {
+        return new Date(monthStart + 'T00:00:00Z').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    }
+
     function pickName(arabic, french) {
         const ar = typeof arabic === 'string' ? arabic.trim() : '';
         return ar !== '' ? ar : (french || '');
@@ -69,7 +82,7 @@
     }
 
     window.progressDashboardLogic = {
-        DEFAULT_STALE_DAYS, STALE_OPTIONS, bandLabel, barPercent, stagnationLabel, evaluationDateLabel, isSevere, pickName, reportUrl, reportFileName
+        DEFAULT_STALE_DAYS, STALE_OPTIONS, TREND_PERIODS, bandLabel, barPercent, stagnationLabel, evaluationDateLabel, monthLabel, isSevere, pickName, reportUrl, reportFileName
     };
 
     document.addEventListener('alpine:init', () => {
@@ -86,13 +99,71 @@
             // Élèves de chaque Halqa dépliée, par identifiant d'Oustaz : { open, loading, error, students }.
             halqaPanels: {},
 
+            // Progression moyenne par mois (journal des évaluations), école entière ou une Halqa. Indépendante du seuil de stagnation.
+            trend: null,
+            trendLoading: false,
+            trendError: null,
+            trendPeriod: '6m',
+            trendInstructorId: '',
+            trendPeriods: TREND_PERIODS,
+
             bandLabel,
             stagnationLabel,
             evaluationDateLabel,
+            monthLabel,
             pickName,
 
             async init() {
                 await this.load();
+                await this.loadTrend();
+            },
+
+            async loadTrend() {
+                const { from, to } = window.trendChart.periodRange(this.trendPeriod);
+                this.trendLoading = true;
+                this.trendError = null;
+                try {
+                    const instructor = this.trendInstructorId ? '&instructorId=' + this.trendInstructorId : '';
+                    this.trend = await window.api.get(`/internat/progress-history?from=${from}&to=${to}${instructor}`);
+                } catch (err) {
+                    this.trendError = window.api.toMessage(err, 'Erreur lors du chargement de la progression mensuelle.');
+                } finally {
+                    this.trendLoading = false;
+                }
+            },
+
+            async setTrendPeriod(key) {
+                if (key === this.trendPeriod) return;
+                this.trendPeriod = key;
+                await this.loadTrend();
+            },
+
+            async setTrendInstructor(instructorId) {
+                this.trendInstructorId = instructorId || '';
+                await this.loadTrend();
+            },
+
+            /** Un point par mois renvoyé : la progression moyenne (en % du Coran) à la fin de chaque mois. */
+            get trendChart() {
+                const months = this.trend ? this.trend.months : [];
+                const at = (monthStart) => Date.parse(monthStart + 'T12:00:00Z');
+                return window.trendChart.build(
+                    months.map((m) => ({ t: at(m.monthStart), v: m.averageProgressPercent })),
+                    { formatX: (t) => monthLabel(new Date(t).toISOString().slice(0, 10)) });
+            },
+
+            get trendSvg() {
+                return window.trendChart.svg(this.trendChart, { label: 'Progression moyenne par mois' });
+            },
+
+            /** Pas de mois à tracer : journal encore vide ou période antérieure à son démarrage. */
+            get trendEmpty() {
+                return !!this.trend && this.trend.months.length === 0;
+            },
+
+            /** Date de début du journal : avant elle, aucun historique n'existe (on ne trace pas de 0 % inventé). */
+            get trendSince() {
+                return this.trend && this.trend.firstEvaluationAt ? evaluationDateLabel(this.trend.firstEvaluationAt) : null;
             },
 
             async load() {

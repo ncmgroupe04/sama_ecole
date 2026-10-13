@@ -48,6 +48,7 @@ public class HizbReportDocument(HizbReportDto report, byte[]? logo) : IDocument
                 column.Item().Element(ComposeHeader);
                 column.Item().PaddingTop(10).Element(ComposeIdentity);
                 column.Item().PaddingTop(10).Element(ComposeSummary);
+                column.Item().PaddingTop(10).Element(ComposeEvolution);
                 column.Item().PaddingTop(10).Element(ComposeGrid);
                 // ShowEntire : le bloc d'appréciation et de signatures ne se coupe jamais en deux entre deux pages.
                 column.Item().PaddingTop(14).ShowEntire().Element(ComposeAppreciationAndSignatures);
@@ -187,6 +188,94 @@ public class HizbReportDocument(HizbReportDto report, byte[]? logo) : IDocument
                 if (percent < 100)
                 {
                     bar.RelativeItem(100 - percent).Background(Colors.Grey.Lighten3);
+                }
+            });
+        });
+    }
+
+    /// <summary>
+    /// Évolution sur la période (douze mois) : courbe du pourcentage du Coran mémorisé, puis les dernières évaluations. Le journal
+    /// des évaluations commence au jour de son activation : quand la période commence avant, le document le dit plutôt que de tracer
+    /// un zéro inventé, et sans aucune évaluation il le dit aussi au lieu d'imprimer une courbe plate.
+    /// </summary>
+    private void ComposeEvolution(IContainer container)
+    {
+        var evolution = report.Evolution;
+        if (evolution is null)
+        {
+            return;
+        }
+
+        container.Column(column =>
+        {
+            column.Item().Text("Évolution sur 12 mois").Bold().FontSize(10);
+
+            var hasCurve = evolution.Points.Count > 0 || evolution.OpeningTotalQuarters is not null;
+            if (!hasCurve)
+            {
+                column.Item().PaddingTop(3).Text("Aucune évaluation enregistrée sur cette période.").FontSize(8.5f).FontColor(Colors.Grey.Darken1);
+                column.Item().Text(evolution.FirstEvaluationAt is { } first
+                        ? $"Le journal des évaluations débute le {first.ToString("dd/MM/yyyy", French)}."
+                        : "Le journal des évaluations commence à la première évaluation saisie.")
+                    .FontSize(8).FontColor(Colors.Grey.Darken1);
+                return;
+            }
+
+            var svg = EvolutionChartSvg.Build(evolution.From, evolution.To, evolution.OpeningTotalQuarters, evolution.Points);
+            column.Item().PaddingTop(3).Height(EvolutionChartSvg.Height).Width(EvolutionChartSvg.Width).Svg(svg.Svg);
+            column.Item().PaddingTop(1).Row(row =>
+            {
+                row.RelativeItem().Text(evolution.From.ToString("dd/MM/yyyy", French)).FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+                row.RelativeItem().AlignCenter().Text($"Échelle : 0 à {svg.YMax.ToString("0.#", French)} % du Coran").FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+                row.RelativeItem().AlignRight().Text(evolution.To.ToString("dd/MM/yyyy", French)).FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+            });
+
+            if (evolution.FirstEvaluationAt is { } started
+                && DateOnly.FromDateTime(started.UtcDateTime) > evolution.From)
+            {
+                column.Item().PaddingTop(2).Text($"Historique disponible à partir du {started.ToString("dd/MM/yyyy", French)}.")
+                    .FontSize(7.5f).Italic().FontColor(Colors.Grey.Darken1);
+            }
+
+            if (evolution.Recent.Count == 0)
+            {
+                return;
+            }
+
+            column.Item().PaddingTop(5).Text("Dernières évaluations").Bold().FontSize(8.5f);
+            column.Item().PaddingTop(2).Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(2.2f);   // date
+                    columns.RelativeColumn(1.2f);   // Hizb
+                    columns.RelativeColumn(2.2f);   // quarts
+                    columns.RelativeColumn(1.2f);   // note
+                    columns.RelativeColumn(1.6f);   // total
+                    columns.RelativeColumn(3.2f);   // saisi par
+                });
+
+                void Head(string text) => table.Cell().Background(Colors.Grey.Lighten3).Padding(2)
+                    .Text(text).Bold().FontSize(7.5f);
+
+                Head("Date");
+                Head("Hizb");
+                Head("Quarts");
+                Head("Note");
+                Head("Total");
+                Head("Saisi par");
+
+                foreach (var entry in evolution.Recent)
+                {
+                    void Cell(string text) => table.Cell().BorderBottom(0.4f).BorderColor(Colors.Grey.Lighten2).Padding(2)
+                        .Text(text).FontSize(8);
+
+                    Cell(entry.EvaluatedAt.ToString("dd/MM/yyyy", French));
+                    Cell(entry.HizbNumber.ToString(French));
+                    Cell($"{entry.QuartersBefore}/4 → {entry.QuartersAfter}/4");
+                    Cell(entry.Rating is { } rating ? $"{rating}/5" : "—");
+                    Cell($"{HizbRules.ProgressPercent(entry.TotalQuartersAfter).ToString("0.#", French)} %");
+                    Cell(entry.IsBaseline ? "Point de départ" : entry.EvaluatedBy ?? "—");
                 }
             });
         });

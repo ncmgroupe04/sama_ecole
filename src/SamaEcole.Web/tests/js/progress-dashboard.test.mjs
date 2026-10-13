@@ -31,6 +31,16 @@ function dashboard(overrides = {}) {
     };
 }
 
+/** Réponse de GET progress-history : le journal commence en août, trois mois de données. */
+const TREND = {
+    instructorId: null, studentsInScope: 3, firstEvaluationAt: '2026-08-10T10:00:00Z',
+    months: [
+        { monthStart: '2026-08-01', averageProgressPercent: 5.6, evaluationCount: 1, studentsEvaluated: 1 },
+        { monthStart: '2026-09-01', averageProgressPercent: 13.9, evaluationCount: 2, studentsEvaluated: 2 },
+        { monthStart: '2026-10-01', averageProgressPercent: 19.4, evaluationCount: 1, studentsEvaluated: 1 }
+    ]
+};
+
 function halqaOf(overrides = {}) {
     return {
         instructorId: 'i1', instructorName: 'Serigne Modou', instructorNameAr: 'سيرين مودو', studentCount: 2, averageProgressPercent: 5.4,
@@ -44,7 +54,7 @@ function halqaOf(overrides = {}) {
 
 function boot(options = {}) {
     const calls = [];
-    const ctx = loadScripts(['progress-dashboard.js'], {
+    const ctx = loadScripts(['trend-chart.js', 'progress-dashboard.js'], {
         preload: {
             pdfPreview: {
                 // Doublure de la modale PDF commune : on ne teste pas pdf-preview.js ici, seulement l'appel qu'on lui adresse.
@@ -55,6 +65,10 @@ function boot(options = {}) {
             api: {
                 get: async (endpoint) => {
                     calls.push({ method: 'GET', endpoint });
+                    if (endpoint.startsWith('/internat/progress-history')) {
+                        if (options.trendError) throw options.trendError;
+                        return options.trend ?? TREND;
+                    }
                     if (endpoint.startsWith('/internat/instructors/')) {
                         if (options.halqaError) throw options.halqaError;
                         return options.halqa ?? halqaOf();
@@ -122,7 +136,11 @@ test('l\'ouverture charge le tableau de bord avec le seuil par défaut', async (
     const { page, calls } = boot();
     await page.init();
 
-    assert.deepEqual(calls, [{ method: 'GET', endpoint: '/internat/progress-dashboard?staleDays=30' }]);
+    // Le tableau de bord se charge d'abord, avec le seuil par défaut ; la courbe mensuelle est lue à part (voir plus bas).
+    assert.deepEqual(calls[0], { method: 'GET', endpoint: '/internat/progress-dashboard?staleDays=30' });
+    assert.deepEqual(
+        calls.filter((c) => c.endpoint.startsWith('/internat/progress-dashboard')),
+        [{ method: 'GET', endpoint: '/internat/progress-dashboard?staleDays=30' }]);
     assert.equal(page.data.studentsInHalqa, 8);
     assert.equal(page.loading, false);
     assert.equal(page.error, null);
@@ -284,4 +302,106 @@ test('deux Halqa ouvertes ensemble ne se mélangent pas', async () => {
 
     assert.equal(page.isHalqaOpen('i1'), false);
     assert.equal(page.isHalqaOpen('i2'), true, 'refermer l\'une n\'affecte pas l\'autre');
+});
+
+// ----------------------------------------------------------------------- progression moyenne par mois (journal des évaluations)
+
+const trendCalls = (calls) => calls.filter((c) => c.method === 'GET' && c.endpoint.startsWith('/internat/progress-history'));
+
+test('l\'ouverture charge aussi la progression mensuelle sur six mois, toutes Halqa confondues', async () => {
+    const { page, calls } = boot();
+    await page.init();
+
+    const reads = trendCalls(calls);
+    assert.equal(reads.length, 1);
+    assert.match(reads[0].endpoint, /^\/internat\/progress-history\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/);
+    assert.equal(page.trendPeriod, '6m');
+    assert.equal(page.trend.months.length, 3);
+});
+
+test('choisir une Halqa relit la progression pour elle seule ; « Toutes » retire le filtre', async () => {
+    const { page, calls } = boot();
+    await page.init();
+
+    await page.setTrendInstructor('i1');
+    assert.match(trendCalls(calls).at(-1).endpoint, /&instructorId=i1$/);
+
+    await page.setTrendInstructor('');
+    assert.doesNotMatch(trendCalls(calls).at(-1).endpoint, /instructorId/);
+});
+
+test('changer de période relit ; rechoisir la même période ne relit rien', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    const before = trendCalls(calls).length;
+
+    await page.setTrendPeriod('6m');
+    assert.equal(trendCalls(calls).length, before);
+
+    await page.setTrendPeriod('24m');
+    assert.equal(trendCalls(calls).length, before + 1);
+    assert.equal(page.trendPeriod, '24m');
+});
+
+test('le seuil de stagnation choisi n\'affecte pas la progression mensuelle', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    const before = trendCalls(calls).length;
+
+    await page.changeStaleDays('60');
+
+    assert.equal(trendCalls(calls).length, before, 'la courbe ne dépend pas du seuil d\'alerte');
+});
+
+test('la courbe compte un point par mois renvoyé, valeurs en % du Coran', async () => {
+    const { page } = boot();
+    await page.init();
+
+    const chart = plain(page.trendChart);
+
+    assert.deepEqual(chart.dots.map((d) => d.v), [5.6, 13.9, 19.4]);
+    assert.ok(chart.dots[0].cx < chart.dots[2].cx);
+    assert.deepEqual(chart.xTicks.map((t) => t.label), ['août 2026', 'oct. 2026']);
+});
+
+test('le libellé d\'un mois est lisible, en français', () => {
+    const { logic } = boot();
+
+    assert.equal(logic.monthLabel('2026-10-01'), 'oct. 2026');
+    assert.equal(logic.monthLabel('2026-08-01'), 'août 2026');
+});
+
+test('sans mois (journal vide ou période antérieure), la progression mensuelle affiche un état vide', async () => {
+    const { page } = boot({ trend: { instructorId: null, studentsInScope: 4, firstEvaluationAt: null, months: [] } });
+    await page.init();
+
+    assert.equal(page.trendEmpty, true);
+    assert.equal(page.trendSvg, '');
+});
+
+test('l\'écran dit depuis quand le journal existe', async () => {
+    const { page } = boot();
+    await page.init();
+
+    assert.equal(page.trendSince, '10/08/2026');
+});
+
+test('une erreur de la progression mensuelle ne casse pas le tableau de bord', async () => {
+    const { page } = boot({ trendError: Object.assign(new Error('HTTP 500'), { status: 500 }) });
+    await page.init();
+
+    assert.equal(page.trendError, 'HTTP 500');
+    assert.equal(page.trendLoading, false);
+    assert.equal(page.error, null);
+    assert.ok(page.data, 'les chiffres du suivi restent affichés');
+});
+
+test('la courbe mensuelle est fournie en SVG prêt à afficher', async () => {
+    const { page } = boot();
+    await page.init();
+
+    const svg = page.trendSvg;
+
+    assert.match(svg, /^<svg /);
+    assert.equal((svg.match(/<circle /g) || []).length, 3);
 });

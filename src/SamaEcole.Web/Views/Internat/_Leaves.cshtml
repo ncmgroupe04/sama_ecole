@@ -134,7 +134,7 @@
                 <input id="leave-boarder" type="text" x-model="declare.search" x-on:input="onBoarderSearchInput()"
                        placeholder="Nom, prénom ou matricule (2 caractères au moins)" class="input-field mt-1" autocomplete="off" />
                 <ul x-show="declare.results.length > 0" x-cloak
-                    class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-auto">
+                    class="w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-sm max-h-48 overflow-auto">
                     <template x-for="boarder in declare.results" :key="boarder.id">
                         <li class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm" x-on:click="selectBoarder(boarder)">
                             <span x-text="boarder.studentName"></span>

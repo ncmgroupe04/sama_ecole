@@ -206,12 +206,9 @@
 
  @* Confirmation « Infiltrer » — action à fort impact (bascule toute la session sur l'identité du
  Directeur ciblé), d'où une confirmation explicite plutôt qu'un simple clic comme pour Relancer. *@
- <div x-show="impersonateTarget" x-cloak
- class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
- x-on:keydown.escape.window="closeImpersonateConfirm()">
- <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
- <h2 class="text-base font-semibold text-white">Infiltrer un établissement</h2>
- <p class="mt-2 text-sm text-zinc-400">
+ <modal-shell open="impersonateTarget" on-close="closeImpersonateConfirm()" size="md" theme="dark">
+     <modal-title>Infiltrer un établissement</modal-title>
+ <p class="text-sm text-zinc-400">
  Vous allez ouvrir une session Directeur pour
  <span class="font-medium text-zinc-100" x-text="impersonateTarget ? impersonateTarget.name : ''"></span>.
  Cette action est journalisée dans le journal d'audit de cet établissement. La session
@@ -230,18 +227,14 @@
  <span x-text="isImpersonating ? 'Ouverture…' : 'Confirmer'"></span>
  </button>
  </div>
- </div>
- </div>
+ </modal-shell>
 
  @* Confirmation changement de statut — motif obligatoire (même exigence que la suspension d'un
  compte utilisateur, ChangeUserStatusCommandValidator) : l'historique doit rester exploitable des
  mois plus tard. *@
- <div x-show="statusTarget" x-cloak
- class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
- x-on:keydown.escape.window="closeStatusConfirm()">
- <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
- <h2 class="text-base font-semibold text-white" x-text="statusModalTitle()"></h2>
- <p class="mt-2 text-sm text-zinc-400">
+ <modal-shell open="statusTarget" on-close="closeStatusConfirm()" size="md" theme="dark">
+     <modal-title><span x-text="statusModalTitle()"></span></modal-title>
+ <p class="text-sm text-zinc-400">
  <span x-text="statusTarget ? statusTarget.name : ''" class="font-medium text-zinc-100"></span>
  <template x-if="statusTarget && statusTarget.newStatus !== 'Active'">
  <span> — toutes les sessions ouvertes de cet établissement seront immédiatement révoquées.</span>
@@ -264,8 +257,7 @@
  <span x-text="isChangingStatus ? 'Application…' : 'Confirmer'"></span>
  </button>
  </div>
- </div>
- </div>
+ </modal-shell>
 </div>
 
 @section Scripts {

@@ -156,12 +156,9 @@
  @* Attribution manuelle d'un accès offert (module Tarification & Promotions) — n'échange aucun
  argent (GrantComplimentaryAccessCommand, AGENTS.md règle #11 hors-sujet ici). Modal dark
  hand-roulé, comme le dialogue « Infiltrer » de Schools.cshtml. *@
- <div x-show="grantAccessTarget" x-cloak
- class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
- x-on:keydown.escape.window="closeGrantAccess()">
- <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
- <h2 class="text-base font-semibold text-white">Offrir un accès</h2>
- <p class="mt-2 text-sm text-zinc-400">
+ <modal-shell open="grantAccessTarget" on-close="closeGrantAccess()" size="md" theme="dark">
+     <modal-title>Offrir un accès</modal-title>
+ <p class="text-sm text-zinc-400">
  Accès gratuit pour
  <span class="font-medium text-zinc-100" x-text="grantAccessTarget ? grantAccessTarget.schoolName : ''"></span>,
  sans passer par un paiement.
@@ -196,8 +193,7 @@
  <span x-text="isGranting ? 'Attribution…' : 'Offrir l\'accès'"></span>
  </button>
  </div>
- </div>
- </div>
+ </modal-shell>
 </div>
 
 @section Scripts {

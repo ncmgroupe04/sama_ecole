@@ -7,6 +7,7 @@
    Pas d'attribut dynamique sur <badge> : ce Tag Helper lit ses attributs au rendu serveur, un binding Alpine y reste
    inerte (même piège que dans Internat/Index.cshtml) — d'où un badge statique par statut, chacun avec son x-show. *@
 @section Scripts {
+    <script src="~/js/trend-chart.js" asp-append-version="true"></script>
     <script src="~/js/progress-dashboard.js" asp-append-version="true"></script>
 }
 
@@ -82,6 +83,45 @@
                     </li>
                 </template>
             </ul>
+        </div>
+
+        @* ------------------------------------------------------------------ Progression moyenne par mois (journal des évaluations) *@
+        @* Moyenne, sur les élèves en Halqa, du total de quarts à la fin de chaque mois (sur 240). Le journal commence au jour où il a été
+           activé : avant, aucun mois n'est tracé — jamais un 0 % inventé. Indépendant du seuil d'alerte ci-dessus. *@
+        <div class="card p-5 mt-6">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-800">Progression moyenne par mois</h2>
+                    <p class="text-xs text-slate-500 mt-1">Part du Coran mémorisée en moyenne, à la fin de chaque mois.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select class="input-field w-auto" aria-label="Halqa" x-bind:value="trendInstructorId" x-on:change="setTrendInstructor($event.target.value)">
+                        <option value="">Toutes les Halqa</option>
+                        <template x-for="halqa in (data ? data.halqas : [])" :key="halqa.instructorId">
+                            <option :value="halqa.instructorId" x-text="halqa.instructorName"></option>
+                        </template>
+                    </select>
+                    <div class="flex gap-1" role="group" aria-label="Période">
+                        <template x-for="p in trendPeriods" :key="p.key">
+                            <button type="button"
+                                    class="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+                                    :class="trendPeriod === p.key ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'"
+                                    :aria-pressed="(trendPeriod === p.key).toString()"
+                                    x-on:click="setTrendPeriod(p.key)" x-text="p.label"></button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <p x-show="trendLoading" x-cloak class="mt-4 text-sm text-slate-500">Chargement…</p>
+            <p x-show="trendError" x-cloak role="alert" class="mt-4 text-sm text-rose-700" x-text="trendError"></p>
+            <p x-show="trendEmpty && !trendLoading && !trendError" x-cloak class="mt-4 text-sm text-slate-500">
+                Aucune évaluation enregistrée sur cette période. Le journal commence à la première évaluation saisie après son activation.
+            </p>
+            <p x-show="trendSince && !trendEmpty" x-cloak class="mt-3 text-xs text-slate-500">
+                Journal démarré le <span x-text="trendSince"></span> : aucune donnée avant cette date.
+            </p>
+            <div x-show="trend && !trendEmpty" x-cloak class="mt-3" x-html="trendSvg"></div>
         </div>
 
         @* ------------------------------------------------------------------ Synthèse par Halqa *@

@@ -23,6 +23,20 @@ function gridOf(overrides = {}) {
     };
 }
 
+/** Réponse de GET hizb-history : niveau d'ouverture de 4 quarts, deux jours de saisie, deux dernières évaluations. */
+const HISTORY = {
+    studentId: 's1', fullName: 'Awa Diop', from: '2026-04-15', to: '2026-10-15',
+    currentTotalQuarters: 9, currentProgressPercent: 3.8, openingTotalQuarters: 4, firstEvaluationAt: '2026-03-01T10:00:00Z',
+    points: [
+        { date: '2026-08-10', totalQuarters: 6, progressPercent: 2.5 },
+        { date: '2026-09-20', totalQuarters: 9, progressPercent: 3.8 }
+    ],
+    recent: [
+        { evaluatedAt: '2026-09-20T09:00:00Z', hizbNumber: 2, quartersBefore: 1, quartersAfter: 3, rating: 4, totalQuartersAfter: 9, isBaseline: false, evaluatedBy: 'Ahmad Lô' },
+        { evaluatedAt: '2026-03-01T10:00:00Z', hizbNumber: 1, quartersBefore: 0, quartersAfter: 4, rating: null, totalQuartersAfter: 4, isBaseline: true, evaluatedBy: null }
+    ]
+};
+
 const HALQA = {
     instructorId: 'i1', instructorName: 'Serigne Modou', instructorNameAr: 'سيرين مودو',
     studentCount: 2, averageProgressPercent: 1.3,
@@ -40,7 +54,7 @@ const HALQA = {
  */
 function boot(options = {}) {
     const calls = [];
-    const ctx = loadScripts(['halqa.js'], {
+    const ctx = loadScripts(['trend-chart.js', 'halqa.js'], {
         preload: {
             pdfPreview: {
                 // Doublure de la modale PDF commune : on ne teste pas pdf-preview.js ici, seulement l'appel qu'on lui adresse.
@@ -56,6 +70,10 @@ function boot(options = {}) {
                         return HALQA;
                     }
                     if (endpoint.endsWith('/hizb-progress')) return options.grid ?? gridOf();
+                    if (endpoint.includes('/hizb-history')) {
+                        if (options.historyError) throw options.historyError;
+                        return options.history ?? HISTORY;
+                    }
                     return null;
                 },
                 put: async (endpoint, body) => {
@@ -377,4 +395,154 @@ test('le nom du fichier du bulletin ne garde que des caractères sûrs', () => {
     assert.equal(logic.reportUrl('abc'), '/api/v1/internat/students/abc/hizb-report/pdf');
     assert.equal(logic.reportFileName('ELEV-2026/0001 é'), 'Bulletin-Coranique-ELEV-20260001.pdf');
     assert.equal(logic.reportFileName(null), 'Bulletin-Coranique-.pdf');
+});
+
+// ------------------------------------------------------------------------------------- évolution (journal des évaluations)
+
+const historyCalls = (calls) => calls.filter((c) => c.method === 'GET' && c.endpoint.includes('/hizb-history'));
+
+test('ouvrir un élève charge son évolution sur les six derniers mois', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    const reads = historyCalls(calls);
+    assert.equal(reads.length, 1);
+    assert.match(reads[0].endpoint, /^\/internat\/students\/s1\/hizb-history\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/);
+    assert.equal(page.historyPeriod, '6m');
+    assert.equal(page.history.points.length, 2);
+});
+
+test('« الكل » demande tout le journal : pas de borne basse', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    await page.setHistoryPeriod('all');
+
+    const last = historyCalls(calls).at(-1);
+    assert.doesNotMatch(last.endpoint, /from=/);
+    assert.match(last.endpoint, /to=\d{4}-\d{2}-\d{2}/);
+    assert.equal(page.historyPeriod, 'all');
+});
+
+test('changer de période relit l\'historique ; choisir la même période ne relit rien', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+    const before = historyCalls(calls).length;
+
+    await page.setHistoryPeriod('6m');
+    assert.equal(historyCalls(calls).length, before, 'déjà sur cette période');
+
+    await page.setHistoryPeriod('3m');
+    assert.equal(historyCalls(calls).length, before + 1);
+});
+
+test('la courbe part du niveau d\'ouverture de la période, puis suit chaque jour de saisie', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    const chart = plain(page.historyChart);
+
+    assert.equal(chart.dots.length, 3, 'ouverture + deux jours');
+    assert.deepEqual(chart.dots.map((d) => d.v), [1.7, 2.5, 3.8], 'ouverture = 4 quarts sur 240');
+    assert.ok(chart.dots[0].cx < chart.dots[1].cx && chart.dots[1].cx < chart.dots[2].cx);
+});
+
+test('sans niveau d\'ouverture (période antérieure au journal), la courbe ne commence qu\'à la première saisie', async () => {
+    const { page } = boot({ history: { ...HISTORY, openingTotalQuarters: null } });
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    assert.equal(plain(page.historyChart).dots.length, 2, 'aucun zéro inventé');
+});
+
+test('un élève sans aucune évaluation affiche un état vide, pas une courbe plate', async () => {
+    const { page } = boot({ history: { ...HISTORY, points: [], recent: [], openingTotalQuarters: null, firstEvaluationAt: null, currentTotalQuarters: 0 } });
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    assert.equal(page.historyEmpty, true);
+    assert.equal(plain(page.historyChart).dots.length, 0);
+});
+
+test('l\'écran dit depuis quand le journal existe quand la période commence avant', async () => {
+    const { page } = boot({ history: { ...HISTORY, firstEvaluationAt: '2026-08-01T00:00:00Z', openingTotalQuarters: null } });
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    assert.equal(page.historySince, '01/08/2026');
+});
+
+test('une erreur de chargement de l\'évolution est affichée sans bloquer la grille', async () => {
+    const { page } = boot({ historyError: httpError(500) });
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    assert.equal(page.historyError, page.labels.historyError);
+    assert.equal(page.historyLoading, false);
+    assert.equal(page.grid.hizbs.length, 60, 'la grille de saisie reste utilisable');
+    assert.equal(page.error, null);
+});
+
+test('enregistrer un Hizb recharge l\'évolution : le nouveau point apparaît', async () => {
+    const { page, calls } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+    page.openDrawer(page.grid.hizbs[2]);
+    page.pickQuarters(3);
+    const before = historyCalls(calls).length;
+
+    await page.save();
+
+    assert.equal(historyCalls(calls).length, before + 1);
+});
+
+test('fermer l\'élève efface son évolution : le suivant ne montre pas celle du précédent', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    await page.closeStudent();
+
+    assert.equal(page.history, null);
+    assert.equal(page.historyError, null);
+});
+
+test('une évaluation se décrit en arabe : Hizb, passage d\'un état à l\'autre, note', () => {
+    const { logic } = boot();
+    const line = logic.describeEvaluation(HISTORY.recent[0]);
+
+    assert.equal(line.title, 'الحزب 2');
+    assert.equal(line.change, 'من الربع الأول إلى ثلاثة أرباع');
+    assert.equal(line.rating, '4/5');
+    assert.equal(line.by, 'Ahmad Lô');
+    assert.equal(line.baseline, false);
+
+    const start = logic.describeEvaluation(HISTORY.recent[1]);
+    assert.equal(start.baseline, true);
+    assert.equal(start.rating, null);
+    assert.equal(start.by, null);
+});
+
+test('le pourcentage de quarts suit la règle du serveur (quarts sur 240, une décimale)', () => {
+    const { logic } = boot();
+
+    assert.equal(logic.percentOfQuarters(0), 0);
+    assert.equal(logic.percentOfQuarters(4), 1.7);
+    assert.equal(logic.percentOfQuarters(240), 100);
+});
+
+test('la courbe est fournie en SVG prêt à afficher, avec un cercle par point', async () => {
+    const { page } = boot();
+    await page.init();
+    await page.openStudent(page.halqa.students[0]);
+
+    const svg = page.historySvg;
+
+    assert.match(svg, /^<svg /);
+    assert.equal((svg.match(/<circle /g) || []).length, 3);
+    assert.ok(svg.includes(page.labels.historyChart), 'titre accessible en arabe');
 });

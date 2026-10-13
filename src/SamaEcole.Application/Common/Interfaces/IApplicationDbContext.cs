@@ -216,6 +216,9 @@ public interface IApplicationDbContext
     /// <summary>État courant d'un élève sur chaque Hizb (module Internat/Daara). Verrou optimiste xmin.</summary>
     DbSet<StudentHizbStatus> StudentHizbStatuses { get; }
 
+    /// <summary>Journal append-only des évaluations Hizb (historique et courbe d'évolution). Jamais modifié ni supprimé.</summary>
+    DbSet<StudentHizbEvaluation> StudentHizbEvaluations { get; }
+
     // ------------------------------------------------------------------ Module Inventaire
 
     /// <summary>Familles de biens (Mobilier, Manuels scolaires, Informatique…), propres à chaque école.</summary>
