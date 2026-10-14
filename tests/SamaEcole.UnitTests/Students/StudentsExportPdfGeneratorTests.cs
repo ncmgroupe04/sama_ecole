@@ -49,6 +49,47 @@ public class StudentsExportPdfGeneratorTests
     }
 
     [Fact]
+    public void Generate_Starts_Each_Classroom_On_Its_Own_Page_When_Grouped()
+    {
+        // Sans filtre de classe : 3 classes de 1-2 élèves tiennent chacune sur une page, mais doivent
+        // quand même produire 3 pages (le nombre de pages se lit dans `/Type /Pages /Count N`).
+        var model = new StudentsExportModel(
+            "Complexe Scolaire Touba Darou Karim", null, "2026-2027",
+            [
+                Row(classroomName: "CE1 A"),
+                Row(matricule: "ELEV-2025-0002", classroomName: "CE1 A"),
+                Row(matricule: "ELEV-2025-0003", classroomName: "CE2 A"),
+                Row(matricule: "ELEV-2025-0004", classroomName: "CM2 A")
+            ],
+            GroupByClassroom: true);
+
+        var pdf = NewGenerator().Generate(model);
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 3");
+    }
+
+    [Fact]
+    public void Generate_Keeps_A_Single_Page_When_Not_Grouped()
+    {
+        // Filtre de classe actif : un seul tableau continu, quel que soit le contenu de ClassroomName.
+        var pdf = NewGenerator().Generate(Model(
+            Row(classroomName: "CM2 A"), Row(matricule: "ELEV-2025-0002", classroomName: "CM2 B")));
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1");
+    }
+
+    [Fact]
+    public void Generate_Grouped_Is_Robust_To_An_Empty_Roster()
+    {
+        // Aucun élève + regroupement demandé : une page « Aucun élève… », jamais un PDF sans page.
+        var pdf = NewGenerator().Generate(new StudentsExportModel("École X", null, null, [], GroupByClassroom: true));
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
     public void Generate_Is_Robust_To_An_Empty_Roster()
     {
         // Branche `model.Students.Count == 0` du document : « Aucun élève pour ce périmètre ».

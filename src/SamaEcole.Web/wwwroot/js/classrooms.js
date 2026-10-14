@@ -150,6 +150,11 @@ document.addEventListener('alpine:init', () => {
         // classes mais ne la modifie pas ; ce booléen n'est qu'un confort d'affichage.
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
+        // Imprimer la liste des élèves d'une classe : mêmes rôles que l'export PDF de l'écran Élèves
+        // (StudentsController.ExportRoles, Volume 7 §15) — jamais l'Enseignant. Confort d'affichage :
+        // la protection réelle est le [Authorize] de GET /students/export/pdf.
+        canExportStudents: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Finance',
+
         // Édition (modale)
         isEditOpen: false,
         editing: { id: '', name: '', level: '', capacity: 0, rowVersion: 0, isAccelerated: false, targetLevel: '', series: '' },
@@ -481,6 +486,15 @@ document.addEventListener('alpine:init', () => {
 
         // ------------------------------------------------------------ Téléchargement Cartes Scolaires
         
+        async printClassroomList(classroom) {
+            // Même export que le bouton « Exporter en PDF » de l'écran Élèves, filtré sur cette classe.
+            await this.openPdfPreview(
+                `/api/v1/students/export/pdf?classroomId=${encodeURIComponent(classroom.id)}`,
+                `Liste des élèves — ${classroom.name}`,
+                `Eleves_${classroom.name}.pdf`
+            );
+        },
+
         async downloadSchoolCards(classroom) {
             // Ouvre les cartes dans la modale d'aperçu partagée (pdf-preview.js) : l'utilisateur
             // vérifie le rendu puis imprime ou télécharge depuis l'en-tête de la modale. Un 422

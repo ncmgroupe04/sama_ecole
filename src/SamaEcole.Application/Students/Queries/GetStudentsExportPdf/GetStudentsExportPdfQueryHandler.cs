@@ -76,10 +76,27 @@ public class GetStudentsExportPdfQueryHandler(
                     .Where(c => c.Id == s.ClassroomId)
                     .Select(c => c.Name)
                     .FirstOrDefault() ?? "Classe supprimée",
+                ClassroomLevel = dbContext.Classrooms
+                    .AsNoTracking()
+                    .Where(c => c.Id == s.ClassroomId)
+                    .Select(c => c.Level)
+                    .FirstOrDefault() ?? string.Empty,
                 s.GuardianName,
                 s.GuardianPhone
             })
             .ToListAsync(cancellationToken);
+
+        // Sans filtre de classe, le PDF est découpé une page par classe : on range les élèves dans le
+        // même ordre que l'écran Classes (niveau puis nom). OrderBy est stable, l'ordre alphabétique
+        // des élèves obtenu en base est donc conservé à l'intérieur de chaque classe.
+        var groupByClassroom = request.ClassroomId is null;
+        if (groupByClassroom)
+        {
+            rows = rows
+                .OrderBy(r => r.ClassroomLevel, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => r.ClassroomName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
 
         var students = rows
             .Select(r => new StudentExportRow(
@@ -97,7 +114,7 @@ public class GetStudentsExportPdfQueryHandler(
 
         var schoolName = await SchoolNameAsync(dbContext, tenantProvider, cancellationToken);
 
-        var model = new StudentsExportModel(schoolName, className, schoolYearLabel, students);
+        var model = new StudentsExportModel(schoolName, className, schoolYearLabel, students, groupByClassroom);
 
         return new StudentsExportPdfResult(pdfGenerator.Generate(model));
     }
