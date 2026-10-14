@@ -111,7 +111,7 @@ public class ProcessPaymentWebhookHandler(
             // rendrait sans effet, mais autant ne pas le provoquer).
             try
             {
-                await SendActivationEmailAsync(result, cancellationToken);
+                await SubscriptionPaymentEmails.SendActivationAsync(emailSender, result, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -126,22 +126,5 @@ public class ProcessPaymentWebhookHandler(
             request.Provider, internalPaymentId, finalStatus, result.SchoolId);
 
         return Unit.Value;
-    }
-
-    private async Task SendActivationEmailAsync(SubscriptionPaymentConfirmation result, CancellationToken cancellationToken)
-    {
-        var body =
-            $"""
-             Bonjour {result.DirectorFullName},
-
-             Votre paiement a été confirmé : l'abonnement de « {result.SchoolName} » est maintenant actif.
-
-             Vous avez désormais accès à l'ensemble des modules de Unikol (élèves, classes, notes,
-             finances…). Votre abonnement est valable jusqu'au {result.NewExpiresAt:dd/MM/yyyy}.
-             """;
-
-        await emailSender.SendAsync(
-            new EmailMessage(result.DirectorEmail, "Votre abonnement Unikol est actif", body),
-            cancellationToken);
     }
 }

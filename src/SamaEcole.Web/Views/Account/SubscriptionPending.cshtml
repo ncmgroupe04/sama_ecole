@@ -2,7 +2,7 @@
  ViewData["Title"] = "Abonnement en attente de paiement";
  Layout = "_AuthLayout";
  var paymentMethodOptions = new List<SelectFieldOption> {
- new("MobileMoney", "Mobile Money (Wave, Orange Money)"), new("BankTransfer", "Virement bancaire"), new("Card", "Carte bancaire")
+ new("WaveMerchant", "Wave — paiement direct (QR / lien)"), new("MobileMoney", "Mobile Money (Wave, Orange Money)"), new("BankTransfer", "Virement bancaire"), new("Card", "Carte bancaire")
  };
  var billingPeriodOptions = new List<SelectFieldOption> { new("Monthly", "Mensuel"), new("Yearly", "Annuel") };
 }
@@ -51,7 +51,49 @@
  <p class="text-jgk-body text-danger" x-text="error"></p>
  </div>
 
- <form x-on:submit.prevent="submit()" novalidate class="mt-6 text-left space-y-4">
+ @* Consigne de paiement direct par Wave : s'affiche À LA PLACE du formulaire une fois la demande créée. Le lien
+ marchand est statique (ni montant ni référence) : le Directeur doit saisir le montant EXACT, et c'est le Super Admin
+ qui valide après rapprochement avec son relevé Wave — rien ne s'active ici (AGENTS.md règle #11). *@
+ <div x-cloak x-show="waveCheckout" class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 text-left space-y-4">
+ <h2 class="text-jgk-body font-semibold text-slate-900">Payez avec Wave</h2>
+
+ <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+ <img src="~/images/wave-merchant-qr.jpg" alt="QR code du compte marchand Wave" width="140" height="144"
+ class="w-36 h-auto shrink-0 rounded-xl border border-slate-200" />
+ <ol class="list-decimal list-inside space-y-2 text-jgk-body text-slate-600">
+ <li>Ouvrez Wave et scannez ce QR code, ou touchez le bouton ci-dessous.</li>
+ <li>Saisissez <strong class="text-slate-900" x-text="waveCheckout ? formatXof(waveCheckout.amount) : ''"></strong>, montant exact.</li>
+ <li>Confirmez le paiement avec votre code Wave.</li>
+ </ol>
+ </div>
+
+ <a x-bind:href="waveCheckout ? waveCheckout.paymentUrl : '#'" target="_blank" rel="noopener noreferrer"
+ class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200 ease-in-out rounded-xl px-5 py-3 text-jgk-body font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+ Payer avec Wave
+ </a>
+
+ <div class="rounded-xl bg-slate-50 px-4 py-3">
+ <p class="text-jgk-table text-slate-500">Votre référence de paiement</p>
+ <p class="mt-0.5 font-mono text-jgk-body font-semibold text-slate-900 select-all" x-text="waveCheckout ? waveCheckout.reference : ''"></p>
+ <p class="mt-1 text-xs text-slate-500">Gardez le reçu Wave : il nous permet de retrouver votre règlement si besoin.</p>
+ </div>
+
+ <p class="text-jgk-table text-slate-500 leading-relaxed">
+ Votre abonnement sera activé dès que notre équipe aura constaté le paiement sur le compte Wave. Vous recevrez un
+ e-mail de confirmation ; vous pouvez ensuite actualiser cette page.
+ </p>
+
+ <div class="flex flex-col gap-2 sm:flex-row">
+ <button type="button" x-on:click="window.location.assign('/')" class="btn-modal-secondary group flex-1">
+ J'ai payé — vérifier mon accès
+ </button>
+ <button type="button" x-on:click="waveCheckout = null" class="btn-modal-secondary group flex-1">
+ Changer de moyen de paiement
+ </button>
+ </div>
+ </div>
+
+ <form x-show="!waveCheckout" x-on:submit.prevent="submit()" novalidate class="mt-6 text-left space-y-4">
  <div>
  <label for="payment-method" class="form-label">Moyen de paiement</label>
  <select-field id="payment-method" model="method" options="paymentMethodOptions" />
@@ -90,11 +132,14 @@
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
  </svg>
- <span x-text="isSubmitting ? 'Redirection…' : 'Procéder au paiement'">Procéder au paiement</span>
+ <span x-text="isSubmitting ? (method === 'WaveMerchant' ? 'Préparation…' : 'Redirection…') : (method === 'WaveMerchant' ? 'Continuer avec Wave' : 'Procéder au paiement')">Procéder au paiement</span>
  </button>
 
- <p class="text-center text-jgk-table text-slate-400">
+ <p class="text-center text-jgk-table text-slate-400" x-show="method !== 'WaveMerchant'">
  Vous serez redirigé(e) vers le guichet sécurisé de notre partenaire de paiement.
+ </p>
+ <p class="text-center text-jgk-table text-slate-400" x-show="method === 'WaveMerchant'" x-cloak>
+ Vous réglerez directement depuis l'application Wave ; l'activation suit la vérification de votre paiement.
  </p>
  </form>
 

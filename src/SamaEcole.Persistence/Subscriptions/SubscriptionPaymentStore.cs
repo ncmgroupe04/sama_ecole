@@ -82,6 +82,38 @@ public class SubscriptionPaymentStore(ApplicationDbContext dbContext) : ISubscri
             NewExpiresAt: reader.IsDBNull(6) ? null : DateOnly.FromDateTime(reader.GetDateTime(6)));
     }
 
+    public async Task<IReadOnlyList<PendingWavePayment>> ListPendingWavePaymentsAsync(CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            """
+            SELECT payment_id, school_id, school_name, director_full_name, director_email, director_phone,
+                   amount, billing_period, reference, initiated_at
+            FROM list_pending_wave_payments()
+            """,
+            cancellationToken);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var payments = new List<PendingWavePayment>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            payments.Add(new PendingWavePayment(
+                PaymentId: reader.GetGuid(0),
+                SchoolId: reader.GetGuid(1),
+                SchoolName: reader.GetString(2),
+                DirectorFullName: reader.IsDBNull(3) ? null : reader.GetString(3),
+                DirectorEmail: reader.IsDBNull(4) ? null : reader.GetString(4),
+                DirectorPhone: reader.IsDBNull(5) ? null : reader.GetString(5),
+                Amount: reader.GetDecimal(6),
+                BillingPeriod: Enum.Parse<BillingPeriod>(reader.GetString(7)),
+                Reference: reader.GetString(8),
+                InitiatedAt: reader.GetFieldValue<DateTimeOffset>(9)));
+        }
+
+        return payments;
+    }
+
     private async Task<NpgsqlCommand> CreateCommandAsync(string sql, CancellationToken cancellationToken)
     {
         var connection = (NpgsqlConnection)dbContext.Database.GetDbConnection();

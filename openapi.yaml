@@ -943,6 +943,59 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/MonthlyRevenueProjection' } }
         '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
 
+  /admin/platform/wave-payments:
+    get:
+      tags: [Platform]
+      summary: Paiements d'abonnement Wave en attente de validation (Super Admin uniquement)
+      description: >-
+        Demandes Provider = WaveMerchant encore Initiated, toutes écoles confondues, de la plus ancienne à la plus
+        récente. Le Super Admin les rapproche de son relevé Wave. Lecture inter-écoles via la fonction SECURITY
+        DEFINER `list_pending_wave_payments`.
+      responses:
+        '200':
+          description: Demandes en attente
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PendingWavePayment' } }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+
+  /admin/platform/wave-payments/{paymentId}/approve:
+    post:
+      tags: [Platform]
+      summary: Valider un paiement Wave (Super Admin uniquement)
+      description: >-
+        À appeler après avoir retrouvé le règlement sur le relevé Wave. Passe le paiement à Confirmed, active
+        l'abonnement et le prolonge (même fonction `confirm_subscription_payment` que le webhook), journalise l'acte
+        sur l'école ciblée et prévient le Directeur par e-mail. Seules les demandes de GET /admin/platform/wave-payments
+        sont éligibles : un paiement d'agrégateur ne peut JAMAIS être validé ainsi (AGENTS.md règle #11).
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Paiement validé, abonnement activé }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Aucune demande Wave en attente ne correspond (inconnue, déjà traitée ou paiement d'agrégateur) }
+        '409': { description: Demande traitée entre-temps par un appel concurrent (WAVE_PAYMENT_ALREADY_REVIEWED) }
+
+  /admin/platform/wave-payments/{paymentId}/reject:
+    post:
+      tags: [Platform]
+      summary: Rejeter un paiement Wave non retrouvé (Super Admin uniquement)
+      description: >-
+        Passe le paiement à Failed ; l'abonnement n'est pas modifié. Le Directeur en est informé par e-mail.
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Paiement rejeté }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Aucune demande Wave en attente ne correspond }
+        '409': { description: Demande traitée entre-temps par un appel concurrent }
+
   /admin/platform/subscriptions/{schoolId}/remind:
     post:
       tags: [Platform]
@@ -7457,7 +7510,14 @@ components:
       type: object
       required: [method, billingPeriod]
       properties:
-        method: { type: string, enum: [MobileMoney, BankTransfer, Card] }
+        method:
+          type: string
+          enum: [MobileMoney, BankTransfer, Card, WaveMerchant]
+          description: >-
+            WaveMerchant = paiement DIRECT sur le compte marchand Wave de la plateforme (lien/QR statique, sans
+            agrégateur ni webhook) : la demande reste Initiated jusqu'à sa validation manuelle par le Super Admin
+            (POST /admin/platform/wave-payments/{paymentId}/approve). Indisponible (409 WAVE_MERCHANT_UNAVAILABLE) si
+            Wave:PaymentUrl n'est pas configuré.
         billingPeriod: { type: string, enum: [Monthly, Yearly] }
         promoCode:
           type: string
@@ -7479,6 +7539,36 @@ components:
           type: boolean
           default: false
           description: Vrai lorsque le code promo a intégralement couvert l'abonnement — aucun paiement n'a eu lieu.
+        wave:
+          nullable: true
+          description: Renseigné uniquement pour method = WaveMerchant (redirectUrl est alors null).
+          allOf:
+            - $ref: '#/components/schemas/WaveCheckout'
+
+    WaveCheckout:
+      type: object
+      description: >-
+        Consigne de paiement direct par Wave. Redemander la même facture (même montant et période) renvoie la
+        même demande ; une demande en attente d'un autre montant/période est abandonnée (Failed).
+      properties:
+        paymentUrl: { type: string, format: uri, description: "Lien marchand Wave (celui du QR code)" }
+        amount: { type: number, description: "Montant EXACT à régler, en FCFA (calculé serveur)" }
+        reference: { type: string, example: WAVE-1A2B3C4D, description: "Référence de rapprochement avec le relevé Wave" }
+
+    PendingWavePayment:
+      type: object
+      description: Ligne de GET /admin/platform/wave-payments — demande de paiement Wave en attente de validation.
+      properties:
+        paymentId: { type: string, format: uuid }
+        schoolId: { type: string, format: uuid }
+        schoolName: { type: string }
+        directorFullName: { type: string, nullable: true }
+        directorEmail: { type: string, nullable: true }
+        directorPhone: { type: string, nullable: true }
+        amount: { type: number }
+        billingPeriod: { type: string, enum: [Monthly, Yearly] }
+        reference: { type: string }
+        initiatedAt: { type: string, format: date-time }
 
     SubscriptionPaymentHistoryItem:
       type: object
@@ -7490,7 +7580,7 @@ components:
         amount: { type: number }
         currency: { type: string, example: XOF }
         billingPeriod: { type: string, enum: [Monthly, Yearly] }
-        method: { type: string, enum: [MobileMoney, BankTransfer, Card] }
+        method: { type: string, enum: [MobileMoney, BankTransfer, Card, WaveMerchant] }
         status: { type: string, enum: [Initiated, Confirmed, Failed] }
         providerTransactionRef: { type: string, nullable: true }
 

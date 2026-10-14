@@ -5,7 +5,9 @@
 
 @* Consomme le VRAI GET /admin/platform/subscriptions (PlatformController, migration
  AddPlatformSubscriptionsAndImpersonation : vue `v_platform_subscriptions`). Le bouton « Relancer »
- appelle POST /admin/platform/subscriptions/{schoolId}/remind (SendSubscriptionReminderCommand). *@
+ appelle POST /admin/platform/subscriptions/{schoolId}/remind (SendSubscriptionReminderCommand). L'encart
+ « Paiements Wave à valider » consomme GET /admin/platform/wave-payments et POST .../{id}/approve|reject
+ (ReviewWavePaymentCommand : paiements d'abonnement par le compte marchand Wave, validés à la main). *@
 <div x-data="superAdminBilling()" x-init="load()" class="space-y-6">
 
  <div>
@@ -15,6 +17,46 @@
 
  <div x-show="error" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
  <div x-show="remindError" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="remindError"></div>
+
+ <div x-show="waveError" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="waveError"></div>
+
+ @* Paiements d'abonnement par le compte marchand Wave : le lien est statique (ni montant ni référence, aucun webhook).
+ Le Super Admin retrouve le règlement sur son relevé Wave (montant + date + nom/téléphone du Directeur, ou la référence
+ si elle figure sur le reçu) puis VALIDE — abonnement activé et prolongé — ou REJETTE. N'apparaît que s'il y en a. *@
+ <section x-show="wavePayments.length > 0" x-cloak class="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 shadow-sm">
+ <h2 class="text-sm font-semibold text-white">Paiements Wave à valider <span class="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400" x-text="wavePayments.length"></span></h2>
+ <p class="mt-1 text-xs text-zinc-500">Vérifiez chaque règlement sur votre relevé Wave avant de valider. Valider active l'abonnement de l'école.</p>
+
+ <div class="mt-4 divide-y divide-zinc-800/80">
+ <template x-for="payment in wavePayments" :key="payment.paymentId">
+ <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+ <div class="min-w-0">
+ <p class="font-medium text-zinc-100 truncate" x-text="payment.schoolName"></p>
+ <p class="mt-0.5 text-xs text-zinc-400">
+ <span class="font-semibold text-amber-300" x-text="formatPeriodicValue(payment.amount, payment.billingPeriod)"></span>
+ · <span x-text="formatDateTime(payment.initiatedAt)"></span>
+ · réf. <span class="font-mono" x-text="payment.reference"></span>
+ </p>
+ <p class="mt-0.5 text-xs text-zinc-500">
+ <span x-text="payment.directorFullName || 'Directeur inconnu'"></span>
+ <span x-show="payment.directorPhone"> · <span x-text="payment.directorPhone"></span></span>
+ <span x-show="payment.directorEmail"> · <span x-text="payment.directorEmail"></span></span>
+ </p>
+ </div>
+ <div class="flex shrink-0 gap-2">
+ <button type="button" x-on:click="openWaveReview(payment, false)"
+ class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-zinc-800 transition-colors">
+ Rejeter
+ </button>
+ <button type="button" x-on:click="openWaveReview(payment, true)"
+ class="rounded-2xl bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-400 transition-colors">
+ Valider
+ </button>
+ </div>
+ </div>
+ </template>
+ </div>
+ </section>
 
  <!-- KPI -->
  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -152,6 +194,33 @@
  </div>
  </template>
  </div>
+
+ @* Décision sur un paiement Wave : irréversible (le paiement quitte la liste « en attente »). *@
+ <modal-shell open="waveReviewTarget" on-close="closeWaveReview()" size="md" theme="dark">
+ <modal-title>Paiement Wave</modal-title>
+ <p class="text-sm text-zinc-400" x-show="waveReviewApprove">
+ Confirmez-vous avoir reçu
+ <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? formatXof(waveReviewTarget.amount) : ''"></span>
+ de <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? waveReviewTarget.schoolName : ''"></span>
+ sur le compte Wave ? L'abonnement sera activé immédiatement.
+ </p>
+ <p class="text-sm text-zinc-400" x-show="!waveReviewApprove" x-cloak>
+ Le paiement de <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? waveReviewTarget.schoolName : ''"></span>
+ sera marqué comme non retrouvé et le Directeur en sera informé par e-mail.
+ </p>
+
+ <div class="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
+ <button type="button" x-on:click="closeWaveReview()" :disabled="isReviewingWave"
+ class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+ Annuler
+ </button>
+ <button type="button" x-on:click="confirmWaveReview()" :disabled="isReviewingWave"
+ :class="waveReviewApprove ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-rose-500 hover:bg-rose-400'"
+ class="rounded-2xl px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50">
+ <span x-text="isReviewingWave ? 'Traitement…' : (waveReviewApprove ? 'Valider le paiement' : 'Rejeter le paiement')"></span>
+ </button>
+ </div>
+ </modal-shell>
 
  @* Attribution manuelle d'un accès offert (module Tarification & Promotions) — n'échange aucun
  argent (GrantComplimentaryAccessCommand, AGENTS.md règle #11 hors-sujet ici). Modal dark
