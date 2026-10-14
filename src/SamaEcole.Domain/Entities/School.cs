@@ -83,6 +83,21 @@ public class School : AuditableEntity
     /// </summary>
     public string? NomLycee { get; set; }
 
+    // ------------------------------------------------- Versions arabes (documents bilingues, Bloc 5)
+
+    /// <summary>
+    /// Nom de l'établissement en arabe, imprimé sur les documents bilingues (cahier de roulement) des
+    /// écoles Franco-Arabes. Null tant que le Directeur ne l'a pas saisi : le document laisse alors la
+    /// ligne arabe à compléter à la main, jamais une translittération du français inventée.
+    /// </summary>
+    public string? NameAr { get; set; }
+
+    /// <summary>Inspection d'Académie en arabe — pendant de <see cref="InspectionAcademie"/>, même règle de vide.</summary>
+    public string? InspectionAcademieAr { get; set; }
+
+    /// <summary>Inspection de l'Éducation et de la Formation en arabe — pendant de <see cref="InspectionEducationFormation"/>.</summary>
+    public string? InspectionEducationFormationAr { get; set; }
+
     // ------------------------------------------------------- Identification réglementaire (SIMEN)
 
     /// <summary>

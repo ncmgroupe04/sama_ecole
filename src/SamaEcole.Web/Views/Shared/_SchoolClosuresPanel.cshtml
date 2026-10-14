@@ -1,0 +1,138 @@
+@*
+ Calendrier de fermeture (jours fériés, vacances) — Franco-Arabe Bloc 5a, affiché sous la liste des
+ années scolaires. Le composant Alpine schoolClosuresView() est défini dans wwwroot/js/school-closures.js,
+ chargé par la page hôte (Settings/Index.cshtml). Les fermetures alimentent le cahier de roulement ;
+ elles n'empêchent PAS la saisie d'un appel un jour fermé (WorkingDayGuard est inchangé).
+*@
+<div x-data="schoolClosuresView()" class="mt-10">
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="calendar" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title text-lg">Calendrier de fermeture</h2>
+ <p class="icon-heading-subtitle text-sm mt-1">
+ Jours fériés et vacances de l'année : ils sont grisés sur le cahier de roulement et ne comptent pas comme jours de classe.
+ </p>
+ </div>
+ </div>
+
+ <button x-show="isDirecteur && yearId" x-cloak x-on:click="openCreate()" class="btn-modal-primary group shrink-0 whitespace-nowrap">
+ <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
+ Nouvelle fermeture
+ </button>
+ </div>
+
+ <div x-show="error" x-cloak class="form-error-banner mt-4" role="alert"><span x-text="error"></span></div>
+
+ <div class="card mt-6 relative">
+ <div class="p-4 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex flex-wrap items-center gap-3">
+ <label for="closure-year" class="form-label !mb-0">Année scolaire</label>
+ <select id="closure-year" x-model="yearId" x-on:change="loadClosures()" class="input-field !w-auto min-w-[10rem]">
+ <template x-for="year in years" :key="year.id">
+ <option :value="year.id" x-text="year.label + (year.isActive ? ' (active)' : '')"></option>
+ </template>
+ </select>
+ </div>
+
+ @* Formulaire de création / modification, dans la page : une fermeture tient en cinq champs. *@
+ <form x-show="isFormOpen" x-cloak x-on:submit.prevent="submit()" class="p-4 border-b border-slate-200 space-y-4">
+ <div x-show="formErrors.global" x-cloak class="form-error-banner"><span x-text="formErrors.global"></span></div>
+ <div class="form-grid">
+ <div>
+ <label for="closure-kind" class="form-label">Nature</label>
+ <select id="closure-kind" x-model="form.kind" class="input-field">
+ <option value="Holiday">Jour férié</option>
+ <option value="Vacation">Vacances</option>
+ <option value="Other">Autre fermeture</option>
+ </select>
+ </div>
+ <div>
+ <label for="closure-start" class="form-label">Du</label>
+ <input id="closure-start" type="date" x-model="form.startDate" x-on:change="onStartChanged()" required
+ class="input-field" :class="formErrors.startdate && 'input-field-error'">
+ <p x-show="formErrors.startdate" x-cloak x-text="formErrors.startdate" class="field-error"></p>
+ </div>
+ <div>
+ <label for="closure-end" class="form-label">Au (inclus)</label>
+ <input id="closure-end" type="date" x-model="form.endDate" required
+ class="input-field" :class="formErrors.enddate && 'input-field-error'">
+ <p x-show="formErrors.enddate" x-cloak x-text="formErrors.enddate" class="field-error"></p>
+ </div>
+ </div>
+ <div class="form-grid">
+ <div>
+ <label for="closure-label" class="form-label">Libellé</label>
+ <input id="closure-label" type="text" x-model="form.label" maxlength="120" required placeholder="ex : Tabaski"
+ class="input-field" :class="formErrors.label && 'input-field-error'">
+ <p x-show="formErrors.label" x-cloak x-text="formErrors.label" class="field-error"></p>
+ </div>
+ <div>
+ <label for="closure-label-ar" class="form-label">Libellé en arabe <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <input id="closure-label-ar" type="text" dir="rtl" lang="ar" x-model="form.labelAr" maxlength="120"
+ class="input-field font-arabic" :class="formErrors.labelar && 'input-field-error'">
+ <p x-show="formErrors.labelar" x-cloak x-text="formErrors.labelar" class="field-error"></p>
+ </div>
+ </div>
+ <div class="flex items-center gap-2">
+ <button type="submit" :disabled="isSaving" class="btn-modal-primary">
+ <span x-text="isSaving ? 'Enregistrement…' : (editingId ? 'Enregistrer' : 'Ajouter')"></span>
+ </button>
+ <button type="button" x-on:click="closeForm()" class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">Annuler</button>
+ </div>
+ </form>
+
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head">
+ <th class="py-3 px-4">Période</th>
+ <th class="py-3 px-4">Nature</th>
+ <th class="py-3 px-4">Libellé</th>
+ <th class="py-3 px-4 text-right" x-show="isDirecteur" x-cloak>Action</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <tr x-show="!isLoading && closures.length === 0" x-cloak>
+ <td colspan="4">
+ <empty-state icon="calendar" title="Aucune fermeture enregistrée pour cette année."
+ hint="Ajoutez les jours fériés et les vacances pour que le cahier de roulement compte les bons jours de classe." />
+ </td>
+ </tr>
+ <template x-for="closure in closures" :key="closure.id">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
+ <td class="py-3 px-4 text-slate-700 whitespace-nowrap">
+ <span x-text="formatRange(closure.startDate, closure.endDate)"></span>
+ <span class="ml-1 text-xs text-slate-400" x-show="closure.startDate !== closure.endDate" x-cloak
+ x-text="'(' + dayCount(closure.startDate, closure.endDate) + ' j)'"></span>
+ </td>
+ <td class="py-3 px-4 text-slate-600" x-text="kindLabels[closure.kind] || closure.kind"></td>
+ <td class="py-3 px-4">
+ <span class="font-medium text-slate-900" x-text="closure.label"></span>
+ <span x-show="closure.labelAr" x-cloak dir="rtl" lang="ar" class="ml-2 font-arabic text-slate-500" x-text="closure.labelAr"></span>
+ </td>
+ <td class="py-3 px-4 text-right whitespace-nowrap" x-show="isDirecteur" x-cloak>
+ <template x-if="pendingDeleteId !== closure.id">
+ <span>
+ <button type="button" x-on:click="openEdit(closure)"
+ class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">Modifier</button>
+ <button type="button" x-on:click="askDelete(closure)"
+ class="ml-1 px-3 py-1.5 text-xs font-medium text-danger bg-red-50 rounded-xl hover:bg-red-100 transition-colors">Supprimer</button>
+ </span>
+ </template>
+ <template x-if="pendingDeleteId === closure.id">
+ <span>
+ <span class="text-xs text-slate-500 mr-1">Supprimer cette fermeture ?</span>
+ <button type="button" x-on:click="confirmDelete(closure)"
+ class="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">Confirmer</button>
+ <button type="button" x-on:click="cancelDelete()"
+ class="ml-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">Annuler</button>
+ </span>
+ </template>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+</div>

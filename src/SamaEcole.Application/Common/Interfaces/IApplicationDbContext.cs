@@ -110,6 +110,9 @@ public interface IApplicationDbContext
     /// <summary>Trimestres d'une année scolaire (ticket JGK-G01), générés automatiquement à sa création.</summary>
     DbSet<Term> Terms { get; }
 
+    /// <summary>Fermetures du calendrier (fériés, vacances) d'une année scolaire — cahier de roulement (Franco-Arabe Bloc 5).</summary>
+    DbSet<SchoolClosure> SchoolClosures { get; }
+
     /// <summary>Notes (ticket JGK-G01) : une par (élève, matière, trimestre, type d'évaluation). Verrou optimiste xmin.</summary>
     DbSet<Grade> Grades { get; }
 
