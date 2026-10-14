@@ -32,10 +32,11 @@ public record DormitoryRegisterDto(
     string? SupervisorName,
     DateOnly Date,
     IReadOnlyList<DormitoryRegisterRowDto> Rows,
-    DateTimeOffset GeneratedAt);
+    DateTimeOffset GeneratedAt,
+    string? SessionName = null);
 
 /// <summary>Registre d'un pavillon pour la nuit <paramref name="Date"/> (aujourd'hui par défaut). Mêmes règles de date que le pointage.</summary>
-public record GetDormitoryRegisterQuery(Guid DormitoryId, DateOnly? Date) : IRequest<DormitoryRegisterDto>;
+public record GetDormitoryRegisterQuery(Guid DormitoryId, DateOnly? Date, Guid? SessionId = null) : IRequest<DormitoryRegisterDto>;
 
 public class GetDormitoryRegisterQueryHandler(IApplicationDbContext dbContext, TimeProvider timeProvider)
     : IRequestHandler<GetDormitoryRegisterQuery, DormitoryRegisterDto>
@@ -46,7 +47,7 @@ public class GetDormitoryRegisterQueryHandler(IApplicationDbContext dbContext, T
         var date = request.Date ?? today;
 
         // Même définition que l'écran de pointage : 404 (pavillon inconnu), 422 (date future / hors année), pré-remplissages.
-        var sheet = await AttendanceSheetReader.GetAsync(dbContext, request.DormitoryId, date, today, cancellationToken);
+        var sheet = await AttendanceSheetReader.GetAsync(dbContext, request.DormitoryId, date, request.SessionId, today, cancellationToken);
 
         var dormitory = await dbContext.Dormitories.AsNoTracking()
             .Where(d => d.Id == request.DormitoryId)
@@ -87,6 +88,6 @@ public class GetDormitoryRegisterQueryHandler(IApplicationDbContext dbContext, T
 
         return new DormitoryRegisterDto(
             school.Name, school.Address, school.LogoUrl, yearLabel, sheet.DormitoryName, dormitory.SupervisorName,
-            date, rows, timeProvider.GetUtcNow());
+            date, rows, timeProvider.GetUtcNow(), sheet.SessionName);
     }
 }

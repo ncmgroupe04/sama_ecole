@@ -85,7 +85,7 @@ public class DormitoryRegisterDocument(DormitoryRegisterDto register, byte[]? lo
             column.Item().PaddingTop(5).AlignCenter().Text($"REGISTRE DU PAVILLON — {register.DormitoryName}").Bold().FontSize(15);
             column.Item().AlignCenter().Text(text =>
             {
-                text.Span($"Nuit du {register.Date.ToString("dd/MM/yyyy", French)}").FontSize(10);
+                text.Span($"{(register.SessionName is { Length: > 0 } session ? session + " du" : "Nuit du")} {register.Date.ToString("dd/MM/yyyy", French)}").FontSize(10);
                 if (!string.IsNullOrWhiteSpace(register.SupervisorName))
                 {
                     text.Span($"   ·   Surveillant : {register.SupervisorName}").FontSize(10);

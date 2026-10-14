@@ -1,134 +1,27 @@
 /**
- * Onglet « Pointage » de l'écran Internat (/internat) — feuille d'appel du soir d'un pavillon et pointage collectif, sur /api/v1/boarding (lot G4, tâche 11).
+ * Onglet « Pointage » de l'écran Internat (/internat) — feuille d'appel d'une SESSION de pointage (appel de nuit, repas, appel d'une Halqa) et
+ * pointage collectif, sur /api/v1/boarding (lot G4, tâche 11, puis sessions configurables). Composant Alpine `attendanceTab` ; la logique pure
+ * vit dans `window.attendanceLogic` (attendance-logic.js).
  *
- * Données : GET /boarding/attendance?dormitoryId=&date= (les internes du pavillon, triés chambre → lit, permissions pré-remplies « absent ») ;
- * POST /boarding/attendance {date, dormitoryId, entries[]} (réponse LIGNE PAR LIGNE : une ligne refusée n'empêche pas les autres) ;
- * registre imprimable : GET /boarding/dormitories/{id}/register-pdf?date= par la modale d'aperçu commune.
+ * Données : GET /boarding/attendance/sessions?activeOnly=true (les sessions pointables, dans l'ordre de la Direction) ;
+ *   - session des INTERNES (ou école sans session : appel de nuit d'origine) : GET /boarding/attendance?dormitoryId=&date=[&sessionId=] et
+ *     POST /boarding/attendance {date, dormitoryId, sessionId?, entries[{boarderId…}]} ; registre imprimable GET /boarding/dormitories/{id}/register-pdf ;
+ *   - autre public (demi-pensionnaires, tous les pensionnaires, Halqa) : le groupe (classe ou Oustaz) vient de GET /boarding/attendance/groups?sessionId=,
+ *     la feuille de GET /boarding/attendance/sheet?sessionId=&groupId=&date= et l'envoi de POST /boarding/attendance/sheet {sessionId, groupId, date,
+ *     entries[{studentId…}]} ;
+ *   - récapitulatif du mois : GET /boarding/attendance/monthly-summary?month=&sessionId=&groupId= et son PDF (modale d'aperçu commune).
+ * Réponse du pointage LIGNE PAR LIGNE : une ligne refusée n'empêche pas les autres.
  *
  * Règles reflétées (le serveur reste le juge) :
  *   - un pensionnaire en permission ne peut être pointé qu'absent (sinon BOARDER_ON_LEAVE) : la case « présent » lui est verrouillée ;
- *   - la nuit n'est jamais dans le futur (refusée avant l'appel) ; hors année scolaire active, le serveur répond 422 et son message est affiché ;
- *   - seules les lignes DÉCIDÉES et MODIFIÉES sont envoyées : une ligne déjà enregistrée n'est pas renvoyée (l'envoi est un upsert, mais inutile) ;
- *   - un résultat mixte garde les rejets visibles (message par ligne) à côté des lignes enregistrées ;
- *   - changer de pavillon ou de nuit avec une saisie non enregistrée demande confirmation : sur 200 lignes, la perdre en silence serait grave.
- *
- * La logique pure vit dans `window.attendanceLogic`, testée sans navigateur (tests/js/internat-attendance.test.mjs).
+ *   - le jour n'est jamais dans le futur (refusé avant l'appel) ; hors année scolaire active, le serveur répond 422 et son message est affiché ;
+ *   - un jour que la session ne couvre pas est SIGNALÉ, jamais bloqué ;
+ *   - seules les lignes DÉCIDÉES et MODIFIÉES sont envoyées ;
+ *   - changer de session, de groupe ou de jour avec une saisie non enregistrée demande confirmation : sur 200 lignes, la perdre en silence serait grave.
  */
-window.attendanceLogic = (() => {
-    const MAX_NOTE = 300;
-    /** Même note que le serveur pose à un absent en permission quand l'opérateur n'en saisit pas (AttendanceRules.OnLeaveNote). */
-    const ON_LEAVE_NOTE = 'En permission';
-
-    const REJECTION_MESSAGES = {
-        NOT_IN_DORMITORY: "Ce pensionnaire n'a pas (ou plus) de lit dans ce pavillon : rechargez la feuille d'appel.",
-        DUPLICATE_ENTRY: 'Ce pensionnaire figurait deux fois dans la saisie : la première ligne a été retenue.',
-        BOARDER_ON_LEAVE: 'Ce pensionnaire est en sortie cette nuit-là : il ne peut être pointé qu\'absent.'
-    };
-
-    function blankToNull(value) {
-        const text = typeof value === 'string' ? value.trim() : '';
-        return text === '' ? null : text;
-    }
-
-    /** Lignes de travail d'une feuille : la valeur enregistrée (`base`) sert à savoir ce qui a changé. */
-    function toLines(sheet) {
-        return sheet.lines.map((l) => ({
-            boarderId: l.boarderId,
-            studentName: l.studentName,
-            matricule: l.matricule,
-            roomName: l.roomName,
-            bedNumber: l.bedNumber,
-            onLeave: !!l.onLeave,
-            recorded: !!l.recorded,
-            isPresent: l.isPresent === undefined ? null : l.isPresent,
-            note: l.note ?? null,
-            base: { recorded: !!l.recorded, isPresent: l.isPresent === undefined ? null : l.isPresent, note: l.note ?? null },
-            rejection: ''
-        }));
-    }
-
-    /** Pointe une ligne. Un pensionnaire en permission ne peut pas être « présent » : refus (faux), la ligne reste inchangée. */
-    function setPresence(line, present) {
-        if (line.onLeave && present) return false;
-        line.isPresent = present;
-        return true;
-    }
-
-    /** Vrai si la ligne doit partir : décidée, et jamais enregistrée ou différente de ce qui est enregistré. */
-    function isDirty(line) {
-        if (line.isPresent === null || line.isPresent === undefined) return false;
-        if (!line.base.recorded) return true;
-        return line.isPresent !== line.base.isPresent || blankToNull(line.note) !== blankToNull(line.base.note);
-    }
-
-    /**
-     * Vrai si l'UTILISATEUR a changé quelque chose depuis le chargement (ou depuis le dernier enregistrement). Différent de isDirty : une permission
-     * pré-remplie par le serveur est « à envoyer » dès l'ouverture, sans que personne n'ait rien saisi — elle ne doit pas déclencher la demande d'abandon.
-     */
-    function hasUnsavedInput(lines) {
-        return lines.some((l) => l.isPresent !== l.base.isPresent || blankToNull(l.note) !== blankToNull(l.base.note));
-    }
-
-    /** Corps minimal de POST : seules les lignes à envoyer. */
-    function dirtyEntries(lines) {
-        return lines.filter(isDirty).map((l) => ({ boarderId: l.boarderId, isPresent: l.isPresent, note: blankToNull(l.note) }));
-    }
-
-    /** « Tout présent » : ne touche ni les décisions déjà prises ni les pensionnaires en permission. */
-    function markAllPresent(lines) {
-        lines.forEach((l) => {
-            if (!l.onLeave && (l.isPresent === null || l.isPresent === undefined)) l.isPresent = true;
-        });
-    }
-
-    function validateDate(date, today) {
-        if (!date) return 'Indiquez la date de la nuit à pointer.';
-        if (date > today) return 'Le pointage ne peut pas porter sur une date future.';
-        return '';
-    }
-
-    function validateNotes(lines) {
-        return lines.some((l) => typeof l.note === 'string' && l.note.length > MAX_NOTE) ? `Une note ne doit pas dépasser ${MAX_NOTE} caractères.` : '';
-    }
-
-    function rejectionMessage(code, serverMessage) {
-        return REJECTION_MESSAGES[code] || serverMessage || 'Ligne refusée par le serveur.';
-    }
-
-    /** Reporte le résultat du serveur sur les lignes : succès = enregistrée et propre, rejet = message conservé et ligne toujours à traiter. */
-    function applyResult(lines, result) {
-        result.lines.forEach((r) => {
-            const line = lines.find((l) => l.boarderId === r.boarderId);
-            if (!line) return;
-            if (r.outcome === 'Saved') {
-                // Le serveur pose « En permission » à un absent en sortie sans note : on l'aligne pour que la ligne ne paraisse pas modifiée.
-                if (line.isPresent === false && line.onLeave && blankToNull(line.note) === null) line.note = ON_LEAVE_NOTE;
-                line.recorded = true;
-                line.base = { recorded: true, isPresent: line.isPresent, note: line.note };
-                line.rejection = '';
-            } else {
-                line.rejection = rejectionMessage(r.code, r.message);
-            }
-        });
-    }
-
-    function counts(lines) {
-        return {
-            present: lines.filter((l) => l.isPresent === true).length,
-            absent: lines.filter((l) => l.isPresent === false).length,
-            pending: lines.filter((l) => l.isPresent === null || l.isPresent === undefined).length,
-            dirty: lines.filter(isDirty).length
-        };
-    }
-
-    return {
-        MAX_NOTE, ON_LEAVE_NOTE, toLines, setPresence, isDirty, hasUnsavedInput, dirtyEntries, markAllPresent, validateDate, validateNotes, rejectionMessage, applyResult, counts
-    };
-})();
-
 document.addEventListener('alpine:init', () => {
     Alpine.data('attendanceTab', () => ({
-        // Modale d'aperçu PDF commune (wwwroot/js/pdf-preview.js) : registre du pavillon.
+        // Modale d'aperçu PDF commune (wwwroot/js/pdf-preview.js) : registre du pavillon et récapitulatif du mois.
         ...window.pdfPreview.state(),
 
         loading: false,
@@ -137,36 +30,78 @@ document.addEventListener('alpine:init', () => {
         error: '',
         dateError: '',
         notice: '',
+        sessions: [],
         dormitories: [],
+        groups: [],
         // Sélection en cours (liée aux champs) et feuille réellement affichée : elles diffèrent le temps d'une confirmation d'abandon.
-        sel: { dormitoryId: '', date: '' },
+        // `dormitoryId` sert aux internes (feuille d'un pavillon), `groupId` aux autres publics (classe ou Oustaz).
+        sel: { sessionId: '', dormitoryId: '', groupId: '', date: '' },
         loaded: null,
         sheetName: '',
+        outsideDays: false,
         lines: [],
         result: null,
         discard: { open: false },
         sheetSeq: 0,
+        // Récapitulatif du mois d'une session pour le groupe affiché.
+        summary: { open: false, loading: false, month: '', data: null },
+        summaryError: '',
 
         async init() {
             this.sel.date = window.internatHelpers.today();
+            await this.loadSessions();
             await this.loadDormitories();
-            // Un seul pavillon : inutile de le faire choisir.
-            if (this.dormitories.length === 1) {
-                this.sel.dormitoryId = this.dormitories[0].id;
-                await this.onSelectionChange();
-            }
+            await this.applySessionChange();
         },
 
         helpers() { return window.internatHelpers; },
         logic() { return window.attendanceLogic; },
 
+        // ------------------------------------------------------------------ Session et groupe choisis
+
+        get canConfigure() { return window.auth && window.auth.role === 'Directeur'; },
+        get hasSessions() { return this.sessions.length > 0; },
+        get sessionOptions() {
+            return this.sessions.map((s) => ({ value: s.id, label: s.timeLabel ? `${s.name} · ${s.timeLabel}` : s.name }));
+        },
+        get selectedSession() { return this.sessions.find((s) => s.id === this.sel.sessionId) || null; },
+        /** Public de la session choisie ; sans session (école qui n'en a pas configuré), l'appel de nuit d'origine : les internes d'un pavillon. */
+        get audience() { return this.selectedSession ? this.selectedSession.audience : 'Interns'; },
+        get isGroup() { return this.logic().isGroupAudience(this.audience); },
+        get groupLabel() { return this.logic().groupLabel(this.audience); },
+        get dayLabel() { return this.isGroup ? 'Jour' : 'Nuit'; },
         get dormitoryOptions() { return this.dormitories.map((d) => ({ value: d.id, label: d.name })); },
+        get groupOptions() { return this.groups.map((g) => ({ value: g.id, label: `${g.name} (${g.studentCount})` })); },
+        get currentGroupId() { return this.isGroup ? this.sel.groupId : this.sel.dormitoryId; },
         get hasSheet() { return this.loaded !== null; },
         get counts() { return this.logic().counts(this.lines); },
         get rejectedLines() { return this.lines.filter((l) => l.rejection); },
         get canSave() { return this.hasSheet && !this.saving && this.counts.dirty > 0; },
+        /** Le registre PDF existe pour la feuille d'un pavillon seulement ; les autres publics ont le récapitulatif du mois. */
+        get canPrintRegister() { return this.hasSheet && this.loaded.audience === 'Interns'; },
+        /** Feuille d'un pavillon (chambre · lit) ou d'un groupe (régime) : lue par la vue sans jamais toucher `loaded` quand il est encore null. */
+        get isPavilionSheet() { return !this.loaded || this.loaded.audience === 'Interns'; },
+        get canSummarize() { return this.hasSheet && !!this.loaded.sessionId; },
+        get summaryTotals() { return this.summary.data ? this.logic().summaryTotals(this.summary.data.rows) : null; },
+        get summaryTitle() {
+            const d = this.summary.data;
+            return d ? `${d.sessionName} — ${d.groupName} — ${this.logic().monthLabel(this.summary.month)}` : '';
+        },
 
-        // ------------------------------------------------------------------ Feuille d'appel
+        // ------------------------------------------------------------------ Chargements
+
+        async loadSessions() {
+            try {
+                const sessions = await window.api.get('/boarding/attendance/sessions?activeOnly=true');
+                this.sessions = Array.isArray(sessions) ? sessions : [];
+            } catch (err) {
+                this.sessions = [];
+                this.error = this.helpers().errorMessage(err, 'Les sessions de pointage n\'ont pas pu être chargées.');
+            }
+
+            // Une session choisie qui n'existe plus (désactivée entre-temps) ne reste pas sélectionnée ; sinon, la première est proposée.
+            if (!this.selectedSession) this.sel.sessionId = this.sessions.length > 0 ? this.sessions[0].id : '';
+        },
 
         async loadDormitories() {
             try {
@@ -177,13 +112,61 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async loadGroups() {
+            if (!this.sel.sessionId || !this.isGroup) {
+                this.groups = [];
+                return;
+            }
+
+            const sessionId = this.sel.sessionId;
+            try {
+                const groups = await window.api.get(`/boarding/attendance/groups?sessionId=${encodeURIComponent(sessionId)}`);
+                if (sessionId !== this.sel.sessionId) return;
+                this.groups = Array.isArray(groups) ? groups : [];
+            } catch (err) {
+                this.groups = [];
+                this.error = this.helpers().errorMessage(err, `Les groupes (${this.groupLabel.toLowerCase()}) n'ont pas pu être chargés.`);
+            }
+        },
+
         /**
-         * Appelée quand le pavillon ou la nuit change. Une date future est refusée sans appel. S'il reste une saisie non enregistrée, on demande avant de
+         * Applique la session choisie : vide la feuille et le groupe, charge les groupes de son public, et ouvre tout seul la feuille quand il n'y a
+         * qu'un choix (un seul pavillon, une seule classe, un seul Oustaz).
+         */
+        async applySessionChange() {
+            this.loaded = null;
+            this.lines = [];
+            this.result = null;
+            this.notice = '';
+            this.outsideDays = false;
+            this.sel.groupId = '';
+
+            if (this.isGroup) {
+                await this.loadGroups();
+                if (this.groups.length === 1) this.sel.groupId = this.groups[0].id;
+            } else if (this.dormitories.length === 1) {
+                this.sel.dormitoryId = this.dormitories[0].id;
+            }
+
+            if (this.currentGroupId) await this.onSelectionChange();
+        },
+
+        /** Le sélecteur de session a changé : une saisie non enregistrée demande d'abord confirmation. */
+        async onSessionChange() {
+            if (this.hasSheet && this.logic().hasUnsavedInput(this.lines)) {
+                this.discard = { open: true };
+                return;
+            }
+            await this.applySessionChange();
+        },
+
+        /**
+         * Appelée quand le groupe ou le jour change. Une date future est refusée sans appel. S'il reste une saisie non enregistrée, on demande avant de
          * la jeter ; la sélection reste modifiée le temps de la réponse (annuler la remet comme la feuille affichée).
          */
         async onSelectionChange() {
             this.dateError = this.logic().validateDate(this.sel.date, this.helpers().today());
-            if (this.dateError || !this.sel.dormitoryId) return;
+            if (this.dateError || !this.currentGroupId) return;
 
             if (this.hasSheet && this.logic().hasUnsavedInput(this.lines)) {
                 this.discard = { open: true };
@@ -195,7 +178,9 @@ document.addEventListener('alpine:init', () => {
         cancelDiscard() {
             this.discard = { open: false };
             if (this.loaded) {
-                this.sel.dormitoryId = this.loaded.dormitoryId;
+                this.sel.sessionId = this.loaded.sessionId || this.sel.sessionId;
+                if (this.loaded.audience === 'Interns') this.sel.dormitoryId = this.loaded.dormitoryId;
+                else this.sel.groupId = this.loaded.groupId;
                 this.sel.date = this.loaded.date;
                 this.dateError = '';
             }
@@ -203,23 +188,38 @@ document.addEventListener('alpine:init', () => {
 
         async confirmDiscard() {
             this.discard = { open: false };
+            if (this.loaded && this.sel.sessionId !== (this.loaded.sessionId || '')) {
+                await this.applySessionChange();
+                return;
+            }
             await this.loadSheet();
         },
+
+        // ------------------------------------------------------------------ Feuille d'appel
 
         /** Un compteur écarte toute réponse arrivée après une demande plus récente. */
         async loadSheet() {
             const seq = ++this.sheetSeq;
-            const { dormitoryId, date } = this.sel;
+            const { sessionId, date } = this.sel;
+            const audience = this.audience;
+            const group = this.isGroup;
+            const groupId = this.currentGroupId;
             this.loading = true;
             this.error = '';
             this.notice = '';
             this.result = null;
             try {
-                const sheet = await window.api.get(`/boarding/attendance?dormitoryId=${encodeURIComponent(dormitoryId)}&date=${encodeURIComponent(date)}`);
+                const day = encodeURIComponent(date);
+                const sheet = group
+                    ? await window.api.get(`/boarding/attendance/sheet?sessionId=${encodeURIComponent(sessionId)}&groupId=${encodeURIComponent(groupId)}&date=${day}`)
+                    : await window.api.get(`/boarding/attendance?dormitoryId=${encodeURIComponent(groupId)}&date=${day}${sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''}`);
                 if (seq !== this.sheetSeq) return;
-                this.lines = this.logic().toLines(sheet);
-                this.sheetName = sheet.dormitoryName;
-                this.loaded = { dormitoryId, date };
+                this.lines = group ? this.logic().toGroupLines(sheet) : this.logic().toLines(sheet);
+                this.sheetName = group ? sheet.groupName : sheet.dormitoryName;
+                this.outsideDays = !!sheet.outsideSessionDays;
+                this.loaded = group
+                    ? { sessionId, audience, groupId, dormitoryId: '', date }
+                    : { sessionId, audience, groupId: '', dormitoryId: groupId, date };
             } catch (err) {
                 if (seq !== this.sheetSeq) return;
                 this.lines = [];
@@ -235,22 +235,37 @@ document.addEventListener('alpine:init', () => {
 
         /**
          * Relit à l'ouverture de l'onglet : une sortie déclarée dans « Sorties » doit verrouiller « absent » le pensionnaire concerné dès maintenant, pas au
-         * prochain rechargement de la page. JAMAIS pendant une saisie non enregistrée, un enregistrement, une confirmation d'abandon ou un aperçu PDF :
-         * relire jetterait les pointages saisis. Sans feuille affichée, on relit les pavillons (l'un d'eux a pu être créé entre-temps).
+         * prochain rechargement de la page. JAMAIS pendant une saisie non enregistrée, un enregistrement, une confirmation d'abandon, un récapitulatif ou un
+         * aperçu PDF : relire jetterait les pointages saisis. Sans feuille affichée, on relit les sessions et les pavillons (l'un d'eux a pu être créé
+         * entre-temps).
          */
         async onTabShown(key) {
-            const busy = this.loading || this.saving || this.discard.open || this.showPdfModal || (this.hasSheet && this.logic().hasUnsavedInput(this.lines));
+            const busy = this.loading || this.saving || this.discard.open || this.summary.open || this.showPdfModal
+                || (this.hasSheet && this.logic().hasUnsavedInput(this.lines));
             if (!this.helpers().shouldRefreshOnShow({ tabKey: 'pointage', shownKey: key, busy, loadedAt: this.loadedAt, now: Date.now() })) return;
 
             if (this.hasSheet) {
                 await this.loadSheet();
                 return;
             }
-            await this.loadDormitories();
-            if (this.dormitories.length === 1 && !this.sel.dormitoryId) {
-                this.sel.dormitoryId = this.dormitories[0].id;
-                await this.onSelectionChange();
+            await this.reloadChoices();
+        },
+
+        /** La Direction a (dés)activé, créé ou réordonné des sessions : on relit la liste sans toucher à une saisie en cours. */
+        async onSessionsChanged() {
+            if (this.hasSheet && this.logic().hasUnsavedInput(this.lines)) {
+                // La feuille affichée reste ; la liste des sessions se met à jour sans changer la sélection si elle existe encore.
+                await this.loadSessions();
+                return;
             }
+            await this.reloadChoices();
+        },
+
+        async reloadChoices() {
+            const previous = this.sel.sessionId;
+            await this.loadSessions();
+            await this.loadDormitories();
+            if (this.sel.sessionId !== previous || !this.hasSheet) await this.applySessionChange();
         },
 
         setPresence(line, present) {
@@ -266,7 +281,8 @@ document.addEventListener('alpine:init', () => {
         async save() {
             if (!this.hasSheet || this.saving) return;
 
-            const entries = this.logic().dirtyEntries(this.lines);
+            const group = this.loaded.audience !== 'Interns';
+            const entries = group ? this.logic().dirtyGroupEntries(this.lines) : this.logic().dirtyEntries(this.lines);
             if (entries.length === 0) {
                 this.notice = 'Aucune modification à enregistrer.';
                 return;
@@ -281,15 +297,22 @@ document.addEventListener('alpine:init', () => {
             this.error = '';
             this.notice = '';
             try {
-                const result = await window.api.post('/boarding/attendance', {
-                    date: this.loaded.date, dormitoryId: this.loaded.dormitoryId, entries
-                });
+                const result = group
+                    ? await window.api.post('/boarding/attendance/sheet', {
+                        sessionId: this.loaded.sessionId, groupId: this.loaded.groupId, date: this.loaded.date, entries
+                    })
+                    : await window.api.post('/boarding/attendance', {
+                        date: this.loaded.date, dormitoryId: this.loaded.dormitoryId,
+                        ...(this.loaded.sessionId ? { sessionId: this.loaded.sessionId } : {}), entries
+                    });
                 this.logic().applyResult(this.lines, result);
                 this.result = { saved: result.saved, rejected: result.rejected };
-                this.notice = this.summary(result);
+                this.notice = this.summaryOf(result);
+                // Une école sans session vient d'en obtenir une (« Appel de nuit », créée à la volée) : on la propose dès maintenant.
+                if (!this.hasSessions && !group) await this.loadSessions();
             } catch (err) {
                 this.error = this.helpers().errorMessage(err, 'Impossible d\'enregistrer le pointage.');
-                // Un autre opérateur a saisi la même nuit entre-temps : la feuille affichée est périmée, on la relit.
+                // Un autre opérateur a saisi la même session le même jour entre-temps : la feuille affichée est périmée, on la relit.
                 if (err && err.code === 'ATTENDANCE_CONFLICT') {
                     const message = this.error;
                     await this.loadSheet();
@@ -301,21 +324,66 @@ document.addEventListener('alpine:init', () => {
         },
 
         /** Phrase de bilan : les succès d'abord, puis les refus s'il y en a. */
-        summary(result) {
+        summaryOf(result) {
             const saved = `${result.saved} ligne${result.saved > 1 ? 's' : ''} enregistrée${result.saved > 1 ? 's' : ''}`;
             return result.rejected > 0 ? `${saved}, ${result.rejected} refusée${result.rejected > 1 ? 's' : ''} (voir le détail ci-dessous).` : `${saved}.`;
         },
 
-        // ------------------------------------------------------------------ PDF
+        // ------------------------------------------------------------------ PDF et récapitulatif du mois
 
         /** Registre imprimable de la nuit affichée. Le serveur répond 422 pour une date hors année active : son message s'affiche dans la modale. */
         async openRegisterPdf() {
-            if (!this.loaded) return;
+            if (!this.canPrintRegister) return;
             const helpers = this.helpers();
             await this.openPdfPreview(
-                helpers.registerPdfUrl(this.loaded.dormitoryId, this.loaded.date),
+                helpers.registerPdfUrl(this.loaded.dormitoryId, this.loaded.date, this.loaded.sessionId),
                 `Registre — ${this.sheetName} — ${this.loaded.date}`,
                 helpers.pdfFileName('Registre-Pavillon', this.sheetName, this.loaded.date));
+        },
+
+        /** Ouvre le récapitulatif du mois de la feuille affichée (le mois du jour pointé). */
+        async openSummary() {
+            if (!this.canSummarize) return;
+            this.summary = { open: true, loading: false, month: this.logic().monthOf(this.loaded.date), data: null };
+            this.summaryError = '';
+            await this.loadSummary();
+        },
+
+        closeSummary() {
+            this.summary.open = false;
+        },
+
+        async loadSummary() {
+            if (!this.loaded) return;
+            const url = this.helpers().monthlySummaryUrl(this.summary.month, this.loaded.sessionId, this.currentLoadedGroup());
+            if (!url) {
+                this.summaryError = 'Indiquez un mois.';
+                this.summary.data = null;
+                return;
+            }
+            this.summary.loading = true;
+            this.summaryError = '';
+            try {
+                this.summary.data = await window.api.get(url.replace(/^\/api\/v1/, ''));
+            } catch (err) {
+                this.summary.data = null;
+                this.summaryError = this.helpers().errorMessage(err, 'Le récapitulatif n\'a pas pu être chargé.');
+            } finally {
+                this.summary.loading = false;
+            }
+        },
+
+        currentLoadedGroup() {
+            return this.loaded ? (this.loaded.audience === 'Interns' ? this.loaded.dormitoryId : this.loaded.groupId) : '';
+        },
+
+        async openSummaryPdf() {
+            if (!this.loaded || !this.summary.data) return;
+            const helpers = this.helpers();
+            await this.openPdfPreview(
+                helpers.monthlySummaryUrl(this.summary.month, this.loaded.sessionId, this.currentLoadedGroup(), true),
+                `Récapitulatif — ${this.summary.data.sessionName} — ${this.summary.data.groupName} — ${this.summary.month}`,
+                helpers.pdfFileName('Recapitulatif-Pointage', this.summary.data.sessionName, this.summary.data.groupName, this.summary.month));
         }
     }));
 });

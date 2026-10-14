@@ -52,7 +52,7 @@ function boot({ role = 'Directeur', lines = DEFAULT_LINES(), dormitories = [{ id
         date: body.date, dormitoryId: body.dormitoryId, saved: body.entries.length, rejected: 0,
         lines: body.entries.map((e) => ({ boarderId: e.boarderId, outcome: 'Saved', code: null, message: null }))
     });
-    const ctx = loadScripts(['internat-helpers.js', 'internat-attendance.js'], {
+    const ctx = loadScripts(['internat-helpers.js', 'attendance-logic.js', 'internat-attendance.js'], {
         preload: {
             auth: { role },
             pdfPreview: { state: () => ({ showPdfModal: false, openPdfPreview: async (...args) => { previews.push(args); } }) },

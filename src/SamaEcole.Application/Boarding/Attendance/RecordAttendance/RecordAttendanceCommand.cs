@@ -4,16 +4,18 @@ using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Boarding.Attendance.RecordAttendance;
 
 /// <summary>
-/// POST /api/v1/boarding/attendance — pointage de nuit COLLECTIF d'un pavillon : une ligne par pensionnaire, enregistrée en
-/// upsert sur <c>(séjour, date)</c>. Le résultat est donné LIGNE PAR LIGNE : une ligne refusée (hors pavillon, doublon,
-/// pensionnaire en sortie déclaré présent) n'empêche pas les autres. Date : pas dans le futur, dans l'année active. Un
-/// pensionnaire en sortie ce soir-là n'est accepté qu'absent ; sans note, la ligne indique « En permission ».
+/// POST /api/v1/boarding/attendance — pointage COLLECTIF d'un pavillon pour une session (par défaut « Appel de nuit ») : une ligne
+/// par pensionnaire, enregistrée en upsert sur <c>(élève, session, date)</c>. Le résultat est donné LIGNE PAR LIGNE : une ligne
+/// refusée (hors pavillon, doublon, pensionnaire en sortie déclaré présent) n'empêche pas les autres. Date : pas dans le futur, dans
+/// l'année active. Un pensionnaire en sortie ce soir-là n'est accepté qu'absent ; sans note, la ligne indique « En permission ».
 /// </summary>
-public record RecordAttendanceCommand(DateOnly Date, Guid DormitoryId, IReadOnlyList<AttendanceEntryInput> Entries)
+public record RecordAttendanceCommand(
+    DateOnly Date, Guid DormitoryId, IReadOnlyList<AttendanceEntryInput> Entries, Guid? SessionId = null)
     : IRequest<RecordAttendanceResult>, IAuditableRequest;
 
 public class RecordAttendanceCommandValidator : AbstractValidator<RecordAttendanceCommand>
@@ -44,15 +46,33 @@ public class RecordAttendanceCommandHandler(IApplicationDbContext dbContext, Tim
         await AttendanceRules.EnsurePointableAsync(dbContext, request.Date, today, cancellationToken);
         var dormitory = await AttendanceRules.GetDormitoryAsync(dbContext, request.DormitoryId, cancellationToken);
 
-        var stayIds = await AttendanceRules.DormitoryStays(dbContext, request.DormitoryId)
-            .AsNoTracking().Select(b => b.Id).ToListAsync(cancellationToken);
-        var inDormitory = stayIds.ToHashSet();
+        var session = await AttendanceRules.FindInternSessionAsync(dbContext, request.SessionId, tracking: true, cancellationToken);
+        if (session is null)
+        {
+            // Routes d'origine, école sans aucune session : « Appel de nuit » est créée à la volée, comme la migration le fait pour
+            // les écoles qui pointaient déjà.
+            session = new AttendanceSession
+            {
+                SchoolId = dormitory.SchoolId,
+                Name = AttendanceRules.DefaultNightSessionName,
+                Audience = AttendanceAudience.Interns
+            };
+            dbContext.AttendanceSessions.Add(session);
+        }
+
+        AttendanceRules.EnsureActive(session);
+
+        var stays = await AttendanceRules.DormitoryStays(dbContext, request.DormitoryId)
+            .AsNoTracking().Select(b => new { b.Id, b.StudentId }).ToListAsync(cancellationToken);
+        var studentByStay = stays.ToDictionary(b => b.Id, b => b.StudentId);
+        var stayIds = studentByStay.Keys.ToList();
         var onLeave = await AttendanceRules.OnLeaveAsync(dbContext, stayIds, request.Date, cancellationToken);
 
+        var studentIds = studentByStay.Values.ToList();
         var existing = (await dbContext.BoardingAttendances
-                .Where(a => a.Date == request.Date && stayIds.Contains(a.BoardingEnrollmentId))
+                .Where(a => a.Date == request.Date && a.SessionId == session.Id && studentIds.Contains(a.StudentId))
                 .ToListAsync(cancellationToken))
-            .ToDictionary(a => a.BoardingEnrollmentId);
+            .ToDictionary(a => a.StudentId);
 
         var seen = new HashSet<Guid>();
         var lines = new List<AttendanceLineResult>();
@@ -65,7 +85,7 @@ public class RecordAttendanceCommandHandler(IApplicationDbContext dbContext, Tim
                 continue;
             }
 
-            if (!inDormitory.Contains(entry.BoarderId))
+            if (!studentByStay.TryGetValue(entry.BoarderId, out var studentId))
             {
                 lines.Add(Rejected(entry, "NOT_IN_DORMITORY", "Ce pensionnaire n'a pas de lit dans ce pavillon."));
                 continue;
@@ -84,7 +104,7 @@ public class RecordAttendanceCommandHandler(IApplicationDbContext dbContext, Tim
                 note = AttendanceRules.OnLeaveNote;
             }
 
-            if (existing.TryGetValue(entry.BoarderId, out var row))
+            if (existing.TryGetValue(studentId, out var row))
             {
                 row.IsPresent = entry.IsPresent;
                 row.Note = note;
@@ -94,6 +114,8 @@ public class RecordAttendanceCommandHandler(IApplicationDbContext dbContext, Tim
                 dbContext.BoardingAttendances.Add(new BoardingAttendance
                 {
                     SchoolId = dormitory.SchoolId,
+                    SessionId = session.Id,
+                    StudentId = studentId,
                     BoardingEnrollmentId = entry.BoarderId,
                     Date = request.Date,
                     IsPresent = entry.IsPresent,
@@ -109,15 +131,17 @@ public class RecordAttendanceCommandHandler(IApplicationDbContext dbContext, Tim
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DuplicateRecordException ex)
-            when (ex.TechnicalDetail.Contains("UX_boarding_attendances_night", StringComparison.OrdinalIgnoreCase))
+            when (ex.TechnicalDetail.Contains("UX_boarding_attendances_session_day", StringComparison.OrdinalIgnoreCase)
+                  || ex.TechnicalDetail.Contains("UX_attendance_sessions_name", StringComparison.OrdinalIgnoreCase))
         {
-            // Course : un autre opérateur a saisi la même nuit entre notre lecture et notre écriture.
+            // Course : un autre opérateur a saisi la même session le même jour (ou créé « Appel de nuit » avant nous) entre notre
+            // lecture et notre écriture.
             throw new BusinessRuleException(
                 "Ce pointage vient d'être saisi par quelqu'un d'autre. Rechargez la feuille d'appel.", "ATTENDANCE_CONFLICT");
         }
 
         var saved = lines.Count(l => l.Outcome == "Saved");
-        return new RecordAttendanceResult(request.Date, request.DormitoryId, saved, lines.Count - saved, lines);
+        return new RecordAttendanceResult(request.Date, request.DormitoryId, saved, lines.Count - saved, lines, session.Id);
     }
 
     private static AttendanceLineResult Rejected(AttendanceEntryInput entry, string code, string message) =>

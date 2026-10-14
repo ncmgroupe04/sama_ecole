@@ -76,6 +76,78 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("AbsenceJustifications");
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.AttendanceSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TimeLabel")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("UX_attendance_sessions_name")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("attendance_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_attendance_sessions_days", "\"Days\" BETWEEN 1 AND 127");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.AttendanceSheet", b =>
                 {
                     b.Property<Guid>("Id")
@@ -280,7 +352,7 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("BoardingEnrollmentId")
+                    b.Property<Guid?>("BoardingEnrollmentId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -311,6 +383,12 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -325,14 +403,18 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BoardingEnrollmentId", "Date")
-                        .IsUnique()
-                        .HasDatabaseName("UX_boarding_attendances_night")
-                        .HasFilter("\"IsDeleted\" = false");
-
                     b.HasIndex("SchoolId", "BoardingEnrollmentId");
 
                     b.HasIndex("SchoolId", "Date");
+
+                    b.HasIndex("SchoolId", "StudentId");
+
+                    b.HasIndex("SchoolId", "SessionId", "Date");
+
+                    b.HasIndex("StudentId", "SessionId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("UX_boarding_attendances_session_day")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("boarding_attendances", (string)null);
                 });
@@ -6747,6 +6829,15 @@ namespace SamaEcole.Persistence.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.AttendanceSession", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.AttendanceSheet", b =>
                 {
                     b.HasOne("SamaEcole.Domain.Entities.ScheduleSlot", null)
@@ -6817,6 +6908,19 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.BoardingEnrollment", null)
                         .WithMany()
                         .HasForeignKey("SchoolId", "BoardingEnrollmentId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SamaEcole.Domain.Entities.AttendanceSession", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SessionId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "StudentId")
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

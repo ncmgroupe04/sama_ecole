@@ -155,6 +155,7 @@ public interface IApplicationDbContext
     DbSet<BoardingLeave> BoardingLeaves { get; }
 
     DbSet<BoardingAttendance> BoardingAttendances { get; }
+    DbSet<AttendanceSession> AttendanceSessions { get; }
 
     /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
     DbSet<GradeAgeNorm> GradeAgeNorms { get; }
