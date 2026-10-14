@@ -37,7 +37,7 @@
  @* Formulaire de création / modification, dans la page : une fermeture tient en cinq champs. *@
  <form x-show="isFormOpen" x-cloak x-on:submit.prevent="submit()" class="p-4 border-b border-slate-200 space-y-4">
  <div x-show="formErrors.global" x-cloak class="form-error-banner"><span x-text="formErrors.global"></span></div>
- <div class="form-grid">
+ <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
  <div>
  <label for="closure-kind" class="form-label">Nature</label>
  <select id="closure-kind" x-model="form.kind" class="input-field">

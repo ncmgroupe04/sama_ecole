@@ -7,7 +7,7 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
-- **Franco-Arabe — en-tête officiel en arabe** (Paramètres → Établissement) : nom de l'établissement,
+- **Franco-Arabe — en-tête officiel en arabe** (Paramètres → Intégration étatique, sous l'IA et l'IEF français) : nom de l'établissement,
   Inspection d'Académie et IEF en arabe, destinés aux documents bilingues. Facultatifs ; un champ vide
   laisse la ligne arabe à compléter à la main.
 - **Calendrier de fermeture** (Paramètres → Années scolaires) : jours fériés et vacances de l'année,

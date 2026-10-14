@@ -982,7 +982,7 @@ lui-même (voir ci-dessous).
   signatures officielles**, **Années scolaires**, **Mensualités & autorisations de caisse**,
   **Facturation & historique**, **Paramètres système (Sécurité & Administration)**, **Utilisateurs &
   rôles**, **Journal d'audit**, **Notifications SMS**, **Mentions**.
-- **En-tête officiel en arabe** (onglet Profil : nom de l'établissement, IA et IEF en arabe, facultatifs) et
+- **En-tête officiel en arabe** (onglet Intégration étatique, sous l'IA et l'IEF français : nom de l'établissement, IA et IEF en arabe, facultatifs) et
   **Calendrier de fermeture** (onglet Années scolaires : jours fériés et vacances, libellé arabe facultatif) —
   socle du cahier de roulement bilingue Franco-Arabe (Bloc 5). Un champ arabe vide laisse la ligne à compléter à
   la main ; le calendrier ne change pas le refus d'appel un jour de repos.
