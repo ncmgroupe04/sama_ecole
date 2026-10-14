@@ -55,6 +55,27 @@ public class SchoolRegistrationRequest : AuditableEntity
     public SchoolSizeTier? SizeTier { get; set; }
 
     /// <summary>
+    /// OFFRE PAR TRANCHE D'EFFECTIF (privé uniquement) : profil d'enseignement choisi. NULL pour une demande
+    /// antérieure aux tranches ou pour un public, qui suivent la grille historique (cycles × taille). Quand
+    /// <see cref="Profile"/> et <see cref="Tier"/> sont renseignés, l'approbation provisionne directement une
+    /// souscription commerciale <c>Active</c> avec ces choix (le Directeur n'a plus d'Onboarding à faire) et le
+    /// montant vient de la grille par tranche (<c>quota_tier_prices</c>), pas de <see cref="SizeTier"/>.
+    /// </summary>
+    public ProfileType? Profile { get; set; }
+
+    /// <summary>L'école héberge des élèves : active le module Internat et la majoration Internat de la grille.</summary>
+    public bool HasBoarding { get; set; }
+
+    /// <summary>
+    /// Cycles académiques cochés (« Maternelle,Primaire,… », forme canonique de ManagedCycleSet). NULL quand aucun n'a
+    /// été coché (Daara de mémorisation, Comptabilité) : l'école démarre alors avec tous les cycles.
+    /// </summary>
+    public string? Cycles { get; set; }
+
+    /// <summary>Tranche d'effectif choisie (offre par tranche). Au moins égale à la tranche minimale de <see cref="EstimatedStudentCount"/>.</summary>
+    public StudentQuotaTier? Tier { get; set; }
+
+    /// <summary>
     /// Plan d'abonnement DÉRIVÉ de l'offre (voir SubscriptionPricingGrid.PlanFor) — jamais saisi : le demandeur ne
     /// choisit plus de « formule », il décrit son établissement. Il ne pilote plus que les DROITS de fonctionnalités
     /// (<see cref="Subscription.Plan"/>) ; le MONTANT, lui, vient de la grille. Enum plutôt que FK : le MVP ne

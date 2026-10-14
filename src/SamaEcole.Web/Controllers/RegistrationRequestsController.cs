@@ -46,7 +46,11 @@ public class RegistrationRequestsController(
         SchoolOwnership? Ownership,
         SchoolCycleProfile? CycleProfile,
         SchoolSizeTier? SizeTier,
-        string? Website);
+        string? Website,
+        ProfileType? Profile = null,
+        bool HasBoarding = false,
+        IReadOnlyList<CycleType>? Cycles = null,
+        StudentQuotaTier? Tier = null);
 
     [HttpPost]
     [EnableRateLimiting(RegistrationRateLimiting.PolicyName)]
@@ -82,7 +86,11 @@ public class RegistrationRequestsController(
                 EstimatedStudentCount = request.EstimatedStudentCount,
                 Ownership = request.Ownership,
                 CycleProfile = request.CycleProfile,
-                SizeTier = request.SizeTier
+                SizeTier = request.SizeTier,
+                Profile = request.Profile,
+                HasBoarding = request.HasBoarding,
+                Cycles = request.Cycles,
+                Tier = request.Tier
             },
             cancellationToken);
 

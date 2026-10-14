@@ -63,6 +63,13 @@ public class SubmitRegistrationRequestHandler(
 
         var trackingReference = await GenerateUniqueReferenceAsync(cancellationToken);
 
+        // Offre par tranche d'effectif : le profil de cycles de la grille historique se DÉDUIT des cycles cochés (les
+        // cycles, eux, sont toujours stockés tels que cochés). Sans profil ni tranche : l'offre historique, inchangée.
+        var isTieredOffer = request.Profile.HasValue && request.Tier.HasValue;
+        var cycleProfile = isTieredOffer
+            ? RegistrationOffer.CycleProfileFor(request.Cycles ?? [])
+            : request.CycleProfile!.Value;
+
         var registrationRequest = new SchoolRegistrationRequest
         {
             TrackingReference = trackingReference,
@@ -75,13 +82,18 @@ public class SubmitRegistrationRequestHandler(
             City = string.IsNullOrWhiteSpace(request.City) ? null : request.City.Trim(),
             Region = string.IsNullOrWhiteSpace(request.Region) ? null : request.Region.Trim(),
             EstimatedStudentCount = request.EstimatedStudentCount,
-            // Validés non nuls et cohérents (SubmitRegistrationRequestValidator) avant d'arriver ici. Le palier n'a de sens
-            // que pour le privé (forfait) ; un public est facturé par élève, sur devis.
+            // Validés non nuls et cohérents (SubmitRegistrationRequestValidator) avant d'arriver ici.
             Ownership = request.Ownership!.Value,
-            CycleProfile = request.CycleProfile!.Value,
-            SizeTier = request.Ownership == SchoolOwnership.Private ? request.SizeTier : null,
+            CycleProfile = cycleProfile,
+            // Le palier de la grille historique n'a de sens que pour un privé SANS offre par tranche ; un public est
+            // facturé par élève, sur devis, et une offre par tranche se facture d'après la tranche.
+            SizeTier = request.Ownership == SchoolOwnership.Private && !isTieredOffer ? request.SizeTier : null,
+            Profile = request.Profile,
+            HasBoarding = isTieredOffer && request.HasBoarding,
+            Cycles = isTieredOffer ? RegistrationOffer.SerializeCycles(request.Cycles) : null,
+            Tier = request.Tier,
             // Déduit de l'offre : le demandeur ne choisit plus de « formule » (SubscriptionPricingGrid.PlanFor).
-            RequestedPlan = SubscriptionPricingGrid.PlanFor(request.CycleProfile!.Value)
+            RequestedPlan = SubscriptionPricingGrid.PlanFor(cycleProfile)
         };
 
         dbContext.SchoolRegistrationRequests.Add(registrationRequest);
@@ -204,6 +216,27 @@ public class SubmitRegistrationRequestHandler(
     }
 
     /// <summary>
+    /// « Privé — cycles : Bicycle — taille : Medium » pour une demande historique. Une offre par tranche ne montre pas le
+    /// profil de cycles de la grille (DÉDUIT : un établissement préscolaire seul y figure sous « Primaire ») : ses cycles
+    /// réellement cochés sont sur la ligne d'offre qui suit.
+    /// </summary>
+    private static string TypeSummary(SchoolRegistrationRequest r)
+    {
+        var ownership = r.Ownership == SchoolOwnership.Public ? "Public" : "Privé";
+
+        return r is { Profile: not null, Tier: not null }
+            ? ownership
+            : $"{ownership} — cycles : {r.CycleProfile}{(r.SizeTier is { } tier ? $" — taille : {tier}" : "")}";
+    }
+
+    /// <summary>Lignes de l'offre par tranche d'effectif pour l'alerte Super Admin ; vide pour une demande historique.</summary>
+    private static string OfferSummary(SchoolRegistrationRequest r) =>
+        r is { Profile: { } profile, Tier: { } tier }
+            ? $"Offre par tranche : {profile} — tranche {tier} — internat : {(r.HasBoarding ? "oui" : "non")}"
+              + $" — cycles cochés : {r.Cycles ?? "aucun"}"
+            : string.Empty;
+
+    /// <summary>
     /// Ne transmet ni mot de passe ni hash — seulement les champs déjà visibles depuis
     /// <c>GET /admin/registration-requests</c>. Le lien mène au tableau de bord Super Admin
     /// (authentifié) : jamais un lien d'approbation à usage unique, qui ferait d'un simple GET depuis
@@ -221,7 +254,8 @@ public class SubmitRegistrationRequestHandler(
              Établissement : {registrationRequest.SchoolName}
              Ville / région : {registrationRequest.City ?? "—"} / {registrationRequest.Region ?? "—"}
              Effectif estimé : {registrationRequest.EstimatedStudentCount?.ToString() ?? "—"}
-             Type : {(registrationRequest.Ownership == SchoolOwnership.Public ? "Public" : "Privé")} — cycles : {registrationRequest.CycleProfile}{(registrationRequest.SizeTier is { } tier ? $" — taille : {tier}" : "")}
+             Type : {TypeSummary(registrationRequest)}
+             {OfferSummary(registrationRequest)}
              Plan d'abonnement déduit : {registrationRequest.RequestedPlan}
 
              Directeur : {registrationRequest.DirectorFullName}

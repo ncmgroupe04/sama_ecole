@@ -1,0 +1,28 @@
+@*
+    Bandeau de quota d'élèves (tableau de bord Directeur / Secrétariat). Autonome : son propre x-data `quotaBanner`
+    (wwwroot/js/quota-banner.js, à charger par la page qui l'inclut). Invisible tant que l'école est dans son quota.
+
+    Avertissement doux (ambre) dans la tolérance ; message de blocage (rouge) au-delà. « Passer à la tranche X » ouvre la modale
+    universelle « Mise à jour de votre abonnement ».
+*@
+<div x-data="quotaBanner()" x-cloak x-show="visible" role="status" aria-live="polite"
+     x-bind:class="isExceeded ? 'border-danger bg-danger-bg' : 'border-warning bg-warning-bg'"
+     class="mb-6 rounded-xl border-l-4 p-5">
+ <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+ <div class="flex items-start gap-3">
+ <svg class="mt-0.5 h-5 w-5 flex-shrink-0" x-bind:class="isExceeded ? 'text-danger' : 'text-warning'" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-alert-circle"></use></svg>
+ <div>
+ <p class="text-sm font-semibold text-slate-900" x-text="title"></p>
+ <p class="mt-1 text-sm text-slate-700" x-text="message"></p>
+ <p x-cloak x-show="hasPendingRequest" class="mt-1 text-sm font-medium text-slate-800">
+ Votre demande de changement de tranche est en cours d'examen par notre équipe.
+ </p>
+ </div>
+ </div>
+ <button type="button" x-cloak x-show="canRequestUpgrade" x-on:click="upgrade()"
+         x-bind:disabled="$store.subscriptionChange.isLoading"
+         class="btn-modal-primary group shrink-0 disabled:opacity-60">
+ <span x-text="upgradeLabel"></span>
+ </button>
+ </div>
+</div>

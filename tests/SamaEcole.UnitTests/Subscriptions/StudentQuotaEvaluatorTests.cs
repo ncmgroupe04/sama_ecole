@@ -12,7 +12,9 @@ namespace SamaEcole.UnitTests.Subscriptions;
 public class StudentQuotaEvaluatorTests
 {
     [Theory]
+    [InlineData(StudentQuotaTier.Tier_100, 100, 110)]
     [InlineData(StudentQuotaTier.Tier1_150, 150, 160)]
+    [InlineData(StudentQuotaTier.Tier_250, 250, 260)]
     [InlineData(StudentQuotaTier.Tier2_400, 400, 420)]
     [InlineData(StudentQuotaTier.Tier3_800, 800, 830)]
     [InlineData(StudentQuotaTier.Tier4_Custom, int.MaxValue, int.MaxValue)]

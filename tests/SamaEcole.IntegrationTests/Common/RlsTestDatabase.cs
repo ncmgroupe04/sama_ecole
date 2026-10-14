@@ -104,7 +104,13 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     /// <summary>Garde de quota branchée sur le contexte (donc le rôle) fourni, pour construire les Handlers à la main.</summary>
     public SamaEcole.Application.Subscriptions.StudentQuotaGuard NewQuotaGuard(ApplicationDbContext dbContext, Guid schoolId) =>
-        new(new SamaEcole.Application.Subscriptions.TenantSubscriptionService(dbContext, new StubTenantProvider(schoolId)));
+        new(
+            new SamaEcole.Application.Subscriptions.TenantSubscriptionService(dbContext, new StubTenantProvider(schoolId)),
+            new SamaEcole.Application.Subscriptions.Changes.OverQuotaTracker(dbContext, new StubTenantProvider(schoolId), TimeProvider.System));
+
+    /// <summary>Verrou d'abonnement branché sur le contexte (donc le rôle) fourni, pour construire à la main les Handlers qu'il garde.</summary>
+    public SamaEcole.Application.Subscriptions.Changes.SubscriptionChangeService NewChangeService(ApplicationDbContext dbContext, Guid schoolId) =>
+        new(dbContext, new StubTenantProvider(schoolId), new SamaEcole.Application.Subscriptions.Pricing.SubscriptionPricingEngine(dbContext));
 
     /// <summary>
     /// AuthStore branché sur le rôle APPLICATIF et SANS tenant — exactement la situation du login :

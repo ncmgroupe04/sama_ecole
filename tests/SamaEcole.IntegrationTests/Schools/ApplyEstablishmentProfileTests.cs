@@ -35,7 +35,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
 
         var result = await new ApplyEstablishmentProfileCommandHandler(
-                db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
             .Handle(new ApplyEstablishmentProfileCommand("DaaraInternat"), CancellationToken.None);
 
         result.ProfileEtablissement.Should().Be("DaaraInternat");
@@ -51,7 +51,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
 
         var result = await new ApplyEstablishmentProfileCommandHandler(
-                db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
             .Handle(new ApplyEstablishmentProfileCommand("Simplifie"), CancellationToken.None);
 
         result.ProfileEtablissement.Should().Be("Simplifie");
@@ -65,7 +65,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using (var db = _db.NewAppContext(Ecole))
         {
             await new ApplyEstablishmentProfileCommandHandler(
-                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
                 .Handle(new ApplyEstablishmentProfileCommand("FrancoArabe"), CancellationToken.None);
         }
 
@@ -82,7 +82,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using (var db = _db.NewAppContext(Ecole))
         {
             await new ApplyEstablishmentProfileCommandHandler(
-                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
                 .Handle(new ApplyEstablishmentProfileCommand("DaaraMemorisation"), CancellationToken.None);
         }
 
@@ -97,14 +97,16 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Changing_The_Profile_Keeps_The_Commercial_Subscription_Aligned_But_Leaves_Tier_And_Status_Alone()
+    public async Task During_Onboarding_Changing_The_Profile_Keeps_The_Commercial_Subscription_Aligned_And_Leaves_Tier_And_Status_Alone()
     {
         await using (var owner = _db.NewOwnerContext())
         {
+            // Pendant l'Onboarding le profil se choisit librement : le verrou d'abonnement ne s'applique pas encore.
             var subscription = RlsTestDatabase.UnlimitedSubscription(Ecole);
             subscription.StudentQuotaTier = StudentQuotaTier.Tier2_400;
             subscription.MaxStudentLimit = 400;
             subscription.SoftQuotaLimit = 420;
+            subscription.Status = TenantSubscriptionStatus.PendingOnboarding;
             owner.TenantSubscriptions.Add(subscription);
             await owner.SaveChangesAsync(CancellationToken.None);
         }
@@ -112,7 +114,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using (var db = _db.NewAppContext(Ecole))
         {
             await new ApplyEstablishmentProfileCommandHandler(
-                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
                 .Handle(new ApplyEstablishmentProfileCommand("DaaraInternat"), CancellationToken.None);
         }
 
@@ -121,7 +123,59 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         row.ProfileType.Should().Be(ProfileType.InternatDaara);
         (row.IsInternatEnabled, row.IsCoranModuleEnabled).Should().Be((true, true));
         (row.StudentQuotaTier, row.MaxStudentLimit, row.SoftQuotaLimit, row.Status)
-            .Should().Be((StudentQuotaTier.Tier2_400, 400, 420, TenantSubscriptionStatus.Active));
+            .Should().Be((StudentQuotaTier.Tier2_400, 400, 420, TenantSubscriptionStatus.PendingOnboarding));
+    }
+
+    [Fact]
+    public async Task Once_The_Subscription_Is_Active_Changing_The_Profile_Is_Intercepted_And_Nothing_Is_Written()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.TenantSubscriptions.Add(RlsTestDatabase.UnlimitedSubscription(Ecole));
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var db = _db.NewAppContext(Ecole))
+        {
+            var act = async () => await new ApplyEstablishmentProfileCommandHandler(
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                .Handle(new ApplyEstablishmentProfileCommand("DaaraInternat"), CancellationToken.None);
+
+            var thrown = (await act.Should().ThrowAsync<SamaEcole.Application.Common.Exceptions.SubscriptionChangeRequiredException>()).Which;
+
+            thrown.Preview.HasChanges.Should().BeTrue();
+            thrown.Preview.Request.Profile.Should().Be(ProfileType.InternatDaara);
+            thrown.Preview.Changes.Select(c => c.Field).Should().Contain("Profile");
+        }
+
+        await using var check = _db.NewAppContext(Ecole);
+        check.TenantSubscriptions.Single().ProfileType.Should().Be(ProfileType.EnseignementGeneral, "rien n'a été écrit");
+        check.SchoolSettings.Should().BeEmpty("l'interception précède toute écriture, y compris la création des réglages");
+    }
+
+    [Fact]
+    public async Task Once_The_Subscription_Is_Active_Reapplying_The_Current_Profile_Changes_Nothing()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var subscription = RlsTestDatabase.UnlimitedSubscription(Ecole);
+            subscription.IsInternatEnabled = true; // droit souscrit en plus du preset du profil Général
+            owner.TenantSubscriptions.Add(subscription);
+            owner.SchoolSettings.Add(new SchoolSettings { SchoolId = Ecole, ProfileEtablissement = ProfileEtablissement.General, IsInternatEnabled = true });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var db = _db.NewAppContext(Ecole))
+        {
+            var result = await new ApplyEstablishmentProfileCommandHandler(
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                .Handle(new ApplyEstablishmentProfileCommand("General"), CancellationToken.None);
+
+            result.IsInternatEnabled.Should().BeTrue("réappliquer le preset aurait effacé le module souscrit en plus");
+        }
+
+        await using var check = _db.NewAppContext(Ecole);
+        check.TenantSubscriptions.Single().IsInternatEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -139,7 +193,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         {
             await using var db = _db.NewAppContext(Ecole);
             var result = await new ApplyEstablishmentProfileCommandHandler(
-                    db, new StubTenantProvider(Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                    db, new StubTenantProvider(Ecole), _db.NewChangeService(db, Ecole), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
                 .Handle(new ApplyEstablishmentProfileCommand(profile), CancellationToken.None);
 
             result.ManagedCycles.Should().Equal("Primaire", "College");
@@ -163,7 +217,7 @@ public class ApplyEstablishmentProfileTests : IAsyncLifetime
         await using var db = _db.NewAppContext(schoolSansReglages);
 
         var result = await new ApplyEstablishmentProfileCommandHandler(
-                db, new StubTenantProvider(schoolSansReglages), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
+                db, new StubTenantProvider(schoolSansReglages), _db.NewChangeService(db, schoolSansReglages), NullLogger<ApplyEstablishmentProfileCommandHandler>.Instance)
             .Handle(new ApplyEstablishmentProfileCommand("General"), CancellationToken.None);
 
         result.ProfileEtablissement.Should().Be("General");

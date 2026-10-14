@@ -325,13 +325,20 @@ Deux demandes **en attente** peuvent partager le même `DirectorEmail` (« une �
 | `SchoolName` | `varchar(200)` | NOT NULL |
 | `SchoolAddress` | `varchar(300)` | NULL |
 | `City`, `Region` | `varchar(100)` | NULL |
-| `EstimatedStudentCount` | `int` | NULL |
+| `EstimatedStudentCount` | `int` | NULL — **obligatoire** (> 0) pour une offre par tranche : il borne la tranche choisie |
+| `Ownership`, `CycleProfile`, `SizeTier` | `varchar(20)` | Offre de la grille **historique** (privé/public × cycles × taille Petit/Moyen/Grand). Pour une offre par tranche, `CycleProfile` est **déduit** des cycles cochés (aucun → `Primaire`, un seul → ce cycle, deux → `Bicycle`, trois ou quatre → `Complexe`) et `SizeTier` reste NULL |
+| `Profile` | `varchar(30)` | NULL — `ProfileType` (§6). Avec `Tier`, signe une **offre par tranche d'effectif** (privé uniquement) ; NULL pour toute demande antérieure et pour un public |
+| `HasBoarding` | `bool` | NOT NULL, défaut `false` — l'école héberge des élèves : active le module Internat et la majoration Internat de `quota_tier_prices` |
+| `Cycles` | `varchar(60)` | NULL — cycles académiques cochés (« Maternelle,Primaire,… », forme canonique) ; NULL pour un Daara de mémorisation ou une Comptabilité (l'école démarre alors avec tous les cycles) |
+| `Tier` | `varchar(20)` | NULL — `StudentQuotaTier` choisie, parmi les quatre tranches tarifées. Règle : tranche ≥ tranche minimale de `EstimatedStudentCount` ; au-delà de 400 élèves (ou `Tier3_800`/`Tier4_Custom`) : « Grand Groupe », sur devis, refusé en libre-service |
 | `RequestedPlanId` | `uuid` | FK `SubscriptionPlans.Id` |
 | `Status` | `varchar(20)` | CHECK IN (`PENDING`,`APPROVED`,`REJECTED`) |
 | `RejectionReason` | `text` | NULL, obligatoire applicativement si `Status = REJECTED` |
 | `ReviewedBy` | `uuid` | FK `Users.Id` (Super Admin), NULL tant que `Status = PENDING` |
 | `ReviewedAt` | `timestamptz` | NULL tant que `Status = PENDING` |
 | `CreatedSchoolId` | `uuid` | FK `Schools.Id`, NULL, renseigné uniquement après approbation effective |
+
+**Approbation d'une offre par tranche.** La soumission et l'approbation appliquent la même règle (`RegistrationOffer.Check`) : la demande a pu attendre. Au lieu de `provision_tenant_subscription` (souscription `PendingOnboarding`), l'approbation appelle `provision_configured_tenant_subscription(...)` (migration `AddRegistrationOfferAndConfiguredProvisioning`, `SECURITY DEFINER`, `search_path` figé, `EXECUTE` retiré à `PUBLIC` et accordé au seul rôle applicatif) : elle insère la souscription **`Active`** avec le profil, la tranche, ses plafonds et les quatre modules, et aligne la ligne `school_settings` créée par `provision_school_director` (profil, modules, `ManagedCycles`). Garde : elle renvoie `NULL` si l'école a déjà une souscription vivante et lève une exception (donc annule la transaction) si les réglages sont introuvables ou ont déjà un profil. Modules : preset du profil, auquel l'Internat s'**ajoute** si `HasBoarding` (il n'en retire jamais un : les Halqas vivent derrière le module Internat) ; la majoration de la grille, elle, ne dépend que de `HasBoarding`. Le montant facturé vient de `SubscriptionPricingEngine` (§5.16) quand `Tier` est renseigné, de la grille historique sinon.
 
 ### 5.8 `SubscriptionPayments` (table plateforme)
 
@@ -543,10 +550,12 @@ Distincte de `subscriptions` (§5.6, facturation : formule, expiration, paiement
 | `SchoolId` | `uuid` | FK `schools.Id` RESTRICT, NOT NULL ; index unique partiel `UX_tenant_subscriptions_SchoolId WHERE NOT IsDeleted` |
 | `ProfileType` | `varchar(30)` | NOT NULL — `ProfileType` (§6), enum stocké en texte |
 | `StudentQuotaTier` | `varchar(20)` | NOT NULL — `StudentQuotaTier` (§6) |
-| `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (150, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
-| `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (160, 420, 830, ou calculée) |
+| `MaxStudentLimit` | `int` | NOT NULL, `CHECK > 0` — plafond nominal (100, 150, 250, 400, 800, ou valeur Super Admin ; `int.MaxValue` = illimité) |
+| `SoftQuotaLimit` | `int` | NOT NULL, `CHECK >= MaxStudentLimit` — tolérance (110, 160, 260, 420, 830, ou calculée) |
 | `Status` | `varchar(20)` | NOT NULL — `TenantSubscriptionStatus` (§6) |
-| `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés |
+| `IsPedagogyEnabled`, `IsFinanceEnabled`, `IsInternatEnabled`, `IsCoranModuleEnabled` | `bool` | NOT NULL — les 4 modules clés, tels que SOUSCRITS (**droits**) : les réglages de l'école (`school_settings`) en sont les préférences. Le Directeur active ou coupe librement un module souscrit ; en activer un qui ne l'est pas passe par une demande de changement (§5.17) |
+| `HasBoarding` | `bool` | NOT NULL, défaut `false` — drapeau de FACTURATION « l'école héberge des élèves » (majoration Internat de `quota_tier_prices`), distinct du module Internat que les profils Franco-Arabe et Daara incluent sans pensionnaires |
+| `OverQuotaSince` | `timestamptz` | NULL — date du premier constat de dépassement du plafond nominal ; posée et levée par les évaluations de quota (création d'élève, import, `GET /tenant-subscription/quota`), jamais à chaque appel ; sert à relancer les écoles en dépassement |
 
 Règle de quota : effectif ≤ `MaxStudentLimit` → admis ; entre `MaxStudentLimit` (exclu) et `SoftQuotaLimit` (inclus) →
 admis avec avertissement ; au-delà → refusé. Aucune création d'élève tant que `Status ≠ Active` (en particulier
@@ -566,6 +575,56 @@ durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni l
 `ElementairePrimaire` → `Elementaire`, `General` → `EnseignementGeneral`, `FrancoArabe` → `FrancoArabe`,
 `DaaraInternat` → `InternatDaara`) ; sans profil → `EnseignementGeneral`. Les 4 modules sont recopiés depuis
 `school_settings` (source de vérité de l'affichage tant que la sidebar n'est pas rebranchée).
+
+### 5.16 Grille tarifaire par tranche d'effectif — `quota_tier_prices`
+
+Table **plateforme** (comme `promo_codes`) : aucun `SchoolId`, ni Global Query Filter tenant ni RLS. Une ligne par tranche
+**tarifée** (`Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`) ; au-delà, offre « Grand Groupe » sur devis, donc aucune ligne.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `Tier` | `varchar(20)` | NOT NULL, index unique — `StudentQuotaTier` (§6) |
+| `MonthlyXof` | `numeric(12,2)` | NOT NULL — tarif mensuel standard (FCFA) |
+| `AnnualXof` | `numeric(12,2)` | NOT NULL — tarif annuel d'engagement ; saisi, jamais déduit du mensuel (10 mois payés, 2 offerts) |
+| `BoardingSurchargeMonthlyXof`, `BoardingSurchargeAnnualXof` | `numeric(12,2)` | NOT NULL, `CHECK >= 0` — majoration si l'école a un Internat (0 = aucune) |
+
+`CHECK MonthlyXof > 0 AND AnnualXof > 0`. Verrou optimiste `xmin`. La migration `AddQuotaTierPrices` sème la grille de départ
+du 2026-10-13 (5 000 / 10 000 / 15 000 / 25 000 FCFA par mois ; 50 000 / 100 000 / 150 000 / 250 000 par an, valeurs
+en dur) et accorde `SELECT, UPDATE` seulement au rôle applicatif : les lignes ne sont jamais créées par l'application.
+Distincte de la grille historique `SubscriptionPricing:Grid` (cycles × taille Petit/Moyen/Grand, `appsettings.json`), qui
+continue de facturer les demandes d'inscription antérieures aux tranches. Aucune entrée `audit_logs` (ce journal est
+rattaché à une école) : la trace d'une modification est `UpdatedAt`/`UpdatedBy` de la ligne et le journal applicatif.
+
+### 5.17 Demandes de changement d'abonnement — `subscription_change_requests`
+
+Table **tenant** (RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE`, aucun `DELETE`, non purgée par `reset_school_data`) :
+une demande par changement de profil, de cycles, de tranche ou d'activation d'un module non souscrit. Le Directeur ne modifie
+**jamais** ces choix directement : sa tentative est interceptée (`409 SUBSCRIPTION_CHANGE_REQUIRED`, rien n'est écrit) et devient
+une demande que le Super Admin valide, une fois le règlement convenu. Index unique partiel `UX_subscription_change_requests_pending_school`
+(`WHERE Status = 'Pending' AND NOT IsDeleted`) : une seule demande en attente par école.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id`, `SchoolId` | `uuid` | PK ; FK `schools.Id` RESTRICT |
+| `Status` | `varchar(20)` | `SubscriptionChangeStatus` : `Pending`, `Approved`, `Rejected`, `Cancelled` |
+| `IsDowngrade` | `bool` | Réduction (tranche inférieure, cycle retiré, module souscrit qui disparaît) : traitée par le support |
+| `Current*` | `ProfileType`, `StudentQuotaTier`, `Cycles`, `HasBoarding`, 4 modules | État de l'école AU MOMENT de la demande |
+| `Target*` | idem + `EstablishmentProfile`, `MaxStudentLimit`, `SoftQuotaLimit` | État COMPLET demandé : c'est lui que la validation écrit (`CHECK` plafond > 0, tolérance ≥ plafond, cycles non vides) |
+| `CurrentMonthlyXof`, `CurrentAnnualXof`, `TargetMonthlyXof`, `TargetAnnualXof` | `numeric(12,2)` | NULL — tarifs de la grille par tranche annoncés au Directeur ; NULL si sur devis (« Grand Groupe ») ou si l'école suit encore l'ancienne grille |
+| `RequestedBy`, `DirectorNote` | `uuid`, `varchar(500)` | Demandeur et précision facultative |
+| `RequestedByName`, `RequestedByEmail` | `varchar(200)` | NULL — nom et adresse du demandeur, FIGÉS à la demande (la table des comptes est sous RLS : le Super Admin ne peut pas les relire) ; c'est à cette adresse que part l'e-mail de décision. Migration `AddSubscriptionChangeRequestRequesterContact` |
+| `ReviewedBy`, `ReviewedAt`, `ReviewNote` | `uuid`, `timestamptz`, `varchar(500)` | Décision du Super Admin ; motif obligatoire d'un rejet |
+
+Les lectures et la décision du Super Admin (sans `SchoolId` de session) passent par des fonctions `SECURITY DEFINER` (`search_path`
+figé, `EXECUTE` retiré à `PUBLIC`, accordé au seul rôle applicatif) : `list_subscription_change_requests(text, uuid)`,
+`resolve_subscription_change_request(uuid, boolean, uuid, text)` et `list_over_quota_schools()`. `resolve_…` applique l'état cible
+stocké à `tenant_subscriptions` et `school_settings` dans une seule instruction, après trois gardes : `STALE_CHANGE_REQUEST` (profil,
+tranche ou cycles de l'école ont changé depuis la demande), `TARGET_TIER_TOO_SMALL` (l'effectif dépasse déjà la tranche demandée),
+`CYCLE_HAS_CLASSROOMS` (un cycle retiré contient des classes vivantes). Elle renvoie `NULL` si la demande n'est plus en attente.
+La facturation suit alors la tranche COURANTE de la souscription (`SubscriptionAmountResolver`), tant que l'école est facturée par
+tranche (inscrite avec une tranche, ou demande validée). La migration `AddSubscriptionChangeRequests` élargit les droits de chaque
+école existante à ses réglages actuels (jamais l'inverse), pour ne rien retirer à ce qu'elle utilise déjà.
 
 ## 6. Dictionnaire des énumérations
 
@@ -588,7 +647,7 @@ durcissement) : tranche, plafonds et statut uniquement — jamais le profil ni l
 | `SubscriptionPaymentStatus` | `INITIATED`, `CONFIRMED`, `FAILED` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR` |
 | `ProfileType` | `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` (texte, `tenant_subscriptions`) |
-| `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` (texte) |
+| `StudentQuotaTier` | `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom`, `Tier_100`, `Tier_250` (texte). L'ordre de l'enum ne signifie rien (les deux dernières ont été ajoutées en fin pour conserver `default = Tier1_150`) ; l'échelle croissante est `QuotaTierResolver.Ladder` : `Tier_100` (100/110), `Tier1_150` (150/160), `Tier_250` (250/260), `Tier2_400` (400/420), `Tier3_800` (800/830), `Tier4_Custom`. Au-delà de 400 : offre « Grand Groupe », sur devis. |
 | `TenantSubscriptionStatus` | `PendingOnboarding`, `PendingApproval`, `Active`, `Suspended`, `Expired` (texte — axe distinct de `SubscriptionStatus`) |
 
 Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou type `enum` PostgreSQL), le domaine C# (`enum` typé) et le contrat API (Volume 4) — aucune chaîne de caractère magique ne doit être dupliquée entre ces trois couches.

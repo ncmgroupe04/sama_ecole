@@ -43,6 +43,9 @@
  @* Modale universelle « Accès refusé » : store Alpine + pont depuis window.api. Script classique
     (enregistre un écouteur alpine:init), donc avant Alpine différé ; après api.js dont il dépend. *@
  <script src="~/js/access-denied.js" asp-append-version="true"></script>
+ @* Modale universelle « Mise à jour de votre abonnement » : même schéma (store Alpine + pont depuis window.api, sur les 409
+    SUBSCRIPTION_CHANGE_REQUIRED). Script classique avant Alpine différé ; après api.js dont il dépend. *@
+ <script src="~/js/subscription-change.js" asp-append-version="true"></script>
  @* Modale universelle « Changer mon mot de passe » : même schéma (store Alpine), ouverte depuis
     la carte de profil de la barre latérale — après api.js, dont submit() dépend. *@
  <script src="~/js/change-password.js" asp-append-version="true"></script>
@@ -826,6 +829,10 @@
  @* Modale universelle « Accès refusé » — un seul montage pour toute l'application (piloté par le
     store Alpine `accessDenied`, alimenté par window.api sur les 403 « FORBIDDEN »). *@
  @await Html.PartialAsync("_AccessDeniedModal")
+
+ @* Modale universelle « Mise à jour de votre abonnement » — un seul montage pour toute l'application (store Alpine
+    `subscriptionChange`, alimenté par window.api sur les 409 « SUBSCRIPTION_CHANGE_REQUIRED » et par le bandeau de quota). *@
+ @await Html.PartialAsync("_SubscriptionChangeModal")
 
  @* Modale universelle « Changer mon mot de passe » — un seul montage pour toute l'application,
     ouverte depuis la carte de profil de la barre latérale ci-dessus (store Alpine

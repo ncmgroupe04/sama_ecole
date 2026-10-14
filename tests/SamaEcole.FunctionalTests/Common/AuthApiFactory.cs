@@ -123,8 +123,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             MaxStudentLimit = int.MaxValue,
             SoftQuotaLimit = int.MaxValue,
             Status = TenantSubscriptionStatus.Active,
+            // TOUS les modules sont souscrits : les tests de modules (Internat, Coran…) les activent par les réglages, ce
+            // que le verrou d'abonnement n'autorise que pour un module compris dans les droits. Les tests du verrou lui-même
+            // retirent un droit avec ExecuteOwnerSqlAsync.
             IsPedagogyEnabled = true,
-            IsFinanceEnabled = true
+            IsFinanceEnabled = true,
+            IsInternatEnabled = true,
+            IsCoranModuleEnabled = true
         });
 
         owner.Users.AddRange(SeedUsers(hasher));
@@ -550,12 +555,22 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Souscriptions commerciales (Onboarding & Pricing SaaS) : même raison — elles référencent schools
         // (Restrict). Celle de l'école semée est remise à « Active, illimitée » : des tests la basculent en
         // PendingOnboarding, Suspended, ou lui posent un quota, et le suivant doit la retrouver neuve.
+        // Demandes de changement d'abonnement : elles référencent schools (Restrict) — purgées avec le reste.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM subscription_change_requests;");
+
+        // Séquences de matricules : un test qui crée des élèves dans une école NEUVE en laisse une, qui référence schools (Restrict).
+        // Celle de l'école semée est conservée (ses numéros n'ont pas à repartir de zéro).
+        await owner.Database.ExecuteSqlAsync(
+            $"""DELETE FROM matricule_sequences WHERE "SchoolId" <> {EcoleId};""");
         await owner.Database.ExecuteSqlAsync(
             $"""DELETE FROM tenant_subscriptions WHERE "SchoolId" <> {EcoleId};""");
         await owner.Database.ExecuteSqlAsync(
             $"""
              UPDATE tenant_subscriptions
-                SET "Status" = 'Active', "MaxStudentLimit" = 2147483647, "SoftQuotaLimit" = 2147483647
+                SET "Status" = 'Active', "ProfileType" = 'EnseignementGeneral', "StudentQuotaTier" = 'Tier4_Custom',
+                    "MaxStudentLimit" = 2147483647, "SoftQuotaLimit" = 2147483647,
+                    "IsPedagogyEnabled" = true, "IsFinanceEnabled" = true, "IsInternatEnabled" = true, "IsCoranModuleEnabled" = true,
+                    "HasBoarding" = false, "OverQuotaSince" = NULL
               WHERE "SchoolId" = {EcoleId};
              """);
 

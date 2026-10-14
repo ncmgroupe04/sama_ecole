@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Subscriptions;
 
@@ -11,6 +12,12 @@ namespace SamaEcole.Web.Middleware;
 /// </summary>
 public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
+    /// <summary>Mêmes conventions que les contrôleurs : camelCase, énumérations en chaînes (voir Program.cs › AddJsonOptions).</summary>
+    private static readonly JsonSerializerOptions PreviewJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -83,6 +90,17 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 businessRuleEx.Code ?? "BUSINESS_RULE_VIOLATION",
                 businessRuleEx.Message,
                 businessRuleEx.Details),
+
+            // Modification directe INTERCEPTÉE (profil, cycles, module non souscrit) : elle change l'abonnement, donc elle passe par
+            // une demande que le Super Admin valide. 409 : la saisie est valide, c'est l'état de l'abonnement qui s'y oppose.
+            // `details` porte l'aperçu (changements, tarif ajusté, corps de la demande) pour la modale universelle de l'interface.
+            SubscriptionChangeRequiredException changeEx => (
+                HttpStatusCode.Conflict,
+                "SUBSCRIPTION_CHANGE_REQUIRED",
+                changeEx.Message,
+                // Sérialisé comme le reste de l'API (camelCase, énumérations en chaînes) : ce middleware écrit avec les options par
+                // défaut de System.Text.Json, qui renverraient « HasChanges » et des cycles en nombres.
+                (object?)JsonSerializer.SerializeToElement(changeEx.Preview, PreviewJsonOptions)),
 
             // Quota d'élèves de la souscription (Onboarding & Pricing SaaS) : 422 — c'est le plan de l'école
             // qui refuse, pas l'état d'une ressource. `details` porte les chiffres (effectif, plafond,

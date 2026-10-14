@@ -848,6 +848,13 @@ document.addEventListener('alpine:init', () => {
                 this.configSnapshot = JSON.parse(JSON.stringify(this.config));
                 this.configSaved = showConfirmation;
             } catch (err) {
+                // Module non souscrit activé : le serveur a INTERCEPTÉ l'enregistrement (la modale « Mise à jour de votre abonnement »
+                // s'ouvre) et n'a rien écrit. L'interrupteur que le Directeur vient de basculer doit donc revenir à son état réel,
+                // sans quoi l'écran afficherait « activé » pour un module qui ne l'est pas.
+                if (err && err.code === 'SUBSCRIPTION_CHANGE_REQUIRED' && this.configSnapshot) {
+                    this.config = JSON.parse(JSON.stringify(this.configSnapshot));
+                }
+
                 this.configErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {
                 this.configSaving = false;

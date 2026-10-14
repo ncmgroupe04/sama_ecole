@@ -127,7 +127,7 @@ public class OnboardingAndQuotaEndpointsTests(AuthApiFactory factory) : IClassFi
         await SetSubscriptionAsync("PendingOnboarding", 150, 160);
 
         (await SendAsync(HttpMethod.Post, "/api/v1/onboarding/select-profile", token,
-            new { profile = "Elementaire", tier = "Tier3_800" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { profile = "Elementaire", tier = "Tier2_400" })).StatusCode.Should().Be(HttpStatusCode.OK);
 
         var second = await SendAsync(HttpMethod.Post, "/api/v1/onboarding/select-profile", token,
             new { profile = "ComptabiliteRapports", tier = "Tier1_150" });
@@ -137,19 +137,26 @@ public class OnboardingAndQuotaEndpointsTests(AuthApiFactory factory) : IClassFi
 
         var current = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/onboarding/subscription", token));
         current.GetProperty("profileType").GetString().Should().Be("Elementaire");
-        current.GetProperty("maxStudentLimit").GetInt32().Should().Be(800);
+        current.GetProperty("maxStudentLimit").GetInt32().Should().Be(400);
     }
 
-    [Fact]
-    public async Task The_Custom_Tier_Cannot_Be_Chosen_By_The_School()
+    [Theory]
+    [InlineData("Tier4_Custom")]
+    [InlineData("Tier3_800")]
+    public async Task A_Tier_On_Quote_Cannot_Be_Chosen_By_The_School(string tier)
     {
         var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
         await SetSubscriptionAsync("PendingOnboarding", 150, 160);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/onboarding/select-profile", token,
-            new { profile = "EnseignementGeneral", tier = "Tier4_Custom" });
+            new { profile = "EnseignementGeneral", tier });
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Grand Groupe");
+
+        // Rien n'a été écrit : l'école est toujours à l'Onboarding.
+        var current = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/onboarding/subscription", token));
+        current.GetProperty("status").GetString().Should().Be("PendingOnboarding");
     }
 
     [Fact]

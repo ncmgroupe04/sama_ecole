@@ -1,0 +1,169 @@
+@{
+    ViewData["Title"] = "Changements d'abonnement";
+    Layout = "_SuperAdminLayout";
+}
+
+@* Changements d'abonnement — consomme GET /api/v1/admin/subscription-change-requests (+ approve/reject) et
+   GET /api/v1/admin/over-quota-schools. La fenêtre de décision utilise <modal-shell theme="dark"> comme les autres fenêtres de cette console
+   (toujours sombre). *@
+<div x-data="superAdminSubscriptionChanges()" x-init="load()" class="space-y-8">
+
+    <div>
+        <h1 class="text-xl font-semibold text-white">Changements d'abonnement</h1>
+        <p class="text-sm text-zinc-500 mt-1">
+            Demandes des Directeurs (profil, cycles, tranche, modules) et écoles en dépassement de quota. Valider une demande applique
+            l'état demandé à l'école ; ne le faites qu'une fois le règlement convenu.
+        </p>
+    </div>
+
+    <div x-show="error" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+
+    <div x-show="notice" x-cloak role="status"
+         class="rounded-2xl border px-4 py-3 text-sm"
+         x-bind:class="noticeIsWarning ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'"
+         x-text="notice"></div>
+
+    @* ─────────────────────────────────────────────────────────── Demandes *@
+    <section class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-base font-semibold text-white">Demandes de changement</h2>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrer par statut">
+                <template x-for="option in statusOptions" x-bind:key="option.value">
+                    <button type="button" x-on:click="selectStatus(option.value)"
+                            x-bind:aria-pressed="(statusFilter === option.value).toString()"
+                            class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+                            x-bind:class="statusFilter === option.value ? 'border-sky-500 bg-sky-500/15 text-sky-300' : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-100'"
+                            x-text="option.label"></button>
+                </template>
+            </div>
+        </div>
+
+        <p x-show="!isLoading && requests.length === 0" x-cloak class="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-10 text-center text-sm text-zinc-500">
+            Aucune demande pour ce filtre.
+        </p>
+
+        <template x-for="request in requests" x-bind:key="request.id">
+            <article class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h3 class="text-base font-semibold text-zinc-100" x-text="request.schoolName || 'Établissement'"></h3>
+                        <p class="mt-0.5 text-xs text-zinc-500">Envoyée le <span x-text="formatDate(request.createdAt)"></span></p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span x-show="request.isDowngrade" x-cloak
+                              class="inline-flex items-center rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/20">
+                            Réduction — à traiter par le support
+                        </span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" x-bind:class="statusClasses(request.status)" x-text="statusLabel(request.status)"></span>
+                    </div>
+                </div>
+
+                <ul class="mt-4 divide-y divide-zinc-800/80 rounded-xl border border-zinc-800">
+                    <template x-for="line in request.changes" x-bind:key="line.field">
+                        <li class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-sm">
+                            <span class="text-zinc-400" x-text="line.from"></span>
+                            <span aria-hidden="true" class="text-zinc-600">→</span>
+                            <span class="font-semibold text-zinc-100" x-text="line.to"></span>
+                        </li>
+                    </template>
+                </ul>
+
+                <p class="mt-3 text-sm text-zinc-100"><span class="text-zinc-500">Tarif :</span> <span x-text="priceLine(request)"></span></p>
+                <p x-show="request.directorNote" x-cloak class="mt-2 text-sm text-zinc-400">
+                    <span class="text-zinc-500">Note du Directeur :</span> <span x-text="request.directorNote"></span>
+                </p>
+                <p x-show="request.reviewNote" x-cloak class="mt-2 text-sm text-zinc-400">
+                    <span class="text-zinc-500">Réponse :</span> <span x-text="request.reviewNote"></span>
+                    (<span x-text="formatDate(request.reviewedAt)"></span>)
+                </p>
+
+                <div x-show="request.status === 'Pending'" x-cloak class="mt-4 flex justify-end gap-3">
+                    <button type="button" x-on:click="openDecision(request, 'reject')"
+                            class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-800 transition-colors">Rejeter</button>
+                    <button type="button" x-on:click="openDecision(request, 'approve')"
+                            class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors">Valider</button>
+                </div>
+            </article>
+        </template>
+    </section>
+
+    @* ─────────────────────────────────────────────────────────── Écoles en dépassement *@
+    <section class="space-y-4">
+        <div>
+            <h2 class="text-base font-semibold text-white">Écoles en dépassement de quota</h2>
+            <p class="text-sm text-zinc-500 mt-1">
+                Effectif supérieur au plafond de la tranche. « Depuis » est la date du premier constat ; l'état est relu d'après les élèves.
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800 bg-zinc-950/40">
+                            <th class="py-3 px-4 font-medium">Établissement</th>
+                            <th class="py-3 px-4 font-medium">Tranche</th>
+                            <th class="py-3 px-4 font-medium">Effectif</th>
+                            <th class="py-3 px-4 font-medium">État</th>
+                            <th class="py-3 px-4 font-medium">Depuis</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-800/80">
+                        <tr x-show="!isLoading && overQuota.length === 0" x-cloak>
+                            <td colspan="5" class="py-8 text-center text-sm text-zinc-500">Aucune école en dépassement.</td>
+                        </tr>
+                        <template x-for="school in overQuota" x-bind:key="school.schoolId">
+                            <tr class="hover:bg-zinc-900 transition-colors">
+                                <td class="py-3 px-4 text-sm font-medium text-zinc-100" x-text="school.schoolName"></td>
+                                <td class="py-3 px-4 text-sm text-zinc-400" x-text="tierLabel(school.tier)"></td>
+                                <td class="py-3 px-4 text-sm text-zinc-100 whitespace-nowrap">
+                                    <span x-text="school.studentCount"></span>
+                                    <span class="text-zinc-500">/ <span x-text="school.maxStudentLimit"></span> (tolérance <span x-text="school.softQuotaLimit"></span>)</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" x-bind:class="overQuotaStateClasses(school.state)" x-text="overQuotaStateLabel(school.state)"></span>
+                                </td>
+                                <td class="py-3 px-4 text-sm text-zinc-400" x-text="formatDate(school.overQuotaSince)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    @* ─────────────────────────────────────────────────────────── Décision *@
+    <modal-shell open="decisionTarget" on-close="closeDecision()" size="lg" theme="dark">
+        <modal-title><span x-text="decisionTitle"></span></modal-title>
+
+        <p x-show="decisionMode === 'approve'" x-cloak class="text-sm text-zinc-400">
+            L'abonnement et les réglages de l'école prennent l'état demandé. Ne validez qu'une fois le règlement convenu.
+        </p>
+        <p x-show="decisionMode === 'reject'" x-cloak class="text-sm text-zinc-400">
+            Le Directeur verra ce motif ; son abonnement ne change pas.
+        </p>
+
+        <p x-show="decisionError" x-cloak x-text="decisionError" class="mt-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300" role="alert"></p>
+
+        <form x-on:submit.prevent="confirmDecision()" novalidate class="mt-4 space-y-4">
+            <div>
+                <label class="form-label-inverse" x-text="decisionMode === 'reject' ? 'Motif du rejet' : 'Remarque (facultatif)'"></label>
+                <textarea x-model="decisionNote" rows="3" maxlength="500"
+                          class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 border-t border-zinc-800 pt-4">
+                <button type="button" x-on:click="closeDecision()" x-bind:disabled="isDeciding"
+                        class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">Annuler</button>
+                <button type="submit" x-bind:disabled="isDeciding"
+                        class="rounded-2xl px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                        x-bind:class="decisionMode === 'reject' ? 'bg-rose-500 hover:bg-rose-400' : 'bg-sky-500 hover:bg-sky-400'">
+                    <span x-text="isDeciding ? 'Enregistrement…' : (decisionMode === 'reject' ? 'Rejeter' : 'Valider')"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+</div>
+
+@section Scripts {
+    <script src="~/js/superadmin-subscription-changes.js" asp-append-version="true"></script>
+}

@@ -23,6 +23,18 @@ document.addEventListener('alpine:init', () => {
         deactivateError: null,
         deactivatingId: null,
 
+        // Grille tarifaire par tranche d'effectif (GET/PUT /admin/pricing-grid). Le serveur reste seul juge des
+        // montants : cet écran ne fait que les saisir, la validation (annuel ≤ 12 mensualités, entiers…) est
+        // celle de UpdateQuotaTierPriceCommandValidator, rendue sous le champ concerné.
+        grid: [],
+        gridLoading: false,
+        gridError: null,
+        quoteAboveStudents: 400,
+        priceEdit: null,
+        priceDraft: emptyPriceDraft(),
+        priceErrors: {},
+        isSavingPrice: false,
+
         async load() {
             this.isLoading = true;
             this.error = null;
@@ -32,6 +44,78 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des codes promo.');
             } finally {
                 this.isLoading = false;
+            }
+
+            await this.loadGrid();
+        },
+
+        async loadGrid() {
+            this.gridLoading = true;
+            this.gridError = null;
+            try {
+                this.grid = await window.api.get('/admin/pricing-grid');
+                // Au-delà du plafond de la dernière tranche tarifée : « Grand Groupe », sur devis.
+                this.quoteAboveStudents = this.grid.reduce((max, r) => Math.max(max, r.price.maxStudents), 0) || 400;
+            } catch (err) {
+                this.gridError = window.api.toMessage(err, 'Erreur lors du chargement de la grille tarifaire.');
+            } finally {
+                this.gridLoading = false;
+            }
+        },
+
+        tierLabel(price) {
+            const index = this.grid.findIndex((r) => r.price.tier === price.tier);
+            const previous = index > 0 ? this.grid[index - 1].price.maxStudents : null;
+            return previous === null ? `Jusqu'à ${price.maxStudents} élèves` : `${previous + 1} à ${price.maxStudents} élèves`;
+        },
+
+        // « 10 mois payés » : le forfait annuel est une remise d'engagement, pas un mensuel × 12.
+        paidMonthsLabel(price) {
+            if (!price.monthlyXof || !price.annualXof) return '';
+            const months = price.annualXof / price.monthlyXof;
+            const rounded = Math.round(months * 10) / 10;
+            return `= ${rounded} mois payés`;
+        },
+
+        surchargeLabel(price) {
+            if (!price.boardingSurchargeMonthlyXof && !price.boardingSurchargeAnnualXof) return 'Aucune';
+            return `+${this.formatXof(price.boardingSurchargeMonthlyXof)}/mois · +${this.formatXof(price.boardingSurchargeAnnualXof)}/an`;
+        },
+
+        openPriceEdit(row) {
+            this.priceEdit = row;
+            this.priceDraft = {
+                monthlyXof: row.price.monthlyXof,
+                annualXof: row.price.annualXof,
+                boardingSurchargeMonthlyXof: row.price.boardingSurchargeMonthlyXof,
+                boardingSurchargeAnnualXof: row.price.boardingSurchargeAnnualXof
+            };
+            this.priceErrors = {};
+        },
+
+        closePriceEdit() {
+            this.priceEdit = null;
+        },
+
+        async submitPriceEdit() {
+            if (!this.priceEdit) return;
+            this.priceErrors = {};
+            this.isSavingPrice = true;
+            try {
+                const updated = await window.api.put(`/admin/pricing-grid/${this.priceEdit.price.tier}`, {
+                    monthlyXof: this.priceDraft.monthlyXof,
+                    annualXof: this.priceDraft.annualXof,
+                    boardingSurchargeMonthlyXof: this.priceDraft.boardingSurchargeMonthlyXof || 0,
+                    boardingSurchargeAnnualXof: this.priceDraft.boardingSurchargeAnnualXof || 0
+                });
+
+                const index = this.grid.findIndex((r) => r.price.tier === updated.price.tier);
+                if (index >= 0) this.grid.splice(index, 1, updated);
+                this.priceEdit = null;
+            } catch (err) {
+                this.priceErrors = window.api.toFieldErrors(err, 'Impossible d\'enregistrer ce tarif.');
+            } finally {
+                this.isSavingPrice = false;
             }
         },
 
@@ -181,6 +265,10 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 });
+
+function emptyPriceDraft() {
+    return { monthlyXof: null, annualXof: null, boardingSurchargeMonthlyXof: 0, boardingSurchargeAnnualXof: 0 };
+}
 
 function emptyNewCode() {
     const today = new Date().toISOString().slice(0, 10);

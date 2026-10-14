@@ -49,6 +49,34 @@ public interface ISchoolProvisioningStore
     /// </summary>
     Task<Guid?> CreateInitialTenantSubscriptionAsync(Guid schoolId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Crée la souscription commerciale d'une école neuve DÉJÀ CONFIGURÉE : <c>Active</c> d'emblée, avec le profil, la
+    /// tranche et les modules choisis à l'inscription, et aligne les réglages de l'école (<c>school_settings</c>) sur
+    /// ces mêmes choix — le Directeur n'a donc pas d'Onboarding à faire. Même problème RLS que les méthodes
+    /// ci-dessus (le Super Admin n'a aucun schoolId de session), même fonction SECURITY DEFINER gardée : elle ne
+    /// touche qu'une école SANS souscription et sans profil déjà choisi. Renvoie null sinon.
+    /// </summary>
+    Task<Guid?> CreateConfiguredTenantSubscriptionAsync(
+        Guid schoolId, ConfiguredTenantSubscription configuration, CancellationToken cancellationToken);
+
     /// <summary>Un e-mail identifie un compte sur TOUTE la plateforme (docs/Volume_3_DDS.md §5.2).</summary>
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Ce que l'approbation d'une offre par tranche écrit sur la souscription commerciale ET sur les réglages de l'école.
+/// Plafonds (<paramref name="MaxStudentLimit"/>, <paramref name="SoftQuotaLimit"/>) calculés par l'appelant d'après la
+/// tranche (StudentQuotaDefaults) — la base ne les recalcule pas.
+/// </summary>
+public sealed record ConfiguredTenantSubscription(
+    ProfileType Profile,
+    ProfileEtablissement EstablishmentProfile,
+    StudentQuotaTier Tier,
+    int MaxStudentLimit,
+    int SoftQuotaLimit,
+    bool IsPedagogyEnabled,
+    bool IsFinanceEnabled,
+    bool IsInternatEnabled,
+    bool IsCoranModuleEnabled,
+    string ManagedCycles,
+    bool HasBoarding);

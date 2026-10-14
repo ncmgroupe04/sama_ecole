@@ -4,7 +4,7 @@
 }
 
 @* /onboarding/select-profile — première configuration de l'établissement : le Directeur choisit son
- PROFIL (5 cartes) puis sa TRANCHE D'EFFECTIF (3 cartes + le sur-mesure, géré par l'équipe commerciale).
+ PROFIL (6 cartes) puis sa TRANCHE D'EFFECTIF (4 cartes + l'offre « Grand Groupe » sur devis, gérée par l'équipe commerciale).
  Un seul envoi, POST /api/v1/onboarding/select-profile : la souscription passe de PendingOnboarding à Active
  et le quota s'applique immédiatement. Les cartes sont décrites dans onboarding.js (une seule source pour
  les libellés), pas répétées ici.
@@ -106,7 +106,7 @@
 
  <!-- Étape 2 : la tranche d'effectif -->
  <h2 class="text-jgk-body font-semibold text-slate-900 mt-10 mb-4">2. Votre tranche d'effectif</h2>
- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" role="radiogroup" aria-label="Tranche d'effectif">
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" role="radiogroup" aria-label="Tranche d'effectif">
  <template x-for="t in tiers" x-bind:key="t.id">
  <button type="button"
  role="radio"
@@ -122,8 +122,8 @@
 
  <!-- Sur-mesure : fixé par l'équipe commerciale, jamais choisi ici (refusé en 422 par l'API). -->
  <div class="flex flex-col rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-5">
- <span class="text-2xl font-bold text-slate-400">Sur mesure</span>
- <span class="mt-1 text-jgk-table text-slate-500">Plus de 800 élèves ou besoin particulier : contactez-nous, nous fixons votre plafond.</span>
+ <span class="text-2xl font-bold text-slate-400">Grand Groupe</span>
+ <span class="mt-1 text-jgk-table text-slate-500">Plus de 400 élèves ou besoin particulier : offre sur devis, contactez-nous et nous fixons votre plafond.</span>
  </div>
  </div>
 

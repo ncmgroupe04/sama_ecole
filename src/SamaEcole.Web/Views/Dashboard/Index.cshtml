@@ -4,6 +4,7 @@
 
 @section Scripts {
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/quota-banner.js" asp-append-version="true"></script>
 }
 
 <div x-data="mainDashboard()" x-cloak class="pb-10">
@@ -13,6 +14,9 @@
             <p class="page-subtitle">Vue consolidée des activités et finances.</p>
         </div>
     </div>
+
+    @* Bandeau de quota d'élèves : avertissement dans la tolérance, blocage au-delà, avec l'invitation à passer à la tranche supérieure. *@
+    @await Html.PartialAsync("_QuotaBanner")
 
     @await Html.PartialAsync("_ErrorBanner")
 

@@ -312,6 +312,17 @@ window.api = {
                 }));
             }
 
+            // Modification directe INTERCEPTÉE (profil, cycles, module non souscrit) : elle change l'abonnement, donc elle passe
+            // par une demande validée par le Super Admin. Le corps porte l'aperçu (changements, tarif ajusté, demande à envoyer) :
+            // la modale universelle « Mise à jour de votre abonnement » (subscription-change.js) l'affiche, au lieu d'un bandeau
+            // rouge par écran. Même mécanique `handledGlobally` que ci-dessus pour ne pas la redire.
+            if (response.status === 409 && payload.code === 'SUBSCRIPTION_CHANGE_REQUIRED') {
+                error.handledGlobally = true;
+                window.dispatchEvent(new CustomEvent('sama:subscription-change', {
+                    detail: { message: payload.message, preview: payload.details }
+                }));
+            }
+
             return error;
         }
 

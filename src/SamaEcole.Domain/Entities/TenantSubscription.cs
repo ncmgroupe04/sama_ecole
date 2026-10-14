@@ -40,10 +40,29 @@ public class TenantSubscription : AuditableEntity, ITenantEntity
 
     public TenantSubscriptionStatus Status { get; set; } = TenantSubscriptionStatus.PendingOnboarding;
 
+    /// <summary>
+    /// Modules SOUSCRITS (droits). Les réglages de l'école (<see cref="SchoolSettings"/>) en sont les préférences : le
+    /// Directeur active ou coupe librement un module que l'abonnement inclut, mais en activer un qui n'y figure pas
+    /// (l'Internat, par exemple) est une montée en gamme : elle passe par une <see cref="SubscriptionChangeRequest"/>.
+    /// </summary>
     public bool IsPedagogyEnabled { get; set; }
     public bool IsFinanceEnabled { get; set; }
     public bool IsInternatEnabled { get; set; }
     public bool IsCoranModuleEnabled { get; set; }
+
+    /// <summary>
+    /// L'école héberge des élèves : drapeau de FACTURATION (majoration Internat de la grille), distinct du module
+    /// <see cref="IsInternatEnabled"/> que les profils Franco-Arabe et Daara incluent sans pensionnaires (les Halqas
+    /// vivent derrière lui). Faux pour toute école antérieure aux tranches : sa grille est la grille historique.
+    /// </summary>
+    public bool HasBoarding { get; set; }
+
+    /// <summary>
+    /// Depuis quand l'effectif dépasse le plafond nominal (tolérance entamée ou dépassée). NULL tant que l'école est dans
+    /// son quota. Posé et levé par les évaluations de quota (création d'élève, import, écran du Directeur), il permet au
+    /// Super Admin de relancer les écoles en dépassement ; l'état réel, lui, se relit toujours d'après l'effectif.
+    /// </summary>
+    public DateTimeOffset? OverQuotaSince { get; set; }
 }
 
 /// <summary>
@@ -59,7 +78,9 @@ public static class StudentQuotaDefaults
     /// <summary>Plafonds (nominal, tolérance) d'une tranche. La tranche sur mesure est illimitée par défaut.</summary>
     public static (int Max, int Soft) For(StudentQuotaTier tier) => tier switch
     {
+        StudentQuotaTier.Tier_100 => (100, 110),
         StudentQuotaTier.Tier1_150 => (150, 160),
+        StudentQuotaTier.Tier_250 => (250, 260),
         StudentQuotaTier.Tier2_400 => (400, 420),
         StudentQuotaTier.Tier3_800 => (800, 830),
         StudentQuotaTier.Tier4_Custom => (Unlimited, Unlimited),

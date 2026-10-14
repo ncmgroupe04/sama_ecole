@@ -62,8 +62,14 @@ public interface IApplicationDbContext
     /// <summary>Souscription commerciale de l'école (profil, tranche d'effectif, modules) : table tenant, une ligne vivante par école.</summary>
     DbSet<TenantSubscription> TenantSubscriptions { get; }
 
+    /// <summary>Demandes de changement d'abonnement de l'école (profil, cycles, tranche, modules) : table tenant.</summary>
+    DbSet<SubscriptionChangeRequest> SubscriptionChangeRequests { get; }
+
     /// <summary>Codes promo (module Tarification &amp; Promotions) : table plateforme, comme Subscriptions/Schools.</summary>
     DbSet<PromoCode> PromoCodes { get; }
+
+    /// <summary>Prix publié de chaque tranche d'effectif tarifée : table plateforme, éditée par le Super Admin.</summary>
+    DbSet<QuotaTierPrice> QuotaTierPrices { get; }
 
     /// <summary>Historique des SMS envoyés (offre Premium) : table tenant, une ligne par tentative.</summary>
     DbSet<SmsMessage> SmsMessages { get; }

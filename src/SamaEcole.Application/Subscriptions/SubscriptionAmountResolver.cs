@@ -2,6 +2,7 @@ using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subscriptions.Pricing;
 using SamaEcole.Domain.Enums;
 using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationException;
 
@@ -21,16 +22,34 @@ public record ResolvedSubscriptionAmount(decimal Amount, BillingPeriod BillingPe
 ///   · privé   → annuel : le forfait de la grille ; mensuel : ce forfait ÷ 12 arrondi (voir ISubscriptionPricingProvider) ;
 ///   · public  → refusé (422) : le tarif est par élève, dans une fourchette, et s'établit sur devis — pas de paiement
 ///     en ligne, le Super Admin active l'abonnement (accès gracieux) une fois le devis accepté.
+/// Une école facturée d'après la grille par TRANCHE (inscrite avec une tranche, ou dont une demande de changement a été validée)
+/// paie le prix de sa tranche COURANTE (<see cref="SubscriptionPricingEngine"/> : prix de la tranche + majoration Internat
+/// éventuelle, mensuel et annuel saisis séparément) ; les demandes antérieures gardent la grille historique ci-dessus.
 /// Un abonnement sans demande d'inscription (comptes historiques, jeux de données de démonstration) garde la
 /// tarification par plan : rien ne change pour eux.
 ///
 /// L'offre est relue en base à chaque appel, jamais fournie par le client (AGENTS.md règle #10).
 /// </summary>
-public class SubscriptionAmountResolver(IApplicationDbContext dbContext, ISubscriptionPricingProvider pricingProvider)
+public class SubscriptionAmountResolver(
+    IApplicationDbContext dbContext, ISubscriptionPricingProvider pricingProvider, SubscriptionPricingEngine pricingEngine)
 {
     public async Task<ResolvedSubscriptionAmount> ResolveAsync(
         Guid schoolId, SubscriptionPlan plan, BillingPeriod requested, CancellationToken cancellationToken)
     {
+        // Facturée d'après la grille par TRANCHE (inscription avec tranche, ou demande de changement validée) : le montant
+        // suit la tranche et l'internat COURANTS de la souscription — celle qu'une montée en gamme validée a mise à jour, ou que
+        // le Super Admin a modifiée — pas ceux de la demande d'inscription d'origine.
+        if (await pricingEngine.IsBilledByTierAsync(schoolId, cancellationToken))
+        {
+            var subscription = await dbContext.TenantSubscriptions.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.SchoolId == schoolId, cancellationToken);
+
+            if (subscription is not null)
+            {
+                return await ResolveByTierAsync(subscription.StudentQuotaTier, subscription.HasBoarding, requested, cancellationToken);
+            }
+        }
+
         var offer = await dbContext.SchoolRegistrationRequests.AsNoTracking()
             .Where(r => r.CreatedSchoolId == schoolId && r.Status == RegistrationRequestStatus.Approved)
             .OrderByDescending(r => r.CreatedAt)
@@ -60,5 +79,33 @@ public class SubscriptionAmountResolver(IApplicationDbContext dbContext, ISubscr
 
         return new ResolvedSubscriptionAmount(
             pricingProvider.GetGridAmount(offer.CycleProfile, tier, requested), requested, FromGrid: true);
+    }
+
+    private async Task<ResolvedSubscriptionAmount> ResolveByTierAsync(
+        StudentQuotaTier quotaTier, bool hasBoarding, BillingPeriod requested, CancellationToken cancellationToken)
+    {
+        PricingQuote quote;
+
+        try
+        {
+            quote = await pricingEngine.QuoteAsync(quotaTier, hasBoarding, cancellationToken);
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new ValidationException([
+                new ValidationFailure("Tier",
+                    "Le tarif de votre tranche d'effectif n'est pas encore configuré : contactez-nous pour établir votre abonnement.")
+            ]);
+        }
+
+        if (quote.AmountFor(requested) is not { } amount)
+        {
+            throw new ValidationException([
+                new ValidationFailure("Tier",
+                    "Votre tranche d'effectif est sur devis (offre « Grand Groupe ») : contactez-nous pour finaliser votre abonnement.")
+            ]);
+        }
+
+        return new ResolvedSubscriptionAmount(amount, requested, FromGrid: true);
     }
 }

@@ -11,6 +11,10 @@ namespace SamaEcole.FunctionalTests.Schools;
 /// <summary>
 /// PUT /api/v1/schools/current/settings/managed-cycles : le Directeur déclare les cycles de son établissement ;
 /// retirer un cycle qui contient encore des classes est refusé (409 CYCLE_HAS_CLASSROOMS) avec le détail.
+///
+/// Les cycles gérés sont ceux de l'ABONNEMENT : tout changement (ajout, retrait) est intercepté (409
+/// SUBSCRIPTION_CHANGE_REQUIRED, avec l'aperçu) et devient une demande que le Super Admin valide. Seule la redéclaration des
+/// cycles actuels passe. Les états de départ de ces tests sont posés directement en base.
 /// </summary>
 public class ManagedCyclesEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -43,30 +47,65 @@ public class ManagedCyclesEndpointsTests(AuthApiFactory factory) : IClassFixture
     }
 
     [Fact]
-    public async Task The_Director_Can_Choose_Cycles_And_The_Settings_Reflect_It()
+    public async Task The_Director_Cannot_Change_Cycles_Directly_The_Attempt_Becomes_A_Change_Preview_And_Nothing_Is_Written()
     {
         var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
 
         var response = await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Primaire", "Maternelle" } });
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        Names(await ReadJsonAsync(response)).Should().Equal("Maternelle", "Primaire");
+        // Les cycles gérés sont ceux de l'abonnement : en retirer passe par une demande validée par le Super Admin.
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var error = await ReadJsonAsync(response);
+        error.GetProperty("code").GetString().Should().Be("SUBSCRIPTION_CHANGE_REQUIRED");
+        var preview = error.GetProperty("details");
+        preview.GetProperty("isDowngrade").GetBoolean().Should().BeTrue("retirer un cycle est une réduction, traitée par le support");
+        preview.GetProperty("changes").EnumerateArray().Select(c => c.GetProperty("field").GetString()).Should().Contain("Cycles");
+        preview.GetProperty("request").GetProperty("cycles").EnumerateArray().Select(c => c.GetString())
+            .Should().Equal("Primaire", "Maternelle");
 
-        var settings = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token));
-        Names(settings).Should().Equal("Maternelle", "Primaire");
+        Names(await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token)))
+            .Should().Equal("Maternelle", "Primaire", "College", "Lycee");
+    }
+
+    [Fact]
+    public async Task Declaring_Exactly_The_Current_Cycles_Is_Not_A_Change_And_Is_Accepted()
+    {
+        var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
+
+        var response = await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Lycee", "College", "Primaire", "Maternelle" } });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        Names(await ReadJsonAsync(response)).Should().Equal("Maternelle", "Primaire", "College", "Lycee");
+    }
+
+    [Fact]
+    public async Task Adding_A_Cycle_Is_Intercepted_As_An_Upgrade()
+    {
+        var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
+        await SetCyclesAsync(token, "Primaire");
+
+        var response = await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Primaire", "College" } });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var preview = (await ReadJsonAsync(response)).GetProperty("details");
+        preview.GetProperty("isDowngrade").GetBoolean().Should().BeFalse("ajouter un cycle est une montée en gamme");
+        Names(await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token))).Should().Equal("Primaire");
     }
 
     [Fact]
     public async Task Other_Settings_Updates_Keep_Reporting_The_Managed_Cycles()
     {
         var token = await TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
-        await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Primaire" } });
+        await SetCyclesAsync(token, "Primaire");
 
-        var profile = await SendAsync(HttpMethod.Post, "/api/v1/schools/current/settings/establishment-profile", token,
-            new { profile = "DaaraInternat" });
+        var current = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token));
+        var body = JsonSerializer.Deserialize<Dictionary<string, object?>>(current.GetRawText(), Json)!;
+        body["autoLogoutMinutes"] = 15;
 
-        profile.StatusCode.Should().Be(HttpStatusCode.OK);
-        Names(await ReadJsonAsync(profile)).Should().Equal(new[] { "Primaire" }, "un changement de profil ne touche pas aux cycles");
+        var saved = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", token, body);
+
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+        Names(await ReadJsonAsync(saved)).Should().Equal(new[] { "Primaire" }, "un autre réglage ne touche pas aux cycles");
     }
 
     [Fact]
@@ -139,12 +178,28 @@ public class ManagedCyclesEndpointsTests(AuthApiFactory factory) : IClassFixture
         await factory.ExecuteOwnerSqlAsync(
             $"""UPDATE classrooms SET "IsDeleted" = true WHERE "SchoolId" = '{AuthApiFactory.EcoleId}' AND "Level" = 'Collège'""");
 
-        var accepted = await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Maternelle", "Primaire", "Lycee" } });
-        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
-        Names(await ReadJsonAsync(accepted)).Should().Equal("Maternelle", "Primaire", "Lycee");
+        // Plus de classes : le refus « le cycle contient des classes » tombe. Le retrait reste une RÉDUCTION d'abonnement, donc une
+        // demande — mais plus un blocage : c'est la modale « demande de changement » qui prend le relais.
+        var afterCleanup = await SendAsync(HttpMethod.Put, Route, token, new { cycles = new[] { "Maternelle", "Primaire", "Lycee" } });
+        afterCleanup.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(afterCleanup)).GetProperty("code").GetString().Should().Be("SUBSCRIPTION_CHANGE_REQUIRED");
     }
 
     // ------------------------------------------------------------------ Aides
+
+    /// <summary>
+    /// Pose les cycles gérés directement en base : l'API ne le permet plus (verrou d'abonnement). La ligne de réglages doit
+    /// exister — un GET n'en crée pas — donc elle est d'abord créée par un enregistrement neutre des réglages actuels.
+    /// </summary>
+    private async Task SetCyclesAsync(string token, string cycles)
+    {
+        var current = await ReadJsonAsync(await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", token));
+        var body = JsonSerializer.Deserialize<Dictionary<string, object?>>(current.GetRawText(), Json)!;
+        (await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", token, body)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await factory.ExecuteOwnerSqlAsync(
+            $"""UPDATE school_settings SET "ManagedCycles" = '{cycles}' WHERE "SchoolId" = '{AuthApiFactory.EcoleId}'""");
+    }
 
     private static IEnumerable<string> Names(JsonElement settings) =>
         settings.GetProperty("managedCycles").EnumerateArray().Select(e => e.GetString()!).ToList();

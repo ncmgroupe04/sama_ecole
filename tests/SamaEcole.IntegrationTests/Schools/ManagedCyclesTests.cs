@@ -276,7 +276,11 @@ public class ManagedCyclesTests : IAsyncLifetime
     }
 
     private static SetManagedCyclesCommandHandler NewHandler(ApplicationDbContext db, Guid school) =>
-        new(db, new FixedTenant(school), NullLogger<SetManagedCyclesCommandHandler>.Instance);
+        new(
+            db, new FixedTenant(school),
+            new SamaEcole.Application.Subscriptions.Changes.SubscriptionChangeService(
+                db, new FixedTenant(school), new SamaEcole.Application.Subscriptions.Pricing.SubscriptionPricingEngine(db)),
+            NullLogger<SetManagedCyclesCommandHandler>.Instance);
 
     private sealed class FixedTenant(Guid schoolId) : ITenantProvider
     {

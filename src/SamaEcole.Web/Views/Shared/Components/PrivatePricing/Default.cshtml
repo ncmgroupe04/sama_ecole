@@ -1,0 +1,66 @@
+@model SamaEcole.Web.ViewComponents.PrivatePricingModel
+@using SamaEcole.Web.Content
+@{
+    // Grille privée de la vitrine (LandingB2B.cshtml, onglet « Établissements privés »). Rendue côté serveur d'après la
+    // grille tarifaire en base : ce qu'on affiche ici est, par construction, ce que le formulaire d'inscription propose
+    // et ce que le serveur facture. Les montants portent des espaces insécables (PrivatePricingModel.FormatXof).
+    var includes = new[]
+    {
+        "Tous les profils : enseignement général, franco-arabe, daara, comptabilité",
+        "Vie scolaire : appel, billets d'entrée, discipline",
+        "Caisse, reçus et suivi des impayés"
+    };
+}
+<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    @foreach (var card in Model.Cards)
+    {
+        <article class="mkt-card flex h-full flex-col">
+            <h4 class="mkt-h3">@card.Label</h4>
+            <p class="mt-5">
+                <span class="block text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">@card.Monthly</span>
+                <span class="mt-1 block text-sm text-slate-500">ou @card.Annual@(string.IsNullOrEmpty(card.PaidMonths) ? "" : " (" + card.PaidMonths + ")")</span>
+            </p>
+
+            <ul class="mt-5 flex-1 space-y-2.5">
+                @foreach (var item in includes)
+                {
+                    <li class="flex items-start gap-2.5 text-sm text-slate-700">
+                        <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                        <span>@item</span>
+                    </li>
+                }
+            </ul>
+
+            <a href="@card.RegisterHref" class="mkt-btn mkt-btn-secondary mt-6 w-full">Inscrire mon école</a>
+        </article>
+    }
+
+    @* Au-delà de la dernière tranche standard : offre « Grand Groupe », sur devis. *@
+    <article class="mkt-card flex h-full flex-col border-2 border-primary-600 shadow-lg shadow-primary-500/5">
+        <h4 class="mkt-h3">Plus de @Model.QuoteAboveStudents élèves</h4>
+        <p class="mt-1 text-sm text-slate-500">Offre « Grand Groupe »</p>
+        <p class="mt-5">
+            <span class="block text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Sur devis</span>
+            <span class="mt-1 block text-sm text-slate-500">tarif sur mesure selon votre effectif et vos sites</span>
+        </p>
+        <ul class="mt-5 flex-1 space-y-2.5">
+            <li class="flex items-start gap-2.5 text-sm text-slate-700">
+                <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                <span>Tous les profils et tous les cycles</span>
+            </li>
+            <li class="flex items-start gap-2.5 text-sm text-slate-700">
+                <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                <span>Accompagnement au déploiement</span>
+            </li>
+        </ul>
+        <a href="@MarketingCatalog.QuoteWhatsAppHref" target="_blank" rel="noopener" class="mkt-btn mkt-btn-primary mt-6 w-full">
+            <icon name="whatsapp" class="h-5 w-5" />
+            Demander un devis
+        </a>
+    </article>
+</div>
+
+@if (Model.BoardingNote is not null)
+{
+    <p class="mt-4 text-center text-sm text-slate-600">@Model.BoardingNote</p>
+}

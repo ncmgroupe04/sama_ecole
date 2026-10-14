@@ -915,10 +915,10 @@ choisit son profil et sa tranche d'effectif, ce qui la passe en `Active`.
 | Méthode | Route | Rôles | Description |
 |---|---|---|---|
 | `GET` | `/api/v1/onboarding/subscription` | Tout rôle de l'école | Souscription courante : `status`, `profileType`, `studentQuotaTier`, `maxStudentLimit`, `softQuotaLimit`, `isPedagogyEnabled`, `isFinanceEnabled`, `isInternatEnabled`, `isCoranModuleEnabled`. 404 si l'école n'a pas de souscription. |
-| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800` (`Tier4_Custom` est réservé au Super Admin : 422). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
-| `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier1_150`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
+| `POST` | `/api/v1/onboarding/select-profile` | Directeur | `{ profile, tier }` — `profile` ∈ `Elementaire`, `FrancoArabe`, `InternatDaara`, `DaaraMemorisation`, `EnseignementGeneral`, `ComptabiliteRapports` ; `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400` (`Tier3_800` et `Tier4_Custom` sont sur devis, réservés au Super Admin : 422, message « Grand Groupe »). Active la souscription, applique le quota et aligne le profil et les modules de `school_settings`. Une seule fois : 409 `ONBOARDING_ALREADY_COMPLETED` ensuite. |
+| `PUT` | `/api/v1/admin/platform/schools/{schoolId}/tenant-subscription` | Super Admin | `{ tier?, customMaxStudentLimit?, status? }` — au moins `tier` ou `status`. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`, `Tier3_800`, `Tier4_Custom` ; `customMaxStudentLimit` **obligatoire** avec `Tier4_Custom` (≥ 1, `2147483647` = illimité ; tolérance calculée : 4 %, au moins 10 élèves) et **interdit** sinon. `status` ∈ `PendingApproval`, `Active`, `Suspended`, `Expired` (`PendingOnboarding` n'est pas assignable). Renvoie la souscription modifiée ; ne touche ni au profil ni aux modules. 404 si l'école n'a pas de souscription ; 409 `ONBOARDING_NOT_COMPLETED` tant qu'elle n'a pas choisi son profil. Tracé au journal d'audit de l'école ciblée. |
 
-Pages : `/onboarding/select-profile` (assistant en deux choix — 5 profils, puis 3 tranches ; le sur-mesure est affiché à titre
+Pages : `/onboarding/select-profile` (assistant en deux choix — 6 profils, puis 4 tranches : 100, 150, 250 et 400 ; le sur-mesure est affiché à titre
 informatif, jamais sélectionnable). `/onboarding` redirige vers elle. Le client (`api.js`) y renvoie toute réponse
 `403 ONBOARDING_REQUIRED` (destination lue dans `details.redirectTo`). L'ancienne route
 `POST /schools/current/settings/establishment-profile` reste disponible mais l'interface ne l'utilise plus ; elle maintient
@@ -936,6 +936,80 @@ jusqu'à `softQuotaLimit` inclus : admis et la réponse porte `quotaWarning` `{ 
 softQuotaLimit, remainingBeforeBlock }` (absent sinon) ; au-delà : 422 `STUDENT_QUOTA_EXCEEDED`. Souscription non `Active`
 ou absente : 422 `SUBSCRIPTION_NOT_ACTIVE`. Le contrôle précède la transaction et ne la verrouille pas : deux créations
 strictement concurrentes à la limite peuvent dépasser la tolérance d'un ou deux élèves.
+
+### 29.0 Offre par tranche d'effectif à l'inscription
+
+`POST /api/v1/registration-requests` accepte, **en plus** des champs historiques, `profile` (`ProfileType`), `hasBoarding`
+(bool), `cycles` (liste de `Maternelle`, `Primaire`, `College`, `Lycee` — respectivement Préscolaire, Élémentaire, Moyen,
+Secondaire) et `tier` (`Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400`). `profile` et `tier` vont ensemble ; renseignés,
+`cycleProfile` et `sizeTier` deviennent inutiles (le premier est déduit des cycles). Règles, toutes en 422 sur le champ concerné :
+`ownership` = `Private` ; `estimatedStudentCount` obligatoire (effectif exact) ; `cycles` obligatoires pour un profil académique
+(tous sauf `DaaraMemorisation` et `ComptabiliteRapports`), sans doublon, limités à `Maternelle`/`Primaire` pour `Elementaire` ;
+**anti-fraude** : `tier` doit couvrir `estimatedStudentCount` (le message nomme la tranche minimale) ; au-delà de 400 élèves ou avec
+`Tier3_800`/`Tier4_Custom`, le message oriente vers l'offre « Grand Groupe » (sur devis). Sans `profile` ni `tier`, la grille
+historique s'applique, inchangée. La liste Super Admin (`GET /admin/registration-requests`) expose `profile`, `hasBoarding`,
+`cycles` et `tier`.
+
+`POST /admin/registration-requests/{id}/approve` : pour une offre par tranche, l'offre est **re-contrôlée** (422 sinon, la demande
+reste en attente), le tarif de la tranche doit exister (409 `PRICING_NOT_CONFIGURED` sinon) et l'école naît **configurée** :
+souscription commerciale `Active` (profil, tranche, plafonds, modules) et réglages alignés — le Directeur n'a pas
+d'Onboarding à faire. L'abonnement de facturation reste `AwaitingPayment` jusqu'au premier paiement, dont le montant (mensuel
+ou annuel) vient de la grille par tranche (§29.1), majoration Internat comprise si `hasBoarding`.
+
+### 29.1 Grille tarifaire par tranche d'effectif
+
+Table : `quota_tier_prices` (Volume 3 §5.16). Le montant facturé n'est jamais celui que le client renvoie : il est recalculé
+côté serveur par `SubscriptionPricingEngine` (prix de la tranche + majoration Internat éventuelle ; tranche > 400 : sur devis).
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/public/pricing-grid` | Anonyme (limité en débit) | `{ currency: "XOF", quoteAboveStudents: 400, tiers: [{ tier, maxStudents, softLimit, monthlyXof, annualXof, boardingSurchargeMonthlyXof, boardingSurchargeAnnualXof }] }`, de la plus petite tranche à la plus grande. Source du formulaire d'inscription. |
+| `GET` | `/api/v1/admin/pricing-grid` | Super Admin | Mêmes lignes, enveloppées `{ price, updatedAt, updatedBy }`. |
+| `PUT` | `/api/v1/admin/pricing-grid/{tier}` | Super Admin | `{ monthlyXof, annualXof, boardingSurchargeMonthlyXof, boardingSurchargeAnnualXof }` — entiers de FCFA, base > 0, `annualXof ≤ 12 × monthlyXof`, majoration annuelle ≤ 12 × mensuelle, plafond 50 000 000. `tier` ∈ `Tier_100`, `Tier1_150`, `Tier_250`, `Tier2_400` (`Tier3_800` / `Tier4_Custom` sont sur devis : 422). 404 si la ligne n'existe pas, 409 en cas de modification concurrente. Vaut pour les nouvelles demandes et les prochains paiements. |
+
+Écran : `/admin/tarification` (section « Grille tarifaire par effectif », au-dessus des codes promo).
+
+Pages publiques qui lisent cette grille : le formulaire d'inscription `/inscription` (cartes de tranche, présélection d'après
+l'effectif, tranches trop petites grisées, « Grand Groupe » au-delà de 400, prix = lecture de `GET /api/v1/public/pricing-grid`) et
+la vitrine `/vitrine` (onglet « Établissements privés », rendu **côté serveur** par le composant de vue `PrivatePricing`, d'après
+la même requête `GetPublicPricingGridQuery` : un prix modifié par le Super Admin y apparaît immédiatement, sans JavaScript).
+Les liens de la vitrine préremplissent le formulaire : `/inscription?type=prive&tranche={tier}` (et `&profil={profile}`).
+
+### 29.2 Verrouillage de l'abonnement et demandes de changement
+
+Le profil, les cycles gérés et les modules NON souscrits sont **verrouillés** : une fois la souscription active, le Directeur ne les
+modifie plus directement. Les trois routes qui le permettaient interceptent la tentative **avant toute écriture** et répondent
+`409 SUBSCRIPTION_CHANGE_REQUIRED` — `message` : « Pour basculer vers ce profil ou ajouter ces options/effectifs, une mise à jour de
+votre abonnement est nécessaire (tarif ajusté). » (ou, pour une réduction, la redirection vers le support) ; `details` : l'aperçu
+(`hasChanges`, `isDowngrade`, `changes[]` `{ field, from, to }`, `problems[]`, `current` / `target` `{ monthlyXof, annualXof, requiresQuote, known }`,
+`differenceMonthlyXof`, `differenceAnnualXof`, `hasPendingRequest`, `canRequest`, `request` — le corps à renvoyer tel quel).
+
+| Route | Verrou |
+|---|---|
+| `PUT /schools/current/settings` | Seule l'**activation nouvelle** d'un module non souscrit est interceptée. Couper un module, réactiver un module souscrit ou enregistrer un module déjà actif reste libre. |
+| `PUT /schools/current/settings/managed-cycles` | Tout changement : ajout (montée en gamme) ou retrait (réduction). Retirer un cycle qui contient des classes reste d'abord refusé (409 `CYCLE_HAS_CLASSROOMS`). Redéclarer les cycles actuels passe. |
+| `POST /schools/current/settings/establishment-profile` | Tout changement de profil. Redemander le profil actuel ne fait rien (réappliquer son preset effacerait les modules souscrits en plus). |
+
+Le verrou ne s'applique pas à une école sans souscription ni à une école encore en `PendingOnboarding`. Le tarif ajusté est calculé par
+`SubscriptionPricingEngine` ; il n'y a **pas** d'écart quand l'école ne suit pas la grille par tranche (`current.known = false`).
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/tenant-subscription/quota` | Directeur, Secrétariat | `{ currentStudentCount, maxStudentLimit, softQuotaLimit, state, tier, tierLabel, suggestedTier, suggestedTierLabel, overQuotaSince, pendingChangeRequestId }` — bandeau du tableau de bord. `state` ∈ `WithinQuota`, `InTolerance`, `Exceeded`. `suggestedTier` (la tranche qui contient l'effectif, ou la suivante ; `Tier3_800` = « Grand Groupe ») n'est renseigné que hors quota. 204 si l'abonnement n'est pas actif. Évaluer le quota pose/lève `overQuotaSince`. |
+| `GET` | `/api/v1/tenant-subscription/change-requests` | Directeur | Les demandes de l'école, la plus récente d'abord. |
+| `POST` | `/api/v1/tenant-subscription/change-requests/preview` | Directeur | `{ profile?, tier?, cycles?, isPedagogyEnabled?, isFinanceEnabled?, isInternatEnabled?, isCoranModuleEnabled? }` → l'aperçu ci-dessus, sans rien écrire. |
+| `POST` | `/api/v1/tenant-subscription/change-requests` | Directeur | `{ change: {…même corps…}, note? }` → 201. Ne modifie RIEN. 409 `CHANGE_REQUEST_PENDING` s'il y en a déjà une ; 422 si elle ne change rien ou se heurte à un blocage (effectif > tranche, cycle contenant des classes, tranche sur mesure). |
+| `POST` | `/api/v1/tenant-subscription/change-requests/{id}/cancel` | Directeur | Retire sa demande tant qu'elle est en attente (409 `CHANGE_REQUEST_NOT_PENDING` sinon). |
+| `GET` | `/api/v1/admin/subscription-change-requests?status=` | Super Admin | Toutes les écoles, avec `schoolName` ; filtrable par `Pending`, `Approved`, `Rejected`, `Cancelled`. |
+| `POST` | `/api/v1/admin/subscription-change-requests/{id}/approve` | Super Admin | `{ note? }` — applique l'état demandé (souscription + réglages). 404 si elle n'est plus en attente ; 409 `STALE_CHANGE_REQUEST`, `TARGET_TIER_TOO_SMALL` ou `CYCLE_HAS_CLASSROOMS`. Tracé au journal d'audit de l'école. Le Directeur est prévenu par e-mail (ce qui a changé) ; la réponse porte `directorNotified`. |
+| `POST` | `/api/v1/admin/subscription-change-requests/{id}/reject` | Super Admin | `{ note }` — motif obligatoire (422 sinon). Tracé au journal d'audit de l'école. Le Directeur reçoit le motif par e-mail ; la réponse porte `directorNotified`. |
+| `GET` | `/api/v1/admin/over-quota-schools` | Super Admin | Écoles dont l'effectif dépasse le plafond nominal : `{ schoolId, schoolName, tier, maxStudentLimit, softQuotaLimit, studentCount, state, overQuotaSince }`. L'état est relu d'après les élèves ; `overQuotaSince` n'est que la date du premier constat. |
+
+**E-mail de décision.** Après validation ou rejet, le Directeur reçoit un e-mail (ce qui a changé, ou le motif du rejet ; jamais de secret) à l'adresse consignée sur la demande. L'envoi est en « meilleur effort » : son échec — ou l'absence d'adresse sur une demande ancienne — n'annule jamais la décision ; la réponse porte alors `directorNotified = false` et l'écran du Super Admin l'avertit de prévenir le Directeur lui-même.
+
+Le changement n'est appliqué qu'à la **validation du Super Admin** (règlement convenu hors ligne). Une validation en ligne déclenchée par
+le paiement n'est pas incluse. Pages : le bandeau de quota du tableau de bord (`/tableau-de-bord`), la modale universelle « Mise à jour
+de votre abonnement » (montée par le layout, ouverte sur tout `409 SUBSCRIPTION_CHANGE_REQUIRED`) et `/admin/changements-abonnement`.
 
 ## 30. API Cycles gérés par l'établissement
 

@@ -74,6 +74,7 @@ public static class DependencyInjection
         // existant plutôt que d'en amorcer un.
         services.AddScoped<ISubscriptionAdminStore, SubscriptionAdminStore>();
         services.AddScoped<ITenantSubscriptionAdminStore, TenantSubscriptionAdminStore>();
+        services.AddScoped<ISubscriptionChangeAdminStore, SubscriptionChangeAdminStore>();
 
         // Purge « Zone de danger » de l'écran Paramètres : le Directeur remet SON école à neuf après
         // une phase d'essai. Vit dans Persistence — elle contourne le Global Query Filter (pour

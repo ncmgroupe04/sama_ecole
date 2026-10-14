@@ -627,7 +627,8 @@ public static class MarketingCatalog
     // ═══════════════════════════════════════════════════════════════════════ Tarification
 
     /// <summary>
-    /// Grille tarifaire publique par TYPE D'ÉTABLISSEMENT (public / privé) et par cycles gérés. Décision
+    /// Grille tarifaire publique par TYPE D'ÉTABLISSEMENT (public / privé). Côté PRIVÉ, les montants ne sont plus dans ce
+    /// catalogue : ils viennent de la grille par tranche d'effectif (table quota_tier_prices). Décision
     /// commerciale du 25/09/2026 : la vitrine affiche désormais des montants FCFA (elle n'en affichait
     /// aucun jusque-là). Ces montants vitrine ne sont PAS ceux de SubscriptionPricingOptions (grille par
     /// formule Primaire/Standard/Premium utilisée par le paiement d'abonnement) : les aligner reste à
@@ -681,84 +682,12 @@ public static class MarketingCatalog
                 "Une commune ou un département finance plusieurs établissements publics d'un coup : " +
                 "un seul devis groupé, un déploiement coordonné.")),
 
+        // PRIVÉ : aucune carte ici. Le prix d'un établissement privé ne dépend plus que de son EFFECTIF (tranches), et ces
+        // prix sont ÉDITÉS par le Super Admin en base : la vitrine les rend côté serveur depuis la grille publique
+        // (ViewComponent PrivatePricing), jamais depuis un texte écrit ici — ce qui s'affiche est ce qui se facture.
         new("prive", "Établissements privés & complexes",
-            "Forfait annuel selon le nombre de cycles gérés et l'effectif de l'établissement.",
-            [
-                new("monocycle", "Établissements monocycles",
-                    "Un seul cycle d'enseignement. Le forfait dépend de la taille de l'établissement.",
-                    [
-                        new("Primaire", "Primaire uniquement",
-                            "par an",
-                            [new("Petit", "150 000 FCFA"), new("Moyen", "250 000 FCFA"), new("Grand", "350 000 FCFA")],
-                            [
-                                "Bulletins APC — approche par compétences",
-                                "Vie scolaire : appel, billets d'entrée, discipline",
-                                "Caisse, reçus et suivi des impayés"
-                            ],
-                            Featured: false,
-                            RegisterQuery: "type=prive&cycles=Primaire"),
-                        new("Collège", "Collège uniquement",
-                            "par an",
-                            [new("Petit", "250 000 FCFA"), new("Moyen", "400 000 FCFA"), new("Grand", "550 000 FCFA")],
-                            [
-                                "Bulletins par matière et coefficients",
-                                "Vie scolaire : appel, billets d'entrée, discipline",
-                                "Caisse, reçus et suivi des impayés"
-                            ],
-                            Featured: false,
-                            RegisterQuery: "type=prive&cycles=College"),
-                        new("Lycée", "Lycée uniquement",
-                            "par an",
-                            [new("Petit", "300 000 FCFA"), new("Moyen", "450 000 FCFA"), new("Grand", "600 000 FCFA")],
-                            [
-                                "Bulletins à coefficients par série",
-                                "Vie scolaire : appel, billets d'entrée, discipline",
-                                "Caisse, reçus et suivi des impayés"
-                            ],
-                            Featured: false,
-                            RegisterQuery: "type=prive&cycles=Lycee")
-                    ]),
-
-                new("bicycle", "Formules bicycles",
-                    "Deux cycles dans le même établissement, par exemple Primaire + Collège ou Collège + Lycée.",
-                    [
-                        new("Bicycle", "Deux cycles, une seule plateforme",
-                            "par an",
-                            [
-                                new("Moins de 400 élèves", "450 000 FCFA"),
-                                new("400 à 800 élèves", "650 000 FCFA"),
-                                new("Plus de 800 élèves", "850 000 FCFA")
-                            ],
-                            [
-                                "Multi-cycles unifié : un seul abonnement, une seule plateforme",
-                                "Bulletins APC et coefficients, selon le cycle de la classe",
-                                "Vie scolaire : appel, billets d'entrée, discipline",
-                                "Caisse, reçus et suivi des impayés"
-                            ],
-                            Featured: true,
-                            RegisterQuery: "type=prive&cycles=Bicycle")
-                    ]),
-
-                new("complexe", "Grands complexes",
-                    "Maternelle + Primaire + Collège + Lycée réunis dans un même établissement.",
-                    [
-                        new("Grand complexe", "Maternelle, Primaire, Collège et Lycée",
-                            "par an",
-                            [
-                                new("Moins de 500 élèves", "600 000 FCFA"),
-                                new("500 à 1 000 élèves", "850 000 FCFA"),
-                                new("Plus de 1 000 élèves", "1,2 million FCFA")
-                            ],
-                            [
-                                "Multi-cycles unifié : tous les cycles, un seul abonnement",
-                                "Bulletins APC et coefficients, selon le cycle de la classe",
-                                "Vie scolaire : appel, billets d'entrée, discipline",
-                                "Caisse, reçus et suivi des impayés"
-                            ],
-                            Featured: true,
-                            RegisterQuery: "type=prive&cycles=Complexe")
-                    ])
-            ],
+            "Un tarif simple selon le nombre d'élèves, au mois ou à l'année.",
+            [],
             new("Un besoin qui sort de la grille ?",
                 "Groupe scolaire, effectif atypique, plusieurs sites : nous établissons un devis sur mesure."))
     ];

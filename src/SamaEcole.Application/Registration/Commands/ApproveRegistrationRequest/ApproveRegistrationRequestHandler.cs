@@ -2,6 +2,9 @@ using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Registration;
+using SamaEcole.Application.Schools.Commands.ApplyEstablishmentProfile;
+using SamaEcole.Application.Subscriptions;
+using SamaEcole.Application.Subscriptions.Pricing;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -23,6 +26,13 @@ namespace SamaEcole.Application.Registration.Commands.ApproveRegistrationRequest
 /// de l'école (SchoolProvisioningStore rattache la commande à la transaction courante). `schools`
 /// n'étant pas sous RLS, elle s'insère normalement via EF.
 ///
+/// OFFRE PAR TRANCHE D'EFFECTIF (profil + tranche renseignés sur la demande) : l'école naît directement configurée —
+/// souscription commerciale <c>Active</c> avec le profil, la tranche et les modules choisis, réglages alignés, via
+/// provision_configured_tenant_subscription — et le Directeur n'a pas d'Onboarding à faire. L'offre est RE-CONTRÔLÉE
+/// ici (tranche suffisante pour l'effectif, hors « Grand Groupe », tarif configuré) : la demande a pu attendre, la
+/// grille a pu changer. Sans offre par tranche (demande historique, public), la souscription naît en
+/// <c>PendingOnboarding</c> comme avant.
+///
 /// Journal d'audit écrit ICI, à la main (comme CreateSchoolCommandHandler) : l'acteur (Super Admin) n'a
 /// pas de schoolId propre, le mécanisme générique AuditLoggingBehavior ne saurait à qui imputer l'entrée
 /// — on l'attribue à l'école NOUVELLEMENT créée, connue après le commit.
@@ -32,6 +42,7 @@ public class ApproveRegistrationRequestHandler(
     ISchoolProvisioningStore provisioningStore,
     IAuditLogStore auditLogStore,
     ICurrentUserService currentUser,
+    SubscriptionPricingEngine pricingEngine,
     IEmailSender emailSender,
     RegistrationSettings registrationSettings,
     TimeProvider timeProvider,
@@ -73,6 +84,10 @@ public class ApproveRegistrationRequestHandler(
                 new ValidationFailure(nameof(snapshot.DirectorEmail), "Un compte utilise déjà l'e-mail de cette demande.")
             ]);
         }
+
+        // Offre par tranche : contrôlée AVANT d'ouvrir la transaction (rien n'est écrit si elle est incohérente), puis
+        // convertie en ce que la base recevra. Null = demande historique.
+        var configuration = await BuildConfigurationAsync(snapshot, cancellationToken);
 
         var (schoolId, directorId, subscriptionId) = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
@@ -125,9 +140,12 @@ public class ApproveRegistrationRequestHandler(
                 ?? throw new InvalidOperationException(
                     $"L'établissement {school.Id} possède déjà un abonnement : il n'est pas à provisionner.");
 
-            // Souscription commerciale (profil + tranche) : PendingOnboarding, le Directeur choisit à sa
-            // première connexion. Même porte étroite, même garde anti-doublon.
-            _ = await provisioningStore.CreateInitialTenantSubscriptionAsync(school.Id, ct)
+            // Souscription commerciale (profil + tranche). Offre par tranche : Active, déjà configurée. Sinon :
+            // PendingOnboarding, le Directeur choisit à sa première connexion. Même porte étroite, même garde
+            // anti-doublon.
+            _ = (configuration is null
+                    ? await provisioningStore.CreateInitialTenantSubscriptionAsync(school.Id, ct)
+                    : await provisioningStore.CreateConfiguredTenantSubscriptionAsync(school.Id, configuration, ct))
                 ?? throw new InvalidOperationException(
                     $"L'établissement {school.Id} possède déjà une souscription commerciale : il n'est pas à provisionner.");
 
@@ -173,6 +191,58 @@ public class ApproveRegistrationRequestHandler(
 
         return new ApproveRegistrationRequestResult(
             schoolId, directorId, subscriptionId, SubscriptionStatus.AwaitingPayment, emailSent);
+    }
+
+    /// <summary>
+    /// Re-contrôle l'offre par tranche d'une demande et la traduit en configuration de souscription. <c>null</c> pour une
+    /// demande historique (pas de profil ni de tranche). Lève une 422 lisible par le Super Admin si l'offre n'est plus
+    /// valide : la demande reste <c>Pending</c>, il peut la rejeter avec un motif ou demander une correction.
+    /// </summary>
+    private async Task<ConfiguredTenantSubscription?> BuildConfigurationAsync(
+        SchoolRegistrationRequest snapshot, CancellationToken cancellationToken)
+    {
+        if (snapshot is not { Profile: { } profile, Tier: { } tier })
+        {
+            return null;
+        }
+
+        if (snapshot.EstimatedStudentCount is not { } declared)
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(snapshot.EstimatedStudentCount),
+                    "Cette demande par tranche d'effectif ne porte pas d'effectif déclaré : elle ne peut pas être approuvée.")
+            ]);
+        }
+
+        if (RegistrationOffer.Check(declared, tier) is { } problem)
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(snapshot.Tier), RegistrationOffer.Describe(problem, declared))
+            ]);
+        }
+
+        // Le tarif de la tranche doit exister : approuver une école qu'on ne saurait pas facturer la laisserait sans
+        // montant au moment de payer. À corriger côté grille tarifaire (Super Admin › Tarification).
+        try
+        {
+            await pricingEngine.QuoteAsync(tier, snapshot.HasBoarding, cancellationToken);
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new BusinessRuleException(
+                $"Aucun tarif n'est configuré pour la tranche {tier} : renseignez la grille tarifaire avant d'approuver cette demande.",
+                "PRICING_NOT_CONFIGURED");
+        }
+
+        var establishmentProfile = ProfileTypeMapping.ToEstablishmentProfile(profile);
+        var modules = RegistrationOffer.ModulesFor(profile, snapshot.HasBoarding);
+        var (max, soft) = StudentQuotaDefaults.For(tier);
+
+        return new ConfiguredTenantSubscription(
+            profile, establishmentProfile, tier, max, soft,
+            modules.IsPedagogyEnabled, modules.IsFinanceEnabled, modules.IsInternatEnabled, modules.IsCoranModuleEnabled,
+            RegistrationOffer.ManagedCyclesFor(RegistrationOffer.ParseCycles(snapshot.Cycles)),
+            snapshot.HasBoarding);
     }
 
     private async Task SendApprovalEmailAsync(

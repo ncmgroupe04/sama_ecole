@@ -1,0 +1,104 @@
+@*
+    Modale UNIVERSELLE « Mise à jour de votre abonnement » — montée une seule fois par _Layout, sous le <body x-data>.
+
+    Pilotée par le store Alpine `subscriptionChange` (wwwroot/js/subscription-change.js), alimenté par window.api sur tout 409
+    « SUBSCRIPTION_CHANGE_REQUIRED » : une modification directe du profil, des cycles ou d'un module non souscrit a été
+    INTERCEPTÉE (rien n'est écrit) et devient une demande, validée par le Super Admin. La modale montre ce qui changerait et le
+    tarif ajusté, d'après l'aperçu calculé par le serveur ; le Directeur y envoie la demande. Le bandeau de quota l'ouvre aussi.
+*@
+<modal-shell open="$store.subscriptionChange.open" on-close="$store.subscriptionChange.close()" size="lg" title="Mise à jour de votre abonnement">
+
+ @* Demande envoyée *@
+ <div x-cloak x-show="$store.subscriptionChange.sentRequest" class="text-center">
+ <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-bg">
+ <icon name="checkmark-circle" class="h-6 w-6 text-success" />
+ </div>
+ <p class="mt-3 text-base font-semibold text-slate-900">Votre demande a bien été envoyée.</p>
+ <p class="mt-2 text-sm leading-relaxed text-slate-600">
+ Notre équipe la traite et vous répond. Vos paramètres ne changent qu'une fois la demande validée,
+ après règlement : rien n'est modifié d'ici là.
+ </p>
+ <div class="mt-5 flex justify-center">
+ <button type="button" x-on:click="$store.subscriptionChange.close()" class="btn-modal-primary group">J'ai compris</button>
+ </div>
+ </div>
+
+ @* Aperçu *@
+ <div x-cloak x-show="!$store.subscriptionChange.sentRequest">
+ <div class="flex items-start gap-3">
+ <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning-bg">
+ <icon name="lock-closed" class="h-5 w-5 text-warning" />
+ </div>
+ <p class="text-sm leading-relaxed text-slate-800" x-text="$store.subscriptionChange.message"></p>
+ </div>
+
+ <template x-if="$store.subscriptionChange.preview && $store.subscriptionChange.preview.changes.length">
+ <div class="mt-4">
+ <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ce qui changerait</p>
+ <ul class="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+ <template x-for="line in $store.subscriptionChange.preview.changes" x-bind:key="line.field">
+ <li class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-sm">
+ <span class="text-slate-500" x-text="line.from"></span>
+ <span aria-hidden="true" class="text-slate-400">→</span>
+ <span class="font-semibold text-slate-900" x-text="line.to"></span>
+ </li>
+ </template>
+ </ul>
+ </div>
+ </template>
+
+ @* Tarif ajusté — calculé par le serveur ; jamais ici *@
+ <div x-cloak x-show="$store.subscriptionChange.hasPriceDifference" class="mt-4 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-sm text-slate-700">
+ <p class="font-semibold text-slate-900">Tarif ajusté</p>
+ <p class="mt-1">
+ <span x-text="$store.subscriptionChange.preview && $store.subscriptionChange.formatSigned($store.subscriptionChange.preview.differenceMonthlyXof)"></span> par mois
+ ou <span x-text="$store.subscriptionChange.preview && $store.subscriptionChange.formatSigned($store.subscriptionChange.preview.differenceAnnualXof)"></span> par an
+ (nouveau tarif : <span class="font-semibold" x-text="$store.subscriptionChange.preview && $store.subscriptionChange.formatXof($store.subscriptionChange.preview.target.monthlyXof)"></span> par mois).
+ </p>
+ </div>
+ <div x-cloak x-show="$store.subscriptionChange.hasTargetPriceOnly" class="mt-4 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-sm text-slate-700">
+ <p class="font-semibold text-slate-900">Nouveau tarif</p>
+ <p class="mt-1">
+ <span x-text="$store.subscriptionChange.preview && $store.subscriptionChange.formatXof($store.subscriptionChange.preview.target.monthlyXof)"></span> par mois
+ ou <span x-text="$store.subscriptionChange.preview && $store.subscriptionChange.formatXof($store.subscriptionChange.preview.target.annualXof)"></span> par an.
+ L'écart avec votre tarif actuel vous est communiqué par notre équipe.
+ </p>
+ </div>
+ <div x-cloak x-show="$store.subscriptionChange.isOnQuote" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+ <p class="font-semibold text-slate-900">Tarif sur devis</p>
+ <p class="mt-1">Votre formule est sur devis (offre « Grand Groupe » ou sur mesure) : notre équipe établit le tarif ajusté à partir de votre demande.</p>
+ </div>
+
+ @* Ce qui empêche la demande *@
+ <template x-if="$store.subscriptionChange.hasProblems">
+ <ul class="mt-4 space-y-1 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+ <template x-for="problem in $store.subscriptionChange.preview.problems" x-bind:key="problem">
+ <li x-text="problem"></li>
+ </template>
+ </ul>
+ </template>
+ <p x-cloak x-show="$store.subscriptionChange.preview && $store.subscriptionChange.preview.hasPendingRequest"
+ class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
+ Une demande de changement est déjà en cours d'examen pour votre établissement. Attendez la réponse de notre équipe avant d'en envoyer une autre.
+ </p>
+
+ <div x-cloak x-show="$store.subscriptionChange.canSend" class="mt-4">
+ <label for="subscriptionChangeNote" class="form-label">Un mot pour notre équipe <span class="font-normal text-slate-400">(facultatif)</span></label>
+ <textarea id="subscriptionChangeNote" x-model="$store.subscriptionChange.note" rows="2" maxlength="500"
+ class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
+ </div>
+
+ <p x-cloak x-show="$store.subscriptionChange.error" x-text="$store.subscriptionChange.error" class="mt-3 text-sm text-red-600" role="alert"></p>
+ <p x-cloak x-show="!$store.subscriptionChange.isDirector && $store.subscriptionChange.preview"
+ class="mt-3 text-xs text-slate-500">Seul le Directeur peut envoyer cette demande.</p>
+
+ <div class="mt-5 flex flex-wrap justify-end gap-3">
+ <button type="button" x-on:click="$store.subscriptionChange.close()" class="btn-modal-secondary">Fermer</button>
+ <button type="button" x-cloak x-show="$store.subscriptionChange.canSend || $store.subscriptionChange.isSending"
+ x-on:click="$store.subscriptionChange.send()" x-bind:disabled="$store.subscriptionChange.isSending"
+ class="btn-modal-primary group disabled:opacity-60">
+ <span x-text="$store.subscriptionChange.isSending ? 'Envoi…' : 'Envoyer la demande'"></span>
+ </button>
+ </div>
+ </div>
+</modal-shell>
