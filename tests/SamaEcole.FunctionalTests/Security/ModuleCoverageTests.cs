@@ -1,6 +1,7 @@
 using System.Reflection;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Controllers;
 using Xunit;
@@ -22,15 +23,15 @@ public class ModuleCoverageTests
     /// Contrôleurs volontairement hors de tout module. Une entrée ici est une DÉCISION, à justifier :
     /// socle commun (élèves, inscriptions, classes, enseignants, années, réglages), plateforme / Super Admin,
     /// authentification, webhooks, pages (gabarits anonymes, voir <see cref="PageModuleAttribute"/>).
-    /// À ARBITRER : <c>SchedulesController</c> (emploi du temps) et <c>ClassroomsController</c> sont pédagogiques dans l'esprit,
-    /// mais Frais par classe, Paie et Inscriptions en dépendent — décision du 13/10/2026 : API laissée ouverte, lien « Classes »
-    /// masqué en Daara — Mémorisation (classesNavVisible).
+    /// <c>ClassroomsController</c> est pédagogique dans l'esprit, mais Frais par classe, Paie et Inscriptions en dépendent —
+    /// décision du 13/10/2026 : API laissée ouverte, lien « Classes » masqué en Daara — Mémorisation (classesNavVisible).
+    /// <c>SchedulesController</c> (emploi du temps) n'est PLUS transverse : il est sous [RequireModule(Pedagogy)].
     /// </summary>
     private static readonly HashSet<string> CrossCuttingControllers =
     [
         // Socle commun
         nameof(StudentsController), nameof(EnrollmentsController), nameof(ClassroomsController), nameof(TeachersController),
-        nameof(SchedulesController), nameof(SchoolYearsController), nameof(SchoolSettingsController), nameof(CurrentSchoolController),
+        nameof(SchoolYearsController), nameof(SchoolSettingsController), nameof(CurrentSchoolController),
         nameof(BuildingsController), nameof(RoomsController), nameof(InventoryController), nameof(UsersController),
         nameof(AuditLogsController), nameof(FeaturesController), nameof(OnboardingController), nameof(SubscriptionsController),
         // Authentification, compte, inscription publique
@@ -65,6 +66,13 @@ public class ModuleCoverageTests
         unclassified.Should().BeEmpty(
             "tout contrôleur doit porter [RequireModule]/[RequireFeature] ou être listé comme transverse dans {0} avec une justification",
             nameof(CrossCuttingControllers));
+    }
+
+    [Fact]
+    public void The_Schedule_Api_Is_Guarded_By_The_Pedagogy_Module()
+    {
+        typeof(SchedulesController).GetCustomAttributes<RequireModuleAttribute>().Single().Policy
+            .Should().Be(ModulePolicies.NameFor(SchoolModule.Pedagogy));
     }
 
     [Fact]

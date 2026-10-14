@@ -94,7 +94,7 @@
  class="tab-btn" :class="tabClass('profil')">Profil de l'établissement</button>
  <button type="button" role="tab" x-on:click="goToTab('modules')" :aria-selected="tab === 'modules'"
  class="tab-btn" :class="tabClass('modules')">Modules &amp; fonctionnalités</button>
- <button type="button" role="tab" x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
+ <button type="button" role="tab" x-show="canViewStateIntegration" x-cloak x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
  class="tab-btn" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
  <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
  class="tab-btn" :class="tabClass('formats-signatures')">Formats &amp; signatures officielles</button>
@@ -429,7 +429,7 @@
  @* Cycles gérés (SchoolSettings.ManagedCycles) : ce que proposent les écrans de classes, d'inscription et d'examens.
  Endpoint DÉDIÉ (toggleManagedCycle, settings.js) : l'état affiché ne change qu'après la réponse du serveur, qui
  refuse (409 CYCLE_HAS_CLASSROOMS) de retirer un cycle contenant encore des classes. *@
- <div class="border-t border-slate-100 pt-4">
+ <div class="border-t border-slate-100 pt-4" x-show="canViewManagedCycles" x-cloak>
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cycles gérés</h3>
  <p class="text-xs text-slate-400 mb-3">
  Les cycles que votre établissement enseigne. Les écrans de classes, d'inscription et d'examens ne
@@ -495,7 +495,7 @@
  TOUJOURS l'objet `profile` complet — voir settings.js. Regrouper IA/IEF avec le code SIMEN/GPS
  suit le ticket JGK-UI02 à la lettre (« Intégration Étatique : SIMEN, GPS, IEF »), alors qu'ils
  vivaient avant dans la colonne de droite du même onglet « Établissement ». *@
- <div x-show="!isLoading && !loadError && tab === 'integration-etatique'" x-cloak>
+ <div x-show="!isLoading && !loadError && canViewStateIntegration && tab === 'integration-etatique'" x-cloak>
  <div class="card p-6 w-full">
  <form x-on:submit.prevent="saveProfile()" novalidate class="space-y-6">
 

@@ -1,4 +1,6 @@
 using SamaEcole.Application.Features.Schedules;
+using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +10,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/schedules")]
 [Authorize(Roles = "Directeur,Secretariat,Enseignant,SuperAdmin")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class SchedulesController(ISender mediator) : ControllerBase
 {
     [HttpGet("teacher/{teacherId:guid}")]

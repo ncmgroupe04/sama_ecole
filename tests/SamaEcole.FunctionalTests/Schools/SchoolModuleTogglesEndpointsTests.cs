@@ -153,6 +153,24 @@ public class SchoolModuleTogglesEndpointsTests(AuthApiFactory factory) : IClassF
     }
 
     [Fact]
+    public async Task Disabling_Pedagogy_Blocks_The_Schedule_Routes()
+    {
+        // L'emploi du temps relève de la Pédagogie (audit du 13/10/2026) : sa seule interface est l'onglet « Emploi du Temps »
+        // des Enseignants, masqué avec le module. Les lectures internes (appel, billets, paie) passent par la base, pas par cette API.
+        var directeur = await LoginAsDirecteurAsync();
+        var route = $"/api/v1/schedules/classroom/{Guid.NewGuid()}";
+
+        (await SendAsync(HttpMethod.Get, route, directeur.AccessToken)).StatusCode
+            .Should().NotBe(HttpStatusCode.Forbidden, "Pédagogie est active par défaut");
+
+        await PutSettingsAsync(directeur.AccessToken, ValidBody(isPedagogyEnabled: false));
+
+        var blocked = await SendAsync(HttpMethod.Get, route, directeur.AccessToken);
+        blocked.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await blocked.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("MODULE_DISABLED");
+    }
+
+    [Fact]
     public async Task Disabling_Pedagogy_Must_Not_Block_Classrooms_Or_Teachers()
     {
         // Périmètre acté avec le client : Classes et Enseignants restent utilisables même Pédagogie

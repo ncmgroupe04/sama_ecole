@@ -198,6 +198,19 @@ document.addEventListener('alpine:init', () => {
             return this.config.isPedagogyEnabled
                 && (window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Enseignant');
         },
+        /**
+         * Onglet « Intégration étatique (SIMEN) » : SIMEN, STATEDUC et les certificats de mutation relèvent des
+         * effectifs/notes officiels, donc du module Pédagogie (StateIntegrationController). Pédagogie coupée → onglet
+         * masqué. Confort d'affichage, la garde réelle est l'API (403 MODULE_DISABLED).
+         */
+        get canViewStateIntegration() { return this.config.isPedagogyEnabled; },
+
+        /**
+         * Bloc « Cycles gérés » : sans objet pour un Daara — Mémorisation (Halqas, pas de cycles scolaires). Profil
+         * inconnu (null, avant chargement) → visible.
+         */
+        get canViewManagedCycles() { return this.config.profileEtablissement !== 'DaaraMemorisation'; },
+
         mentions: [],
         isMentionCreateOpen: false,
         mentionSubmitting: false,
@@ -380,6 +393,8 @@ document.addEventListener('alpine:init', () => {
                 this.loadError = window.api.toMessage(err, 'Erreur lors du chargement des paramètres.');
             } finally {
                 this.isLoading = false;
+                // Un lien ?tab=integration-etatique ouvert sur une école sans Pédagogie ne doit pas afficher une page vide.
+                if (this.tab === 'integration-etatique' && !this.canViewStateIntegration) this.tab = 'profil';
                 this.focusModeSection();
             }
         },
