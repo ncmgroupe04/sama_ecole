@@ -1,12 +1,15 @@
 using SamaEcole.Application.Platform.Commands.AttachSchoolToUser;
 using SamaEcole.Application.Platform.Commands.GrantComplimentaryAccess;
 using SamaEcole.Application.Platform.Commands.ImpersonateSchool;
+using SamaEcole.Application.Platform.Commands.ReviewWavePayment;
 using SamaEcole.Application.Platform.Commands.SendSubscriptionReminder;
 using SamaEcole.Application.Platform.Commands.TopUpSmsCredits;
 using SamaEcole.Application.Platform.Queries.GetPlatformActivity;
 using SamaEcole.Application.Platform.Queries.GetPlatformDashboard;
 using SamaEcole.Application.Platform.Queries.GetPlatformRevenueProjection;
+using SamaEcole.Application.Platform.Queries.GetPendingWavePayments;
 using SamaEcole.Application.Platform.Queries.GetPlatformSubscriptions;
+using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Subscriptions.Commands.UpdateSubscriptionTier;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -62,6 +65,38 @@ public class PlatformController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RemindSubscription(Guid schoolId, CancellationToken cancellationToken)
     {
         await mediator.Send(new SendSubscriptionReminderCommand(schoolId), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Demandes de paiement d'abonnement par le compte marchand Wave, en attente de rapprochement avec le relevé
+    /// Wave (voir ReviewWavePaymentCommand) — encart « Paiements Wave à valider » de Abonnements &amp; Facturation.
+    /// </summary>
+    [HttpGet("wave-payments")]
+    [ProducesResponseType<IReadOnlyList<PendingWavePayment>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetPendingWavePayments(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetPendingWavePaymentsQuery(), cancellationToken));
+
+    [HttpPost("wave-payments/{paymentId:guid}/approve")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ApproveWavePayment(Guid paymentId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ReviewWavePaymentCommand(paymentId, Approve: true), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("wave-payments/{paymentId:guid}/reject")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RejectWavePayment(Guid paymentId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ReviewWavePaymentCommand(paymentId, Approve: false), cancellationToken);
         return NoContent();
     }
 

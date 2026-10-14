@@ -29,7 +29,27 @@ public interface ISubscriptionPaymentStore
         SubscriptionPaymentStatus finalStatus,
         string webhookPayloadJson,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Console Super Admin — paiements d'abonnement par Wave marchand (Provider = WaveMerchant) encore au
+    /// statut Initiated, toutes écoles confondues, du plus ancien au plus récent. Lecture inter-écoles : passe
+    /// par la fonction SECURITY DEFINER list_pending_wave_payments, jamais une requête EF (RLS).
+    /// </summary>
+    Task<IReadOnlyList<PendingWavePayment>> ListPendingWavePaymentsAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>Une demande de paiement Wave en attente de validation manuelle par le Super Admin.</summary>
+public record PendingWavePayment(
+    Guid PaymentId,
+    Guid SchoolId,
+    string SchoolName,
+    string? DirectorFullName,
+    string? DirectorEmail,
+    string? DirectorPhone,
+    decimal Amount,
+    BillingPeriod BillingPeriod,
+    string Reference,
+    DateTimeOffset InitiatedAt);
 
 public record SubscriptionPaymentLookup(
     string ProviderTransactionRef, decimal Amount, SubscriptionPaymentStatus Status);

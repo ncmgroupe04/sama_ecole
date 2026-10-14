@@ -30,4 +30,12 @@ public record InitiateSubscriptionPaymentCommand : IRequest<InitiateSubscription
 /// guichet PayDunya à ouvrir, l'abonnement est déjà Actif.
 /// </summary>
 public record InitiateSubscriptionPaymentResult(
-    Guid? PaymentId, string? RedirectUrl, SubscriptionPaymentStatus? Status, bool ActivatedWithoutPayment = false);
+    Guid? PaymentId, string? RedirectUrl, SubscriptionPaymentStatus? Status, bool ActivatedWithoutPayment = false,
+    WaveCheckout? Wave = null);
+
+/// <summary>
+/// Consigne de paiement DIRECT sur le compte marchand Wave (méthode WaveMerchant) : <c>RedirectUrl</c> est alors
+/// null — le Directeur règle depuis l'application Wave (lien/QR) <paramref name="Amount"/> FCFA exactement, puis
+/// attend la validation du Super Admin. <paramref name="Reference"/> sert au rapprochement avec le relevé Wave.
+/// </summary>
+public record WaveCheckout(string PaymentUrl, decimal Amount, string Reference);

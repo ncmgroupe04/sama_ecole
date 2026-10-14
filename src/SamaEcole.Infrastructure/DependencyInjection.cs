@@ -33,6 +33,9 @@ public static class DependencyInjection
     /// <summary>Sous-section « Subscriptions:Lifecycle » (voir SubscriptionLifecycleSettings et .env.example).</summary>
     private const string SubscriptionLifecycleSettingsSection = "Subscriptions:Lifecycle";
 
+    /// <summary>Section « Wave » : compte marchand de la plateforme (voir WaveMerchantSettings).</summary>
+    private const string WaveSettingsSection = "Wave";
+
     /// <summary>Sous-section « Kpi:Cache » (voir KpiCacheSettings et .env.example).</summary>
     private const string KpiCacheSettingsSection = "Kpi:Cache";
 
@@ -327,6 +330,11 @@ public static class DependencyInjection
         var payDunyaSection = configuration.GetSection(PayDunyaOptions.SectionName);
         services.Configure<PayDunyaOptions>(payDunyaSection);
         services.Configure<SubscriptionPricingOptions>(configuration.GetSection(SubscriptionPricingOptions.SectionName));
+
+        // Compte marchand Wave de la plateforme (paiement d'abonnement direct, confirmé à la main par le Super
+        // Admin) : le lien est public, il vit dans appsettings.json (section « Wave »).
+        services.AddSingleton(configuration.GetSection(WaveSettingsSection).Get<WaveMerchantSettings>()
+            ?? new WaveMerchantSettings());
 
         // Toujours enregistré (même hors Development) : DevPaymentSimulationController en dépend pour
         // afficher son faux guichet, et sa propre garde IWebHostEnvironment.IsDevelopment() suffit à en

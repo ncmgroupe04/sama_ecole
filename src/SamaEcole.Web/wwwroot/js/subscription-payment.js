@@ -2,17 +2,21 @@
  * Écran /abonnement/paiement — initiation du paiement d'abonnement (ticket JGK-I05).
  *
  * Le Directeur choisit un moyen de paiement et une période, puis est redirigé vers le guichet sécurisé
- * de l'agrégateur (PayDunya). Aucune confirmation de paiement ne se décide ici (AGENTS.md règle #11) :
+ * de l'agrégateur (PayDunya) — ou, pour « Wave — paiement direct », reçoit la consigne de paiement sur le compte
+ * marchand de la plateforme (QR/lien), validée ensuite à la main par le Super Admin. Aucune confirmation de paiement ne se décide ici (AGENTS.md règle #11) :
  * cet écran ne fait qu'INITIER — seul le webhook signé (JGK-I06, à venir) confirmera un jour le paiement.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('subscriptionPaymentForm', () => ({
-        method: 'MobileMoney',
+        method: 'WaveMerchant',
         // Annuel par défaut : c'est le forfait publié sur la grille de la vitrine. Le mensuel (forfait ÷ 12, arrondi)
         // reste au choix du Directeur (SubscriptionAmountResolver).
         billingPeriod: 'Yearly',
         isSubmitting: false,
         error: null,
+
+        // Consigne Wave ({ paymentUrl, amount, reference }) — non null une fois la demande créée (méthode WaveMerchant).
+        waveCheckout: null,
 
         // Module Tarification & Promotions — aperçu uniquement (ValidatePromoCodeQuery, LECTURE
         // SEULE). Le montant qui compte réellement est RECALCULÉ côté serveur à submit() : promoResult
@@ -68,6 +72,14 @@ document.addEventListener('alpine:init', () => {
                     // est déjà Actif (AGENTS.md règle #11 — pas de paiement, donc pas de webhook à
                     // attendre). require-session.js/api.js redirigera vers l'app dès le prochain appel.
                     window.location.assign('/');
+                    return;
+                }
+
+                if (result.wave) {
+                    // Paiement direct sur le compte marchand Wave : pas de guichet à ouvrir, on affiche la consigne
+                    // (QR/lien, montant exact, référence). L'abonnement ne s'active qu'à la validation du Super Admin.
+                    this.waveCheckout = result.wave;
+                    this.isSubmitting = false;
                     return;
                 }
 

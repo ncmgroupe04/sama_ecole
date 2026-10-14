@@ -26,9 +26,57 @@ document.addEventListener('alpine:init', () => {
         grantAccessError: null,
         isGranting: false,
 
+        // Paiements d'abonnement par le compte marchand Wave, en attente de validation manuelle.
+        wavePayments: [],
+        waveError: null,
+        waveReviewTarget: null,
+        waveReviewApprove: true,
+        isReviewingWave: false,
+
+        async loadWavePayments() {
+            try {
+                this.wavePayments = await window.api.get('/admin/platform/wave-payments');
+            } catch (err) {
+                this.waveError = window.api.toMessage(err, 'Erreur lors du chargement des paiements Wave.');
+            }
+        },
+
+        openWaveReview(payment, approve) {
+            this.waveReviewTarget = payment;
+            this.waveReviewApprove = approve;
+            this.waveError = null;
+        },
+
+        closeWaveReview() {
+            this.waveReviewTarget = null;
+        },
+
+        async confirmWaveReview() {
+            this.isReviewingWave = true;
+            this.waveError = null;
+            const action = this.waveReviewApprove ? 'approve' : 'reject';
+            try {
+                await window.api.post('/admin/platform/wave-payments/' + this.waveReviewTarget.paymentId + '/' + action);
+                this.waveReviewTarget = null;
+                await Promise.all([this.loadWavePayments(), this.load()]);
+            } catch (err) {
+                this.waveError = window.api.toMessage(err, 'Erreur lors du traitement du paiement Wave.');
+                this.waveReviewTarget = null;
+                await this.loadWavePayments();
+            } finally {
+                this.isReviewingWave = false;
+            }
+        },
+
+        formatDateTime(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+        },
+
         async load() {
             this.isLoading = true;
             this.error = null;
+            this.loadWavePayments();
             try {
                 this.subscriptions = await window.api.get('/admin/platform/subscriptions');
             } catch (err) {

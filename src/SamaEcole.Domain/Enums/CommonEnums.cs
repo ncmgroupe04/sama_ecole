@@ -259,12 +259,15 @@ public enum RegistrationRequestStatus
 /// Moyen de paiement d'un ABONNEMENT (ticket JGK-I05, docs/Volume_1_Cahier_des_Charges.md §11.6) —
 /// distinct de <see cref="PaymentMethod"/> (encaissement de scolarité, JGK-F02) : deux domaines métier
 /// différents, même si le vocabulaire se recoupe.
+/// <see cref="WaveMerchant"/> : paiement DIRECT sur le compte marchand Wave de la plateforme (lien/QR statique,
+/// sans agrégateur ni webhook) — confirmé À LA MAIN par le Super Admin, jamais par le client.
 /// </summary>
 public enum SubscriptionPaymentMethod
 {
     MobileMoney,
     BankTransfer,
-    Card
+    Card,
+    WaveMerchant
 }
 
 /// <summary>
