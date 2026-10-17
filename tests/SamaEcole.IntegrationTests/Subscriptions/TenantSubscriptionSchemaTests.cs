@@ -193,13 +193,16 @@ public class TenantSubscriptionSchemaTests : IAsyncLifetime
     [Fact]
     public async Task Migration_Is_Reversible_And_Can_Be_Replayed()
     {
-        await MigrateToAsync(PreviousMigration);
-
+        // L'école est semée dans le schéma COURANT, puis on RECULE (comme le test de reprise ci-dessus) : le modèle EF
+        // écrit toutes ses colonnes, y compris celles que des migrations POSTÉRIEURES ajoutent à `schools` — après
+        // MigrateToAsync(PreviousMigration), elles n'existent plus et l'insertion échouerait (42703).
         await using (var owner = _db.NewOwnerContext())
         {
             owner.Schools.Add(new School { Name = "Ecole existante" });
             await owner.SaveChangesAsync();
         }
+
+        await MigrateToAsync(PreviousMigration);
 
         (await TableExistsAsync()).Should().BeFalse("Down supprime la table");
 

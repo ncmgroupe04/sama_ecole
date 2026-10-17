@@ -353,6 +353,8 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `POST` | `/api/v1/schools/current/go-live` | Bascule en mode réel (Directeur, mot « CONFIRMER » ou nom de l'école) — définitive |
 | `POST` | `/api/v1/schools/current/reset-data` | « Zone de danger » : remise à neuf en mode test (Directeur, mot « PURGER » ou nom de l'école) |
 | `DELETE` | `/api/v1/school-years/{id}` | Suppression d'une année scolaire (Directeur, **libellé exact** à recopier) |
+| `GET` / `POST` | `/api/v1/school-calendar/closures` | Calendrier de fermeture (jours fériés, vacances) d'une année, utilisé par le cahier de roulement Franco-Arabe (Bloc 5). Lecture : Directeur, Secrétariat, Enseignant, Surveillant ; création : Directeur (`schoolYearId` en query, période tenue dans l'année sinon `422`). Module Pédagogie. N'influence pas `WorkingDayGuard` |
+| `PUT` / `DELETE` | `/api/v1/school-calendar/closures/{id}` | Modifie ou supprime (logiquement) une fermeture — Directeur |
 | `POST` | `/api/v1/school-years/{id}/apply-evaluation-periods` | Rejoue sur l'année le découpage en périodes choisi dans les réglages (`evaluationPeriodType` : `Trimester` / `Semester` / `Custom` de 2 à 6). Directeur ; `422` dès qu'une note ou une appréciation de bulletin existe sur l'année, ou si elle est terminée |
 
 > **Mode bac à sable, purge et suppression d'année — les trois gardes.** `reset_school_data` et

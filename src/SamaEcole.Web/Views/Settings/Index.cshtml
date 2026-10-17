@@ -18,6 +18,7 @@
  <script src="~/js/settings.js" asp-append-version="true"></script>
  <script src="~/js/council-rules.js" asp-append-version="true"></script>
  <script src="~/js/school-years.js" asp-append-version="true"></script>
+ <script src="~/js/school-closures.js" asp-append-version="true"></script>
  <script src="~/js/users.js" asp-append-version="true"></script>
  <script src="~/js/audit-log.js" asp-append-version="true"></script>
  <script src="~/js/subscription-payments-history.js" asp-append-version="true"></script>
@@ -535,6 +536,34 @@
  <p class="mt-1 text-xs text-slate-400">N'indiquez que le nom, sans préfixe : « ÉCOLE ÉLÉMENTAIRE DE », « COLLÈGE DE » ou « LYCÉE DE » est ajouté automatiquement selon le cycle de la classe de l'élève.</p>
  <p x-show="profileErrors.nomlycee" x-cloak x-text="profileErrors.nomlycee" class="field-error"></p>
  </div>
+
+ @* En-tête officiel en arabe — imprimé sur les documents bilingues (cahier de roulement). Facultatif :
+ un champ vide laisse la ligne arabe à compléter à la main, rien n'est traduit automatiquement. *@
+ <div class="pt-4 border-t border-slate-100">
+ <p class="text-sm font-semibold text-slate-700">En-tête en arabe <span class="font-normal text-slate-400">(documents bilingues, facultatif)</span></p>
+ <div class="mt-3 space-y-4">
+ <div class="max-w-lg">
+ <label for="school-name-ar" class="form-label">Nom de l'établissement (arabe)</label>
+ <input id="school-name-ar" type="text" dir="rtl" lang="ar" x-model="profile.nameAr" maxlength="200" :disabled="!isDirecteur"
+ class="input-field font-arabic disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.namear && 'input-field-error'">
+ <p x-show="profileErrors.namear" x-cloak x-text="profileErrors.namear" class="field-error"></p>
+ </div>
+ <div class="form-grid">
+ <div>
+ <label for="school-ia-ar" class="form-label">Inspection d'Académie (arabe)</label>
+ <input id="school-ia-ar" type="text" dir="rtl" lang="ar" x-model="profile.inspectionAcademieAr" maxlength="150" :disabled="!isDirecteur"
+ class="input-field font-arabic disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.inspectionacademiear && 'input-field-error'">
+ <p x-show="profileErrors.inspectionacademiear" x-cloak x-text="profileErrors.inspectionacademiear" class="field-error"></p>
+ </div>
+ <div>
+ <label for="school-ief-ar" class="form-label">Inspection de l'Éducation (arabe)</label>
+ <input id="school-ief-ar" type="text" dir="rtl" lang="ar" x-model="profile.inspectionEducationFormationAr" maxlength="150" :disabled="!isDirecteur"
+ class="input-field font-arabic disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.inspectioneducationformationar && 'input-field-error'">
+ <p x-show="profileErrors.inspectioneducationformationar" x-cloak x-text="profileErrors.inspectioneducationformationar" class="field-error"></p>
+ </div>
+ </div>
+ </div>
+ </div>
  </div>
  </div>
 
@@ -896,6 +925,7 @@
  <!-- ============================= SPOKE : ANNÉES SCOLAIRES ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'annees-scolaires'" x-cloak>
  @await Html.PartialAsync("_SchoolYearsPanel")
+ @await Html.PartialAsync("_SchoolClosuresPanel")
  </div>
 
  <!-- ============================= SECTION : NOTATION & MENTIONS (Pédagogie) ============================= -->

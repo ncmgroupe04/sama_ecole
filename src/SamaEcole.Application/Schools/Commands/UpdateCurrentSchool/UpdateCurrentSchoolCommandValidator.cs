@@ -44,6 +44,20 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
             .MaximumLength(150).WithMessage("Le nom d'établissement du bulletin ne peut pas dépasser 150 caractères.")
             .NoHtml();
 
+        // Versions arabes de l'en-tête (documents bilingues). Facultatives, mêmes bornes que leur
+        // pendant français : elles sont imprimées telles quelles, donc pas de HTML.
+        RuleFor(c => c.NameAr)
+            .MaximumLength(200).WithMessage("Le nom en arabe ne peut pas dépasser 200 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.InspectionAcademieAr)
+            .MaximumLength(150).WithMessage("L'Inspection d'Académie en arabe ne peut pas dépasser 150 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.InspectionEducationFormationAr)
+            .MaximumLength(150).WithMessage("L'IEF en arabe ne peut pas dépasser 150 caractères.")
+            .NoHtml();
+
         // Coordonnées et mentions légales de l'en-tête du reçu. Facultatives : une école qui n'a pas
         // encore son RCCM doit pouvoir travailler — la mention manquante ne s'imprime simplement pas.
         RuleFor(c => c.Email)

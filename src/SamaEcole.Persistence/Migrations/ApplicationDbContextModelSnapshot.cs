@@ -4115,7 +4115,15 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("InspectionAcademieAr")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<string>("InspectionEducationFormation")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("InspectionEducationFormationAr")
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
@@ -4137,6 +4145,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameAr")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
@@ -4200,6 +4212,69 @@ namespace SamaEcole.Persistence.Migrations
                         .HasFilter("\"IsPubliclyListed\" = TRUE AND \"IsDeleted\" = FALSE");
 
                     b.ToTable("schools", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SchoolClosure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("LabelAr")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "SchoolYearId", "StartDate");
+
+                    b.ToTable("school_closures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_school_closures_period", "\"EndDate\" >= \"StartDate\"");
+                        });
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.SchoolRegistrationRequest", b =>
@@ -7692,6 +7767,22 @@ namespace SamaEcole.Persistence.Migrations
                     b.Navigation("Subject");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SchoolClosure", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.SchoolYear", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SchoolYearId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.SchoolSettings", b =>

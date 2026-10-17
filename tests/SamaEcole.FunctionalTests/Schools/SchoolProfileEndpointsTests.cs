@@ -101,6 +101,51 @@ public class SchoolProfileEndpointsTests(AuthApiFactory factory) : IClassFixture
         reread.LogoUrl.Should().BeNull();
     }
 
+    private record ArabicHeader(string? NameAr, string? InspectionAcademieAr, string? InspectionEducationFormationAr);
+
+    [Fact]
+    public async Task The_Arabic_Header_Fields_Are_Saved_And_Cleared_To_Null()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var saved = await PutProfileAsync(directeur.AccessToken, new
+        {
+            name = "Groupe Scolaire Teranga",
+            nameAr = "مجموعة تيرانغا المدرسية",
+            inspectionAcademieAr = "تييس",
+            inspectionEducationFormationAr = "مبور 1"
+        });
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Relu depuis la base, pas seulement renvoyé par le PUT.
+        var reread = (await (await GetProfileAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<ArabicHeader>())!;
+        reread.NameAr.Should().Be("مجموعة تيرانغا المدرسية");
+        reread.InspectionAcademieAr.Should().Be("تييس");
+        reread.InspectionEducationFormationAr.Should().Be("مبور 1");
+
+        // Une chaîne vide efface le champ : NULL, pas "" (le PDF laisse alors la ligne à compléter).
+        (await PutProfileAsync(directeur.AccessToken, new
+        {
+            name = "Groupe Scolaire Teranga", nameAr = "", inspectionAcademieAr = "  ", inspectionEducationFormationAr = (string?)null
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var cleared = (await (await GetProfileAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<ArabicHeader>())!;
+        cleared.NameAr.Should().BeNull();
+        cleared.InspectionAcademieAr.Should().BeNull();
+        cleared.InspectionEducationFormationAr.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task A_Too_Long_Arabic_Name_Must_Be_Rejected()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await PutProfileAsync(directeur.AccessToken,
+            new { name = "Groupe Scolaire Teranga", nameAr = new string('ع', 201) });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
     [Fact]
     public async Task A_Missing_Name_Must_Be_Rejected()
     {

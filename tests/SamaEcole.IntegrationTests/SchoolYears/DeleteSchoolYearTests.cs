@@ -89,6 +89,14 @@ public class DeleteSchoolYearTests : IAsyncLifetime
             Order = 1, StartDate = new DateOnly(year, 10, 1), EndDate = new DateOnly(year, 12, 20)
         });
 
+        // Calendrier de fermeture (cahier de roulement) : FK RESTRICT vers l'année, donc à purger avec elle.
+        owner.SchoolClosures.Add(new SchoolClosure
+        {
+            Id = Guid.NewGuid(), SchoolId = schoolId, SchoolYearId = schoolYearId, Label = "Tabaski",
+            StartDate = new DateOnly(year + 1, 6, 6), EndDate = new DateOnly(year + 1, 6, 6),
+            Kind = SchoolClosureKind.Holiday
+        });
+
         owner.Classrooms.Add(new Classroom
         {
             Id = classroomId, SchoolId = schoolId, Name = $"CM2-{year}", Level = "Primaire", Capacity = 40
@@ -217,6 +225,8 @@ public class DeleteSchoolYearTests : IAsyncLifetime
         // L'exercice visé a disparu, chaîne financière et pédagogique comprise.
         (await owner.SchoolYears.IgnoreQueryFilters().CountAsync(y => y.Id == AnneeSupprimeeA)).Should().Be(0);
         (await owner.Terms.IgnoreQueryFilters().CountAsync(t => t.SchoolYearId == AnneeSupprimeeA)).Should().Be(0);
+        (await owner.SchoolClosures.IgnoreQueryFilters().CountAsync(c => c.SchoolYearId == AnneeSupprimeeA)).Should().Be(0,
+            "le calendrier de fermeture part avec l'année, sans quoi la FK RESTRICT ferait échouer la purge");
         (await owner.Enrollments.IgnoreQueryFilters().CountAsync(e => e.SchoolYearId == AnneeSupprimeeA)).Should().Be(0,
             "y compris l'inscription déjà supprimée logiquement, que le Global Query Filter masque");
         (await owner.AttendanceSheets.IgnoreQueryFilters().CountAsync(s => s.SchoolYearId == AnneeSupprimeeA)).Should().Be(0);
@@ -228,6 +238,7 @@ public class DeleteSchoolYearTests : IAsyncLifetime
         // ciblée par année plutôt que par école.
         (await owner.SchoolYears.IgnoreQueryFilters().CountAsync(y => y.Id == AnneeGardeeA)).Should().Be(1);
         (await owner.Terms.IgnoreQueryFilters().CountAsync(t => t.SchoolYearId == AnneeGardeeA)).Should().Be(1);
+        (await owner.SchoolClosures.IgnoreQueryFilters().CountAsync(c => c.SchoolYearId == AnneeGardeeA)).Should().Be(1);
         (await owner.Enrollments.IgnoreQueryFilters().CountAsync(e => e.SchoolYearId == AnneeGardeeA)).Should().Be(2);
         (await owner.Payments.IgnoreQueryFilters().CountAsync(p => p.SchoolId == EcoleA)).Should().Be(1,
             "le paiement de l'année supprimée part, celui de l'année gardée reste");

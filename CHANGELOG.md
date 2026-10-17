@@ -3,6 +3,23 @@
 Format : `MAJEURE.MINEURE.CORRECTIF` (`docs/Volume_9_Deployment_Operations.md` §13). Chaque version
 distingue les changements **visibles pour les écoles** des changements **internes**.
 
+## [Non publié]
+
+### Visible pour les écoles
+
+- **Franco-Arabe — en-tête officiel en arabe** (Paramètres → Intégration étatique, sous l'IA et l'IEF français) : nom de l'établissement,
+  Inspection d'Académie et IEF en arabe, destinés aux documents bilingues. Facultatifs ; un champ vide
+  laisse la ligne arabe à compléter à la main.
+- **Calendrier de fermeture** (Paramètres → Années scolaires) : jours fériés et vacances de l'année,
+  avec libellé arabe facultatif. Préparation du cahier de roulement bilingue (Bloc 5) ; ne change pas le
+  refus d'appel un jour de repos.
+
+### Interne
+
+- Migration `AddSchoolClosuresAndArabicSchoolNames` : table `school_closures` (RLS, sans `DELETE` pour le
+  rôle applicatif) et trois colonnes nullables sur `schools`. `delete_school_year` supprime désormais les
+  fermetures de l'année ; `reset_school_data` est inchangée (elle conserve les années scolaires).
+
 ## [1.2.0] — 2026-09-26
 
 ### Visible pour les écoles

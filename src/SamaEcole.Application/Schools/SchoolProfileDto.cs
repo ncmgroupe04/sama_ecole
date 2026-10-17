@@ -41,4 +41,9 @@ public record SchoolProfileDto(
 
     // Chaîne d'affichage « lat, lon » calculée (culture invariante), null si l'une des deux manque —
     // pratique pour l'écran, jamais une donnée persistée. Voir School.GpsCoordinates.
-    string? GpsCoordinates = null);
+    string? GpsCoordinates = null,
+
+    // Versions arabes de l'en-tête officiel (documents bilingues) — voir School.NameAr.
+    string? NameAr = null,
+    string? InspectionAcademieAr = null,
+    string? InspectionEducationFormationAr = null);
