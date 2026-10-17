@@ -103,6 +103,12 @@ public class PagesController : Controller
     [HttpGet("/presences")]
     public IActionResult Attendance() => View("~/Views/Attendance/Index.cshtml");
 
+    // Franco-Arabe Bloc 5b : cahier de roulement — registre d'appel mensuel par classe (grille + statistiques).
+    // RollBookController garde l'accès (Enseignant borné à ses classes ; statistiques : Directeur, Secrétariat).
+    [PageModule(SchoolModule.Pedagogy)]
+    [HttpGet("/cahier-de-roulement")]
+    public IActionResult RollBook() => View("~/Views/RollBook/Index.cshtml");
+
     [PageModule(SchoolModule.Pedagogy)]
 
     [HttpGet("/billets")]
