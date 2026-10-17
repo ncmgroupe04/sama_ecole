@@ -23,6 +23,7 @@ tags:
   - name: Users
   - name: Schools
   - name: SchoolYears
+  - name: SchoolCalendar
   - name: Classrooms
   - name: Subjects
   - name: Coefficients
@@ -1868,6 +1869,103 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Term' }
+
+  /school-calendar/closures:
+    get:
+      tags: [SchoolCalendar]
+      summary: Lister les fermetures (jours fériés, vacances) d'une année scolaire
+      description: >-
+        Calendrier de fermeture utilisé par le cahier de roulement (Franco-Arabe Bloc 5) : les jours
+        couverts sont grisés et ne comptent pas comme jours de classe. N'influence PAS le refus d'appel
+        (`WorkingDayGuard`) : un appel saisi un jour fermé reste accepté. Sans `schoolYearId`, celles de
+        l'année ACTIVE ; aucune année active = liste vide. Lecture : Directeur, Secrétariat, Enseignant,
+        Surveillant, SuperAdmin. Module Pédagogie requis.
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Les fermetures de l'année, dans l'ordre du calendrier
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchoolClosure' }
+        '403': { description: Rôle non autorisé, ou module Pédagogie désactivé (MODULE_DISABLED) }
+    post:
+      tags: [SchoolCalendar]
+      summary: Ajouter une fermeture à une année scolaire (Directeur)
+      description: >-
+        La période (dates incluses) doit tenir dans l'année scolaire visée (422 sinon). Un jour férié
+        isolé a `startDate == endDate`. L'école vient du JWT.
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolClosureInput' }
+      responses:
+        '201':
+          description: Fermeture créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolClosure' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+        '422':
+          description: Libellé manquant ou trop long, fin avant début, ou période hors de l'année
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /school-calendar/closures/{id}:
+    put:
+      tags: [SchoolCalendar]
+      summary: Modifier une fermeture (Directeur)
+      description: >-
+        Dates, nature et libellés. L'année d'une fermeture ne change jamais : la supprimer puis la
+        recréer sur l'autre année.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolClosureInput' }
+      responses:
+        '200':
+          description: Fermeture modifiée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolClosure' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Fermeture introuvable dans cet établissement }
+        '422':
+          description: Mêmes règles qu'à la création
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    delete:
+      tags: [SchoolCalendar]
+      summary: Supprimer une fermeture (Directeur, suppression logique)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Fermeture supprimée (logiquement) }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Fermeture introuvable dans cet établissement }
 
   /classrooms:
     get:
@@ -5880,6 +5978,16 @@ components:
           nullable: true
           maxLength: 150
           description: Nom porté par l'en-tête du bulletin, SANS préfixe de cycle (ajouté à l'impression).
+        nameAr:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: >-
+            Nom de l'établissement en arabe, imprimé sur les documents bilingues (cahier de roulement,
+            Franco-Arabe Bloc 5). Absent = la ligne arabe est laissée à compléter à la main ; rien n'est
+            traduit automatiquement.
+        inspectionAcademieAr: { type: string, nullable: true, maxLength: 150, description: "Inspection d'Académie en arabe (même règle que `nameAr`)." }
+        inspectionEducationFormationAr: { type: string, nullable: true, maxLength: 150, description: "IEF en arabe (même règle que `nameAr`)." }
         isPubliclyListed: { type: boolean, default: false }
         city: { type: string, nullable: true, maxLength: 120 }
         region: { type: string, nullable: true, maxLength: 120 }
@@ -6061,6 +6169,27 @@ components:
           description: >-
             Postérieure à `startDate`, et comprise entre 3 et 18 mois après elle — de quoi
             intercepter la faute de frappe sur le millésime.
+
+    SchoolClosure:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        schoolYearId: { type: string, format: uuid }
+        startDate: { type: string, format: date, description: Premier jour fermé (inclus) }
+        endDate: { type: string, format: date, description: Dernier jour fermé (inclus), jamais avant startDate }
+        kind: { type: string, enum: [Holiday, Vacation, Other] }
+        label: { type: string, maxLength: 120, example: Tabaski }
+        labelAr: { type: string, nullable: true, maxLength: 120, description: Libellé imprimé sur le cahier bilingue }
+
+    SchoolClosureInput:
+      type: object
+      required: [startDate, endDate, kind, label]
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        kind: { type: string, enum: [Holiday, Vacation, Other] }
+        label: { type: string, maxLength: 120 }
+        labelAr: { type: string, nullable: true, maxLength: 120 }
 
     SchoolYear:
       type: object

@@ -33,6 +33,7 @@ public class GetCurrentSchoolQueryHandler(IApplicationDbContext dbContext, ITena
             school.Email, school.Ninea, school.RegistreCommerce,
             school.IsPubliclyListed, school.City, school.Region, school.PublicDescription,
             school.NationalSchoolCode, school.MinistryAuthorizationNumber, school.SchoolDistrictCode,
-            school.GpsLatitude, school.GpsLongitude, school.GpsCoordinates);
+            school.GpsLatitude, school.GpsLongitude, school.GpsCoordinates,
+            school.NameAr, school.InspectionAcademieAr, school.InspectionEducationFormationAr);
     }
 }

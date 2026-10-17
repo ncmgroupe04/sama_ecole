@@ -29,6 +29,11 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
         builder.Property(s => s.InspectionEducationFormation).HasMaxLength(150);
         builder.Property(s => s.NomLycee).HasMaxLength(150);
 
+        // Versions arabes (documents bilingues). Facultatives, sans défaut : NULL = « à compléter ».
+        builder.Property(s => s.NameAr).HasMaxLength(200);
+        builder.Property(s => s.InspectionAcademieAr).HasMaxLength(150);
+        builder.Property(s => s.InspectionEducationFormationAr).HasMaxLength(150);
+
         // Identification réglementaire SIMEN (module Intégration étatique, ticket JGK-M05).
         builder.Property(s => s.NationalSchoolCode).HasMaxLength(30);
         builder.Property(s => s.MinistryAuthorizationNumber).HasMaxLength(80);

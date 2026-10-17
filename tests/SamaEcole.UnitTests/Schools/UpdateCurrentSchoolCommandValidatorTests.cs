@@ -102,4 +102,54 @@ public class UpdateCurrentSchoolCommandValidatorTests
 
         _validator.Validate(command).IsValid.Should().BeTrue();
     }
+
+    // -- Versions arabes de l'en-tête (documents bilingues, Franco-Arabe Bloc 5) ----------------------
+
+    [Fact]
+    public void The_Arabic_Header_Fields_Are_Optional()
+    {
+        var command = Valid() with { NameAr = null, InspectionAcademieAr = null, InspectionEducationFormationAr = null };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_Complete_Arabic_Header_Should_Pass()
+    {
+        var command = Valid() with
+        {
+            NameAr = "مدرسة الباوباب",
+            InspectionAcademieAr = "تييس",
+            InspectionEducationFormationAr = "مبور 1"
+        };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(201, 0, 0)]
+    [InlineData(0, 151, 0)]
+    [InlineData(0, 0, 151)]
+    public void Too_Long_Arabic_Header_Fields_Should_Fail(int nameAr, int iaAr, int iefAr)
+    {
+        var command = Valid() with
+        {
+            NameAr = nameAr == 0 ? null : new string('ع', nameAr),
+            InspectionAcademieAr = iaAr == 0 ? null : new string('ع', iaAr),
+            InspectionEducationFormationAr = iefAr == 0 ? null : new string('ع', iefAr)
+        };
+
+        _validator.Validate(command).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void An_Html_Bearing_Arabic_Name_Should_Fail()
+    {
+        var command = Valid() with { NameAr = "<img src=x onerror=alert(1)>" };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.NameAr));
+    }
 }

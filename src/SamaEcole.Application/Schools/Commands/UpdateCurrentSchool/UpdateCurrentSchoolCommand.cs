@@ -39,4 +39,9 @@ public record UpdateCurrentSchoolCommand(
     string? MinistryAuthorizationNumber = null,
     string? SchoolDistrictCode = null,
     decimal? GpsLatitude = null,
-    decimal? GpsLongitude = null) : IRequest<SchoolProfileDto>;
+    decimal? GpsLongitude = null,
+
+    // Versions arabes de l'en-tête officiel (documents bilingues, Franco-Arabe Bloc 5). Facultatives.
+    string? NameAr = null,
+    string? InspectionAcademieAr = null,
+    string? InspectionEducationFormationAr = null) : IRequest<SchoolProfileDto>;

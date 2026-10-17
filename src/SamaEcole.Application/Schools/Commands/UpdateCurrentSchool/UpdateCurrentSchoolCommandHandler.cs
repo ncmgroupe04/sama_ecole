@@ -35,6 +35,9 @@ public class UpdateCurrentSchoolCommandHandler(
         school.InspectionAcademie = Normalize(request.InspectionAcademie);
         school.InspectionEducationFormation = Normalize(request.InspectionEducationFormation);
         school.NomLycee = Normalize(request.NomLycee);
+        school.NameAr = Normalize(request.NameAr);
+        school.InspectionAcademieAr = Normalize(request.InspectionAcademieAr);
+        school.InspectionEducationFormationAr = Normalize(request.InspectionEducationFormationAr);
         school.Email = Normalize(request.Email);
         school.Ninea = Normalize(request.Ninea);
         school.RegistreCommerce = Normalize(request.RegistreCommerce);
@@ -78,7 +81,8 @@ public class UpdateCurrentSchoolCommandHandler(
             school.Email, school.Ninea, school.RegistreCommerce,
             school.IsPubliclyListed, school.City, school.Region, school.PublicDescription,
             school.NationalSchoolCode, school.MinistryAuthorizationNumber, school.SchoolDistrictCode,
-            school.GpsLatitude, school.GpsLongitude, school.GpsCoordinates);
+            school.GpsLatitude, school.GpsLongitude, school.GpsCoordinates,
+            school.NameAr, school.InspectionAcademieAr, school.InspectionEducationFormationAr);
     }
 
     /// <summary>Chaîne vide ⇒ null : un champ optionnel effacé par le Directeur redevient NULL, pas "".</summary>

@@ -513,6 +513,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // créées par les tests : une école n'a droit qu'à UNE année active. Sans cette purge, la
         // première année créée par un test resterait active et le suivant, croyant créer sa première
         // année, obtiendrait une année inactive. L'ordre d'exécution deviendrait significatif.
+        // Les fermetures du calendrier (FK Restrict vers school_years) partent avant les années.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_closures;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_years;");
 
         // Enseignants (ticket JGK-D03) : teacher_subjects référence teachers ET subjects en Restrict,

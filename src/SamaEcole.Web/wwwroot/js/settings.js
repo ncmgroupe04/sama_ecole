@@ -64,6 +64,8 @@ document.addEventListener('alpine:init', () => {
         profile: {
             name: '', address: '', phone: '', logoUrl: '',
             inspectionAcademie: '', inspectionEducationFormation: '', nomLycee: '',
+            // En-tête officiel en arabe (documents bilingues Franco-Arabe) — facultatif.
+            nameAr: '', inspectionAcademieAr: '', inspectionEducationFormationAr: '',
             // Coordonnées et mentions légales de l'en-tête du reçu (NINEA / RCCM).
             email: '', ninea: '', registreCommerce: '',
             // Intégration étatique (SIMEN, JGK-M05). GPS en deux champs numériques ; « lat, lon »
@@ -500,6 +502,9 @@ document.addEventListener('alpine:init', () => {
                 inspectionAcademie: dto.inspectionAcademie || '',
                 inspectionEducationFormation: dto.inspectionEducationFormation || '',
                 nomLycee: dto.nomLycee || '',
+                nameAr: dto.nameAr || '',
+                inspectionAcademieAr: dto.inspectionAcademieAr || '',
+                inspectionEducationFormationAr: dto.inspectionEducationFormationAr || '',
                 email: dto.email || '',
                 ninea: dto.ninea || '',
                 registreCommerce: dto.registreCommerce || '',
@@ -547,6 +552,9 @@ document.addEventListener('alpine:init', () => {
                     inspectionAcademie: this.profile.inspectionAcademie || null,
                     inspectionEducationFormation: this.profile.inspectionEducationFormation || null,
                     nomLycee: this.profile.nomLycee || null,
+                    nameAr: this.profile.nameAr || null,
+                    inspectionAcademieAr: this.profile.inspectionAcademieAr || null,
+                    inspectionEducationFormationAr: this.profile.inspectionEducationFormationAr || null,
                     email: this.profile.email || null,
                     ninea: this.profile.ninea || null,
                     registreCommerce: this.profile.registreCommerce || null,

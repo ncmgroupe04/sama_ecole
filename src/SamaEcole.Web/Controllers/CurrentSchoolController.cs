@@ -72,7 +72,12 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
         string? MinistryAuthorizationNumber = null,
         string? SchoolDistrictCode = null,
         decimal? GpsLatitude = null,
-        decimal? GpsLongitude = null);
+        decimal? GpsLongitude = null,
+
+        // Versions arabes de l'en-tête (Franco-Arabe Bloc 5). Même remarque : mappé à la main.
+        string? NameAr = null,
+        string? InspectionAcademieAr = null,
+        string? InspectionEducationFormationAr = null);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le nom et les coordonnées s'affichent sur le
@@ -98,7 +103,8 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
                 request.Email, request.Ninea, request.RegistreCommerce,
                 request.IsPubliclyListed, request.City, request.Region, request.PublicDescription,
                 request.NationalSchoolCode, request.MinistryAuthorizationNumber, request.SchoolDistrictCode,
-                request.GpsLatitude, request.GpsLongitude),
+                request.GpsLatitude, request.GpsLongitude,
+                request.NameAr, request.InspectionAcademieAr, request.InspectionEducationFormationAr),
             cancellationToken));
 
     /// <summary>
