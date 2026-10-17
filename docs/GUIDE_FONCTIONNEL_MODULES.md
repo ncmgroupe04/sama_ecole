@@ -990,7 +990,10 @@ lui-même (voir ci-dessous).
   renseignées ; assiduité = présence + absences justifiées ; la **couverture** dit quelle part des demi-journées
   attendues est renseignée, pour qu'un cahier presque vide ne passe pas pour 100 %. Un niveau additionne les compteurs de
   ses classes avant de calculer les taux. L'Enseignant n'accède qu'à ses classes ; les statistiques sont réservées à la
-  direction et au secrétariat.
+  direction et au secrétariat. **Export PDF** (Directeur, Secrétariat, Surveillant) : « Exporter en PDF » ouvre le cahier
+  du mois dans l'aperçu (A4 paysage, bandeau officiel et IA/IEF, légende, totaux, signatures) ; depuis les statistiques,
+  « Exporter la période en PDF » ajoute une grille par mois, le récapitulatif et, pour la direction et le secrétariat, la
+  synthèse du niveau. En français, en arabe ou bilingue (modules Franco-Arabe) ; le PDF reprend le cahier ENREGISTRÉ.
 - **En-tête officiel en arabe** (onglet Intégration étatique, sous l'IA et l'IEF français : nom de l'établissement, IA et IEF en arabe, facultatifs) et
   **Calendrier de fermeture** (onglet Années scolaires : jours fériés et vacances, libellé arabe facultatif) —
   socle du cahier de roulement bilingue Franco-Arabe (Bloc 5). Un champ arabe vide laisse la ligne à compléter à

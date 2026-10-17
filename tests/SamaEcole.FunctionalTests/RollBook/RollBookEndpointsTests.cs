@@ -252,6 +252,88 @@ public class RollBookEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         (await SendAsync(HttpMethod.Get, $"{Url}/stats?scope=level&month={WorkingDay:yyyy-MM}", secretaire)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    // ------------------------------------------------------------------------------------ Export PDF
+
+    private async Task<HttpResponseMessage> PdfAsync(string token, Guid classroom, string query) =>
+        await SendAsync(HttpMethod.Get, $"{Url}/pdf?classroomId={classroom}&{query}", token);
+
+    [Fact]
+    public async Task Directeur_Exports_The_Monthly_Cahier_As_An_Inline_French_Pdf()
+    {
+        var directeur = await DirecteurAsync();
+        var (classroom, _, s1, _) = await SeedAsync(directeur);
+        await SendAsync(HttpMethod.Put, $"{Url}/entries", directeur,
+            new { classroomId = classroom, entries = new[] { Cell(s1, "Morning", "Present") } });
+
+        // « fr » explicite, puis sans langue : une école hors module Franco-Arabe reçoit le français.
+        foreach (var query in new[] { $"month={WorkingDay:yyyy-MM}&lang=fr", $"month={WorkingDay:yyyy-MM}" })
+        {
+            var response = await PdfAsync(directeur, classroom, query);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK, query);
+            response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf", query);
+            response.Content.Headers.ContentDisposition!.DispositionType.Should().Be("inline");
+            response.Content.Headers.ContentDisposition.FileName.Should().StartWith("Cahier-de-roulement-CM2-A-");
+            (await response.Content.ReadAsByteArrayAsync()).Take(5).Should().Equal("%PDF-"u8.ToArray(), query);
+        }
+    }
+
+    [Fact]
+    public async Task Arabic_And_Bilingual_Exports_Are_Refused_For_A_School_Without_The_Franco_Arabic_Module()
+    {
+        var directeur = await DirecteurAsync();
+        var (classroom, _, _, _) = await SeedAsync(directeur);
+
+        // L'école de test n'active pas le module : le rendu arabe ou bilingue est refusé (422), jamais généré à moitié.
+        // Le rendu arabe et bilingue d'une école Franco-Arabe est couvert par RollBookPdfTests (PostgreSQL réel).
+        foreach (var lang in new[] { "ar", "bi" })
+        {
+            (await PdfAsync(directeur, classroom, $"month={WorkingDay:yyyy-MM}&lang={lang}")).StatusCode
+                .Should().Be(HttpStatusCode.UnprocessableEntity, lang);
+        }
+    }
+
+    [Fact]
+    public async Task Secretariat_Can_Export_The_Cahier()
+    {
+        var directeur = await DirecteurAsync();
+        var (classroom, _, _, _) = await SeedAsync(directeur);
+        var secretaire = await TokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+
+        (await PdfAsync(secretaire, classroom, $"month={WorkingDay:yyyy-MM}&lang=fr")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task The_Pdf_Needs_Exactly_One_Period_And_A_Known_Language()
+    {
+        var directeur = await DirecteurAsync();
+        var (classroom, _, _, _) = await SeedAsync(directeur);
+
+        (await PdfAsync(directeur, classroom, "lang=fr")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, "aucune période");
+        (await PdfAsync(directeur, classroom, $"month={ThisMonth}&termId={Guid.NewGuid()}")).StatusCode
+            .Should().Be(HttpStatusCode.UnprocessableEntity, "deux périodes");
+        (await PdfAsync(directeur, classroom, $"month={ThisMonth}&lang=en")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await PdfAsync(directeur, classroom, "month=novembre")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await PdfAsync(directeur, classroom, "month=2001-01")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, "hors de toute année scolaire");
+        (await PdfAsync(directeur, Guid.NewGuid(), $"month={ThisMonth}")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, "classe inconnue");
+        (await PdfAsync(directeur, classroom, $"termId={Guid.NewGuid()}")).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, "période d'évaluation inconnue");
+    }
+
+    [Fact]
+    public async Task Teacher_Finance_And_Anonymous_Callers_Cannot_Export_The_Cahier()
+    {
+        var directeur = await DirecteurAsync();
+        var (classroom, _, _, _) = await SeedAsync(directeur);
+        var query = $"month={WorkingDay:yyyy-MM}&lang=fr";
+
+        var enseignant = await TokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
+        var finance = await TokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
+
+        (await PdfAsync(enseignant, classroom, query)).StatusCode.Should().Be(HttpStatusCode.Forbidden, "l'Enseignant saisit le cahier mais ne l'exporte pas");
+        (await PdfAsync(finance, classroom, query)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _client.GetAsync($"{Url}/pdf?classroomId={classroom}&{query}")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     [Fact]
     public async Task Finance_And_Anonymous_Callers_Are_Rejected()
     {

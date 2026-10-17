@@ -20,7 +20,12 @@ distingue les changements **visibles pour les écoles** des changements **intern
   (P, R, J, A), motif et durée du retard par case, enregistrement en un lot. Affichage français, arabe (grille de
   droite à gauche) ou bilingue sur les établissements Franco-Arabes. Statistiques de présence, d'absence et
   d'assiduité par élève, classe et niveau, pour un mois ou une période d'évaluation, avec le taux de couverture
-  (part des demi-journées renseignées). L'export PDF pour l'inspection arrive dans la livraison suivante.
+  (part des demi-journées renseignées).
+- **Export PDF du cahier de roulement pour l'inspection** : A4 paysage, bandeau officiel (République, Ministère, IA, IEF,
+  établissement) en français, en arabe ou bilingue, une grille par mois (légende, totaux et taux de la classe, ligne
+  « Absents » par demi-journée), signatures et cachet. Pour une période d'évaluation : une grille par mois, le
+  récapitulatif mois par mois et, pour la direction et le secrétariat, la synthèse du niveau. Le Surveillant peut
+  exporter. Un nom d'école ou d'inspection non renseigné en arabe laisse une ligne pointillée à compléter à la main.
 
 ### Interne
 

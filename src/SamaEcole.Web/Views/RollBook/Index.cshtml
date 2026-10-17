@@ -77,6 +77,11 @@
  <div class="flex items-center gap-2">
  <span x-show="pendingCount > 0" x-cloak class="text-xs font-semibold text-amber-700 bg-amber-50 rounded-lg px-2 py-1" x-text="pendingCount + ' modification(s) non enregistrée(s)'"></span>
  <button type="button" x-show="pendingCount > 0" x-cloak x-on:click="discard()" class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors" x-text="short('cancel')"></button>
+ <button type="button" x-show="canExport" x-cloak x-on:click="exportMonthPdf()" :disabled="exportBlocked"
+ :title="exportBlocked ? 'Enregistrez ou annulez vos modifications avant d\'exporter : le PDF reprend le cahier enregistré.' : 'Cahier du mois, prêt à imprimer pour l\'inspection'"
+ class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
+ <span x-text="short('exportPdf')"></span>
+ </button>
  <button type="button" x-on:click="save()" :disabled="pendingCount === 0 || isSaving" class="btn-modal-primary whitespace-nowrap">
  <span x-text="isSaving ? 'Enregistrement…' : short('save')"></span>
  </button>
@@ -234,6 +239,13 @@
  <option value="term">Une période d'évaluation</option>
  </select>
  </div>
+ <div x-show="canExportTerm" x-cloak class="lg:ml-auto">
+ <button type="button" x-on:click="exportTermPdf()"
+ title="Grilles mensuelles, récapitulatif de la période et, pour la direction, synthèse du niveau"
+ class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap">
+ Exporter la période en PDF
+ </button>
+ </div>
  <div x-show="statsPeriod === 'term'" x-cloak>
  <label for="rb-term" class="form-label-sm">Trimestre / semestre</label>
  <select id="rb-term" x-model="statsTermId" x-on:change="loadStats()" class="input-field mt-0">
@@ -337,4 +349,7 @@
  <empty-state icon="layers" title="Aucune statistique affichée." hint="Choisissez la portée et la période (et une classe pour la portée « Une classe »)." />
  </div>
  </div>
+
+ @* Aperçu PDF partagé — voir wwwroot/js/pdf-preview.js *@
+ @await Html.PartialAsync("_PdfPreviewModal")
 </div>
