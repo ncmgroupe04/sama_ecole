@@ -113,6 +113,9 @@ public interface IApplicationDbContext
     /// <summary>Fermetures du calendrier (fériés, vacances) d'une année scolaire — cahier de roulement (Franco-Arabe Bloc 5).</summary>
     DbSet<SchoolClosure> SchoolClosures { get; }
 
+    /// <summary>Saisies du cahier de roulement (une par élève et demi-journée) : elles priment sur le statut dérivé des appels (Franco-Arabe Bloc 5b).</summary>
+    DbSet<RollBookEntry> RollBookEntries { get; }
+
     /// <summary>Notes (ticket JGK-G01) : une par (élève, matière, trimestre, type d'évaluation). Verrou optimiste xmin.</summary>
     DbSet<Grade> Grades { get; }
 
