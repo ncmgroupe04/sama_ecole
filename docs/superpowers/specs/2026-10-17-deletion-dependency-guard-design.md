@@ -122,7 +122,7 @@ Respecte le format d'erreur normalisé (`Volume_4_API_Design.md` §0.4) ; `schoo
 | Route | Rôle | Réponse |
 |---|---|---|
 | `GET /api/v1/{ressource}/{id}/deletion-impact` | Analyse | 200 : `canDelete`, `financialBlock` (booléen + message), `links[]` |
-| `POST /api/v1/{ressource}/{id}/unlink-dependencies` | Rupture explicite | 200 : l'analyse mise à jour ; 409 si `financialBlock` ; 409 si `rowVersion` périmé |
+| `POST /api/v1/{ressource}/{id}/unlink-dependencies` | Rupture explicite | 200 : l'analyse mise à jour ; 409 si `financialBlock` ; 409 `DEPENDENCIES_NOT_BREAKABLE` si un lien ne se rompt pas ici (ex. matériel prêté non restitué). Pas de `rowVersion` : la rupture ne modifie pas la fiche, les inscriptions sont protégées par leur propre verrou xmin. |
 | `DELETE /api/v1/{ressource}/{id}?rowVersion=` | Suppression (existante) | 204 ; **409** `FINANCIAL_RECORDS_EXIST` ou `DEPENDENCIES_EXIST` avec `links[]` |
 
 Forme d'un lien dans la réponse :
@@ -221,6 +221,12 @@ Ce catalogue est un point de départ : l'inventaire exhaustif est une étape d'i
 
 0. **PR0 — Annulation de paiement** (§2.4) : route, écran, tests de non-régression des rapports.
 1. **PR1 — socle + Élève** : analyse, rupture, composant d'interface, messages, test de couverture FK.
+   *Livrée (branche `feat/guided-student-deletion`, plan `docs/superpowers/plans/2026-10-18-guided-student-deletion.md`).*
+   Précisions d'implémentation : un élève ne peut jamais « ne pas avoir de classe » (`Student.ClassroomId` est obligatoire) —
+   le rattachement à la classe n'est donc pas un lien à rompre, il disparaît avec la fiche archivée ; le matricule et l'IEN
+   redeviennent disponibles par des index uniques partiels, mais la numérotation automatique reste un compteur sans trou
+   (elle ne réémet pas d'elle-même un numéro supprimé) ; l'historique financier d'un élève supprimé reste lisible
+   (« (élève supprimé) » dans les états).
 2. **PR2 — Classe, Matière, Enseignant.**
 3. **PR3 — Salle, Bâtiment, Frais, Année scolaire, Inventaire.**
 
