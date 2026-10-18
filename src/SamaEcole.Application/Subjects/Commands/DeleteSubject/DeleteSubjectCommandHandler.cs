@@ -1,5 +1,6 @@
-using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Subjects.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,29 +22,11 @@ public class DeleteSubjectCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Matière {request.Id} introuvable.");
 
-        // Règle métier obligatoire : une matière déjà notée ne peut pas être archivée — son coefficient
-        // pilote encore le calcul des moyennes et bulletins déjà émis (Subject.Coefficient).
-        var hasGrades = await dbContext.Grades
-            .AnyAsync(g => g.SubjectId == request.Id, cancellationToken);
-
-        if (hasGrades)
-        {
-            throw new BusinessRuleException(
-                "Impossible de supprimer : cet élément possède des données liées (des notes existent déjà pour cette matière).");
-        }
-
-        // Un DOMAINE qui porte encore des activités : les archiver en cascade supprimerait des notes de
-        // vue sans que personne ne l'ait demandé, et les laisser en place les rendrait orphelines —
-        // rattachées à un domaine archivé, donc absentes du bulletin sans le moindre message. L'école
-        // décide, ligne par ligne (la FK est en Restrict pour la même raison).
-        var childCount = await dbContext.Subjects
-            .CountAsync(s => s.ParentSubjectId == request.Id, cancellationToken);
-
-        if (childCount > 0)
-        {
-            throw new BusinessRuleException(
-                $"Impossible de supprimer : ce domaine porte encore {childCount} activité(s) d'évaluation. Supprimez-les ou rattachez-les à un autre domaine d'abord.");
-        }
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkSubjectDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, SubjectDeletionPolicy.Policy, request.Id, cancellationToken);
 
         // Même verrou optimiste que UpdateSubjectCommandHandler (AGENTS.md règle #5).
         dbContext.SetOriginalConcurrencyToken(subject, request.RowVersion);
