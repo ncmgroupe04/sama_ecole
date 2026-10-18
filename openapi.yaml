@@ -2050,6 +2050,38 @@ paths:
         '403': { description: Enseignant non affecté à la classe }
         '404': { description: Saisie introuvable dans cet établissement }
 
+  /roll-book/pdf:
+    get:
+      tags: [RollBook]
+      summary: Cahier de roulement imprimable pour l'inspection (PDF A4 paysage)
+      description: >-
+        Exactement UNE période : `month` (AAAA-MM, le cahier mensuel) ou `termId` (la période d'évaluation : une grille par
+        mois, le récapitulatif mois par mois, puis — pour la Direction, le Secrétariat et le Super Admin seulement — la
+        synthèse du niveau, compteurs sommés). Le bandeau officiel (République, Ministère, IA, IEF, établissement) est
+        imprimé en français, en arabe ou les deux selon `lang` : `fr`, `ar` (page de droite à gauche) ou `bi` (grille de gauche
+        à droite, libellés français puis arabe). Sans `lang`, `bi` pour une école Franco-Arabe, `fr` sinon ; `ar` et `bi`
+        exigent le module Franco-Arabe (422 sinon). Un nom d'école ou d'inspection non renseigné en arabe laisse une ligne
+        pointillée à compléter à la main. Les cases, compteurs et taux sont ceux de `GET /roll-book` et `/roll-book/stats` :
+        le document ne calcule rien. Réponse `application/pdf`, `Content-Disposition: inline`. Directeur, Secrétariat,
+        Surveillant, Super Admin ; jamais l'Enseignant (403).
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: month, in: query, required: false, schema: { type: string, example: '2026-11' } }
+        - { name: termId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: lang, in: query, required: false, schema: { type: string, enum: [fr, ar, bi] } }
+      responses:
+        '200':
+          description: Le cahier de roulement en PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé (dont l'Enseignant), ou module Pédagogie désactivé }
+        '422':
+          description: Période absente ou double, mois mal formé, classe ou période introuvable, hors année scolaire, ou langue arabe/bilingue sans module Franco-Arabe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /roll-book/stats:
     get:
       tags: [RollBook]

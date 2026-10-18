@@ -27,7 +27,7 @@
     const KEY_TO_STATUS = { p: 'Present', r: 'Late', j: 'JustifiedAbsence', a: 'UnjustifiedAbsence' };
 
     const LABELS = {
-        title: { fr: 'Cahier de roulement', ar: 'سجل المناداة' },
+        title: { fr: 'Cahier de roulement', ar: 'سجل الحضور والغياب' },
         grid: { fr: 'Grille', ar: 'الجدول' },
         stats: { fr: 'Statistiques', ar: 'الإحصائيات' },
         classroom: { fr: 'Classe', ar: 'القسم' },
@@ -45,6 +45,7 @@
         unjustified: { fr: 'Absent non justifié', ar: 'غائب بدون عذر' },
         notRecorded: { fr: 'Non renseigné', ar: 'غير مسجل' },
         entry: { fr: 'Saisie du cahier', ar: 'إدخال يدوي' },
+        exportPdf: { fr: 'Exporter en PDF', ar: 'تصدير PDF' },
         revert: { fr: 'Revenir au calcul', ar: 'العودة إلى الحساب التلقائي' },
         save: { fr: 'Enregistrer', ar: 'حفظ' },
         cancel: { fr: 'Annuler les modifications', ar: 'إلغاء التعديلات' },
@@ -101,6 +102,9 @@
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('rollBookView', () => ({
+            // Aperçu PDF partagé (pdf-preview.js) : impression ou téléchargement au choix, jamais un download forcé.
+            ...(window.pdfPreview ? window.pdfPreview.state() : {}),
+
             classrooms: [],
             terms: [],
             classroomId: '',
@@ -124,8 +128,12 @@
             stats: null,
             isLoadingStats: false,
 
-            lang: 'fr',
+            /** Choix de l'utilisateur (« fr », « ar », « bi »), ou null : la langue effective se déduit alors du module. */
+            langChoice: null,
             today: new Date().toISOString().slice(0, 10),
+
+            /** Confort d'affichage : l'API refuse (403) l'export à l'Enseignant, qui saisit le cahier sans l'exporter. */
+            canExport: ['Directeur', 'Secretariat', 'Surveillant', 'SuperAdmin'].includes(window.auth && window.auth.role),
 
             /** Confort d'affichage : l'API refuse (403) les statistiques aux autres rôles. */
             canStats: ['Directeur', 'Secretariat', 'SuperAdmin'].includes(window.auth && window.auth.role),
@@ -133,6 +141,16 @@
             get bilingualAvailable() {
                 const config = Alpine.store('schoolConfig');
                 return !!(config && config.coranEnabled);
+            },
+
+            /**
+             * Langue EFFECTIVE de l'écran. Déduite à chaque lecture, jamais figée au chargement : le store `schoolConfig`
+             * se remplit après le montage du composant, et une langue fixée trop tôt resterait « fr » pour une école
+             * Franco-Arabe (export PDF compris). Sans le module, toujours le français ; avec, le choix mémorisé ou le bilingue.
+             */
+            get lang() {
+                if (!this.bilingualAvailable) return 'fr';
+                return ['fr', 'ar', 'bi'].includes(this.langChoice) ? this.langChoice : 'bi';
             },
 
             get rtl() { return this.lang === 'ar'; },
@@ -161,10 +179,8 @@
             },
 
             async init() {
-                // Langue : mémorisée par viewer (confort) ; le bilingue n'existe que si le module Franco-Arabe est actif.
-                let saved = null;
-                try { saved = localStorage.getItem('rollbook.lang'); } catch (e) { /* stockage indisponible */ }
-                this.lang = this.bilingualAvailable ? (['fr', 'ar', 'bi'].includes(saved) ? saved : 'bi') : 'fr';
+                // Langue : choix mémorisé par viewer (confort) ; l'arabe et le bilingue n'existent que si le module Franco-Arabe est actif.
+                try { this.langChoice = localStorage.getItem('rollbook.lang'); } catch (e) { /* stockage indisponible */ }
 
                 try {
                     this.classrooms = await window.api.get('/classrooms');
@@ -194,7 +210,7 @@
             },
 
             setLang(lang) {
-                this.lang = lang;
+                this.langChoice = lang;
                 try { localStorage.setItem('rollbook.lang', lang); } catch (e) { /* confort uniquement */ }
             },
 
@@ -387,6 +403,41 @@
                 } finally {
                     this.isSaving = false;
                 }
+            },
+
+            // ------------------------------------------------------------------------------------ export PDF
+
+            /**
+             * URL de l'export : un mois (AAAA-MM) OU une période d'évaluation, dans la langue de l'écran (« fr » quand
+             * le module Franco-Arabe n'est pas actif — le serveur refuse de toute façon l'arabe et le bilingue, 422).
+             */
+            pdfUrl({ termId = null } = {}) {
+                const params = new URLSearchParams({ classroomId: this.classroomId });
+                if (termId) params.set('termId', termId);
+                else params.set('month', this.month);
+                params.set('lang', this.lang);
+                return `/api/v1/roll-book/pdf?${params.toString()}`;
+            },
+
+            /** Le PDF relit la base : les modifications en attente n'y seraient pas, on refuse donc d'exporter avec elles. */
+            get exportBlocked() { return this.pendingCount > 0; },
+
+            exportMonthPdf() {
+                if (!this.canExport || !this.classroomId || !this.month || this.exportBlocked) return null;
+                return this.openPdfPreview(this.pdfUrl(), 'Cahier de roulement', `Cahier-de-roulement-${this.month}.pdf`);
+            },
+
+            get canExportTerm() {
+                return this.canExport && this.statsScope === 'class' && this.statsPeriod === 'term'
+                    && !!this.statsTermId && !!this.classroomId;
+            },
+
+            exportTermPdf() {
+                if (!this.canExportTerm) return null;
+                const term = this.terms.find((t) => t.id === this.statsTermId);
+                return this.openPdfPreview(
+                    this.pdfUrl({ termId: this.statsTermId }), 'Cahier de roulement — période',
+                    `Cahier-de-roulement-${(term && term.label ? term.label : 'periode').replace(/\s+/g, '-')}.pdf`);
             },
 
             // ------------------------------------------------------------------------------- statistiques

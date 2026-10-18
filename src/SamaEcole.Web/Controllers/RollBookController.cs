@@ -2,9 +2,11 @@ using SamaEcole.Application.RollBook;
 using SamaEcole.Application.RollBook.Commands.RevertRollBookEntry;
 using SamaEcole.Application.RollBook.Commands.UpsertRollBookEntries;
 using SamaEcole.Application.RollBook.Queries.GetRollBookGrid;
+using SamaEcole.Application.RollBook.Queries.GetRollBookPdf;
 using SamaEcole.Application.RollBook.Queries.GetRollBookStats;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
+using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +57,28 @@ public class RollBookController(ISender mediator) : ControllerBase
     {
         await mediator.Send(new RevertRollBookEntryCommand(id), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Le cahier de roulement imprimable pour l'inspection (A4 paysage) : un mois (<c>month=AAAA-MM</c>) ou une période
+    /// d'évaluation (<c>termId</c> : grilles mensuelles, récapitulatif, et synthèse du niveau pour la direction et le
+    /// secrétariat). <c>lang</c> : <c>fr</c>, <c>ar</c> ou <c>bi</c> ; l'arabe et le bilingue exigent le module
+    /// Franco-Arabe (422 sinon). Directeur, Secrétariat, Surveillant, Super Admin ; jamais l'Enseignant.
+    /// </summary>
+    [HttpGet("pdf")]
+    [Authorize(Roles = "Directeur,Secretariat,Surveillant,SuperAdmin")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Pdf(
+        [FromQuery] Guid classroomId,
+        [FromQuery] string? month,
+        [FromQuery] Guid? termId,
+        [FromQuery] string? lang,
+        CancellationToken cancellationToken)
+    {
+        var file = await mediator.Send(new GetRollBookPdfQuery(classroomId, month, termId, lang), cancellationToken);
+        return this.InlinePdf(file.Content, file.FileName);
     }
 
     /// <summary>

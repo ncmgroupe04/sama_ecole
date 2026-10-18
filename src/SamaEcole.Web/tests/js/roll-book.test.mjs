@@ -45,6 +45,13 @@ function boot({ role = 'Directeur', grid = gridOf(), coran = false, putResult = 
     const ctx = loadScripts(['roll-book.js'], {
         preload: {
             auth: { role },
+            // Aperçu PDF partagé (pdf-preview.js) : doublure qui note ce qu'on lui demande d'ouvrir.
+            pdfPreview: {
+                state: () => ({
+                    previews: [],
+                    openPdfPreview(url, title, downloadName) { this.previews.push([url, title, downloadName]); }
+                })
+            },
             api: {
                 get: async (endpoint) => {
                     calls.push(['GET', endpoint]);
@@ -355,6 +362,24 @@ test('avec le module Franco-Arabe, le bilingue est le défaut et les libellés s
     assert.equal(view.glyph('JustifiedAbsence'), 'AJ');
 });
 
+test('la langue par défaut suit le module même si le store de réglages se remplit après le montage', async () => {
+    let coran = false;
+    const env = boot();
+    env.ctx.sandbox.Alpine.store = (name, value) => (name === 'schoolConfig' && value === undefined ? { coranEnabled: coran } : undefined);
+
+    assert.equal(env.view.lang, 'fr', 'store pas encore prêt : français');
+    assert.match(env.view.pdfUrl(), /lang=fr$/);
+
+    coran = true;
+    assert.equal(env.view.lang, 'bi', 'le module apparaît après coup : bilingue, sans rechargement');
+    assert.match(env.view.pdfUrl(), /lang=bi$/);
+
+    env.view.setLang('ar');
+    assert.equal(env.view.lang, 'ar');
+    coran = false;
+    assert.equal(env.view.lang, 'fr', 'sans module, le choix mémorisé est ignoré');
+});
+
 test('la langue choisie est mémorisée pour le prochain affichage', async () => {
     const env = boot({ coran: true });
     env.view.setLang('ar');
@@ -443,4 +468,98 @@ test('un Enseignant ne déclenche aucune requête de statistiques', async () => 
     await view.loadStats();
 
     assert.equal(calls.length, before);
+});
+
+// -- Export PDF --------------------------------------------------------------------------------------
+
+test('l’export du mois ouvre l’aperçu PDF avec la classe, le mois et la langue de l’écran', async () => {
+    const { view } = await loaded({ coran: true });
+    view.setLang('ar');
+
+    await view.exportMonthPdf();
+
+    assert.deepEqual(plain(view.previews), [[
+        '/api/v1/roll-book/pdf?classroomId=c1&month=2026-11&lang=ar', 'Cahier de roulement', 'Cahier-de-roulement-2026-11.pdf'
+    ]]);
+});
+
+test('sans module Franco-Arabe, l’export est toujours demandé en français', async () => {
+    const { view } = await loaded({ coran: false });
+
+    assert.match(view.pdfUrl(), /lang=fr$/);
+});
+
+test('en bilingue, l’export est demandé en bilingue', async () => {
+    const { view } = await loaded({ coran: true });
+    view.setLang('bi');
+
+    assert.match(view.pdfUrl(), /lang=bi$/);
+});
+
+test('l’export est refusé tant que des modifications ne sont pas enregistrées (le PDF relit la base)', async () => {
+    const { view } = await loaded();
+    view.cycle('s1', '2026-11-02', 'Morning');
+
+    assert.equal(view.exportBlocked, true);
+    await view.exportMonthPdf();
+    assert.equal(view.previews.length, 0);
+
+    view.discard();
+    assert.equal(view.exportBlocked, false);
+    await view.exportMonthPdf();
+    assert.equal(view.previews.length, 1);
+});
+
+test('l’Enseignant saisit le cahier mais ne peut pas l’exporter', async () => {
+    const { view } = await loaded({ role: 'Enseignant' });
+
+    assert.equal(view.canExport, false);
+    await view.exportMonthPdf();
+    assert.equal(view.previews.length, 0);
+});
+
+test('le Surveillant exporte le cahier mais n’a pas les statistiques', () => {
+    const { view } = boot({ role: 'Surveillant' });
+
+    assert.equal(view.canExport, true);
+    assert.equal(view.canStats, false);
+});
+
+test('l’export demande une classe et un mois', async () => {
+    const { view } = boot();
+    await flush();
+
+    await view.exportMonthPdf();
+    assert.equal(view.previews.length, 0, 'sans classe');
+
+    view.classroomId = 'c1';
+    view.month = '';
+    await view.exportMonthPdf();
+    assert.equal(view.previews.length, 0, 'sans mois');
+});
+
+test('l’export d’une période n’est proposé que pour une classe et un trimestre choisis', async () => {
+    const { view } = await loaded();
+
+    assert.equal(view.canExportTerm, false, 'période = mois');
+    view.statsPeriod = 'term';
+    assert.equal(view.canExportTerm, false, 'aucun trimestre choisi');
+    view.statsTermId = 't1';
+    assert.equal(view.canExportTerm, true);
+    view.statsScope = 'level';
+    assert.equal(view.canExportTerm, false, 'la portée niveau n’a pas de cahier de classe');
+});
+
+test('l’export d’une période envoie le trimestre par son id et nomme le fichier d’après son libellé', async () => {
+    const { view } = await loaded({ coran: true });
+    await flush();
+    view.setLang('bi');
+    view.statsPeriod = 'term';
+    view.statsTermId = 't1';
+
+    await view.exportTermPdf();
+
+    assert.deepEqual(plain(view.previews), [[
+        '/api/v1/roll-book/pdf?classroomId=c1&termId=t1&lang=bi', 'Cahier de roulement — période', 'Cahier-de-roulement-1er-trimestre.pdf'
+    ]]);
 });

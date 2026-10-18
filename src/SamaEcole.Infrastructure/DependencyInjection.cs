@@ -274,6 +274,7 @@ public static class DependencyInjection
         services.AddSingleton<IExamCandidateFormPdfGenerator, ExamCandidateFormPdfGenerator>();
         services.AddSingleton<IExamConvocationPdfGenerator, ExamConvocationPdfGenerator>();
         services.AddSingleton<IExamSynthesisPdfGenerator, ExamSynthesisPdfGenerator>();
+        services.AddSingleton<IRollBookPdfGenerator, RollBookPdfGenerator>();
 
         // ---------------------------------------------- Module Intégration étatique (SIMEN, §23)
         //

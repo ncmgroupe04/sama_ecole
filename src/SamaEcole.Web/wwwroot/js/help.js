@@ -2507,7 +2507,10 @@
                         "Sélectionnez une case pour préciser les minutes de retard et le motif (certificat médical, panne de bus…).",
                         "Les cases modifiées sont entourées d'orange : rien n'est enregistré avant « Enregistrer ». Le lot est atomique — s'il est refusé, rien n'est écrit et vos modifications restent à l'écran.",
                         "Les jours de repos de l'établissement et les fermetures du calendrier (Paramètres › Années scolaires) sont grisés. Les jours à venir ne se remplissent pas à l'avance.",
-                        "Direction et Secrétariat : l'onglet Statistiques donne les taux par élève et par classe (portée « Une classe »), ou par niveau pour toute l'école, sur un mois ou un trimestre."
+                        "Direction et Secrétariat : l'onglet Statistiques donne les taux par élève et par classe (portée « Une classe »), ou par niveau pour toute l'école, sur un mois ou un trimestre.",
+                        "Direction, Secrétariat et Surveillant : « Exporter en PDF » ouvre le cahier du mois en A4 paysage, avec le bandeau officiel (IA, IEF, établissement), la légende, les totaux et les signatures, dans la langue choisie à l'écran. Enregistrez d'abord vos modifications : le PDF reprend le cahier enregistré.",
+                        "Pour un trimestre : choisissez la portée « Une classe » et la période d'évaluation dans Statistiques, puis « Exporter la période en PDF » (une grille par mois, le récapitulatif et, pour la direction et le secrétariat, la synthèse du niveau).",
+                        "Établissements Franco-Arabes : renseignez les noms arabes de l'établissement et des inspections (Paramètres › Intégration étatique) ; sinon le PDF laisse une ligne pointillée à compléter à la main, il ne traduit rien tout seul."
                     ],
                     impacts: [
                         "Appel en classe : le cahier lit les appels par cours, placés dans la demi-journée de leur créneau (avant 13 h = matin). Un appel sans créneau d'emploi du temps ne peut pas être placé : la grille en signale le nombre.",
