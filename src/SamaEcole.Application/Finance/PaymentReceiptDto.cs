@@ -40,7 +40,12 @@ public record PaymentReceiptDto(
 
     // Classe PASSERELLE / ACCÉLÉRÉE (option) : même mention que sur le reçu d'inscription, pour que le
     // reçu de caisse d'un élève de « CI-CP » dise la même chose que la pièce d'inscription qu'il complète.
-    bool IsAcceleratedClass = false)
+    bool IsAcceleratedClass = false,
+
+    // Renseigné UNIQUEMENT pour un versement annulé (« REÇU ANNULÉ le … — motif »). Le reçu reste consultable et
+    // réimprimable — la trace est conservée — mais il porte alors un bandeau et un filigrane « ANNULÉ » : il ne doit
+    // jamais pouvoir passer pour un reçu valable.
+    string? CancellationNotice = null)
 {
     /// <summary>
     /// Libellé de la colonne « Période / Note » pour une ligne : son libellé propre (« Unique »,

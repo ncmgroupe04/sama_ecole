@@ -1,0 +1,58 @@
+@* Modal d'annulation d'un paiement — état et méthodes fournis par wwwroot/js/payment-cancel.js
+   (window.paymentCancel.mixin()), à inclure dans le composant Alpine de la page hôte.
+   Motif obligatoire : liste proposée + champ de saisie (obligatoire pour « Autre motif »). *@
+<modal-shell open="cancelingPayment" on-close="closeCancelPayment()" size="md">
+ <modal-title>Annuler le paiement</modal-title>
+ <modal-subtitle>
+ Reçu <span class="font-semibold text-slate-900" x-text="cancelingPayment ? cancelingPayment.receiptNumber : ''"></span>
+ — <span class="font-semibold text-slate-900" x-text="cancelingPayment ? Number(cancelingPayment.amount).toLocaleString('fr-FR') + ' FCFA' : ''"></span>
+ </modal-subtitle>
+
+ <div x-show="cancelPaymentError" x-cloak class="form-error-banner" x-text="cancelPaymentError"></div>
+
+ <p class="text-base font-medium leading-relaxed text-slate-700">
+ Le montant est rendu au solde de l'élève. Le reçu n'est pas supprimé : il reste dans l'historique, marqué « Annulé », avec son motif, et son numéro ne sera jamais réutilisé. Possible pendant 48 heures après l'encaissement, même si la caisse a été clôturée ; ensuite, c'est définitif.
+ </p>
+
+ <div class="mt-4 space-y-3">
+ <div>
+ <label for="cancel-payment-choice" class="block text-sm font-semibold text-slate-700 mb-1">Motif de l'annulation <span class="text-rose-600">*</span></label>
+ <select id="cancel-payment-choice" x-model="cancelPaymentChoice"
+ class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+ <option value="">— Choisir un motif —</option>
+ <template x-for="reason in cancelPaymentReasons" :key="reason">
+ <option :value="reason" x-text="reason"></option>
+ </template>
+ </select>
+ </div>
+
+ <fieldset>
+ <legend class="block text-sm font-semibold text-slate-700 mb-1">Que devient l'argent ?</legend>
+ <div class="space-y-1.5">
+ <template x-for="option in cancelPaymentOutcomes" :key="option.value">
+ <label class="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+ <input type="radio" name="cancel-payment-outcome" class="mt-0.5" :value="option.value" x-model="cancelPaymentOutcome" />
+ <span x-text="option.label"></span>
+ </label>
+ </template>
+ </div>
+ </fieldset>
+
+ <div x-show="cancelPaymentChoice" x-cloak>
+ <label for="cancel-payment-detail" class="block text-sm font-semibold text-slate-700 mb-1">
+ <span x-text="cancelPaymentDetailRequired() ? 'Précisez le motif' : 'Précision (facultatif)'"></span>
+ <span class="text-rose-600" x-show="cancelPaymentDetailRequired()">*</span>
+ </label>
+ <textarea id="cancel-payment-detail" x-model="cancelPaymentDetail" rows="3" maxlength="400"
+ :placeholder="cancelPaymentDetailRequired() ? 'Décrivez la raison de l\'annulation' : 'Ex. : élève homonyme, reçu n° …'"
+ class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"></textarea>
+ </div>
+ </div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" @@click="closeCancelPayment()" class="btn-modal-secondary group">Retour</button>
+ <button type="button" @@click="confirmCancelPayment()" :disabled="isCancelingPayment" class="btn-modal-danger">
+ <span x-text="isCancelingPayment ? 'Annulation...' : 'Annuler le paiement'"></span>
+ </button>
+ </div>
+</modal-shell>

@@ -3297,6 +3297,23 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("CancellationOutcome")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("CancellationSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("CashierSessionId")
                         .HasColumnType("uuid");
 
@@ -3371,6 +3388,14 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("numeric(5,4)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "CancellationSessionId")
+                        .HasDatabaseName("IX_payments_SchoolId_CancellationSessionId")
+                        .HasFilter("\"CancellationSessionId\" IS NOT NULL");
+
+                    b.HasIndex("SchoolId", "CancelledAt")
+                        .HasDatabaseName("IX_payments_SchoolId_CancelledAt")
+                        .HasFilter("\"CancelledAt\" IS NOT NULL");
 
                     b.HasIndex("SchoolId", "CashierSessionId");
 

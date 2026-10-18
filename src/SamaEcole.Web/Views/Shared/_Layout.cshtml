@@ -165,7 +165,7 @@
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
  // courante. L'ouverture/fermeture au clic est ensuite gérée par wwwroot/js/sidebar-nav.js
  // (voir Styles/input.css pour les classes [data-submenu] / .is-closed).
- bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/internat") || path.StartsWith("/halqa") || path.StartsWith("/oustaz") || path.StartsWith("/suivi-coranique") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/examens") || path.StartsWith("/integration-etatique") || path.StartsWith("/rapports/assiduite") || path.StartsWith("/rapports/institutionnels") || path.StartsWith("/programmes") || path.StartsWith("/caisse");
+ bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/internat") || path.StartsWith("/halqa") || path.StartsWith("/oustaz") || path.StartsWith("/suivi-coranique") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/examens") || path.StartsWith("/integration-etatique") || path.StartsWith("/rapports/assiduite") || path.StartsWith("/rapports/institutionnels") || path.StartsWith("/programmes");
  bool surveillanceOpen = path.StartsWith("/presences") || path.StartsWith("/cahier-de-roulement") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage");
  bool comptabiliteOpen = path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") || path.StartsWith("/rapports/financiers");
  }
@@ -176,6 +176,15 @@
  <a href="/tableau-de-bord" title="Tableau de bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
  <icon name="dashboard" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Tableau de bord</span>
+ </a>
+
+ @* Caisse (Encaissements) du Secrétariat : lien de PREMIER NIVEAU, toujours visible pour ce rôle. Il était rangé dans l'accordéon
+    « Gestion Scolaire » (replié sur la plupart des pages) et masqué dès que le module Finance était désactivé : un secrétaire
+    qui tient la caisse ne le voyait plus. Directeur/Finance y accèdent par le pôle Comptabilité. Aucune condition de module
+    ici : si Finance est désactivé, c'est l'API qui répond, avec un message — pas un menu qui disparaît sans explication. *@
+ <a href="/caisse" title="Caisse (Encaissements)" x-show="canView(['Secretariat'])" x-cloak class="sidebar-link-main @(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
+ <icon name="payment" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Caisse (Encaissements)</span>
  </a>
 
  <!-- Pôle : Gestion Scolaire
@@ -202,13 +211,6 @@
  <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Inscriptions</span>
- </a>
- @* Le Secrétariat tient sa propre caisse (ouvre une session, encaisse à l'inscription ou ici,
-    clôture). Directeur/Finance y accèdent via le pôle Comptabilité — ce raccourci ne s'affiche
-    donc que pour le Secrétariat, pour éviter un doublon. *@
- <a href="/caisse" x-show="canView(['Secretariat']) && financeEnabled" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
- <icon name="payment" class="w-5 h-5" />
- <span class="text-sm font-medium">Caisse (Encaissements)</span>
  </a>
  <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && classesNavVisible" class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
  <icon name="building" class="w-5 h-5" />

@@ -108,7 +108,11 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
             {
                 column.Item().Text("INFORMATIONS").Bold().FontSize(8).FontColor(Colors.Grey.Darken2);
                 column.Item().PaddingTop(2).Text($"Date : {FormatDate(report.Date)}").FontSize(8);
-                column.Item().Text($"Transactions : {report.Payments.Count}").FontSize(8);
+                column.Item().Text($"Transactions : {report.Payments.Count(p => !p.IsReversal)}").FontSize(8);
+                if (report.Payments.Any(p => p.IsReversal))
+                {
+                    column.Item().Text($"Annulations d'un jour antérieur : {report.Payments.Count(p => p.IsReversal)}").FontSize(8).FontColor(Colors.Red.Darken2);
+                }
             });
         });
     }
@@ -117,7 +121,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
     {
         container.Column(column =>
         {
-            column.Item().PaddingBottom(4).Text("DÉTAIL DES ENCAISSEMENTS").Bold().FontSize(10).FontColor(Colors.Grey.Darken3);
+            column.Item().PaddingBottom(4).Text("DÉTAIL DES ENCAISSEMENTS ET ANNULATIONS").Bold().FontSize(10).FontColor(Colors.Grey.Darken3);
 
             column.Item().Table(table =>
             {
@@ -154,7 +158,14 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
                         table.Cell().Element(BodyCell).Text(payment.StudentFullName);
                         table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(payment.ReceiptNumber));
                         table.Cell().Element(BodyCell).Text(MethodLabel(payment.Method));
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(payment.Amount)).Bold();
+                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(payment.Amount)).Bold()
+                            .FontColor(payment.IsReversal ? Colors.Red.Darken2 : Colors.Black);
+
+                        if (!string.IsNullOrWhiteSpace(payment.Note))
+                        {
+                            table.Cell().ColumnSpan(6).BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingBottom(2).PaddingHorizontal(2)
+                                .Text(payment.Note).FontSize(7).Italic().FontColor(payment.IsReversal ? Colors.Red.Darken2 : Colors.Grey.Darken2);
+                        }
                     }
                 }
             });

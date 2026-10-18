@@ -30,6 +30,12 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
 
                 column.Item().PaddingTop(15).Element(ComposeSummaryCards);
 
+                if (report.TotalReversed > 0)
+                {
+                    column.Item().PaddingTop(6).Text($"Le total encaissé est NET de {FormatMoney(report.TotalReversed)} FCFA d'annulations de versements antérieurs (détail plus bas).")
+                        .FontSize(8).Italic().FontColor(Colors.Red.Darken2);
+                }
+
                 if (report.ActualCashAmount.HasValue)
                 {
                     column.Item().PaddingTop(15).Element(ComposeCashControl);
@@ -42,6 +48,11 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
                 });
 
                 column.Item().PaddingTop(20).Element(ComposeTransactionGrid);
+
+                if (report.Reversals is { Count: > 0 })
+                {
+                    column.Item().PaddingTop(20).Element(ComposeReversals);
+                }
 
                 column.Item().PaddingTop(40).Element(ComposeSignatures);
             });
@@ -248,6 +259,58 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.Category).FontSize(8);
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.Method).FontSize(8);
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).AlignRight().Text(FormatMoney(tx.Amount)).FontSize(8).Bold();
+
+                    if (!string.IsNullOrWhiteSpace(tx.CancelledNote))
+                    {
+                        // Le versement reste compté dans ce journal (chiffres signés à la clôture) : on dit qu'il a été annulé depuis.
+                        table.Cell().ColumnSpan(6).BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingBottom(2)
+                            .Text(tx.CancelledNote).FontSize(7).Italic().FontColor(Colors.Red.Darken2);
+                    }
+                }
+            });
+        });
+    }
+
+    /// <summary>
+    /// Annulations de versements d'une session DÉJÀ clôturée, faites pendant celle-ci : écritures négatives qui
+    /// réduisent le total encaissé de CETTE session, sans toucher à la journée d'origine (contre-passation).
+    /// </summary>
+    private void ComposeReversals(IContainer container)
+    {
+        container.Column(column =>
+        {
+            column.Item().PaddingBottom(5).Text("Annulations de versements antérieurs (écritures négatives)").Bold().FontSize(10).FontColor(Colors.Red.Darken2);
+
+            column.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(PdfColumnWidths.Time + 20);  // Date/heure de l'annulation
+                    columns.ConstantColumn(PdfColumnWidths.Identifier); // Reçu annulé
+                    columns.RelativeColumn(2.2f);                       // Élève
+                    columns.ConstantColumn(60);                         // Mode
+                    columns.ConstantColumn(PdfColumnWidths.Amount);     // Montant (négatif)
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(2).Text("Annulé le").FontSize(8).Bold();
+                    header.Cell().BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(2).Text("Reçu").FontSize(8).Bold();
+                    header.Cell().BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(2).Text("Élève / Tiers").FontSize(8).Bold();
+                    header.Cell().BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(2).Text("Mode").FontSize(8).Bold();
+                    header.Cell().BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(2).AlignRight().Text("Montant").FontSize(8).Bold();
+                });
+
+                foreach (var reversal in report.Reversals!)
+                {
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(reversal.Time).FontSize(8);
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(NoBreakText.NoBreak(reversal.ReceiptNumber)).FontSize(8);
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(reversal.StudentName).FontSize(8);
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(reversal.Method).FontSize(8);
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).AlignRight().Text(FormatMoney(reversal.Amount)).FontSize(8).Bold().FontColor(Colors.Red.Darken2);
+
+                    table.Cell().ColumnSpan(5).BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingBottom(2)
+                        .Text(reversal.Note).FontSize(7).Italic().FontColor(Colors.Grey.Darken1);
                 }
             });
         });

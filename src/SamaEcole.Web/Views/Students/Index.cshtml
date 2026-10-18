@@ -27,6 +27,7 @@
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
  <script src="~/js/subject-exemptions.js" asp-append-version="true"></script>
  <script src="~/js/import-errors.js" asp-append-version="true"></script>
+ <script src="~/js/payment-cancel.js" asp-append-version="true"></script>
  <script src="~/js/students.js" asp-append-version="true"></script>
 }
 
@@ -845,7 +846,8 @@
  <tr class="hover:bg-slate-50/60 transition-colors border-b border-slate-100 last:border-none">
  <td class="py-3 px-4 text-slate-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
  <td class="py-3 px-4 font-mono text-xs text-slate-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
- <td class="py-3 px-4 text-right font-extrabold text-slate-900 font-mono whitespace-nowrap amount" x-text="formatAmount(payment.amount)"></td>
+ <td class="py-3 px-4 text-right font-extrabold text-slate-900 font-mono whitespace-nowrap amount"
+     :class="payment.status === 'Cancelled' ? 'line-through text-slate-400' : ''" x-text="formatAmount(payment.amount)"></td>
  <td class="py-3 px-4 text-slate-700 whitespace-nowrap">
      <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md font-medium inline-flex items-center gap-1"
            :class="{
@@ -868,7 +870,17 @@
              <span x-text="paymentStatusLabel(payment.status)"></span>
          </span>
      </template>
-     <template x-if="payment.status !== 'Partial' && payment.status !== 'Completed'">
+     <template x-if="payment.status === 'Cancelled'">
+         <div>
+             <span class="bg-rose-50 text-rose-700 border border-rose-200/60 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
+                 <span x-text="paymentStatusLabel(payment.status)"></span>
+             </span>
+             <p class="text-xs text-slate-500 mt-1 max-w-[220px] mx-auto whitespace-normal" x-show="payment.cancellationReason"
+                x-text="'Motif : ' + payment.cancellationReason"></p>
+             <p class="text-xs text-slate-400" x-show="payment.cancelledAt" x-text="'le ' + formatDate(payment.cancelledAt)"></p>
+         </div>
+     </template>
+     <template x-if="payment.status !== 'Partial' && payment.status !== 'Completed' && payment.status !== 'Cancelled'">
          <span class="bg-slate-50 text-slate-700 border border-slate-200/60 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
              <span x-text="paymentStatusLabel(payment.status)"></span>
          </span>
@@ -880,6 +892,12 @@
  class="bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200/60 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 mx-auto shrink-0">
  <icon name="document-text" class="w-4 h-4 text-primary-600 shrink-0" />
  <span class="whitespace-nowrap">Aperçu / Imprimer</span>
+ </button>
+ <button type="button" x-show="canCancelPayment && isPaymentCancellable(payment)" x-cloak
+ x-on:click="openCancelPayment(payment)"
+ title="Annuler ce paiement saisi par erreur (le reçu est conservé, marqué annulé)"
+ class="mt-2 text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mx-auto">
+ Annuler le paiement
  </button>
  </td>
  </tr>
@@ -1104,6 +1122,9 @@
  La fiche a bien été supprimée.
  </confirm-dialog-body>
  </modal-shell>
+
+ <!-- Annulation d'un paiement (erreur de saisie) : Directeur uniquement, motif choisi dans une liste -->
+ <partial name="_CancelPaymentModal" />
 
  <!-- Annulation d'une inscription (erreur de saisie, sans paiement encaissé) -->
  <modal-shell open="cancelingEnrollment" on-close="closeCancelEnrollment()" size="md">

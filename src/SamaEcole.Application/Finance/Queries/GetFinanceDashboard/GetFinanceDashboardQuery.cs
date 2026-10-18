@@ -61,21 +61,17 @@ public class GetFinanceDashboardQueryHandler(
         var yearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, now.Offset);
 
         // Un versement annulé (règle #6 : jamais de suppression physique, un Payment se corrige par
-        // Status = Cancelled) ne doit compter dans AUCUN total encaissé.
-        var validPayments = dbContext.Payments.AsNoTracking()
-            .Where(p => p.Status != PaymentStatus.Cancelled);
+        // Status = Cancelled) n'est plus compté — mais selon le registre daté (PaymentLedger) : il sort de la période
+        // où il est annulé, et l'annulation d'un versement d'une période antérieure est une ligne négative de la
+        // période courante (les mois passés ne bougent pas).
+        var collectedToday = await PaymentLedger.NetAsync(
+            dbContext, todayStart, todayStart.AddDays(1), p => p.Amount, cancellationToken);
 
-        var collectedToday = await validPayments
-            .Where(p => p.PaidAt >= todayStart)
-            .SumAsync(p => (decimal?)p.Amount, cancellationToken) ?? 0m;
+        var collectedThisMonth = await PaymentLedger.NetAsync(
+            dbContext, monthStart, monthStart.AddMonths(1), p => p.Amount, cancellationToken);
 
-        var collectedThisMonth = await validPayments
-            .Where(p => p.PaidAt >= monthStart)
-            .SumAsync(p => (decimal?)p.Amount, cancellationToken) ?? 0m;
-
-        var collectedThisYear = await validPayments
-            .Where(p => p.PaidAt >= yearStart)
-            .SumAsync(p => (decimal?)p.Amount, cancellationToken) ?? 0m;
+        var collectedThisYear = await PaymentLedger.NetAsync(
+            dbContext, yearStart, yearStart.AddYears(1), p => p.Amount, cancellationToken);
 
         // Solde dû et taux de recouvrement portent sur les inscriptions NON ANNULÉES de l'année scolaire
         // ACTIVE — le même périmètre que la caisse (GetStudentBalanceQuery), pas l'historique complet.

@@ -8,6 +8,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+ <script src="~/js/payment-cancel.js" asp-append-version="true"></script>
  <script src="~/js/caisse.js" asp-append-version="true"></script>
 }
 
@@ -346,6 +347,11 @@
                                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary-200 bg-primary-50/60 hover:bg-primary-100 text-primary-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
                                  <icon name="document-text" class="w-3.5 h-3.5 text-primary-600 shrink-0" />
                                  <span class="whitespace-nowrap">Aperçu / Imprimer</span>
+                             </button>
+                             <button type="button" x-show="canCancelPayment && isPaymentCancellable(pay)" x-cloak x-on:click.stop="openCancelPayment(pay)"
+                                     title="Annuler ce paiement saisi par erreur (le reçu est conservé, marqué annulé)"
+                                     class="ml-1 inline-flex items-center px-2.5 py-1 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors whitespace-nowrap shrink-0">
+                                 Annuler
                              </button>
                          </td>
                      </tr>
@@ -744,5 +750,10 @@
 
  <!-- Modale de prévisualisation PDF et actions (Ticket JGK-F02 / Axe 4) -->
  @await Html.PartialAsync("_PdfPreviewModal")
+ </div>
+
+ @* Annulation d'un versement saisi par erreur : motif choisi dans une liste (payment-cancel.js). *@
+ <div class="no-print">
+ <partial name="_CancelPaymentModal" />
  </div>
 </div>

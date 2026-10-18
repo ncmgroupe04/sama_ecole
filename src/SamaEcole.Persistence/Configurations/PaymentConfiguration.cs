@@ -37,6 +37,18 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.ReceiptNumber).HasMaxLength(50).IsRequired();
         builder.Property(p => p.ReceivedByUserId).IsRequired();
         builder.Property(p => p.PaidAt).IsRequired();
+        builder.Property(p => p.CancellationReason).HasMaxLength(500);
+        builder.Property(p => p.CancellationOutcome).HasConversion<string>().HasMaxLength(30);
+
+        // Retrouver les annulations comptabilisées dans une session de caisse (clôture, état de la caisse en cours).
+        builder.HasIndex(p => new { p.SchoolId, p.CancellationSessionId })
+            .HasFilter("\"CancellationSessionId\" IS NOT NULL")
+            .HasDatabaseName("IX_payments_SchoolId_CancellationSessionId");
+
+        // Reconstituer les états par date : les annulations d'une période, quel que soit le jour de l'encaissement.
+        builder.HasIndex(p => new { p.SchoolId, p.CancelledAt })
+            .HasFilter("\"CancelledAt\" IS NOT NULL")
+            .HasDatabaseName("IX_payments_SchoolId_CancelledAt");
 
         // Le montant versé est strictement positif : garde-fou en base, en plus de la validation applicative.
         builder.ToTable(t => t.HasCheckConstraint("CK_payments_amount_positive", "\"Amount\" > 0"));

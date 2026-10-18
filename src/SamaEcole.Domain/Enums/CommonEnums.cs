@@ -138,9 +138,24 @@ public enum PaymentMethod
 }
 
 /// <summary>
+/// Destination de l'argent d'un versement ANNULÉ (spec 2026-10-17, §2.4). Trace comptable uniquement : l'annulation
+/// elle-même se comptabilise de la même façon dans les trois cas (écriture négative datée du jour de l'annulation).
+/// <c>KeptBySchool</c> : simple correction, l'argent reste à l'école (erreur de saisie, mauvais élève, doublon…) —
+/// la valeur par défaut, car les écoles remboursent très rarement. <c>ReusedForEnrollment</c> : l'argent est
+/// réutilisé pour l'inscription de l'enfant (le versement sera ressaisi correctement). <c>RefundedToParent</c> :
+/// l'argent est rendu au parent.
+/// </summary>
+public enum PaymentCancellationOutcome
+{
+    KeptBySchool,
+    ReusedForEnrollment,
+    RefundedToParent
+}
+
+/// <summary>
 /// Statut d'un paiement d'élève (DDS §6). <c>Paid</c> : ce versement solde l'inscription ; <c>Partial</c> :
-/// un solde reste dû après lui ; <c>Cancelled</c> : versement annulé/remboursé (réservé à une évolution —
-/// aucune route de F02 ne l'émet). Le statut GLOBAL d'une inscription se déduit de son solde, pas d'ici.
+/// un solde reste dû après lui ; <c>Cancelled</c> : versement annulé par CancelPaymentCommand (motif, date, auteur
+/// et destination de l'argent conservés sur le paiement, qui n'est jamais effacé). Le statut GLOBAL d'une inscription se déduit de son solde, pas d'ici.
 /// </summary>
 public enum PaymentStatus
 {

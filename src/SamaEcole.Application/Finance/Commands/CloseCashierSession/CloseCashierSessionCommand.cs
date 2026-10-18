@@ -53,10 +53,10 @@ public class CloseCashierSessionCommandHandler(
             ]);
         }
 
-        var payments = await dbContext.Payments
-            .Where(p => p.CashierSessionId == session.Id && p.Status != PaymentStatus.Cancelled)
-            .Select(p => new { p.Amount, p.Method })
-            .ToListAsync(cancellationToken);
+        // Registre de la session (PaymentLedger) : ses versements non annulés, MOINS les annulations comptées dans cette
+        // session pour des versements d'une session déjà clôturée (écriture négative). Une annulation faite avant
+        // la clôture, sur un versement de cette même session, l'en retire simplement.
+        var payments = await PaymentLedger.SessionEntriesAsync(dbContext, session, cancellationToken);
 
         var totalCollected = payments.Sum(p => p.Amount);
         var expectedClosingBalance = session.OpeningBalance + totalCollected;
@@ -67,7 +67,7 @@ public class CloseCashierSessionCommandHandler(
         // à expectedClosingBalance (toutes méthodes) produirait un écart systématique et sans rapport
         // avec la réalité dès qu'une école accepte Wave/Orange Money/virement en plus des espèces —
         // même distinction que report.TotalCashInRegister sur le rapport PDF existant.
-        var cashCollected = payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.Amount);
+        var cashCollected = payments.Sum(p => p.CashEffect);
         var expectedCashAmount = session.OpeningBalance + cashCollected;
         var discrepancy = request.ActualCashAmount - expectedCashAmount;
 

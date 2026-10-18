@@ -254,6 +254,10 @@ document.addEventListener('alpine:init', () => {
         isCancelingEnrollment: false,
         cancelEnrollmentError: null,
 
+        // Annulation d'un paiement saisi par erreur : état et méthodes partagés avec l'écran Caisse
+        // (payment-cancel.js). Le modal est Views/Shared/_CancelPaymentModal.cshtml.
+        ...window.paymentCancel.mixin(),
+
         // Cycle de vie d'une inscription : abandon / transfert en cours d'année
         // JAMAIS null — même raison que editingStudent ci-dessus (modal-shell est un x-show, pas un
         // x-if) : select-field model="changingEnrollmentStatus.newStatus" throw sinon en arrière-plan.
@@ -963,6 +967,13 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isCancelingEnrollment = false;
             }
+        },
+
+        // ------------------------------------------------------------ Paiements : annulation (erreur de saisie)
+
+        /** Appelé par le mixin payment-cancel.js une fois le paiement annulé : relit la fiche (solde, ligne barrée). */
+        async afterPaymentCancelled() {
+            await this.refreshStudentDetail();
         },
 
         // ------------------------------------------------------------ Inscriptions : abandon / transfert
