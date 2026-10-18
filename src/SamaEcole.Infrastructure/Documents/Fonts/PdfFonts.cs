@@ -64,3 +64,21 @@ public static class PdfFonts
         }
     }
 }
+
+/// <summary>
+/// Enregistre la police arabe dès le chargement de l'assembly, AVANT tout rendu PDF du processus.
+///
+/// Pourquoi : sous Linux (sans police arabe système — conteneur de production, runner CI), un PDF arabe généré AVANT
+/// l'enregistrement empoisonne le processus : QuestPDF mémorise l'absence de police et l'arabe reste vide (glyphes
+/// « NUL » à l'extraction) même après <see cref="PdfFonts.EnsureRegistered"/>. Dépendre d'un appel fait « au démarrage »
+/// rendait le résultat tributaire de l'ordre d'exécution : tests de documents ne passant pas par
+/// <c>AddInfrastructure</c>, ou rendu lancé avant lui. Un initialiseur de module s'exécute avant le premier accès à
+/// l'assembly, donc avant tout générateur — dans l'application comme dans chaque processus de test.
+/// </summary>
+internal static class PdfFontsModuleInitializer
+{
+#pragma warning disable CA2255 // Initialiseur de module volontaire dans une bibliothèque : voir le résumé de la classe.
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void RegisterArabicFont() => PdfFonts.EnsureRegistered();
+#pragma warning restore CA2255
+}
