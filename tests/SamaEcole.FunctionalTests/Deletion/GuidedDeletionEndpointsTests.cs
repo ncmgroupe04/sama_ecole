@@ -148,7 +148,7 @@ public class GuidedDeletionEndpointsTests : IClassFixture<AuthApiFactory>, IAsyn
         blocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var error = (await blocked.Content.ReadFromJsonAsync<ApiError>())!;
         error.Code.Should().Be("DEPENDENCIES_EXIST");
-        error.Message.Should().Contain("1 élève rattaché").And.Contain("1 inscription").And.Contain("Vous devez rompre ces liens");
+        error.Message.Should().Contain("1 élève").And.Contain("1 inscription").And.Contain("Vous devez rompre ces liens");
 
         var impact = (await (await SendAsync(HttpMethod.Get, $"/api/v1/classrooms/{classroom}/deletion-impact", directeur))
             .Content.ReadFromJsonAsync<Impact>())!;

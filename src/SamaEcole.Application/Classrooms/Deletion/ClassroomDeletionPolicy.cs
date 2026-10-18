@@ -23,7 +23,7 @@ public static class ClassroomDeletionPolicy
 
     public static IReadOnlyList<DeletionDependency> Dependencies { get; } =
     [
-        DeletionDependencies.Blocking<Student>("Student", "élève rattaché", "élèves rattachés",
+        DeletionDependencies.Blocking<Student>("Student", "élève", "élèves",
             "Transférez ces élèves vers une autre classe ou supprimez leur fiche",
             db => db.Students, id => s => s.ClassroomId == id),
         DeletionDependencies.Enrollments(id => e => e.ClassroomId == id),

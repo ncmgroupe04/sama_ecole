@@ -535,7 +535,7 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         var error = (await response.Content.ReadFromJsonAsync<ApiError>())!;
         // Suppression guidée (spec 2026-10-17) : les élèves rattachés ne se rompent pas ici, la classe énumère ce qui reste.
         error.Code.Should().Be("DEPENDENCIES_EXIST");
-        error.Message.Should().Contain("1 élève rattaché").And.Contain("Vous devez rompre ces liens");
+        error.Message.Should().Contain("1 élève").And.Contain("Vous devez rompre ces liens");
         (await _factory.GetClassroomAsync(classroom.Id))!.IsDeleted.Should().BeFalse();
     }
 

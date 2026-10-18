@@ -139,7 +139,7 @@ public class EntityDeletionPoliciesTests : IAsyncLifetime
         var impact = await AnalyzeAsync(ClassroomDeletionPolicy.Policy, Classe);
 
         impact.FinancialBlock.Should().BeFalse();
-        impact.Links.Should().ContainSingle(l => l.Kind == "Student" && !l.Breakable).Which.Label.Should().Be("1 élève rattaché");
+        impact.Links.Should().ContainSingle(l => l.Kind == "Student" && !l.Breakable).Which.Label.Should().Be("1 élève");
         impact.Links.Should().ContainSingle(l => l.Kind == "Enrollment" && l.Breakable);
         impact.Message.Should().StartWith("Cette classe est actuellement rattachée à ");
     }
@@ -151,7 +151,7 @@ public class EntityDeletionPoliciesTests : IAsyncLifetime
 
         var error = (await act.Should().ThrowAsync<BusinessRuleException>()).Which;
         error.Code.Should().Be(DeletionErrorCodes.DependenciesNotBreakable);
-        error.Message.Should().Contain("1 élève rattaché").And.Contain("Transférez ces élèves");
+        error.Message.Should().Contain("1 élève").And.Contain("Transférez ces élèves");
 
         await using var check = _db.NewAppContext(Ecole);
         (await check.Enrollments.CountAsync(e => e.ClassroomId == Classe)).Should().Be(1, "rien n'est rompu tant que des élèves sont rattachés");
