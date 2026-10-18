@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments;
 using SamaEcole.Application.Finance;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,10 @@ public class GetPaymentReceiptQueryHandler(
                 p.BalanceAfter,
                 p.Method,
                 p.PaidAt,
+                p.Status,
+                p.CancelledAt,
+                p.CancellationReason,
+                p.CancellationOutcome,
                 p.ReferencePeriod,
                 e.TotalDue,
                 s.Matricule,
@@ -88,6 +93,10 @@ public class GetPaymentReceiptQueryHandler(
             row.PaidAt,
             lines,
             row.ReferencePeriod,
-            row.IsAccelerated);
+            row.IsAccelerated,
+            row.Status == PaymentStatus.Cancelled
+                ? "REÇU ANNULÉ — " + PaymentCancellationOutcomeLabels.CancelledNote(
+                    row.CancelledAt, row.CancellationReason, row.CancellationOutcome)
+                : null);
     }
 }

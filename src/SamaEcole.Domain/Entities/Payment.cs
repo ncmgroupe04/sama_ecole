@@ -77,6 +77,31 @@ public class Payment : AuditableEntity, ITenantEntity
 
     public DateTimeOffset PaidAt { get; set; }
 
+    /// <summary>
+    /// Annulation d'un versement saisi par erreur (spec 2026-10-17, §2.4). Renseignés ensemble par
+    /// CancelPaymentCommandHandler, jamais autrement : le paiement garde son montant, son reçu et son numéro,
+    /// seul son statut change. Null tant que le versement est valide.
+    /// </summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+
+    /// <summary>Utilisateur (Directeur) qui a annulé le versement — issu du JWT, jamais du client.</summary>
+    public Guid? CancelledByUserId { get; set; }
+
+    /// <summary>Motif obligatoire de l'annulation, affiché sur le reçu et dans l'historique financier.</summary>
+    public string? CancellationReason { get; set; }
+
+    /// <summary>Destination de l'argent (conservé, réutilisé pour l'inscription, remboursé). Null tant que le versement est valide.</summary>
+    public PaymentCancellationOutcome? CancellationOutcome { get; set; }
+
+    /// <summary>
+    /// Session de caisse OUVERTE de la personne qui a annulé, au moment de l'annulation — c'est dans cette
+    /// session que l'annulation d'un versement d'une session DÉJÀ CLÔTURÉE est comptée (écriture négative,
+    /// contre-passation). Null si l'auteur n'avait aucune session ouverte : l'annulation figure alors dans les
+    /// états par date, mais dans aucun écart de caisse. Référence d'audit sans clé étrangère (comme
+    /// <see cref="ReceivedByUserId"/>).
+    /// </summary>
+    public Guid? CancellationSessionId { get; set; }
+
     public Enrollment Enrollment { get; set; } = null!;
 
     public CashierSession? CashierSession { get; set; }

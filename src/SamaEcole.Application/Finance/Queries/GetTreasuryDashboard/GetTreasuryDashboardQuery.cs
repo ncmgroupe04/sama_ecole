@@ -51,10 +51,11 @@ public class GetTreasuryDashboardQueryHandler(IApplicationDbContext dbContext)
         // reste dû), pas si l'argent de CE versement a été reçu — il l'a toujours été dès l'insertion de
         // la ligne (RecordPaymentCommandHandler). Ne retenir que Status == Paid exclurait donc tous les
         // versements par mensualités du total encaissé : seul Cancelled (paiement annulé) doit sortir.
-        var payments = await dbContext.Payments.AsNoTracking()
-            .Where(p => p.Status != PaymentStatus.Cancelled && p.PaidAt >= startInclusive && p.PaidAt < endExclusive)
-            .Select(p => new { p.Amount, p.Method, p.PaidAt, p.ReceiptNumber })
-            .ToListAsync(cancellationToken);
+        //
+        // Registre daté (PaymentLedger) : les versements de la période, y compris ceux annulés APRÈS la période (la
+        // trésorerie d'un mois clos ne change pas), et en NÉGATIF les annulations faites pendant la période pour des
+        // versements antérieurs — au lieu de faire silencieusement disparaître le versement de son mois d'origine.
+        var payments = await PaymentLedger.EntriesAsync(dbContext, startInclusive, endExclusive, cancellationToken);
 
         var disbursements = await dbContext.Disbursements.AsNoTracking()
             .Where(d => d.Date >= startDate && d.Date <= endDate)
@@ -83,7 +84,8 @@ public class GetTreasuryDashboardQueryHandler(IApplicationDbContext dbContext)
             .ToList();
 
         var recentTransactions = payments
-            .Select(p => new TreasuryTransactionItem("Encaissement", p.ReceiptNumber, p.Amount, DateOnly.FromDateTime(p.PaidAt.UtcDateTime)))
+            .Select(p => new TreasuryTransactionItem(
+                p.IsReversal ? "Annulation" : "Encaissement", p.ReceiptNumber, p.Amount, DateOnly.FromDateTime(p.At.UtcDateTime)))
             .Concat(disbursements.Select(d => new TreasuryTransactionItem("Décaissement", d.Reason, d.Amount, d.Date)))
             .OrderByDescending(t => t.Date)
             .Take(RecentTransactionsLimit)

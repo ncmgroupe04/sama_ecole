@@ -7,6 +7,7 @@ using SamaEcole.Application.Finance.Commands.CreateFeeCategory;
 using SamaEcole.Application.Finance.Commands.DeleteClassFee;
 using SamaEcole.Application.Finance.Commands.DeleteFeeCategory;
 using SamaEcole.Application.Finance.Commands.UpdateFeeCategory;
+using SamaEcole.Application.Finance.Commands.CancelPayment;
 using SamaEcole.Application.Finance.Commands.RecordPayment;
 using SamaEcole.Application.Finance.Commands.UpdateClassFee;
 using SamaEcole.Application.Finance.Queries.GetClassFees;
@@ -304,6 +305,24 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         return CreatedAtAction(nameof(PaymentReceipt), new { id = result.PaymentId }, result);
     }
 
+    /// <summary>
+    /// Annule un versement saisi par erreur (spec 2026-10-17, §2.4). Le paiement et son numéro de reçu sont
+    /// conservés, marqués « annulé » avec leur motif ; le montant est rendu au solde de l'inscription.
+    /// Directeur et Finance (le comptable corrige sans attendre la direction). 409 si le paiement est déjà
+    /// annulé, ou si le délai de grâce de 48 h après l'encaissement est dépassé (PaymentCancellationPolicy).
+    /// </summary>
+    [HttpPost("payments/{id:guid}/cancel")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<CancelPaymentResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CancelPayment(
+        Guid id, [FromBody] CancelPaymentRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new CancelPaymentCommand(id, request.Reason, request.Outcome), cancellationToken));
+
     // LECTURE du reçu ouverte à tout rôle de l'école : le tenant vient du JWT, un paiement d'une autre
     // école est introuvable (404), jamais servi.
     [HttpGet("payments/{id:guid}/receipt")]
@@ -414,6 +433,9 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     }
 
     public record CloseCashierSessionRequest(decimal ActualCashAmount, string? DiscrepancyReason = null);
+
+    public record CancelPaymentRequest(
+        string Reason, PaymentCancellationOutcome Outcome = PaymentCancellationOutcome.KeptBySchool);
 
     /// <summary>Le comptage physique (JGK-F09) est obligatoire ; le motif d'écart ne l'est que si un écart est réellement constaté (422 sinon).</summary>
     [HttpPost("sessions/{id}/close")]

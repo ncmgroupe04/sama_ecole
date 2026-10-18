@@ -62,7 +62,11 @@ public record StudentBalancePaymentDto(
     string ReceiptNumber,
     decimal Amount,
     string Method,
-    DateTimeOffset PaidAt);
+    DateTimeOffset PaidAt)
+{
+    /// <summary>Dernier instant où ce versement peut encore être annulé (délai de grâce, PaymentCancellationPolicy).</summary>
+    public DateTimeOffset CancellableUntil => PaymentCancellationPolicy.DeadlineFor(PaidAt);
+}
 
 public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, TimeProvider timeProvider)
     : IRequestHandler<GetStudentBalanceQuery, StudentBalanceDto>

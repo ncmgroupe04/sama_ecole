@@ -43,19 +43,16 @@ public class GetCurrentCashierSessionQueryHandler(
             return null;
         }
 
-        // Même agrégat que CloseCashierSessionCommandHandler (paiements annulés exclus, Volume 1 §15.2) :
-        // afficher un total différent de celui que la clôture calculerait romprait la confiance dans
-        // le chiffre montré pendant la journée.
-        var payments = await dbContext.Payments.AsNoTracking()
-            .Where(p => p.CashierSessionId == session.Id && p.Status != PaymentStatus.Cancelled)
-            .Select(p => p.Amount)
-            .ToListAsync(cancellationToken);
+        // Même agrégat que CloseCashierSessionCommandHandler (registre PaymentLedger : paiements annulés exclus,
+        // annulations de versements d'une session clôturée en négatif — Volume 1 §15.2) : afficher un total
+        // différent de celui que la clôture calculerait romprait la confiance dans le chiffre montré.
+        var entries = await PaymentLedger.SessionEntriesAsync(dbContext, session, cancellationToken);
 
         return new CurrentCashierSessionDto(
             session.Id,
             session.OpeningBalance,
             session.OpenedAt,
-            payments.Sum(),
-            payments.Count);
+            entries.Sum(e => e.Amount),
+            entries.Count(e => !e.IsReversal));
     }
 }

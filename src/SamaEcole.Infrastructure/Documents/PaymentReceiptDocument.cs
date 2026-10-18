@@ -46,8 +46,21 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             page.Margin(10, Unit.Millimetre);
             page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(ReceiptTheme.Ink).DisableFontFeature(FontFeatures.StandardLigatures));
 
+            // Reçu annulé : filigrane en travers de la page, en plus du bandeau ci-dessous — jamais pris pour un reçu valable.
+            if (!string.IsNullOrWhiteSpace(receipt.CancellationNotice))
+            {
+                page.Foreground().AlignCenter().AlignMiddle().Rotate(-25)
+                    .Text("ANNULÉ").FontSize(90).Bold().FontColor(Colors.Red.Lighten3);
+            }
+
             page.Content().Column(column =>
             {
+                if (!string.IsNullOrWhiteSpace(receipt.CancellationNotice))
+                {
+                    column.Item().PaddingBottom(4).Border(1).BorderColor(Colors.Red.Darken2).Padding(3)
+                        .Text(receipt.CancellationNotice).Bold().FontSize(8).FontColor(Colors.Red.Darken2);
+                }
+
                 ReceiptTheme.ComposeHeader(
                     column,
                     receipt.SchoolName,

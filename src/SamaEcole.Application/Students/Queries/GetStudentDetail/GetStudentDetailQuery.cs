@@ -167,7 +167,14 @@ public record PaymentEntryDto(
     decimal BalanceAfter,
     string Method,
     string Status,
-    DateTimeOffset PaidAt);
+    DateTimeOffset PaidAt,
+    // Renseignés uniquement pour un versement annulé : il reste dans l'historique, avec son motif.
+    string? CancellationReason = null,
+    DateTimeOffset? CancelledAt = null)
+{
+    /// <summary>Dernier instant où ce versement peut encore être annulé (délai de grâce, PaymentCancellationPolicy).</summary>
+    public DateTimeOffset CancellableUntil => Finance.PaymentCancellationPolicy.DeadlineFor(PaidAt);
+}
 
 public class GetStudentDetailQueryHandler(
     IApplicationDbContext dbContext,
@@ -386,7 +393,9 @@ public class GetStudentDetailQueryHandler(
                 p.BalanceAfter,
                 p.Method.ToString(),
                 p.Status.ToString(),
-                p.PaidAt))
+                p.PaidAt,
+                p.CancellationReason,
+                p.CancelledAt))
             .ToListAsync(cancellationToken);
 
     /// <summary>

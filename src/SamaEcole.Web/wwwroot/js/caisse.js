@@ -18,6 +18,15 @@ document.addEventListener('alpine:init', () => {
         // liste globale des paiements), qui reste Directeur/Finance. Confort d'affichage : l'API garde.
         canRecordPayment: ['Directeur', 'Finance', 'Secretariat'].includes(window.auth.role),
 
+        // Annulation d'un versement saisi par erreur : état et méthodes partagés avec la fiche élève
+        // (payment-cancel.js). Le modal est Views/Shared/_CancelPaymentModal.cshtml.
+        ...window.paymentCancel.mixin(),
+
+        /** Appelé par le mixin une fois le paiement annulé : le solde et l'historique ont changé. */
+        async afterPaymentCancelled() {
+            await this.reloadBalance();
+        },
+
         students: [],
         studentsLoaded: false,
         isSearchingStudents: false,

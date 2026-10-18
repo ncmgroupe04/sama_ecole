@@ -32,7 +32,11 @@ public record DailyCashRegisterPaymentDto(
     string Matricule,
     string ReceiptNumber,
     string Method,
-    decimal Amount
+    decimal Amount,
+    // Annulation d'un versement d'un jour ANTÉRIEUR : montant négatif, daté de l'annulation (PaymentLedger).
+    bool IsReversal = false,
+    // Mention imprimée sous la ligne : « Annulé le … » sur un versement annulé depuis, ou le détail d'une annulation.
+    string? Note = null
 );
 
 public interface IDailyCashRegisterPdfGenerator
@@ -61,26 +65,42 @@ public class GetDailyCashRegisterPdfQueryHandler(
         var targetStart = new DateTimeOffset(request.Date.Year, request.Date.Month, request.Date.Day, 0, 0, 0, TimeSpan.Zero);
         var targetEnd = targetStart.AddDays(1).AddTicks(-1);
 
-        var validPayments = await (
-            from p in dbContext.Payments.AsNoTracking()
-            join e in dbContext.Enrollments.AsNoTracking() on p.EnrollmentId equals e.Id
-            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
-            where p.Status != PaymentStatus.Cancelled
-               && p.PaidAt >= targetStart
-               && p.PaidAt <= targetEnd
-            orderby p.PaidAt descending
-            select new DailyCashRegisterPaymentDto(
-                p.PaidAt,
-                s.FullName,
-                s.Matricule,
-                p.ReceiptNumber,
-                p.Method.ToString(),
-                p.Amount
-            )
-        ).ToListAsync(cancellationToken);
+        // Registre daté (PaymentLedger) : les versements du jour — y compris ceux annulés un autre jour, signalés « annulé
+        // le … » sans être retirés (le journal d'hier reste celui d'hier) — et, en négatif, les annulations faites CE
+        // jour pour des versements d'un jour antérieur. Un versement annulé le jour même disparaît (l'erreur et sa
+        // correction se compensent).
+        var entries = await PaymentLedger.EntriesAsync(dbContext, targetStart, targetStart.AddDays(1), cancellationToken);
 
+        var enrollmentIds = entries.Select(e => e.EnrollmentId).Distinct().ToList();
+        var students = await (
+            from e in dbContext.Enrollments.AsNoTracking()
+            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
+            where enrollmentIds.Contains(e.Id)
+            select new { EnrollmentId = e.Id, s.FullName, s.Matricule })
+            .ToDictionaryAsync(x => x.EnrollmentId, cancellationToken);
+
+        var validPayments = entries
+            .OrderByDescending(e => e.At)
+            .Select(e =>
+            {
+                var student = students.GetValueOrDefault(e.EnrollmentId);
+                var note = e.IsReversal
+                    ? $"Annulation du reçu encaissé le {e.PaidAt:dd/MM/yyyy} — "
+                      + $"{(string.IsNullOrWhiteSpace(e.CancellationReason) ? "sans motif" : e.CancellationReason)} "
+                      + $"({PaymentCancellationOutcomeLabels.Label(e.Outcome)})"
+                    : e.CancelledLater
+                        ? PaymentCancellationOutcomeLabels.CancelledNote(e.CancelledAt, e.CancellationReason, e.Outcome)
+                        : null;
+
+                return new DailyCashRegisterPaymentDto(
+                    e.At, student?.FullName ?? "Inconnu", student?.Matricule ?? "—",
+                    e.ReceiptNumber, e.Method.ToString(), e.Amount, e.IsReversal, note);
+            })
+            .ToList();
+
+        // Montants SIGNÉS : le total et le récapitulatif par mode sont NETS des annulations.
         var totalCollected = validPayments.Sum(p => p.Amount);
-        
+
         var totalsByMethod = validPayments
             .GroupBy(p => p.Method)
             .Select(g => new DailyCashRegisterMethodTotalDto(g.Key, g.Sum(x => x.Amount)))

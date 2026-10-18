@@ -46,9 +46,12 @@ public class GenerateTaxDeclarationCommandHandler(
         var startInclusive = new DateTimeOffset(new DateTime(request.Year, request.Month, 1), TimeSpan.Zero);
         var endExclusive = startInclusive.AddMonths(1);
 
-        decimal tvaCollected = await context.Payments
-            .Where(p => p.Status != PaymentStatus.Cancelled && p.PaidAt >= startInclusive && p.PaidAt < endExclusive)
-            .SumAsync(p => p.VatAmount, cancellationToken);
+        //
+        // Registre daté (PaymentLedger) : la TVA d'un versement reste dans le mois où il a été encaissé, même annulé
+        // plus tard (une déclaration déjà déposée ne se réécrit pas), et l'annulation d'un versement d'un mois antérieur
+        // vient en négatif dans le mois où elle est faite (régularisation).
+        decimal tvaCollected = await PaymentLedger.NetAsync(
+            context, startInclusive, endExclusive, p => p.VatAmount, cancellationToken);
 
         // 4. TVA déductible : somme de VatAmount des décaissements du mois (Disbursement.VatRate/VatAmount).
         var periodStart = DateOnly.FromDateTime(startInclusive.DateTime);

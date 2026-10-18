@@ -432,4 +432,94 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         monthTwo.Status.Should().BeOneOf("Pending", "Overdue");
         monthTwo.RemainingDue.Should().Be(Mensualite);
     }
+
+    private record CancelResult(
+        Guid PaymentId, string ReceiptNumber, decimal CancelledAmount, decimal TotalDue,
+        decimal AmountPaid, decimal RemainingBalance);
+
+    [Fact]
+    public async Task Directeur_And_Finance_Can_Cancel_A_Payment_But_Not_The_Secretariat()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 60_000m));
+        pay.StatusCode.Should().Be(HttpStatusCode.Created);
+        var payment = (await pay.Content.ReadFromJsonAsync<PaymentResult>())!;
+
+        var cancelUrl = $"/api/v1/finance/payments/{payment.PaymentId}/cancel";
+
+        // Le Secrétariat encaisse mais n'annule pas : Directeur et Finance (le comptable) uniquement.
+        (await SendAsync(HttpMethod.Post, cancelUrl, await SecretaireTokenAsync(), new { reason = "Erreur de saisie" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var directeur = await DirecteurTokenAsync();
+
+        // Le motif est obligatoire.
+        (await SendAsync(HttpMethod.Post, cancelUrl, directeur, new { reason = "  " }))
+            .StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        // Le comptable corrige sans attendre la direction.
+        var cancel = await SendAsync(HttpMethod.Post, cancelUrl, finance, new { reason = "Saisi sur le mauvais élève" });
+        cancel.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await cancel.Content.ReadFromJsonAsync<CancelResult>())!;
+        result.ReceiptNumber.Should().Be(payment.ReceiptNumber);
+        result.AmountPaid.Should().Be(0m);
+        result.RemainingBalance.Should().Be(ExpectedTotal);
+
+        // Le reçu annulé reste consultable : la ligne n'a pas été effacée.
+        (await SendAsync(HttpMethod.Get, $"/api/v1/finance/payments/{payment.PaymentId}/receipt", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Une seconde annulation est refusée, et ne retire pas le montant deux fois.
+        (await SendAsync(HttpMethod.Post, cancelUrl, directeur, new { reason = "Encore" }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Theory]
+    [InlineData("KeptBySchool")]
+    [InlineData("ReusedForEnrollment")]
+    [InlineData("RefundedToParent")]
+    public async Task The_Destination_Of_The_Money_Is_Accepted_As_A_String(string outcome)
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 10_000m));
+        var payment = (await pay.Content.ReadFromJsonAsync<PaymentResult>())!;
+
+        var cancel = await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{payment.PaymentId}/cancel", finance,
+            new { reason = "Argent réutilisé", outcome });
+
+        cancel.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task An_Unknown_Destination_Of_The_Money_Is_Refused()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 10_000m));
+        var payment = (await pay.Content.ReadFromJsonAsync<PaymentResult>())!;
+
+        var cancel = await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{payment.PaymentId}/cancel", finance,
+            new { reason = "Erreur", outcome = "Donné à un tiers" });
+
+        cancel.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Cancelling_An_Unknown_Payment_Returns_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Post, $"/api/v1/finance/payments/{Guid.NewGuid()}/cancel", directeur, new { reason = "Erreur" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }
