@@ -1,5 +1,4 @@
 using SamaEcole.Application.Common.Deletion;
-using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Students.Deletion;
 using MediatR;
@@ -27,17 +26,8 @@ public class DeleteStudentCommandHandler(
         // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Un paiement actif la refuse (texte imposé) ; tout
         // autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
         // (UnlinkStudentDependenciesCommand).
-        var impact = await new StudentDeletionAnalyzer(dbContext).AnalyzeAsync(request.Id, cancellationToken);
-
-        if (impact.FinancialBlock)
-        {
-            throw new BusinessRuleException(impact.Message!, DeletionErrorCodes.FinancialRecordsExist);
-        }
-
-        if (!impact.CanDelete)
-        {
-            throw new BusinessRuleException(impact.Message!, DeletionErrorCodes.DependenciesExist) { Details = impact.Links };
-        }
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, StudentDeletionPolicy.Policy, request.Id, cancellationToken);
 
         // Même verrou optimiste que UpdateStudentCommandHandler (AGENTS.md règle #5).
         dbContext.SetOriginalConcurrencyToken(student, request.RowVersion);

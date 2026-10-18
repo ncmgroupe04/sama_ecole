@@ -1,5 +1,4 @@
 using SamaEcole.Application.Common.Deletion;
-using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Students.Deletion;
 using MediatR;
@@ -24,35 +23,10 @@ public class UnlinkStudentDependenciesCommandHandler(
         var actorId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Utilisateur courant inconnu.");
 
-        var analyzer = new StudentDeletionAnalyzer(dbContext);
-
-        var impact = await dbContext.ExecuteInTransactionAsync(async ct =>
-        {
-            var before = await analyzer.AnalyzeAsync(request.StudentId, ct);
-
-            if (before.FinancialBlock)
-            {
-                throw new BusinessRuleException(before.Message!, DeletionErrorCodes.FinancialRecordsExist);
-            }
-
-            var notBreakable = before.Links.Where(l => !l.Breakable).ToList();
-            if (notBreakable.Count > 0)
-            {
-                throw new BusinessRuleException(
-                    $"Impossible de rompre ces liens automatiquement : {DeletionMessages.JoinLabels(notBreakable.Select(l => l.Label))}. "
-                    + "Traitez-les d'abord (ex. enregistrez la restitution du matériel).",
-                    DeletionErrorCodes.DependenciesNotBreakable) { Details = notBreakable };
-            }
-
-            foreach (var dependency in StudentDependencyCatalog.All.Where(d => d.Breakable))
-            {
-                await dependency.BreakAsync(dbContext, request.StudentId, actorId.ToString(), ct);
-            }
-
-            await dbContext.SaveChangesAsync(ct);
-
-            return await analyzer.AnalyzeAsync(request.StudentId, ct);
-        }, cancellationToken);
+        var impact = await dbContext.ExecuteInTransactionAsync(
+            ct => EntityDeletionAnalyzer.UnlinkAsync(
+                dbContext, StudentDeletionPolicy.Policy, request.StudentId, actorId.ToString(), ct),
+            cancellationToken);
 
         // Après commit : les effectifs et l'occupation des classes ont changé.
         kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
