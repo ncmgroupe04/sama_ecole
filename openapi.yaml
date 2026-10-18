@@ -1667,11 +1667,14 @@ paths:
         effacés définitivement, lignes en suppression logique comprises. Les ÉLÈVES survivent : ils
         appartiennent à l'établissement, pas à un exercice.
 
-        MODE RÉEL : l'année n'est retirée que si elle ne porte AUCUNE donnée (cas réel : une année
-        créée par erreur ou préparée puis abandonnée) ; elle est alors ARCHIVÉE, en suppression
-        logique, avec ses trimestres et ses affectations. Dès qu'une inscription, une note ou une
-        fiche d'appel y est rattachée, la suppression est refusée en 409 `SCHOOL_YEAR_HAS_DATA` :
-        ces écritures sont la contrepartie de reçus déjà remis aux familles (AGENTS.md règle #6).
+        MODE RÉEL (suppression guidée, spec 2026-10-17) : un paiement NON ANNULÉ sur une inscription de
+        l'année la bloque (409 `FINANCIAL_RECORDS_EXIST`, aucune option de rupture : annuler le paiement
+        la libère). Tout autre lien (inscriptions, notes, appréciations, appels, sessions d'examen,
+        certificats de mutation, suivis et dispenses de matières, coefficients) donne un 409
+        `DEPENDENCIES_EXIST` qui les énumère ; `GET /school-years/{id}/deletion-impact` les liste et
+        `POST /school-years/{id}/unlink-dependencies` les archive, après confirmation de l'utilisateur.
+        L'année est alors ARCHIVÉE, en suppression logique, avec sa configuration (trimestres,
+        affectations d'enseignants, jours de fermeture). DELETE ne rompt jamais rien.
         L'export ZIP (`GET /school-years/{id}/export`) reste la voie d'archivage hors plateforme.
 
         Le corps porte le LIBELLÉ EXACT de l'année (« 2025-2026 »), et non un mot-clé générique :
@@ -1738,8 +1741,8 @@ paths:
         '404': { description: Année scolaire introuvable dans cet établissement }
         '409':
           description: >-
-            `SCHOOL_YEAR_HAS_DATA` — en mode réel, l'année porte des données et ne peut pas être
-            supprimée. Le message énumère ce qui bloque.
+            En mode réel : `FINANCIAL_RECORDS_EXIST` (paiement non annulé) ou `DEPENDENCIES_EXIST`
+            (liens à rompre d'abord). Le message énumère ce qui bloque.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1748,6 +1751,55 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /school-years/{id}/deletion-impact:
+    get:
+      tags: [SchoolYears]
+      summary: Ce qui empêche ou accompagne la suppression d'une année scolaire (lecture seule)
+      description: |
+        Mode réel : `financialBlock` si un paiement non annulé est rattaché à l'année, sinon `links` énumère les liens
+        (inscriptions, notes, appréciations de bulletin, feuilles d'appel, sessions d'examen, certificats de mutation, suivis et
+        dispenses de matières, coefficients personnalisés), tous `breakable`. Mode test : l'effacement définitif emporte tout, rien n'est listé.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /school-years/{id}/unlink-dependencies:
+    post:
+      tags: [SchoolYears]
+      summary: Rompre explicitement les liens non financiers d'une année scolaire
+      description: |
+        Archive (suppression logique, auteur et date conservés) les liens listés par deletion-impact. Ne supprime pas l'année :
+        c'est `DELETE`. Tracée dans le journal d'audit. Mode test : sans effet. 409 : `FINANCIAL_RECORDS_EXIST`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: FINANCIAL_RECORDS_EXIST }
 
   /school-years/{id}/activate:
     post:

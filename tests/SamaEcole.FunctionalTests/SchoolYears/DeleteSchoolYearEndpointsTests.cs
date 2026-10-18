@@ -16,7 +16,8 @@ namespace SamaEcole.FunctionalTests.SchoolYears;
 /// Ce qui est prouvé ici, et qui ne l'est nulle part ailleurs :
 ///   * la garde de rôle (Directeur seul) et celle du mot de confirmation (le libellé EXACT) ;
 ///   * les DEUX régimes : en mode test l'année et ses données partent ; en mode réel, une année qui
-///     porte des données est refusée (409 SCHOOL_YEAR_HAS_DATA) et une année vide est ARCHIVÉE ;
+///     porte des données est refusée (409 DEPENDENCIES_EXIST, ou FINANCIAL_RECORDS_EXIST si un paiement
+///     non annulé y est rattaché), se rompt explicitement puis s'archive, et une année vide est ARCHIVÉE ;
 ///   * la rebascule de l'année active quand c'est elle qu'on supprime.
 ///
 /// L'isolation multi-tenant et l'ordre des clés étrangères sont couverts côté base par
@@ -48,6 +49,8 @@ public class DeleteSchoolYearEndpointsTests(AuthApiFactory factory) : IClassFixt
 
     private record ResetSummary(int TotalRowsDeleted);
     private record ApiError(string Code, string Message);
+    private record Link(string Kind, string Label, int Count, bool Breakable, string BreakAction);
+    private record Impact(bool CanDelete, bool FinancialBlock, string? Message, List<Link> Links);
 
     private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -115,8 +118,8 @@ public class DeleteSchoolYearEndpointsTests(AuthApiFactory factory) : IClassFixt
         });
 
     /// <summary>Rattache une inscription à l'année : de quoi la rendre « non vide » en mode réel.</summary>
-    private Task SeedEnrollmentAsync(Guid schoolYearId) =>
-        factory.SeedAsOwnerAsync(async db =>
+    private async Task SeedEnrollmentAsync(Guid schoolYearId, bool withPayment = false) =>
+        await factory.SeedAsOwnerAsync(async db =>
         {
             var classroomId = Guid.NewGuid();
             var studentId = Guid.NewGuid();
@@ -135,15 +138,25 @@ public class DeleteSchoolYearEndpointsTests(AuthApiFactory factory) : IClassFixt
                 ClassroomId = classroomId
             });
 
+            var enrollmentId = Guid.NewGuid();
             db.Enrollments.Add(new Enrollment
             {
-                SchoolId = AuthApiFactory.EcoleId, StudentId = studentId, SchoolYearId = schoolYearId,
+                Id = enrollmentId, SchoolId = AuthApiFactory.EcoleId, StudentId = studentId, SchoolYearId = schoolYearId,
                 ClassroomId = classroomId, Type = EnrollmentType.NewEnrollment,
                 Status = EnrollmentStatus.Confirmed, TotalDue = 150_000m, AmountPaid = 0m,
                 ReceiptNumber = $"REC-{Guid.NewGuid():N}"[..20], EnrolledAt = DateTimeOffset.UtcNow
             });
 
-            await Task.CompletedTask;
+            if (withPayment)
+            {
+                var director = await db.Users.FirstAsync(u => u.Email == AuthApiFactory.DirecteurEmail);
+                db.Payments.Add(new Payment
+                {
+                    SchoolId = AuthApiFactory.EcoleId, EnrollmentId = enrollmentId, Amount = 50_000m, Method = PaymentMethod.Cash,
+                    Status = PaymentStatus.Partial, BalanceAfter = 100_000m, ReceiptNumber = $"REC-{Guid.NewGuid():N}"[..20],
+                    ReceivedByUserId = director.Id, PaidAt = DateTimeOffset.UtcNow
+                });
+            }
         });
 
     [Fact]
@@ -264,7 +277,7 @@ public class DeleteSchoolYearEndpointsTests(AuthApiFactory factory) : IClassFixt
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var error = (await response.Content.ReadFromJsonAsync<ApiError>())!;
-        error.Code.Should().Be("SCHOOL_YEAR_HAS_DATA");
+        error.Code.Should().Be("DEPENDENCIES_EXIST");
         error.Message.Should().Contain("inscription",
             "le message doit dire CE QUI bloque, sinon le Directeur ne sait pas quoi faire");
 
@@ -293,5 +306,85 @@ public class DeleteSchoolYearEndpointsTests(AuthApiFactory factory) : IClassFixt
 
         var years = await ListYearsAsync(directeur.AccessToken);
         years.Should().ContainSingle().Which.Id.Should().Be(current.Id);
+    }
+
+    [Fact]
+    public async Task In_Live_Mode_A_Year_With_Enrollments_Is_Unlinked_Explicitly_Then_Archived()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+        var current = await CreateYearAsync(directeur.AccessToken, CurrentYear("2026-2027"));
+        var next = await CreateYearAsync(directeur.AccessToken, FutureYear("2027-2028"));
+        await SeedEnrollmentAsync(next.Id);
+        await SetLiveModeAsync(live: true);
+
+        var impact = (await (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{next.Id}/deletion-impact", directeur.AccessToken))
+            .Content.ReadFromJsonAsync<Impact>())!;
+        impact.CanDelete.Should().BeFalse();
+        impact.FinancialBlock.Should().BeFalse();
+        impact.Links.Should().ContainSingle(l => l.Kind == "Enrollment" && l.Breakable);
+
+        // La suppression ne rompt jamais rien : elle énumère.
+        (await DeleteYearAsync(directeur.AccessToken, next.Id, "2027-2028")).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var unlink = await SendAsync(HttpMethod.Post, $"/api/v1/school-years/{next.Id}/unlink-dependencies", directeur.AccessToken);
+        unlink.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await unlink.Content.ReadFromJsonAsync<Impact>())!.CanDelete.Should().BeTrue();
+
+        var response = await DeleteYearAsync(directeur.AccessToken, next.Id, "2027-2028");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<DeleteResult>())!.WasPurged.Should().BeFalse();
+        (await ListYearsAsync(directeur.AccessToken)).Should().ContainSingle().Which.Id.Should().Be(current.Id);
+    }
+
+    [Fact]
+    public async Task In_Live_Mode_A_Year_With_An_Active_Payment_Is_Blocked_Without_Any_Break_Option()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+        var current = await CreateYearAsync(directeur.AccessToken, CurrentYear("2026-2027"));
+        await SeedEnrollmentAsync(current.Id, withPayment: true);
+        await SetLiveModeAsync(live: true);
+
+        var impact = (await (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{current.Id}/deletion-impact", directeur.AccessToken))
+            .Content.ReadFromJsonAsync<Impact>())!;
+        impact.FinancialBlock.Should().BeTrue();
+        impact.Message.Should().Contain("Impossible de supprimer cette année scolaire");
+
+        var blocked = await DeleteYearAsync(directeur.AccessToken, current.Id, "2026-2027");
+        blocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await blocked.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("FINANCIAL_RECORDS_EXIST");
+
+        var unlink = await SendAsync(HttpMethod.Post, $"/api/v1/school-years/{current.Id}/unlink-dependencies", directeur.AccessToken);
+        unlink.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await unlink.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("FINANCIAL_RECORDS_EXIST");
+
+        (await ListYearsAsync(directeur.AccessToken)).Should().ContainSingle().Which.Id.Should().Be(current.Id);
+    }
+
+    [Fact]
+    public async Task The_Deletion_Routes_Of_A_Year_Are_Reserved_To_The_Director_And_Return_404_For_Unknown_Years()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+        var secretaire = await LoginAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+        var year = await CreateYearAsync(directeur.AccessToken, CurrentYear("2026-2027"));
+
+        (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{year.Id}/deletion-impact", secretaire.AccessToken)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/school-years/{year.Id}/unlink-dependencies", secretaire.AccessToken)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{Guid.NewGuid()}/deletion-impact", directeur.AccessToken)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/school-years/{Guid.NewGuid()}/unlink-dependencies", directeur.AccessToken)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task In_Test_Mode_The_Impact_Lists_Nothing_Because_The_Historical_Purge_Applies()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+        var year = await CreateYearAsync(directeur.AccessToken, CurrentYear("2026-2027"));
+        await SeedEnrollmentAsync(year.Id, withPayment: true);
+
+        var impact = (await (await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{year.Id}/deletion-impact", directeur.AccessToken))
+            .Content.ReadFromJsonAsync<Impact>())!;
+
+        impact.CanDelete.Should().BeTrue();
+        impact.FinancialBlock.Should().BeFalse();
+        impact.Links.Should().BeEmpty();
     }
 }

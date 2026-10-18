@@ -8,15 +8,12 @@ namespace SamaEcole.Application.SchoolYears.Commands.DeleteSchoolYear;
 ///
 /// DEUX RÉGIMES, selon le mode de l'établissement (School.WentLiveAt) :
 ///
-///   * MODE TEST — l'année et TOUT ce qu'elle porte (inscriptions, paiements, notes, appels, examens)
-///     sont effacés définitivement, par la fonction <c>delete_school_year</c>. C'est la même exception
-///     bornée à la règle #6 que la « Zone de danger ».
-///
-///   * MODE RÉEL — l'année n'est supprimée que si elle ne porte AUCUNE donnée (cas réel : une année
-///     créée par erreur, ou préparée puis abandonnée). Elle est alors ARCHIVÉE, en suppression logique.
-///     Une année qui a servi est refusée en 409 : ses inscriptions et ses paiements sont la
-///     contrepartie de reçus déjà remis aux parents, et la règle #6 les déclare inaltérables. L'export
-///     ZIP (GET /school-years/{id}/export) reste la voie d'archivage hors plateforme.
+///   * MODE RÉEL — suppression guidée (spec 2026-10-17) : un paiement non annulé sur une inscription de
+///     l'année la bloque définitivement (409 FINANCIAL_RECORDS_EXIST) ; tout autre lien (inscriptions sans
+///     paiement, notes, appels, examens…) donne un 409 DEPENDENCIES_EXIST qui les énumère, et ne se rompt
+///     que par l'appel explicite POST /school-years/{id}/unlink-dependencies, après confirmation. L'année est
+///     alors ARCHIVÉE, en suppression logique, avec sa configuration (trimestres, affectations, fermetures).
+///     L'export ZIP (GET /school-years/{id}/export) reste la voie d'archivage hors plateforme.
 ///
 /// <paramref name="Confirmation"/> : le LIBELLÉ EXACT de l'année (« 2025-2026 »), revérifié côté
 /// serveur — une modale ne protège que les appelants qui passent par l'interface.

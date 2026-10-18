@@ -4,7 +4,10 @@ using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.ApplyEvaluationPeriods;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.SchoolYears.Commands.DeleteSchoolYear;
+using SamaEcole.Application.SchoolYears.Commands.UnlinkSchoolYearDependencies;
+using SamaEcole.Application.SchoolYears.Queries.GetSchoolYearDeletionImpact;
 using SamaEcole.Application.SchoolYears.Commands.UpdateSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.ExportSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
@@ -109,9 +112,10 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
     /// Supprime une année scolaire — Directeur, avec recopie du libellé exact dans le corps.
     ///
     /// DEUX RÉGIMES, tenus par le Handler puis par la base (voir DeleteSchoolYearCommand) : en mode
-    /// test, l'année et tout ce qu'elle porte sont effacés ; en mode réel, elle n'est ARCHIVÉE que si
-    /// elle ne porte aucune donnée — sinon 409 SCHOOL_YEAR_HAS_DATA, car inscriptions et paiements
-    /// sont la contrepartie de reçus déjà remis (AGENTS.md règle #6).
+    /// test, l'année et tout ce qu'elle porte sont effacés ; en mode réel, un paiement non annulé la
+    /// bloque (409 FINANCIAL_RECORDS_EXIST) et tout autre lien encore présent donne un 409
+    /// DEPENDENCIES_EXIST qui les énumère : on les rompt avant, explicitement (unlink-dependencies),
+    /// puis l'année est ARCHIVÉE (spec 2026-10-17).
     ///
     /// Si l'année supprimée était l'année ACTIVE, l'établissement rebascule sur l'année ouverte la plus
     /// proche ; quand il n'en reste aucune, la réponse le signale (requiresActiveYearSelection) et
@@ -131,6 +135,31 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Delete(
         Guid id, [FromBody] DeleteRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new DeleteSchoolYearCommand(id, request.Confirmation), cancellationToken));
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une année scolaire (spec 2026-10-17, §3) : blocage financier ou liste
+    /// précise des liens à rompre. En mode test (effacement définitif), aucun lien n'est listé. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SchoolYearDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSchoolYearDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens non financiers d'une année scolaire, après la confirmation de l'utilisateur (spec
+    /// 2026-10-17, §2.1) : chaque lien est archivé. Ne supprime pas l'année : c'est DELETE. 409 : FINANCIAL_RECORDS_EXIST.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkSchoolYearDependenciesCommand(id), cancellationToken));
 
     /// <summary>
     /// Rejoue sur cette année le découpage choisi dans Paramètres (Trimestriel / Semestriel /

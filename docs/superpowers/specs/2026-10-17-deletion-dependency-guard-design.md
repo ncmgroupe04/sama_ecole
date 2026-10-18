@@ -244,8 +244,16 @@ Ce catalogue est un point de départ : l'inventaire exhaustif est une étape d'i
    archivait en cascade, sans le dire) ; catégorie d'inventaire — les **biens ne se rompent pas** ; bien — un **prêt en cours ne
    se rompt pas** (restitution d'abord), les prêts clos sont intrinsèques (archivés avec lui), le journal de stock reste
    append-only. La colonne fantôme `Enrollment.RoomId` (jamais renseignée) est ignorée par le test de couverture.
-   **Année scolaire : reportée à une PR séparée** (parcours existant : confirmation par saisie du libellé, mode test purgé /
-   mode réel archivé si l'année est vide, à réconcilier avec le blocage financier).
+4. **PR4 — Année scolaire.**
+   *Livrée (branche `feat/guided-deletion-school-years`).* Précisions d'implémentation : **mode réel** — un paiement non annulé
+   sur une inscription de l'année bloque (sans rupture) ; tout le reste (inscriptions, notes, appréciations de bulletin,
+   feuilles d'appel, sessions d'examen avec dossiers et résultats, certificats de mutation, suivis et dispenses de matières,
+   coefficients personnalisés) est listé et rompu explicitement par archivage — **fini le refus sans issue** (ancien code
+   `SCHOOL_YEAR_HAS_DATA`) ; la configuration de l'année (trimestres, affectations d'enseignants, jours de fermeture) est
+   **intrinsèque** : archivée avec elle et annoncée à l'écran. **Mode test** — l'exception bornée historique (effacement
+   définitif par `delete_school_year`, zone de test) est inchangée : l'analyse ne liste rien, la saisie du libellé reste exigée.
+   La saisie du libellé reste aussi exigée en mode réel (garde supplémentaire de l'interface et du serveur). Restaurer une
+   année depuis la corbeille ne restaure que sa configuration (trimestres, affectations, fermetures) : ses données archivées restent archivées.
 
 Chaque PR est indépendante pour la recette ; la PR1 pose les contrats que les suivantes réutilisent.
 
