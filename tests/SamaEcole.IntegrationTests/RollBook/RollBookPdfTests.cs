@@ -60,6 +60,15 @@ file sealed class SectionMediator(ApplicationDbContext dbContext) : ISender
 /// </summary>
 public class RollBookPdfTests : IAsyncLifetime
 {
+    // La police arabe s'enregistre UNE fois par processus (PdfFonts.EnsureRegistered, appelé au démarrage de l'application
+    // mais pas par ces tests) : sans cet appel, le résultat dépendait de l'ordre d'exécution des classes de tests — verte
+    // quand ExamSynthesisTests passait avant, rouge (« 0 lettre arabe ») sur la CI de main quand cette classe passait en premier.
+    static RollBookPdfTests()
+    {
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        PdfFonts.EnsureRegistered();
+    }
+
     private readonly RlsTestDatabase _db = new();
 
     private static readonly Guid EcoleA = Guid.Parse("f1111111-1111-1111-1111-111111111111");
