@@ -2575,8 +2575,14 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Students]
-      summary: Archiver (soft delete) une fiche élève créée par pure erreur de saisie
-      description: 'Refusée en 409 dès qu''une inscription ou une note existe déjà pour cet élève.'
+      summary: Supprimer (suppression logique) une fiche élève
+      description: |
+        Suppression logique : la ligne reste en base avec l'auteur et la date, l'élève disparaît de tous les écrans et
+        son matricule redevient disponible. **Ne rompt jamais un lien** : refusée en 409 tant qu'un paiement non annulé
+        est rattaché à l'élève (`FINANCIAL_RECORDS_EXIST`, texte : « Impossible de supprimer cet élève car il possède
+        des transactions financières / reçus enregistrés. ») ou qu'un autre lien existe (`DEPENDENCIES_EXIST`,
+        `details` = liste des liens). Voir `GET .../deletion-impact` et `POST .../unlink-dependencies`. Un paiement
+        annulé (`POST /finance/payments/{id}/cancel`) ne bloque plus.
       parameters:
         - $ref: '#/components/parameters/EntityId'
         - name: rowVersion
@@ -2584,10 +2590,61 @@ paths:
           required: true
           schema: { type: integer, format: int64 }
       responses:
-        '204': { description: Fiche archivée }
+        '204': { description: Fiche supprimée }
         '403': { description: Réservé au Directeur et au Secrétariat }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: 'Jeton de concurrence périmé, ou une inscription/note existe déjà' }
+        '409': { description: 'Jeton de concurrence périmé, paiement non annulé (FINANCIAL_RECORDS_EXIST) ou lien à rompre (DEPENDENCIES_EXIST)' }
+
+  /students/{studentId}/deletion-impact:
+    get:
+      tags: [Students]
+      summary: Ce qui empêche ou accompagne la suppression d'un élève (lecture seule)
+      description: |
+        `financialBlock` : un paiement non annulé interdit la suppression, sans option de rupture. Sinon `links` énumère
+        précisément les liens (inscriptions, matières suivies, notes…), chacun `breakable` ou non (matériel prêté non
+        restitué : à traiter avant). `canDelete` : plus aucun lien.
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string, example: 3 matières suivies }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /students/{studentId}/unlink-dependencies:
+    post:
+      tags: [Students]
+      summary: Rompre explicitement les liens non financiers d'un élève
+      description: |
+        Archive (suppression logique, auteur et date conservés) les inscriptions et leurs lignes de frais, matières
+        suivies, dispenses, notes, présences, suivis… Ne supprime pas la fiche : c'est `DELETE`. Tracée dans le journal
+        d'audit. Réponse : l'analyse mise à jour. 409 : `FINANCIAL_RECORDS_EXIST` (paiement non annulé) ou
+        `DEPENDENCIES_NOT_BREAKABLE` (matériel prêté non restitué).
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
 
   /teachers:
     get:
