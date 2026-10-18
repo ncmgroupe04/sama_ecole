@@ -164,9 +164,12 @@ document.addEventListener('alpine:init', () => {
         editedClassroomName: '',
 
         // Suppression (modale de confirmation)
-        deletingClassroom: null, // { id, name, rowVersion }
-        isDeletingClassroom: false,
-        deleteClassroomError: null,
+        // Suppression guidée (guided-delete.js) : analyse des liens, blocage financier, rupture explicite.
+        ...window.guidedDelete.mixin({
+            resource: 'classrooms',
+            financialHint: "Annulez d'abord les paiements des élèves de cette classe (onglet « Paiements » de leur fiche) : la suppression sera alors possible.",
+            readyText: "Cette classe sera supprimée et n'apparaîtra plus nulle part. Une trace de la suppression est conservée."
+        }),
         showDeletedDialog: false,
         deletedClassroomName: '',
 
@@ -439,49 +442,19 @@ document.addEventListener('alpine:init', () => {
 
         openDelete(classroom) {
             if (!classroom) return;
-            this.deletingClassroom = { id: classroom.id, name: classroom.name, rowVersion: classroom.rowVersion };
-            this.deleteClassroomError = null;
+            this.openGuidedDelete({ id: classroom.id, name: classroom.name, rowVersion: classroom.rowVersion });
         },
 
         deleteClassroom(classroom) {
             this.openDelete(classroom);
         },
 
-        closeDelete() {
-            this.deletingClassroom = null;
-            this.deleteClassroomError = null;
-        },
-
-        async confirmDelete(classroom = null) {
-            if (classroom && classroom.id) {
-                this.openDelete(classroom);
-                return;
-            }
-            if (!this.deletingClassroom) return;
-
-            this.isDeletingClassroom = true;
-            this.deleteClassroomError = null;
-            try {
-                await window.api.delete(`/classrooms/${this.deletingClassroom.id}?rowVersion=${this.deletingClassroom.rowVersion}`);
-                this.deletedClassroomName = this.deletingClassroom.name;
-                this.deletingClassroom = null;
-                window.softDeleteTrash.notifyChanged('classrooms');
-                await this.loadClassrooms();
-                this.showDeletedDialog = true;
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    // Des élèves sont encore rattachés à cette classe (DeleteClassroomCommandHandler) :
-                    // le message serveur est déjà explicite, on l'affiche tel quel.
-                    this.deleteClassroomError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteClassroomError = 'Cette classe vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
-                    await this.loadClassrooms();
-                } else {
-                    this.deleteClassroomError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingClassroom = false;
-            }
+        /** Appelé par guided-delete.js une fois la classe supprimée : relire la liste et annoncer. */
+        async afterGuidedDelete(target) {
+            this.deletedClassroomName = target.name;
+            window.softDeleteTrash.notifyChanged('classrooms');
+            await this.loadClassrooms();
+            this.showDeletedDialog = true;
         },
 
         // ------------------------------------------------------------ Téléchargement Cartes Scolaires

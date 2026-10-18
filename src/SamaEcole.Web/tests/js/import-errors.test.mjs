@@ -137,7 +137,7 @@ function studentsView() {
 }
 
 function teachersView() {
-    const ctx = loadScripts(['import-errors.js', 'teachers.js'], {
+    const ctx = loadScripts(['import-errors.js', 'guided-delete.js', 'teachers.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },

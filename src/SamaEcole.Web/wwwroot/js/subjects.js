@@ -232,9 +232,11 @@ document.addEventListener('alpine:init', () => {
         editedSubjectName: '',
 
         // Suppression (modale de confirmation)
-        deletingSubject: null, // { id, name, rowVersion }
-        isDeletingSubject: false,
-        deleteSubjectError: null,
+        // Suppression guidée (guided-delete.js) : analyse des liens, rupture explicite (notes archivées après confirmation).
+        ...window.guidedDelete.mixin({
+            resource: 'subjects',
+            readyText: "Cette matière sera supprimée et n'apparaîtra plus nulle part. Une trace de la suppression est conservée."
+        }),
         showDeletedDialog: false,
         deletedSubjectName: '',
 
@@ -807,48 +809,18 @@ document.addEventListener('alpine:init', () => {
 
         openDelete(subject) {
             if (!subject) return;
-            this.deletingSubject = { id: subject.id, name: subject.name, rowVersion: subject.rowVersion };
-            this.deleteSubjectError = null;
+            this.openGuidedDelete({ id: subject.id, name: subject.name, rowVersion: subject.rowVersion });
         },
 
         deleteSubject(subject) {
             this.openDelete(subject);
         },
 
-        closeDelete() {
-            this.deletingSubject = null;
-            this.deleteSubjectError = null;
-        },
-
-        async confirmDelete(subject = null) {
-            if (subject && subject.id) {
-                this.openDelete(subject);
-                return;
-            }
-            if (!this.deletingSubject) return;
-
-            this.isDeletingSubject = true;
-            this.deleteSubjectError = null;
-            try {
-                await window.api.delete(`/subjects/${this.deletingSubject.id}?rowVersion=${this.deletingSubject.rowVersion}`);
-                this.deletedSubjectName = this.deletingSubject.name;
-                this.deletingSubject = null;
-                await this.loadSubjects();
-                this.showDeletedDialog = true;
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    // Des notes existent déjà pour cette matière (DeleteSubjectCommandHandler) : le
-                    // message serveur est déjà explicite, on l'affiche tel quel.
-                    this.deleteSubjectError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteSubjectError = 'Cette matière vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
-                    await this.loadSubjects();
-                } else {
-                    this.deleteSubjectError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingSubject = false;
-            }
+        /** Appelé par guided-delete.js une fois la matière supprimée : relire la liste et annoncer. */
+        async afterGuidedDelete(target) {
+            this.deletedSubjectName = target.name;
+            await this.loadSubjects();
+            this.showDeletedDialog = true;
         }
     }));
 });

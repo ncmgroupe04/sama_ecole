@@ -28,6 +28,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+ <script src="~/js/guided-delete.js" asp-append-version="true"></script>
  <script src="~/js/classrooms.js" asp-append-version="true"></script>
 }
 
@@ -479,27 +480,8 @@
   </confirm-dialog-body>
  </modal-shell>
 
- @* Confirmation : suppression d'une classe *@
- <modal-shell open="deletingClassroom" on-close="closeDelete()" size="md">
-  <modal-title>Supprimer la classe</modal-title>
-  <modal-subtitle>
-   <span class="font-semibold text-slate-900" x-text="deletingClassroom ? deletingClassroom.name : ''"></span>
-   sera archivée et n'apparaîtra plus dans les sélecteurs de classe.
-  </modal-subtitle>
-
-  <div x-show="deleteClassroomError" x-cloak class="form-error-banner" x-text="deleteClassroomError"></div>
-
-  <p class="text-base font-medium leading-relaxed text-slate-700">
-   Impossible si des élèves sont encore rattachés à cette classe : déplacez-les d'abord vers une autre classe.
-  </p>
-
-  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
-   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingClassroom" class="btn-modal-danger">
-    <span x-text="isDeletingClassroom ? 'Suppression...' : 'Supprimer la classe'"></span>
-   </button>
-  </div>
- </modal-shell>
+ @* Suppression guidée d'une classe : analyse des liens, blocage financier, rupture explicite *@
+ <partial name="_GuidedDeleteModal" />
 
  @* Confirmation : classe supprimée *@
  <modal-shell open="showDeletedDialog" size="md" on-close="showDeletedDialog = false" title="Classe supprimée">

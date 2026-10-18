@@ -31,7 +31,7 @@ const THREE_CYCLES = () => [
  * badge de matière d'un autre écran).
  */
 async function subjectsView(rows, { query = '' } = {}) {
-    const ctx = loadScripts(['subjects.js'], {
+    const ctx = loadScripts(['guided-delete.js', 'subjects.js'], {
         preload: {
             auth: { role: 'Directeur' },
             api: {

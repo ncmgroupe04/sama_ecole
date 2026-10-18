@@ -6,6 +6,7 @@
 @section Scripts {
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
  <script src="~/js/import-errors.js" asp-append-version="true"></script>
+ <script src="~/js/guided-delete.js" asp-append-version="true"></script>
  <script src="~/js/teachers.js" asp-append-version="true"></script>
  <script src="~/js/hour-volumes.js" asp-append-version="true"></script>
 }
@@ -491,27 +492,8 @@
  </div>
  </modal-shell>
 
- <!-- Confirmation : suppression de la fiche enseignant -->
- <modal-shell open="deletingTeacherRecord" on-close="closeDeleteTeacher()" size="md">
- <modal-title>Supprimer la fiche</modal-title>
- <modal-subtitle>
- <span class="font-semibold text-slate-900" x-text="deletingTeacherRecord ? deletingTeacherRecord.fullName : ''"></span>
- sera archivée et n'apparaîtra plus dans la liste des enseignants.
- </modal-subtitle>
-
- <div x-show="deleteTeacherRecordError" x-cloak class="form-error-banner" x-text="deleteTeacherRecordError"></div>
-
- <p class="text-base font-medium leading-relaxed text-slate-700">
- Réservé à une fiche créée par pure erreur de saisie : impossible si une attribution classe/matière existe déjà pour cet enseignant.
- </p>
-
- <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeDeleteTeacher()" class="btn-modal-secondary group">Annuler</button>
- <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-modal-danger">
- <span x-text="isDeletingTeacherRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
- </button>
- </div>
- </modal-shell>
+ <!-- Suppression guidée de la fiche enseignant : analyse des liens, blocage financier (fiche de paie), rupture explicite -->
+ <partial name="_GuidedDeleteModal" />
 
  <!-- Confirmation : suppression d'une fiche enseignant -->
  <modal-shell open="showTeacherDeletedDialog" size="md" on-close="showTeacherDeletedDialog = false" title="Fiche supprimée">

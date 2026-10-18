@@ -245,7 +245,11 @@ document.addEventListener('alpine:init', () => {
 
         // Suppression guidée de la fiche : état et méthodes partagés (guided-delete.js). Modal :
         // Views/Shared/_GuidedDeleteModal.cshtml. showStudentDeletedDialog : confirmation après suppression.
-        ...window.guidedDelete.mixin({ resource: 'students' }),
+        ...window.guidedDelete.mixin({
+            resource: 'students',
+            financialHint: "Annulez d'abord le ou les paiements depuis l'onglet « Paiements » de la fiche : la suppression sera alors possible.",
+            readyText: "Cette fiche sera supprimée et n'apparaîtra plus nulle part ; son matricule redeviendra disponible. Une trace de la suppression est conservée."
+        }),
         showStudentDeletedDialog: false,
 
         // Cycle de vie d'une inscription : annulation (erreur de saisie)

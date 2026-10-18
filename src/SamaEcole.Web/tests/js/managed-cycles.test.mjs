@@ -119,7 +119,7 @@ test('le store retombe sur tous les cycles si les réglages n\'en portent pas (A
 // ---------------------------------------------------------------- 3a. écran des classes
 
 async function classrooms(managedCycles) {
-    const ctx = loadScripts(['auth.js', 'classrooms.js'], {
+    const ctx = loadScripts(['auth.js', 'guided-delete.js', 'classrooms.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },

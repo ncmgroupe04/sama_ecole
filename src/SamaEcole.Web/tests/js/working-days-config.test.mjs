@@ -176,7 +176,7 @@ test('saveConfig conserve les jours ouvrés du serveur quand l\'écran n\'y a pa
 // ---------------------------------------------------------------- 3. Emploi du temps
 
 async function teachersView(slots = []) {
-    const { ctx } = boot(['teachers.js'], { settings: SERVER_SETTINGS() });
+    const { ctx } = boot(['guided-delete.js', 'teachers.js'], { settings: SERVER_SETTINGS() });
     await ctx.store('schoolConfig').init();
     const view = ctx.component('teachersView');
     view.scheduleSlots = slots;
