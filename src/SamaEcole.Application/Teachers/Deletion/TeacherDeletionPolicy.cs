@@ -7,10 +7,10 @@ namespace SamaEcole.Application.Teachers.Deletion;
 /// <summary>
 /// Règle de suppression d'un enseignant (spec 2026-10-17, §6) :
 ///   • une FICHE DE PAIE émise sur l'un de ses contrats bloque, sans option de rupture (donnée financière) ;
-///   • son contrat (sans fiche de paie), ses affectations, matières, créneaux, pointages et journaux se rompent
-///     explicitement par archivage ;
+///   • son contrat (sans fiche de paie), ses affectations, créneaux, pointages et journaux se rompent
+///     explicitement par archivage ; ses matières enseignées (intrinsèques à la fiche) partent avec elle ;
 ///   • le matériel prêté non restitué n'est pas rompable (le stock en dépend) : on enregistre d'abord la restitution.
-/// Un test (TeacherDependencyCoverageTests) garantit que toute table liée à un enseignant est classée ici.
+/// Un test (DeletionDependencyCoverageTests) garantit que toute table liée à un enseignant est classée ici.
 /// </summary>
 public static class TeacherDeletionPolicy
 {
@@ -22,8 +22,6 @@ public static class TeacherDeletionPolicy
         Contracts(),
         DeletionDependencies.Owned<TeacherAssignment>("TeacherAssignment", "affectation classe/matière", "affectations classe/matière",
             "Retirer ces affectations", db => db.TeacherAssignments, id => a => a.TeacherId == id),
-        DeletionDependencies.Owned<TeacherSubject>("TeacherSubject", "matière enseignée", "matières enseignées",
-            "Retirer ces rattachements", db => db.TeacherSubjects, id => t => t.TeacherId == id),
         DeletionDependencies.Owned<ScheduleSlot>("ScheduleSlot", "créneau d'emploi du temps", "créneaux d'emploi du temps",
             "Archiver ces créneaux", db => db.ScheduleSlots, id => s => s.TeacherId == id),
         DeletionDependencies.Owned<TeacherAttendance>("TeacherAttendance", "pointage d'enseignant", "pointages d'enseignant",
@@ -32,6 +30,16 @@ public static class TeacherDeletionPolicy
             "Archiver ces entrées", db => db.ClassJournalEntries, id => e => e.TeacherId == id),
         DeletionDependencies.ReturnedLoans(id => a => a.TeacherId == id),
         DeletionDependencies.UnreturnedLoans(id => a => a.TeacherId == id)
+    ];
+
+    /// <summary>
+    /// Les matières qu'un enseignant est qualifié pour enseigner font partie de sa fiche (la création en exige au moins
+    /// une) : elles sont archivées avec elle, sans rupture manuelle — l'écran de confirmation l'annonce.
+    /// </summary>
+    public static IReadOnlyList<DeletionDependency> Intrinsic { get; } =
+    [
+        DeletionDependencies.Owned<TeacherSubject>("TeacherSubject", "matière enseignée", "matières enseignées",
+            "Retirées avec la fiche", db => db.TeacherSubjects, id => t => t.TeacherId == id)
     ];
 
     public static EntityDeletionPolicy Policy { get; } = new(
@@ -52,7 +60,8 @@ public static class TeacherDeletionPolicy
 
             return hasPayslip ? FinancialBlock : null;
         },
-        Dependencies);
+        Dependencies,
+        Intrinsic);
 
     /// <summary>Contrat de l'enseignant (sans fiche de paie : sinon le blocage financier a déjà joué), avec son historique et ses relevés d'heures.</summary>
     private static DeletionDependency Contracts() => new(

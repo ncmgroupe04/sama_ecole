@@ -3,14 +3,14 @@ using MediatR;
 namespace SamaEcole.Application.Teachers.Commands.DeleteTeacher;
 
 /// <summary>
-/// DELETE /api/v1/teachers/{id} — archive (soft delete) une fiche enseignant créée par pure erreur de
-/// saisie. Toujours un soft delete (AGENTS.md règle #6). Réservé au Directeur et au Secrétariat.
+/// DELETE /api/v1/teachers/{id} — archive (soft delete) une fiche enseignant. Toujours un soft delete (AGENTS.md règle #6).
+/// Réservé au Directeur et au Secrétariat.
 ///
-/// Le Handler DOIT rejeter la suppression si un historique critique est déjà attaché : une attribution
-/// classe/matière/année (<see cref="Domain.Entities.TeacherAssignment"/>, ticket JGK-D04). Sans
-/// attribution, la fiche n'a encore produit aucun effet pédagogique — c'est le cas d'une « erreur
-/// visuelle » que cette commande cible. Les qualifications (TeacherSubject) ne bloquent PAS la
-/// suppression : elles sont librement modifiables (voir UpdateTeacherCommand), pas un historique.
+/// Spec 2026-10-17 : le Handler refuse la suppression (409) tant qu'une FICHE DE PAIE est émise sur l'un de ses contrats
+/// (FINANCIAL_RECORDS_EXIST) ou qu'un autre lien existe — contrat, affectations classe/matière, matières enseignées,
+/// emploi du temps, pointages…, matériel prêté non restitué (DEPENDENCIES_EXIST, liste précise). Il ne rompt JAMAIS un
+/// lien : c'est UnlinkTeacherDependenciesCommand, demandée explicitement, qui archive ceux qui peuvent l'être. Les
+/// qualifications (TeacherSubject), autrefois silencieuses, sont désormais listées et rompues explicitement.
 ///
 /// <paramref name="RowVersion"/> : même verrouillage optimiste que UpdateTeacherCommand (règle #5).
 /// </summary>

@@ -23,7 +23,8 @@ public class DeletionDependencyCoverageTests
     {
         yield return [typeof(Classroom), ClassroomDeletionPolicy.Dependencies];
         yield return [typeof(Subject), SubjectDeletionPolicy.Dependencies];
-        yield return [typeof(Teacher), TeacherDeletionPolicy.Dependencies];
+        // Les matières enseignées (TeacherSubject) sont intrinsèques à la fiche : classées, mais archivées avec elle.
+        yield return [typeof(Teacher), TeacherDeletionPolicy.Dependencies.Concat(TeacherDeletionPolicy.Intrinsic).ToList()];
     }
 
     [Theory]

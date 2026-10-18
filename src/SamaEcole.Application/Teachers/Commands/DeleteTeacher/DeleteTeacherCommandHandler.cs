@@ -28,6 +28,10 @@ public class DeleteTeacherCommandHandler(
         await EntityDeletionAnalyzer.EnsureDeletableAsync(
             dbContext, TeacherDeletionPolicy.Policy, request.Id, cancellationToken);
 
+        // Les matières enseignées font partie de la fiche : elles sont archivées avec elle (annoncé à l'écran).
+        await EntityDeletionAnalyzer.ArchiveIntrinsicAsync(
+            dbContext, TeacherDeletionPolicy.Policy, request.Id, actorId.ToString(), cancellationToken);
+
         // Même verrou optimiste que UpdateTeacherCommandHandler (AGENTS.md règle #5).
         dbContext.SetOriginalConcurrencyToken(teacher, request.RowVersion);
 
