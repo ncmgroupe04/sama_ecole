@@ -45,17 +45,16 @@ public class GetDailyClosingReportPdfQueryHandler(
         var payments = await dbContext.Payments.AsNoTracking()
             .Include(p => p.Breakdowns)
             .ThenInclude(b => b.FeeCategory)
-            .Include(p => p.Enrollment)
             .Where(p => paymentIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, cancellationToken);
 
-        var studentIds = payments.Values.Select(p => p.Enrollment.StudentId).Distinct().ToList();
-        var students = await dbContext.Students.AsNoTracking()
-            .Where(s => studentIds.Contains(s.Id))
-            .ToDictionaryAsync(s => s.Id, s => s.FullName, cancellationToken);
+        // L'élève d'un versement annulé peut avoir été supprimé depuis : son nom reste imprimé, suivi de
+        // « (élève supprimé) » (PaymentOwnerResolver) — jamais une inscription nulle qui ferait planter le rapport.
+        var owners = await PaymentOwnerResolver.ResolveAsync(
+            dbContext, schoolId, payments.Values.Select(p => p.EnrollmentId).Distinct().ToList(), cancellationToken);
 
         string StudentOf(Guid paymentId) =>
-            students.GetValueOrDefault(payments[paymentId].Enrollment.StudentId, "Inconnu");
+            owners.TryGetValue(payments[paymentId].EnrollmentId, out var owner) ? owner.DisplayName : "Inconnu";
 
         // Montants SIGNÉS : le total, la répartition par mode et par catégorie sont NETS des annulations, donc
         // identiques à ce que la clôture a enregistré (CloseCashierSessionCommandHandler utilise le même registre).
