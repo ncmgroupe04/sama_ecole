@@ -47,8 +47,12 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.IenNumber).HasMaxLength(24);
         builder.Property(s => s.IsIenProvisional).IsRequired().HasDefaultValue(false);
 
-        // Un matricule est unique par école, pas globalement.
-        builder.HasIndex(s => new { s.SchoolId, s.Matricule }).IsUnique();
+        // Un matricule est unique par école, pas globalement, parmi les élèves ACTIFS : celui d'une fiche supprimée
+        // (logiquement) est libre (spec 2026-10-01 §1.4 et 2026-10-17 §2.2). La numérotation automatique reste un
+        // compteur séquentiel sans trou : elle ne réémet pas d'elle-même un numéro supprimé (AGENTS.md règle #3).
+        builder.HasIndex(s => new { s.SchoolId, s.Matricule })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(s => s.SchoolId);
 
         // Index unique PARTIEL sur l'IEN, même dispositif qu'ExamDossier.CandidateNumber : l'immense
@@ -61,7 +65,7 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         // élève — ce qui est le comportement NORMAL d'un identifiant qui suit l'élève.
         builder.HasIndex(s => new { s.SchoolId, s.IenNumber })
             .IsUnique()
-            .HasFilter("\"IenNumber\" IS NOT NULL");
+            .HasFilter("\"IenNumber\" IS NOT NULL AND \"IsDeleted\" = false");
 
         // FK vers schools (docs/Volume_3_DDS.md §3) — pas de navigation dans l'entité, la relation
         // reste au niveau du schéma. Restrict : on ne supprime jamais physiquement une école (règle #6).
