@@ -26,6 +26,8 @@ public static class DependencyInjection
         // soumission d'une fiche de présence. Scoped — elle lit le tenant/compte de la requête courante.
         services.AddScoped<AttendanceScopeAuthorizer>();
         services.AddScoped<Schools.WorkingDayGuard>();
+        services.AddScoped<RollBook.RollBookEngine>();
+        services.AddScoped<RollBook.RollBookScopeAuthorizer>();
         services.AddScoped<Subscriptions.SubscriptionAmountResolver>();
         services.AddScoped<Subscriptions.Pricing.SubscriptionPricingEngine>();
         services.AddScoped<ITenantSubscriptionService, Subscriptions.TenantSubscriptionService>();
