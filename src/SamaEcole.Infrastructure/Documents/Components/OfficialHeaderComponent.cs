@@ -40,12 +40,8 @@ public static class OfficialHeaderComponent
     {
         container.BorderBottom(1).BorderColor(Colors.Grey.Darken1).PaddingBottom(6).Row(row =>
         {
-            row.RelativeItem(3).Column(left =>
-            {
-                left.Item().Element(c => HeaderLine(c, "Inspection d'Académie de", inspectionAcademie));
-                left.Item().Element(c => HeaderLine(c, "Inspection de l'Éducation et de la Formation de", inspectionEducationFormation));
-                left.Item().Element(c => HeaderLine(c, headingPrefix, headingName));
-            });
+            row.RelativeItem(3).Element(left =>
+                ComposeEstablishmentLines(left, inspectionAcademie, inspectionEducationFormation, headingPrefix, headingName));
 
             if (logo is not null)
             {
@@ -53,13 +49,33 @@ public static class OfficialHeaderComponent
             }
         });
 
-        static void HeaderLine(IContainer container, string label, string? value) =>
-            container.Text(text =>
-            {
-                text.Span($"{label} : ").Bold().FontSize(9.5f);
-                text.Span(value ?? "").FontSize(9.5f);
-            });
     }
+
+    /// <summary>
+    /// Les trois lignes IA / IEF / établissement seules (sans filet ni logo), pour les documents qui composent leur
+    /// propre bandeau — le cahier de roulement y ajoute les lignes arabes (Franco-Arabe, Bloc 5c).
+    /// </summary>
+    public static void ComposeEstablishmentLines(
+        IContainer container,
+        string? inspectionAcademie,
+        string? inspectionEducationFormation,
+        string headingPrefix,
+        string? headingName)
+    {
+        container.Column(column =>
+        {
+            column.Item().Element(c => HeaderLine(c, "Inspection d'Académie de", inspectionAcademie));
+            column.Item().Element(c => HeaderLine(c, "Inspection de l'Éducation et de la Formation de", inspectionEducationFormation));
+            column.Item().Element(c => HeaderLine(c, headingPrefix, headingName));
+        });
+    }
+
+    private static void HeaderLine(IContainer container, string label, string? value) =>
+        container.Text(text =>
+        {
+            text.Span($"{label} : ").Bold().FontSize(9.5f);
+            text.Span(value ?? "").FontSize(9.5f);
+        });
 
     /// <summary>
     /// Bloc de pied de document anti-fraude commun (AGENTS.md §2.5 du cahier des charges Documents) :

@@ -2482,6 +2482,51 @@
                     ]
                 },
                 {
+                    id: 'cahier-de-roulement',
+                    title: 'Cahier de roulement (registre d\'appel mensuel)',
+                    location: 'Surveillance › Cahier de roulement',
+                    href: '/cahier-de-roulement',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant', 'Enseignant'],
+                    definition:
+                        "Le cahier de roulement est le registre d'appel d'une CLASSE sur un mois : une ligne par élève, " +
+                        "deux cases par jour de classe (matin et après-midi). Chaque case est soit une SAISIE du cahier, " +
+                        "soit le statut CALCULÉ à partir des appels par cours déjà faits ; la saisie l'emporte toujours, " +
+                        "et on peut la retirer pour revenir au calcul. Sur un établissement Franco-Arabe, l'écran s'affiche " +
+                        "en français, en arabe (grille de droite à gauche) ou en bilingue.",
+                    objectif:
+                        "Tenir, pour l'inspection comme pour la direction, un registre de présence fiable par demi-journée, " +
+                        "et en tirer des taux de présence, d'absence et d'assiduité par élève, par classe et par niveau, " +
+                        "sur un mois ou une période d'évaluation.",
+                    probleme:
+                        "Les appels par cours disent bien qui manque à quel cours, mais pas la journée d'un élève : une " +
+                        "école qui ne fait pas l'appel cours par cours, ou qui doit régulariser une absence après coup, " +
+                        "n'a aucun registre mensuel à présenter, et les taux d'assiduité se calculent à la main.",
+                    procedure: [
+                        "Ouvrez Surveillance › Cahier de roulement, choisissez la classe et le mois.",
+                        "Cliquez sur une case pour la faire tourner : présent, retard, absent justifié, absent non justifié, puis retour au calcul. Au clavier, P, R, J, A posent un statut et Retour arrière revient au calcul.",
+                        "Sélectionnez une case pour préciser les minutes de retard et le motif (certificat médical, panne de bus…).",
+                        "Les cases modifiées sont entourées d'orange : rien n'est enregistré avant « Enregistrer ». Le lot est atomique — s'il est refusé, rien n'est écrit et vos modifications restent à l'écran.",
+                        "Les jours de repos de l'établissement et les fermetures du calendrier (Paramètres › Années scolaires) sont grisés. Les jours à venir ne se remplissent pas à l'avance.",
+                        "Direction et Secrétariat : l'onglet Statistiques donne les taux par élève et par classe (portée « Une classe »), ou par niveau pour toute l'école, sur un mois ou un trimestre.",
+                        "Direction, Secrétariat et Surveillant : « Exporter en PDF » ouvre le cahier du mois en A4 paysage, avec le bandeau officiel (IA, IEF, établissement), la légende, les totaux et les signatures, dans la langue choisie à l'écran. Enregistrez d'abord vos modifications : le PDF reprend le cahier enregistré.",
+                        "Pour un trimestre : choisissez la portée « Une classe » et la période d'évaluation dans Statistiques, puis « Exporter la période en PDF » (une grille par mois, le récapitulatif et, pour la direction et le secrétariat, la synthèse du niveau).",
+                        "Établissements Franco-Arabes : renseignez les noms arabes de l'établissement et des inspections (Paramètres › Intégration étatique) ; sinon le PDF laisse une ligne pointillée à compléter à la main, il ne traduit rien tout seul."
+                    ],
+                    impacts: [
+                        "Appel en classe : le cahier lit les appels par cours, placés dans la demi-journée de leur créneau (avant 13 h = matin). Un appel sans créneau d'emploi du temps ne peut pas être placé : la grille en signale le nombre.",
+                        "Absence partielle : un élève absent à une partie seulement des cours d'une demi-journée y est marqué « ½ ». C'est un constat calculé, il ne se saisit pas ; il compte comme présence dans les taux.",
+                        "Taux : présence = (présents + retards + absences partielles) ÷ demi-journées renseignées ; absence = absences justifiées et non justifiées ; assiduité = présence + absences justifiées, donc seules les absences non justifiées pénalisent.",
+                        "Couverture : part des demi-journées attendues qui sont renseignées. Un taux de 100 % avec une couverture de 10 % ne prouve rien : renseignez le cahier avant de conclure.",
+                        "Niveau : les compteurs des classes d'un même niveau sont additionnés avant de calculer les taux, une classe de 5 élèves ne pèse pas autant qu'une classe de 50.",
+                        "Élèves : un élève en abandon ou transféré sort du cahier, comme de la feuille d'appel."
+                    ],
+                    recommandations: [
+                        "Renseignez le cahier au fil de l'eau : une case non renseignée ne compte ni comme présence ni comme absence, et fait baisser la couverture.",
+                        "Réservez « Absent justifié » aux absences dont le motif est établi, et notez-le dans le motif.",
+                        "Enregistrez en fin de séance de saisie plutôt que case par case : un seul lot, une seule vérification par le serveur."
+                    ]
+                },
+                {
                     id: 'billets-entree-sortie',
                     title: "Billets d'entrée tardive et de sortie anticipée",
                     location: 'Surveillance › Billets d’entrée',

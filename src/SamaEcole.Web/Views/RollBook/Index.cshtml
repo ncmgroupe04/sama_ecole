@@ -1,0 +1,355 @@
+@{
+ ViewData["Title"] = "Cahier de roulement";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois.
+ Le composant rollBookView() (wwwroot/js/roll-book.js) porte toute la logique : la grille fusionne les saisies du
+ cahier (prioritaires) et les statuts dérivés des appels par séance, le serveur décide et fait foi.
+ En arabe, la grille passe en dir="rtl" (police Cairo) ; les libellés FR / AR sont dans l'objet LABELS du script. *@
+@section Scripts {
+ <script src="~/js/roll-book.js" asp-append-version="true"></script>
+}
+
+<div x-data="rollBookView()">
+ <div>
+ <h1 class="page-title">Cahier de roulement</h1>
+ <p class="page-subtitle">Registre d'appel mensuel d'une classe : une case par élève et par demi-journée. Une saisie du cahier l'emporte sur le statut calculé à partir des appels par cours.</p>
+ </div>
+
+ @await Html.PartialAsync("_ErrorBanner")
+
+ <div x-show="error" x-cloak class="form-error-banner mt-4" role="alert"><span x-text="error"></span></div>
+ <div x-show="notice" x-cloak class="mt-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm px-4 py-3" role="status"><span x-text="notice"></span></div>
+
+ <!-- Sélection -->
+ <div class="card mt-6 p-6">
+ <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+ <div class="flex-1">
+ <label for="rb-classroom" class="form-label-sm" x-text="t('classroom')"></label>
+ <select id="rb-classroom" x-model="classroomId" x-on:change="tab === 'grid' ? loadGrid() : loadStats()" class="input-field mt-0">
+ <option value="">Choisir une classe…</option>
+ <template x-for="c in classrooms" :key="c.id">
+ <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
+ </template>
+ </select>
+ </div>
+ <div>
+ <label for="rb-month" class="form-label-sm" x-text="t('month')"></label>
+ <input id="rb-month" type="month" x-model="month" x-on:change="tab === 'grid' ? loadGrid() : loadStats()" class="input-field mt-0 w-44">
+ </div>
+ <div x-show="bilingualAvailable" x-cloak>
+ <span class="form-label-sm" x-text="t('language')"></span>
+ <div class="mt-1 inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Langue d'affichage">
+ <button type="button" x-on:click="setLang('fr')" :class="lang === 'fr' ? 'bg-white shadow text-slate-900' : 'text-slate-500'" class="px-3 py-1.5 text-xs font-semibold rounded-lg">Français</button>
+ <button type="button" x-on:click="setLang('ar')" :class="lang === 'ar' ? 'bg-white shadow text-slate-900' : 'text-slate-500'" class="px-3 py-1.5 text-xs font-semibold rounded-lg font-arabic">العربية</button>
+ <button type="button" x-on:click="setLang('bi')" :class="lang === 'bi' ? 'bg-white shadow text-slate-900' : 'text-slate-500'" class="px-3 py-1.5 text-xs font-semibold rounded-lg">FR · AR</button>
+ </div>
+ </div>
+ </div>
+
+ <nav class="mt-5 tab-nav-scroll" role="tablist" aria-label="Sections du cahier de roulement">
+ <button type="button" role="tab" x-on:click="tab = 'grid'" :aria-selected="tab === 'grid'" class="tab-btn" :class="tab === 'grid' && 'tab-btn-active'" x-text="t('grid')"></button>
+ <button type="button" role="tab" x-show="canStats" x-cloak x-on:click="showStats()" :aria-selected="tab === 'stats'" class="tab-btn" :class="tab === 'stats' && 'tab-btn-active'" x-text="t('stats')"></button>
+ </nav>
+ </div>
+
+ <!-- ============================== GRILLE ============================== -->
+ <div x-show="tab === 'grid'" x-cloak class="mt-6">
+ <div x-show="!grid && !isLoading" class="card p-6">
+ <empty-state icon="calendar" title="Aucun cahier affiché."
+ hint="Choisissez une classe et un mois pour afficher le registre d'appel." />
+ </div>
+
+ <div x-show="isLoading" x-cloak class="card p-6"><div class="skeleton h-40 w-full"></div></div>
+
+ <template x-if="grid && !isLoading">
+ <div :dir="rtl ? 'rtl' : 'ltr'" :lang="rtl ? 'ar' : 'fr'" :class="rtl && 'font-arabic'">
+ <div class="card">
+ <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+ <div>
+ <h2 class="text-lg font-bold text-slate-900"><span x-text="grid.classroomName"></span> <span class="text-slate-400 font-normal" x-text="'· ' + grid.level"></span></h2>
+ <p class="text-sm text-slate-500">
+ <bdi x-text="monthTitle()"></bdi> ·
+ <bdi x-text="grid.classDays + ' ' + short('classDays')"></bdi> ·
+ <bdi x-text="grid.schoolYearLabel"></bdi>
+ </p>
+ </div>
+ <div class="flex items-center gap-2">
+ <span x-show="pendingCount > 0" x-cloak class="text-xs font-semibold text-amber-700 bg-amber-50 rounded-lg px-2 py-1" x-text="pendingCount + ' modification(s) non enregistrée(s)'"></span>
+ <button type="button" x-show="pendingCount > 0" x-cloak x-on:click="discard()" class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors" x-text="short('cancel')"></button>
+ <button type="button" x-show="canExport" x-cloak x-on:click="exportMonthPdf()" :disabled="exportBlocked"
+ :title="exportBlocked ? 'Enregistrez ou annulez vos modifications avant d\'exporter : le PDF reprend le cahier enregistré.' : 'Cahier du mois, prêt à imprimer pour l\'inspection'"
+ class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
+ <span x-text="short('exportPdf')"></span>
+ </button>
+ <button type="button" x-on:click="save()" :disabled="pendingCount === 0 || isSaving" class="btn-modal-primary whitespace-nowrap">
+ <span x-text="isSaving ? 'Enregistrement…' : short('save')"></span>
+ </button>
+ </div>
+ </div>
+
+ <div x-show="grid.unplacedSessions > 0" x-cloak class="px-4 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
+ <span x-text="grid.unplacedSessions"></span> appel(s) par cours sans créneau d'emploi du temps n'ont pas pu être placés dans une demi-journée : ils n'apparaissent pas dans la grille. Saisissez les cases directement, ou rattachez ces appels à un créneau.
+ </div>
+
+ <div class="overflow-x-auto">
+ <table class="border-collapse text-sm" aria-label="Cahier de roulement">
+ <thead>
+ <tr class="table-head">
+ <th rowspan="2" class="py-2 px-3 text-start bg-white z-10 min-w-[11rem]" style="position:sticky; inset-inline-start:0" x-text="short('student')"></th>
+ <template x-for="day in grid.days" :key="day.date">
+ <th :colspan="day.isClassDay ? 2 : 1"
+ :title="day.isClassDay ? '' : offLabel(day)"
+ class="px-0.5 py-1 text-center font-semibold border-s border-slate-200"
+ :class="day.isClassDay ? 'text-slate-600' : 'text-slate-300 bg-slate-50'">
+ <div class="text-[10px] leading-none opacity-70" x-text="dayHeader(day).weekday"></div>
+ <div class="text-xs" x-text="dayHeader(day).number"></div>
+ </th>
+ </template>
+ <th colspan="5" class="px-2 text-center border-s border-slate-200" x-text="short('total')"></th>
+ </tr>
+ <tr class="table-head">
+ <template x-for="col in columns" :key="col.key">
+ <th class="w-7 min-w-[1.75rem] text-center text-[10px] font-medium border-s border-slate-100"
+ :class="col.off && 'bg-slate-50'"
+ x-text="col.off ? '' : short(col.half === 'Morning' ? 'morningShort' : 'afternoonShort')"></th>
+ </template>
+ <th class="px-2 text-center text-[10px] border-s border-slate-200" title="Présent">✓</th>
+ <th class="px-2 text-center text-[10px]" title="Retard">R</th>
+ <th class="px-2 text-center text-[10px]" title="Absent justifié">AJ</th>
+ <th class="px-2 text-center text-[10px]" title="Absent non justifié">A</th>
+ <th class="px-2 text-center text-[10px]" :title="short('presenceRate')">%</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <tr x-show="grid.students.length === 0" x-cloak>
+ <td :colspan="columns.length + 6">
+ <empty-state icon="layers" title="Aucun élève dans cette classe." hint="Les élèves en abandon ou transférés n'apparaissent pas au cahier." />
+ </td>
+ </tr>
+ <template x-for="student in grid.students" :key="student.studentId">
+ <tr class="hover:bg-slate-50/60">
+ <th scope="row" class="py-1.5 px-3 text-start font-medium text-slate-800 bg-white whitespace-nowrap" style="position:sticky; inset-inline-start:0">
+ <span x-text="studentName(student)"></span>
+ </th>
+ <template x-for="col in columns" :key="col.key">
+ <td class="p-0 border-s border-slate-100" :class="col.off && 'bg-slate-50'">
+ <template x-if="!col.off">
+ <button type="button"
+ class="w-7 h-7 flex items-center justify-center text-[11px] font-bold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-40 disabled:cursor-not-allowed"
+ :class="[markClass(effective(student.studentId, col.date, col.half).mark),
+ effective(student.studentId, col.date, col.half).source === 'Entry' && 'ring-1 ring-inset ring-slate-400',
+ effective(student.studentId, col.date, col.half).pending && 'ring-2 ring-amber-400',
+ selected && selected.studentId === student.studentId && selected.date === col.date && selected.half === col.half && 'outline outline-2 outline-primary-600']"
+ :disabled="isFuture(col.date)"
+ :title="markLabel(effective(student.studentId, col.date, col.half).mark)"
+ :aria-label="studentName(student) + ' — ' + col.date + ' — ' + markLabel(effective(student.studentId, col.date, col.half).mark)"
+ x-on:click="cycle(student.studentId, col.date, col.half)"
+ x-on:focus="select(student.studentId, col.date, col.half)"
+ x-on:keydown="onKey($event, student.studentId, col.date, col.half)"
+ x-text="effective(student.studentId, col.date, col.half).reverting ? '↺' : glyph(effective(student.studentId, col.date, col.half).mark)"></button>
+ </template>
+ <template x-if="col.off">
+ <span class="w-7 h-7 flex items-center justify-center text-[10px] text-amber-600" x-show="offHasEntry(student, col.date)" title="Saisie un jour non travaillé : non comptée dans les taux">•</span>
+ </template>
+ </td>
+ </template>
+ <td class="px-2 text-center font-semibold text-emerald-700 border-s border-slate-200" x-text="student.counts.present"></td>
+ <td class="px-2 text-center font-semibold text-amber-700" x-text="student.counts.late"></td>
+ <td class="px-2 text-center font-semibold text-sky-700" x-text="student.counts.justifiedAbsence"></td>
+ <td class="px-2 text-center font-semibold text-red-700" x-text="student.counts.unjustifiedAbsence"></td>
+ <td class="px-2 text-center text-xs text-slate-600 whitespace-nowrap" dir="ltr" x-text="percent(student.counts.presenceRate)"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <!-- Légende et totaux de la classe -->
+ <div class="p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs">
+ <div class="flex flex-wrap items-center gap-x-4 gap-y-1" role="list" :aria-label="short('legend')">
+ <template x-for="mark in ['Present','Late','PartialAbsence','JustifiedAbsence','UnjustifiedAbsence','NotRecorded']" :key="mark">
+ <span role="listitem" class="inline-flex items-center gap-1.5">
+ <span class="w-6 h-6 inline-flex items-center justify-center rounded-md font-bold" :class="markClass(mark)" x-text="glyph(mark)"></span>
+ <span class="text-slate-600" x-text="markLabel(mark)"></span>
+ </span>
+ </template>
+ <span class="inline-flex items-center gap-1.5 text-slate-500"><span class="w-6 h-6 rounded-md ring-1 ring-inset ring-slate-400"></span> <span x-text="t('entry')"></span></span>
+ </div>
+ <div class="flex flex-wrap gap-x-5 gap-y-1 text-slate-600">
+ <span><span x-text="short('presenceRate')"></span> : <bdi class="font-bold" x-text="percent(grid.totals.presenceRate)"></bdi></span>
+ <span><span x-text="short('absenceRate')"></span> : <bdi class="font-bold" x-text="percent(grid.totals.absenceRate)"></bdi></span>
+ <span><span x-text="short('assiduityRate')"></span> : <bdi class="font-bold" x-text="percent(grid.totals.assiduityRate)"></bdi></span>
+ <span><span x-text="short('coverage')"></span> : <bdi class="font-bold" x-text="percent(grid.totals.coverage)"></bdi></span>
+ </div>
+ </div>
+ </div>
+
+ <!-- Détail de la case sélectionnée : statut, durée du retard, motif -->
+ <div x-show="selectedCell" x-cloak class="card mt-4 p-4" dir="ltr">
+ <template x-if="selectedCell && selectedStudent">
+ <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+ <div class="min-w-[12rem]">
+ <p class="text-sm font-semibold text-slate-900" x-text="studentName(selectedStudent)"></p>
+ <p class="text-xs text-slate-500" x-text="selectedCell.date + ' · ' + short(selectedCell.half === 'Morning' ? 'morning' : 'afternoon')"></p>
+ <p class="text-xs mt-1" :class="selectedCell.source === 'Entry' || selectedCell.pending ? 'text-slate-700' : 'text-slate-400'"
+ x-text="selectedCell.pending ? 'Modification en attente' : (selectedCell.source === 'Entry' ? 'Saisie du cahier' : (selectedCell.source === 'Derived' ? 'Calculé à partir des appels par cours' : 'Non renseigné'))"></p>
+ </div>
+ <div class="flex flex-wrap gap-1.5" role="group" aria-label="Statut de la case">
+ <template x-for="status in ['Present','Late','JustifiedAbsence','UnjustifiedAbsence']" :key="status">
+ <button type="button"
+ x-on:click="applyDetail(status, selectedCell.lateMinutes, selectedCell.reason)"
+ :class="selectedCell.mark === status ? markClass(status) + ' ring-2 ring-inset ring-slate-500' : 'bg-slate-50 text-slate-600'"
+ class="px-3 py-1.5 text-xs font-semibold rounded-lg" x-text="markLabel(status)"></button>
+ </template>
+ <button type="button" x-on:click="applyDetail(null)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200" x-text="short('revert')"></button>
+ </div>
+ <div x-show="selectedCell.mark === 'Late'" x-cloak>
+ <label for="rb-minutes" class="form-label-sm">Minutes de retard</label>
+ <input id="rb-minutes" type="number" min="0" max="600" class="input-field mt-0 w-28"
+ :value="selectedCell.lateMinutes" x-on:change="applyDetail('Late', $event.target.value, selectedCell.reason)">
+ </div>
+ <div class="flex-1" x-show="selectedCell.mark !== 'NotRecorded' && selectedCell.mark !== 'PartialAbsence'" x-cloak>
+ <label for="rb-reason" class="form-label-sm">Motif (facultatif)</label>
+ <input id="rb-reason" type="text" maxlength="300" class="input-field mt-0"
+ :value="selectedCell.reason" x-on:change="applyDetail(selectedCell.mark, selectedCell.lateMinutes, $event.target.value)">
+ </div>
+ </div>
+ </template>
+ </div>
+ <p class="mt-3 text-xs text-slate-400" dir="ltr">Clavier : <kbd>P</kbd> présent · <kbd>R</kbd> retard · <kbd>J</kbd> absent justifié · <kbd>A</kbd> absent non justifié · <kbd>Retour arrière</kbd> revient au calcul.</p>
+ </div>
+ </template>
+ </div>
+
+ <!-- ============================== STATISTIQUES ============================== -->
+ <div x-show="tab === 'stats' && canStats" x-cloak class="mt-6">
+ <div class="card p-4 flex flex-col lg:flex-row lg:items-end gap-3">
+ <div>
+ <label for="rb-scope" class="form-label-sm">Portée</label>
+ <select id="rb-scope" x-model="statsScope" x-on:change="loadStats()" class="input-field mt-0">
+ <option value="class">Une classe (élèves, classe, niveau)</option>
+ <option value="level">Toute l'école, par niveau</option>
+ </select>
+ </div>
+ <div>
+ <label for="rb-period" class="form-label-sm">Période</label>
+ <select id="rb-period" x-model="statsPeriod" x-on:change="loadStats()" class="input-field mt-0">
+ <option value="month">Le mois choisi</option>
+ <option value="term">Une période d'évaluation</option>
+ </select>
+ </div>
+ <div x-show="canExportTerm" x-cloak class="lg:ml-auto">
+ <button type="button" x-on:click="exportTermPdf()"
+ title="Grilles mensuelles, récapitulatif de la période et, pour la direction, synthèse du niveau"
+ class="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap">
+ Exporter la période en PDF
+ </button>
+ </div>
+ <div x-show="statsPeriod === 'term'" x-cloak>
+ <label for="rb-term" class="form-label-sm">Trimestre / semestre</label>
+ <select id="rb-term" x-model="statsTermId" x-on:change="loadStats()" class="input-field mt-0">
+ <option value="">Choisir…</option>
+ <template x-for="term in terms" :key="term.id">
+ <option :value="term.id" x-text="term.label"></option>
+ </template>
+ </select>
+ </div>
+ </div>
+
+ <div x-show="isLoadingStats" x-cloak class="card p-6 mt-4"><div class="skeleton h-32 w-full"></div></div>
+
+ <template x-if="stats && !isLoadingStats">
+ <div class="mt-4 space-y-4">
+ <div class="card p-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+ <span><span x-text="stats.from"></span> → <span x-text="stats.to"></span> · <span x-text="stats.schoolYearLabel"></span></span>
+ <span>Présence : <strong x-text="percent(stats.totals.presenceRate)"></strong></span>
+ <span>Absence : <strong x-text="percent(stats.totals.absenceRate)"></strong></span>
+ <span>Assiduité : <strong x-text="percent(stats.totals.assiduityRate)"></strong></span>
+ <span>Couverture : <strong x-text="percent(stats.totals.coverage)"></strong></span>
+ </div>
+
+ <div x-show="stats.students.length > 0" x-cloak class="card overflow-x-auto">
+ <table class="w-full text-left border-collapse text-sm">
+ <thead><tr class="table-head">
+ <th class="py-3 px-4">Élève</th><th class="px-3 text-center">Renseignées</th><th class="px-3 text-center">Présent</th>
+ <th class="px-3 text-center">Retard</th><th class="px-3 text-center">Abs. partielle</th><th class="px-3 text-center">Abs. justifiée</th>
+ <th class="px-3 text-center">Abs. non justifiée</th><th class="px-3 text-center">Présence</th><th class="px-3 text-center">Absence</th>
+ <th class="px-3 text-center">Assiduité</th><th class="px-3 text-center">Couverture</th>
+ </tr></thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-for="row in stats.students" :key="row.studentId">
+ <tr class="hover:bg-slate-50/60">
+ <td class="py-2 px-4 font-medium text-slate-800"><span x-text="row.fullName"></span> <span class="font-arabic text-slate-400" dir="rtl" x-show="row.fullNameAr" x-text="row.fullNameAr"></span></td>
+ <td class="px-3 text-center" x-text="row.counts.recorded"></td>
+ <td class="px-3 text-center text-emerald-700" x-text="row.counts.present"></td>
+ <td class="px-3 text-center text-amber-700" x-text="row.counts.late"></td>
+ <td class="px-3 text-center text-yellow-700" x-text="row.counts.partialAbsence"></td>
+ <td class="px-3 text-center text-sky-700" x-text="row.counts.justifiedAbsence"></td>
+ <td class="px-3 text-center text-red-700" x-text="row.counts.unjustifiedAbsence"></td>
+ <td class="px-3 text-center font-semibold" x-text="percent(row.counts.presenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.absenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.assiduityRate)"></td>
+ <td class="px-3 text-center text-slate-500" x-text="percent(row.counts.coverage)"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <div class="card overflow-x-auto">
+ <table class="w-full text-left border-collapse text-sm">
+ <thead><tr class="table-head">
+ <th class="py-3 px-4">Classe</th><th class="px-3">Niveau</th><th class="px-3 text-center">Élèves</th><th class="px-3 text-center">Jours de classe</th>
+ <th class="px-3 text-center">Présence</th><th class="px-3 text-center">Absence</th><th class="px-3 text-center">Assiduité</th><th class="px-3 text-center">Couverture</th>
+ </tr></thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-for="row in stats.classes" :key="row.classroomId">
+ <tr class="hover:bg-slate-50/60">
+ <td class="py-2 px-4 font-medium text-slate-800" x-text="row.name"></td>
+ <td class="px-3 text-slate-600" x-text="row.level"></td>
+ <td class="px-3 text-center" x-text="row.studentCount"></td>
+ <td class="px-3 text-center" x-text="row.classDays"></td>
+ <td class="px-3 text-center font-semibold" x-text="percent(row.counts.presenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.absenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.assiduityRate)"></td>
+ <td class="px-3 text-center text-slate-500" x-text="percent(row.counts.coverage)"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <div class="card overflow-x-auto">
+ <table class="w-full text-left border-collapse text-sm">
+ <thead><tr class="table-head">
+ <th class="py-3 px-4">Niveau</th><th class="px-3 text-center">Classes</th><th class="px-3 text-center">Élèves</th>
+ <th class="px-3 text-center">Présence</th><th class="px-3 text-center">Absence</th><th class="px-3 text-center">Assiduité</th><th class="px-3 text-center">Couverture</th>
+ </tr></thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-for="row in stats.levels" :key="row.level">
+ <tr class="hover:bg-slate-50/60">
+ <td class="py-2 px-4 font-medium text-slate-800" x-text="row.level"></td>
+ <td class="px-3 text-center" x-text="row.classCount"></td>
+ <td class="px-3 text-center" x-text="row.studentCount"></td>
+ <td class="px-3 text-center font-semibold" x-text="percent(row.counts.presenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.absenceRate)"></td>
+ <td class="px-3 text-center" x-text="percent(row.counts.assiduityRate)"></td>
+ <td class="px-3 text-center text-slate-500" x-text="percent(row.counts.coverage)"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ <p class="text-xs text-slate-400">Les compteurs d'un niveau sont additionnés avant de calculer les taux : une classe de 5 élèves ne pèse pas autant qu'une classe de 50.</p>
+ </div>
+ </template>
+
+ <div x-show="!stats && !isLoadingStats" x-cloak class="card p-6 mt-4">
+ <empty-state icon="layers" title="Aucune statistique affichée." hint="Choisissez la portée et la période (et une classe pour la portée « Une classe »)." />
+ </div>
+ </div>
+
+ @* Aperçu PDF partagé — voir wwwroot/js/pdf-preview.js *@
+ @await Html.PartialAsync("_PdfPreviewModal")
+</div>
