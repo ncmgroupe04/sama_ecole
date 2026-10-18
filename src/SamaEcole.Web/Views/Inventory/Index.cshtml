@@ -5,6 +5,7 @@
 @* auth.js, api.js, pdf-preview.js et formatters.js sont chargés par _Layout : les inclure ici les
    exécuterait une seconde fois. *@
 @section Scripts {
+    <script src="~/js/guided-delete.js" asp-append-version="true"></script>
     <script src="~/js/inventory.js" asp-append-version="true"></script>
 }
 
@@ -142,7 +143,7 @@
                                         <row-action icon="database" label="Enregistrer un mouvement" on-click="openMovementModal(item)" show="canManageStock" />
                                         <row-action icon="link" label="Prêter" on-click="openAssignmentModal(item)" show="canManageStock && !item.isConsumable" />
                                         <row-action icon="pencil" label="Modifier" on-click="openEditItem(item)" show="canManageCatalog" />
-                                        <row-action icon="trash-2" label="Archiver" on-click="openDeleteItem(item)" show="canManageCatalog" variant="danger" />
+                                        <row-action icon="trash-2" label="Supprimer" on-click="openDeleteItem(item)" show="canManageCatalog" variant="danger" />
                                     </row-actions>
                                 </td>
                             </tr>
@@ -192,7 +193,7 @@
                                 <td class="py-3 px-4">
                                     <row-actions show="canManageCatalog">
                                         <row-action icon="pencil" label="Modifier" on-click="openEditCategory(category)" />
-                                        <row-action icon="trash-2" label="Archiver" on-click="openDeleteCategory(category)" variant="danger" />
+                                        <row-action icon="trash-2" label="Supprimer" on-click="openDeleteCategory(category)" variant="danger" />
                                     </row-actions>
                                 </td>
                             </tr>
@@ -526,22 +527,6 @@
         </template>
     </modal-shell>
 
-    <modal-shell open="deletingItem" on-close="closeDeleteItem()" size="md">
-        <modal-title>Archiver le bien</modal-title>
-        <modal-subtitle>
-            <span class="font-semibold text-slate-900" x-text="deletingItem ? deletingItem.name : ''"></span>
-            sera archivé et n'apparaîtra plus dans le catalogue.
-        </modal-subtitle>
-        <div x-show="deleteItemError" x-cloak class="form-error-banner" x-text="deleteItemError"></div>
-        <p class="text-base font-medium leading-relaxed text-slate-700">Impossible si des prêts de ce bien sont encore en cours : clôturez-les d'abord.</p>
-        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-            <button type="button" x-on:click="closeDeleteItem()" class="btn-modal-secondary group">Annuler</button>
-            <button type="button" x-on:click="confirmDeleteItem()" :disabled="isDeletingItem" class="btn-modal-danger">
-                <span x-text="isDeletingItem ? 'Suppression...' : 'Archiver le bien'"></span>
-            </button>
-        </div>
-    </modal-shell>
-
     @* Fiche détaillée d'un bien — lecture seule : historique récent + prêts en cours. *@
     <modal-shell open="detailItem" on-close="closeItemDetail()" size="wide">
         <modal-title><span x-text="detailItem ? detailItem.name : ''"></span></modal-title>
@@ -695,21 +680,7 @@
         </template>
     </modal-shell>
 
-    <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">
-        <modal-title>Archiver la catégorie</modal-title>
-        <modal-subtitle>
-            <span class="font-semibold text-slate-900" x-text="deletingCategory ? deletingCategory.name : ''"></span>
-            sera archivée et n'apparaîtra plus dans les sélecteurs.
-        </modal-subtitle>
-        <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
-        <p class="text-base font-medium leading-relaxed text-slate-700">Impossible si des biens sont encore rattachés à cette catégorie.</p>
-        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-            <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
-            <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
-                <span x-text="isDeletingCategory ? 'Suppression...' : 'Archiver la catégorie'"></span>
-            </button>
-        </div>
-    </modal-shell>
+    <partial name="_GuidedDeleteModal" />
 
     @* ═══════════════════════════════════════════════════════════════════════════
        MODALE — Nouveau mouvement de stock

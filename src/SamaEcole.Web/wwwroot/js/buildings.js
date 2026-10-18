@@ -14,6 +14,9 @@ document.addEventListener('alpine:init', () => {
     };
 
     Alpine.data('buildingsView', () => ({
+        ...window.guidedDelete.mixin({
+            resource: 'buildings'
+        }),
         buildings: [],
         isLoading: false,
         error: null,
@@ -34,10 +37,6 @@ document.addEventListener('alpine:init', () => {
         isSavingEditBuilding: false,
         editBuildingErrors: {},
 
-        deletingBuilding: null, // { id, name, rowVersion }
-        isDeletingBuilding: false,
-        deleteBuildingError: null,
-
         // ---------------------------------------------------------------- Salles
         isCreateRoomOpen: false,
         isSavingRoom: false,
@@ -47,10 +46,6 @@ document.addEventListener('alpine:init', () => {
         editingRoom: null, // { id, name, capacity, type, rowVersion }
         isSavingEditRoom: false,
         editRoomErrors: {},
-
-        deletingRoom: null, // { id, name, rowVersion }
-        isDeletingRoom: false,
-        deleteRoomError: null,
 
         init() {
             // Deep-link « badge de bâtiment » : un raccourci (ici l'en-tête d'une carte bâtiment,
@@ -84,17 +79,6 @@ document.addEventListener('alpine:init', () => {
 
         roomTypeLabel(type) {
             return ROOM_TYPE_LABELS[type] || type;
-        },
-
-        // Dortoir (module Internat) partage cette même modale de suppression que les salles
-        // ordinaires : un directeur qui supprime un dortoir doit lire « dortoir », pas « salle ».
-        deleteRoomWording() {
-            const isDorm = !!(this.deletingRoom && this.deletingRoom.type === 'Dortoir');
-            return {
-                title: isDorm ? 'Supprimer le dortoir' : 'Supprimer la salle',
-                demonstrative: isDorm ? 'ce dortoir' : 'cette salle',
-                archived: isDorm ? 'archivé' : 'archivée',
-            };
         },
 
         async loadBuildings() {
@@ -174,40 +158,27 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // ------------------------------------------------------------ Bâtiments : suppression
+        // ------------------------------------------------------------ Suppression guidée (bâtiments et salles)
 
         openDeleteBuilding(building) {
-            this.deletingBuilding = { id: building.id, name: building.name, rowVersion: building.rowVersion };
-            this.deleteBuildingError = null;
+            return this.openGuidedDelete({
+                id: building.id, name: building.name, rowVersion: building.rowVersion, resource: 'buildings',
+                readyText: "Ce bâtiment sera supprimé et n'apparaîtra plus dans les sélecteurs. Une trace de la suppression est conservée."
+            });
         },
 
-        closeDeleteBuilding() {
-            this.deletingBuilding = null;
-            this.deleteBuildingError = null;
+        // Dortoir (module Internat) partage ce flux avec les salles ordinaires : le texte de confirmation doit lire « dortoir ».
+        openDeleteRoom(room) {
+            const noun = room.type === 'Dortoir' ? 'Ce dortoir' : 'Cette salle';
+            return this.openGuidedDelete({
+                id: room.id, name: room.name, rowVersion: room.rowVersion, resource: 'rooms',
+                readyText: noun + " sera supprimé" + (room.type === 'Dortoir' ? '' : 'e') + " et n'apparaîtra plus dans la liste. Une trace de la suppression est conservée."
+            });
         },
 
-        async confirmDeleteBuilding() {
-            if (!this.deletingBuilding) return;
-
-            this.isDeletingBuilding = true;
-            this.deleteBuildingError = null;
-            try {
-                await window.api.delete(`/buildings/${this.deletingBuilding.id}?rowVersion=${this.deletingBuilding.rowVersion}`);
-                this.deletingBuilding = null;
-                window.softDeleteTrash.notifyChanged('buildings');
-                await this.loadBuildings();
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    this.deleteBuildingError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteBuildingError = "Ce bâtiment vient d'être modifié par un autre utilisateur. Rafraîchissez la page puis réessayez.";
-                    await this.loadBuildings();
-                } else {
-                    this.deleteBuildingError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingBuilding = false;
-            }
+        async afterGuidedDelete(target) {
+            window.softDeleteTrash.notifyChanged(target.resource);
+            await this.loadBuildings();
         },
 
         // ------------------------------------------------------------ Salles : création
@@ -273,40 +244,6 @@ document.addEventListener('alpine:init', () => {
                 }
             } finally {
                 this.isSavingEditRoom = false;
-            }
-        },
-
-        // ------------------------------------------------------------ Salles : suppression
-
-        openDeleteRoom(room) {
-            this.deletingRoom = { id: room.id, name: room.name, type: room.type, rowVersion: room.rowVersion };
-            this.deleteRoomError = null;
-        },
-
-        closeDeleteRoom() {
-            this.deletingRoom = null;
-            this.deleteRoomError = null;
-        },
-
-        async confirmDeleteRoom() {
-            if (!this.deletingRoom) return;
-
-            this.isDeletingRoom = true;
-            this.deleteRoomError = null;
-            try {
-                await window.api.delete(`/rooms/${this.deletingRoom.id}?rowVersion=${this.deletingRoom.rowVersion}`);
-                this.deletingRoom = null;
-                window.softDeleteTrash.notifyChanged('rooms');
-                await this.loadBuildings();
-            } catch (err) {
-                if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteRoomError = "Cette salle vient d'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.";
-                    await this.loadBuildings();
-                } else {
-                    this.deleteRoomError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingRoom = false;
             }
         },
 
