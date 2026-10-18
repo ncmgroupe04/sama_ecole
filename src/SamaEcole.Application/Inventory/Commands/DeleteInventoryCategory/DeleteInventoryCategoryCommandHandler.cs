@@ -1,5 +1,6 @@
-using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Inventory.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,17 +20,11 @@ public class DeleteInventoryCategoryCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Catégorie d'inventaire {request.Id} introuvable.");
 
-        // Même règle que DeleteBuildingCommandHandler vis-à-vis des salles : une catégorie encore
-        // porteuse de biens ne s'archive pas, sinon la fiche d'inventaire listerait des lots rattachés
-        // à une famille disparue.
-        var hasItems = await dbContext.InventoryItems
-            .AnyAsync(i => i.CategoryId == request.Id, cancellationToken);
-
-        if (hasItems)
-        {
-            throw new BusinessRuleException(
-                "Impossible de supprimer : des biens sont encore rattachés à cette catégorie.");
-        }
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkInventoryCategoryDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, InventoryCategoryDeletionPolicy.Policy, request.Id, cancellationToken);
 
         dbContext.SetOriginalConcurrencyToken(category, request.RowVersion);
 

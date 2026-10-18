@@ -22,6 +22,27 @@ public static class DeletionDependencies
             CountAsync: (db, ownerId, ct) => set(db).CountAsync(forOwner(ownerId), ct),
             BreakAsync: (db, ownerId, actor, ct) => ArchiveAsync(set(db).Where(forOwner(ownerId)), actor, ct));
 
+    /// <summary>
+    /// Lien rompable par DÉTACHEMENT : la colonne qui désigne l'élément est mise à vide (<paramref name="clear"/>), les lignes
+    /// elles-mêmes ne sont ni archivées ni supprimées (ex. les biens d'inventaire rangés dans une salle qu'on supprime).
+    /// </summary>
+    public static DeletionDependency Detach<T>(
+        string kind, string singular, string plural, string breakAction,
+        Func<IApplicationDbContext, DbSet<T>> set,
+        Func<Guid, Expression<Func<T, bool>>> forOwner,
+        Action<T> clear) where T : AuditableEntity =>
+        new(kind, singular, plural, breakAction, Breakable: true, typeof(T),
+            CountAsync: (db, ownerId, ct) => set(db).CountAsync(forOwner(ownerId), ct),
+            BreakAsync: async (db, ownerId, actor, ct) =>
+            {
+                var rows = await set(db).Where(forOwner(ownerId)).ToListAsync(ct);
+                foreach (var row in rows)
+                {
+                    clear(row);
+                }
+                return rows.Count;
+            });
+
     /// <summary>Lien qui bloque et ne se rompt pas ici : l'utilisateur doit d'abord faire <paramref name="beforeAction"/>.</summary>
     public static DeletionDependency Blocking<T>(
         string kind, string singular, string plural, string beforeAction,

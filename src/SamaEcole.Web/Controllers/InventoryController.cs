@@ -1,3 +1,9 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Inventory.Commands.UnlinkInventoryItemDependencies;
+using SamaEcole.Application.Inventory.Queries.GetInventoryItemDeletionImpact;
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Inventory.Commands.UnlinkInventoryCategoryDependencies;
+using SamaEcole.Application.Inventory.Queries.GetInventoryCategoryDeletionImpact;
 using SamaEcole.Application.Inventory.Commands.CancelItemAssignment;
 using SamaEcole.Application.Inventory.Commands.CreateInventoryCategory;
 using SamaEcole.Application.Inventory.Commands.CreateInventoryItem;
@@ -119,6 +125,31 @@ public class InventoryController(ISender mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une catégorie d'inventaire (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("categories/{id:guid}/deletion-impact")]
+    [Authorize(Roles = CatalogRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> InventoryCategoryDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetInventoryCategoryDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens de la catégorie (archivage ou détachement, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("categories/{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = CatalogRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkInventoryCategoryDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkInventoryCategoryDependenciesCommand(id), cancellationToken));
+
     // ------------------------------------------------------------------ Catalogue des biens
 
     [HttpGet("items")]
@@ -190,6 +221,31 @@ public class InventoryController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteInventoryItemCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'un bien d'inventaire (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("items/{id:guid}/deletion-impact")]
+    [Authorize(Roles = CatalogRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> InventoryItemDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetInventoryItemDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens du bien (archivage ou détachement, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("items/{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = CatalogRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkInventoryItemDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkInventoryItemDependenciesCommand(id), cancellationToken));
 
     // ------------------------------------------------------------------ Journal de stock
 

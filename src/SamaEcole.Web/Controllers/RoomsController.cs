@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Rooms.Commands.UnlinkRoomDependencies;
+using SamaEcole.Application.Rooms.Queries.GetRoomDeletionImpact;
 using SamaEcole.Application.Rooms.Commands.RestoreRoom;
 using SamaEcole.Application.Rooms.Queries.GetDeletedRooms;
 using SamaEcole.Application.Rooms.Commands.CreateRoom;
@@ -77,6 +80,31 @@ public class RoomsController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteRoomCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une salle (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RoomDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetRoomDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens de la salle (archivage ou détachement, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkRoomDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkRoomDependenciesCommand(id), cancellationToken));
 
     /// <summary>Corbeille : salles supprimées de l'école courante.</summary>
     [HttpGet("deleted")]

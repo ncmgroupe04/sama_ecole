@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Finance.Commands.UnlinkFeeCategoryDependencies;
+using SamaEcole.Application.Finance.Queries.GetFeeCategoryDeletionImpact;
 using SamaEcole.Application.Finance.Commands.RestoreFeeCategory;
 using SamaEcole.Application.Finance.Queries.GetDeletedFeeCategories;
 using SamaEcole.Application.Finance;
@@ -148,6 +151,31 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         await mediator.Send(new DeleteFeeCategoryCommand(id), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une catégorie de frais (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("fee-categories/{id:guid}/deletion-impact")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> FeeCategoryDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetFeeCategoryDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens de la catégorie (archivage ou détachement, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("fee-categories/{id:guid}/unlink-dependencies")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkFeeCategoryDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkFeeCategoryDependenciesCommand(id), cancellationToken));
 
     /// <summary>Corbeille : catégories de frais supprimées. Même autorisation que la suppression.</summary>
     [HttpGet("fee-categories/deleted")]
