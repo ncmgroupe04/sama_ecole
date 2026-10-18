@@ -46,6 +46,8 @@ tags:
   - name: Platform
   - name: Notifications
   - name: Inventory
+  - name: Buildings
+  - name: Rooms
   - name: Exams
   - name: VieScolaire
   - name: StateIntegration
@@ -2242,6 +2244,246 @@ paths:
       responses:
         '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
         '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
+
+  /buildings/{id}/deletion-impact:
+    get:
+      tags: [Buildings]
+      summary: Ce qui empêche ou accompagne la suppression de un bâtiment (lecture seule)
+      description: |
+        Aucune donnée financière n'est concernée. Sinon `links` énumère précisément les liens : salles (non rompable : une par une). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /buildings/{id}/unlink-dependencies:
+    post:
+      tags: [Buildings]
+      summary: Rompre explicitement les liens non financiers de un bâtiment
+      description: |
+        Rompt les liens rompables (salles (non rompable : une par une)). Ne supprime pas l'élément : c'est `DELETE`, qui ne rompt jamais rien et
+        répond 409 `DEPENDENCIES_EXIST` (liste des liens). Tracée dans le journal d'audit.
+        409 : `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'DEPENDENCIES_NOT_BREAKABLE' }
+
+  /rooms/{id}/deletion-impact:
+    get:
+      tags: [Rooms]
+      summary: Ce qui empêche ou accompagne la suppression de une salle (lecture seule)
+      description: |
+        Aucune donnée financière n'est concernée. Sinon `links` énumère précisément les liens : biens d'inventaire rangés dans la salle (rupture = emplacement vidé, les biens ne sont ni archivés ni supprimés). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{id}/unlink-dependencies:
+    post:
+      tags: [Rooms]
+      summary: Rompre explicitement les liens non financiers de une salle
+      description: |
+        Rompt les liens rompables (biens d'inventaire rangés dans la salle (rupture = emplacement vidé, les biens ne sont ni archivés ni supprimés)). Ne supprime pas l'élément : c'est `DELETE`, qui ne rompt jamais rien et
+        répond 409 `DEPENDENCIES_EXIST` (liste des liens). Tracée dans le journal d'audit.
+        409 : `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'DEPENDENCIES_NOT_BREAKABLE' }
+
+  /inventory/categories/{id}/deletion-impact:
+    get:
+      tags: [Inventory]
+      summary: Ce qui empêche ou accompagne la suppression de une catégorie d'inventaire (lecture seule)
+      description: |
+        Aucune donnée financière n'est concernée. Sinon `links` énumère précisément les liens : biens (non rompable : à supprimer ou à changer de catégorie d'abord). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /inventory/categories/{id}/unlink-dependencies:
+    post:
+      tags: [Inventory]
+      summary: Rompre explicitement les liens non financiers de une catégorie d'inventaire
+      description: |
+        Rompt les liens rompables (biens (non rompable : à supprimer ou à changer de catégorie d'abord)). Ne supprime pas l'élément : c'est `DELETE`, qui ne rompt jamais rien et
+        répond 409 `DEPENDENCIES_EXIST` (liste des liens). Tracée dans le journal d'audit.
+        409 : `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'DEPENDENCIES_NOT_BREAKABLE' }
+
+  /inventory/items/{id}/deletion-impact:
+    get:
+      tags: [Inventory]
+      summary: Ce qui empêche ou accompagne la suppression de un bien d'inventaire (lecture seule)
+      description: |
+        Aucune donnée financière n'est concernée. Sinon `links` énumère précisément les liens : prêts en cours ou partiellement restitués (non rompable : restitution à enregistrer d'abord) ; les prêts clos sont archivés avec le bien. `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /inventory/items/{id}/unlink-dependencies:
+    post:
+      tags: [Inventory]
+      summary: Rompre explicitement les liens non financiers de un bien d'inventaire
+      description: |
+        Rompt les liens rompables (prêts en cours ou partiellement restitués (non rompable : restitution à enregistrer d'abord) ; les prêts clos sont archivés avec le bien). Ne supprime pas l'élément : c'est `DELETE`, qui ne rompt jamais rien et
+        répond 409 `DEPENDENCIES_EXIST` (liste des liens). Tracée dans le journal d'audit.
+        409 : `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'DEPENDENCIES_NOT_BREAKABLE' }
+
+  /finance/fee-categories/{id}/deletion-impact:
+    get:
+      tags: [Finance]
+      summary: Ce qui empêche ou accompagne la suppression de une catégorie de frais (lecture seule)
+      description: |
+        Une inscription qui facture la catégorie ou un paiement non annulé qui l'a ventilée donne `financialBlock: true` (aucune option de rupture). Sinon `links` énumère précisément les liens : lignes du barème (rupture = archivage). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé aux utilisateurs autorisés à supprimer des frais (`CanDeleteFees`) }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /finance/fee-categories/{id}/unlink-dependencies:
+    post:
+      tags: [Finance]
+      summary: Rompre explicitement les liens non financiers de une catégorie de frais
+      description: |
+        Rompt les liens rompables (lignes du barème (rupture = archivage)). Ne supprime pas l'élément : c'est `DELETE`, qui ne rompt jamais rien et
+        répond 409 `DEPENDENCIES_EXIST` (liste des liens) ou `FINANCIAL_RECORDS_EXIST`. Tracée dans le journal d'audit.
+        409 : `DEPENDENCIES_NOT_BREAKABLE` ou `FINANCIAL_RECORDS_EXIST`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé aux utilisateurs autorisés à supprimer des frais (`CanDeleteFees`) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
 
