@@ -124,7 +124,7 @@ test('nom de fichier : sujet et date LOCALE sur deux chiffres', () => {
 // ---------------------------------------------------------------- branchement dans les composants
 
 function studentsView() {
-    const ctx = loadScripts(['import-errors.js', 'payment-cancel.js', 'students.js'], {
+    const ctx = loadScripts(['import-errors.js', 'payment-cancel.js', 'guided-delete.js', 'students.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },

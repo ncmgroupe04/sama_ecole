@@ -13,7 +13,7 @@ import { loadScripts, plain } from './harness.mjs';
 
 function students() {
     const calls = [];
-    const ctx = loadScripts(['payment-cancel.js', 'students.js'], {
+    const ctx = loadScripts(['payment-cancel.js', 'guided-delete.js', 'students.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },

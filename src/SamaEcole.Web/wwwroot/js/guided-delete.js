@@ -57,6 +57,8 @@
                 async confirmGuidedDelete() {
                     const state = this.guidedDelete;
                     if (!state || state.busy) return;
+                    // Blocage financier ou analyse en cours : rien à rompre ni à supprimer (le serveur refuserait de toute façon).
+                    if (state.phase === 'financial' || state.phase === 'loading') return;
 
                     if (state.phase === 'links' && !state.confirmed) {
                         state.error = 'Cochez la case pour confirmer la rupture de ces liens.';
