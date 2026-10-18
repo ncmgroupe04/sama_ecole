@@ -1,11 +1,14 @@
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Students.Commands.CorrectStudentMatricule;
 using SamaEcole.Application.Students.Commands.CreateStudent;
 using SamaEcole.Application.Students.Commands.DeleteStudent;
 using SamaEcole.Application.Students.Commands.ImportStudents;
 using SamaEcole.Application.Students.Commands.SetStudentPhoto;
+using SamaEcole.Application.Students.Commands.UnlinkStudentDependencies;
 using SamaEcole.Application.Students.Commands.UpdateStudent;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Application.Students.Queries.GetStudentDeletionImpact;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Application.Students.Queries.GetStudentImportTemplate;
 using SamaEcole.Application.Students.Queries.GetStudents;
@@ -221,8 +224,9 @@ public class StudentsController(ISender mediator) : ControllerBase
             new SetStudentPhotoCommand(id, request.PhotoData, request.RowVersion), cancellationToken));
 
     /// <summary>
-    /// Archive (soft delete) une fiche élève créée par pure erreur de saisie. Refusée en 409 dès
-    /// qu'une inscription ou une note existe déjà (DeleteStudentCommandHandler). `rowVersion` en
+    /// Archive (soft delete) une fiche élève. Refusée en 409 tant qu'un paiement non annulé existe
+    /// (FINANCIAL_RECORDS_EXIST) ou qu'un lien reste à rompre (DEPENDENCIES_EXIST) : voir deletion-impact et
+    /// unlink-dependencies. Elle ne rompt jamais un lien elle-même. `rowVersion` en
     /// query string, comme DELETE /grades/{id}.
     /// </summary>
     [HttpDelete("{id:guid}")]
@@ -237,4 +241,29 @@ public class StudentsController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteStudentCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'un élève (spec 2026-10-17, §3) : blocage financier (paiement non
+    /// annulé) ou liste précise des liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetStudentDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens non financiers d'un élève (archivage logique, tracé). Ne supprime pas la fiche.
+    /// 409 : blocage financier ou lien non rompable (matériel non restitué).
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkStudentDependenciesCommand(id), cancellationToken));
 }
