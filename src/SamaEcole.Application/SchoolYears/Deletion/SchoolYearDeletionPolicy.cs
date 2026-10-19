@@ -28,6 +28,8 @@ public static class SchoolYearDeletionPolicy
         TermGrades(),
         TermReportCardRemarks(),
         DeletionDependencies.AttendanceSheets(id => s => s.SchoolYearId == id),
+        DeletionDependencies.Owned<RollBookEntry>("RollBookEntry", "pointage du cahier de roulement", "pointages du cahier de roulement",
+            "Archiver ces pointages", db => db.RollBookEntries, id => e => e.SchoolYearId == id),
         ExamSessions(),
         DeletionDependencies.Owned<StudentMutationCertificate>("MutationCertificate", "certificat de mutation", "certificats de mutation",
             "Archiver ces certificats", db => db.StudentMutationCertificates, id => c => c.SchoolYearId == id),
