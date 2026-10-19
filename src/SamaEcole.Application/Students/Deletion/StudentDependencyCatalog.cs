@@ -36,6 +36,8 @@ public static class StudentDependencyCatalog
             db => db.ReportCardRemarks, id => e => e.StudentId == id),
         DeletionDependencies.Owned<StudentAttendance>("Attendance", "pointage de présence", "pointages de présence", "Archiver ces pointages",
             db => db.StudentAttendances, id => e => e.StudentId == id),
+        DeletionDependencies.Owned<RollBookEntry>("RollBookEntry", "pointage du cahier de roulement", "pointages du cahier de roulement", "Archiver ces pointages",
+            db => db.RollBookEntries, id => e => e.StudentId == id),
         DeletionDependencies.Owned<AbsenceJustification>("AbsenceJustification", "justificatif d'absence", "justificatifs d'absence", "Archiver ces justificatifs",
             db => db.AbsenceJustifications, id => e => e.StudentId == id),
         DeletionDependencies.Owned<LateArrival>("LateArrival", "retard", "retards", "Archiver ces retards",

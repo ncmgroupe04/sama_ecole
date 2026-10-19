@@ -982,6 +982,18 @@ lui-même (voir ci-dessous).
   signatures officielles**, **Années scolaires**, **Mensualités & autorisations de caisse**,
   **Facturation & historique**, **Paramètres système (Sécurité & Administration)**, **Utilisateurs &
   rôles**, **Journal d'audit**, **Notifications SMS**, **Mentions**.
+- **Cahier de roulement** (Surveillance › Cahier de roulement) : grille mensuelle par classe, deux demi-journées par jour
+  de classe (les jours de repos, les fermetures du calendrier et ce qui dépasse l'année sont grisés). Une case vient soit
+  d'une **saisie du cahier** (cerclée, elle prime), soit du statut **calculé** à partir des appels par cours ; l'absence
+  partielle (absent à une partie des cours de la demi-journée) est un constat calculé, non saisissable. Taux : présence
+  = (présents + retards + absences partielles) ÷ demi-journées renseignées ; absence = (justifiées + non justifiées) ÷
+  renseignées ; assiduité = présence + absences justifiées ; la **couverture** dit quelle part des demi-journées
+  attendues est renseignée, pour qu'un cahier presque vide ne passe pas pour 100 %. Un niveau additionne les compteurs de
+  ses classes avant de calculer les taux. L'Enseignant n'accède qu'à ses classes ; les statistiques sont réservées à la
+  direction et au secrétariat. **Export PDF** (Directeur, Secrétariat, Surveillant) : « Exporter en PDF » ouvre le cahier
+  du mois dans l'aperçu (A4 paysage, bandeau officiel et IA/IEF, légende, totaux, signatures) ; depuis les statistiques,
+  « Exporter la période en PDF » ajoute une grille par mois, le récapitulatif et, pour la direction et le secrétariat, la
+  synthèse du niveau. En français, en arabe ou bilingue (modules Franco-Arabe) ; le PDF reprend le cahier ENREGISTRÉ.
 - **En-tête officiel en arabe** (onglet Intégration étatique, sous l'IA et l'IEF français : nom de l'établissement, IA et IEF en arabe, facultatifs) et
   **Calendrier de fermeture** (onglet Années scolaires : jours fériés et vacances, libellé arabe facultatif) —
   socle du cahier de roulement bilingue Franco-Arabe (Bloc 5). Un champ arabe vide laisse la ligne à compléter à

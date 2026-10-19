@@ -27,7 +27,7 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
     /// <summary>Pages que la sidebar masque quand la Pédagogie est coupée (Daara — Mémorisation, Comptabilité &amp; Rapports).</summary>
     private static readonly string[] PedagogyPageActions =
     [
-        "Attendance", "Billets", "PointageProfs", "Discipline", "ParentSummons", "Subjects", "Grades", "ClassJournal",
+        "Attendance", "RollBook", "Billets", "PointageProfs", "Discipline", "ParentSummons", "Subjects", "Grades", "ClassJournal",
         "AttendanceReport", "Exams", "InstitutionalReports", "Syllabus"
     ];
 
@@ -53,6 +53,7 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
 
     [Theory]
     [InlineData("/presences")]
+    [InlineData("/cahier-de-roulement")]
     [InlineData("/billets")]
     [InlineData("/pointage-profs")]
     [InlineData("/discipline")]

@@ -38,6 +38,8 @@ public static class ClassroomDeletionPolicy
         DeletionDependencies.Owned<ClassJournalEntry>("ClassJournalEntry", "entrée du cahier de texte", "entrées du cahier de texte",
             "Archiver ces entrées", db => db.ClassJournalEntries, id => e => e.ClassroomId == id),
         DeletionDependencies.AttendanceSheets(id => s => s.ClassroomId == id),
+        DeletionDependencies.Owned<RollBookEntry>("RollBookEntry", "pointage du cahier de roulement", "pointages du cahier de roulement",
+            "Archiver ces pointages", db => db.RollBookEntries, id => e => e.ClassroomId == id),
         DeletionDependencies.Owned<ExamDossier>("ExamDossier", "dossier d'examen", "dossiers d'examen",
             "Archiver ces dossiers", db => db.ExamDossiers, id => d => d.ClassroomId == id),
         DeletionDependencies.Owned<SubjectCoefficientOverride>("CoefficientOverride", "coefficient personnalisé", "coefficients personnalisés",
