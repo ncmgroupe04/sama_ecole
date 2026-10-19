@@ -41,16 +41,27 @@ public class ExportSchoolYearQueryHandler(IApplicationDbContext dbContext, TimeP
                 c.Id, c.Name, c.Level, s.GuardianName, s.GuardianPhone))
             .ToListAsync(cancellationToken);
 
-        var enrollmentIds = enrolled.Select(x => x.EnrollmentId).ToList();
-        var byEnrollmentId = enrolled.ToDictionary(x => x.EnrollmentId);
+        // L'archive hors plateforme garde la TRACE (règle #6) : les paiements ANNULÉS y figurent, marqués, avec leur motif
+        // et la destination de l'argent — y compris ceux d'une inscription annulée ou archivée depuis (suppression
+        // guidée), dont l'élève peut lui-même avoir été supprimé. IgnoreQueryFilters retire AUSSI le filtre de tenant :
+        // le SchoolId est réaffirmé à chaque requête (la policy RLS reste la seconde barrière).
+        var yearEnrollments = await (
+            from e in dbContext.Enrollments.IgnoreQueryFilters().AsNoTracking()
+            join s in dbContext.Students.IgnoreQueryFilters().AsNoTracking() on e.StudentId equals s.Id
+            where e.SchoolId == schoolYear.SchoolId && s.SchoolId == schoolYear.SchoolId && e.SchoolYearId == request.SchoolYearId
+            select new PaymentOwnerRow(e.Id, s.Matricule, s.FullName, s.IsDeleted))
+            .ToListAsync(cancellationToken);
+
+        var paymentOwners = yearEnrollments.ToDictionary(x => x.EnrollmentId);
+        var paymentEnrollmentIds = paymentOwners.Keys.ToList();
 
         var payments = await dbContext.Payments.AsNoTracking()
-            .Where(p => enrollmentIds.Contains(p.EnrollmentId) && p.Status != PaymentStatus.Cancelled)
+            .Where(p => paymentEnrollmentIds.Contains(p.EnrollmentId))
             .OrderBy(p => p.PaidAt)
             .ToListAsync(cancellationToken);
 
         var studentsCsv = BuildStudentsCsv(enrolled);
-        var paymentsCsv = BuildPaymentsCsv(payments, byEnrollmentId);
+        var paymentsCsv = BuildPaymentsCsv(payments, paymentOwners);
         var classroomsCsv = BuildClassroomsCsv(enrolled);
 
         var zipBytes = BuildZip(
@@ -84,27 +95,44 @@ public class ExportSchoolYearQueryHandler(IApplicationDbContext dbContext, TimeP
         return sb.ToString();
     }
 
+    private static readonly IReadOnlyDictionary<PaymentCancellationOutcome, string> OutcomeLabels =
+        new Dictionary<PaymentCancellationOutcome, string>
+        {
+            [PaymentCancellationOutcome.KeptBySchool] = "Simple correction",
+            [PaymentCancellationOutcome.ReusedForEnrollment] = "Réutilisé pour l'inscription",
+            [PaymentCancellationOutcome.RefundedToParent] = "Remboursé au parent"
+        };
+
+    /// <summary>Propriétaire d'un paiement dans l'archive : l'élève de l'inscription, même supprimé depuis.</summary>
+    private sealed record PaymentOwnerRow(Guid EnrollmentId, string Matricule, string FullName, bool StudentDeleted);
+
     private static string BuildPaymentsCsv(
-        IReadOnlyList<Domain.Entities.Payment> payments, IReadOnlyDictionary<Guid, EnrolledStudentRow> byEnrollmentId)
+        IReadOnlyList<Domain.Entities.Payment> payments, IReadOnlyDictionary<Guid, PaymentOwnerRow> owners)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(CsvLine("Reçu N°", "Matricule", "Élève", "Montant (FCFA)", "Mode", "Date"));
+        // Les colonnes d'origine restent en tête et dans le même ordre : les colonnes ajoutées (statut, annulation) sont à la suite.
+        sb.AppendLine(CsvLine(
+            "Reçu N°", "Matricule", "Élève", "Montant (FCFA)", "Mode", "Date",
+            "Statut", "Annulé le", "Motif d'annulation", "Destination de l'argent"));
 
         foreach (var payment in payments)
         {
-            // Toujours résolu : un paiement référence une inscription NON annulée de cette même
-            // requête (les paiements sur une inscription annulée n'existent pas — règle #6), donc
-            // présente dans byEnrollmentId. Une entrée absente signalerait une incohérence de données,
-            // pas un cas normal à absorber silencieusement.
-            var enrollment = byEnrollmentId[payment.EnrollmentId];
+            // Toujours résolu : la liste des paiements est construite à partir des inscriptions de l'année.
+            // Une entrée absente signalerait une incohérence de données, pas un cas normal à absorber.
+            var owner = owners[payment.EnrollmentId];
+            var cancelled = payment.Status == PaymentStatus.Cancelled;
 
             sb.AppendLine(CsvLine(
                 payment.ReceiptNumber,
-                enrollment.Matricule,
-                enrollment.FullName,
+                owner.Matricule,
+                owner.StudentDeleted ? $"{owner.FullName} (élève supprimé)" : owner.FullName,
                 payment.Amount.ToString(CultureInfo.InvariantCulture),
                 MethodLabels.GetValueOrDefault(payment.Method, payment.Method.ToString()),
-                payment.PaidAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)));
+                payment.PaidAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                cancelled ? "Annulé" : "Valide",
+                cancelled && payment.CancelledAt is { } at ? at.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "",
+                cancelled ? payment.CancellationReason : "",
+                cancelled && payment.CancellationOutcome is { } outcome ? OutcomeLabels.GetValueOrDefault(outcome, outcome.ToString()) : ""));
         }
 
         return sb.ToString();

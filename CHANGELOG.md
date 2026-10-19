@@ -7,6 +7,13 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Contre-passation d'un paiement** (fiche élève, historique des paiements) : passé le délai d'annulation de 48 heures, le
+  Directeur peut « contre-passer » un versement. Le reçu est conservé et marqué annulé ; l'écriture inverse est datée
+  d'aujourd'hui, donc les journées et périodes déjà arrêtées ne changent pas. Réservée au Directeur.
+- **Droit d'annulation de la Finance, réglable** (Paramètres → Autorisations de caisse) : le caissier peut annuler un paiement
+  saisi par erreur pendant 48 heures ; le Directeur peut retirer ce droit à tout moment. Ouvert par défaut.
+- **Export d'année : les paiements annulés y figurent** (`paiements.csv`) avec leur statut, la date et le motif d'annulation et la
+  destination de l'argent, y compris pour un élève ou une inscription supprimés depuis. Colonnes d'origine inchangées.
 - **Franco-Arabe — en-tête officiel en arabe** (Paramètres → Intégration étatique, sous l'IA et l'IEF français) : nom de l'établissement,
   Inspection d'Académie et IEF en arabe, destinés aux documents bilingues. Facultatifs ; un champ vide
   laisse la ligne arabe à compléter à la main.
@@ -28,6 +35,8 @@ distingue les changements **visibles pour les écoles** des changements **intern
   exporter. Un nom d'école ou d'inspection non renseigné en arabe laisse une ligne pointillée à compléter à la main.
 
 ### Interne
+
+- Migration `AddAllowFinanceToCancelPaymentsToSchoolSettings` : colonne `school_settings.AllowFinanceToCancelPayments`, booléen non nul, défaut vrai (additive ; les écoles existantes gardent le droit actuel de la Finance).
 
 - Migration `AddRollBookEntries` : table `roll_book_entries` (RLS, sans `DELETE` pour le rôle applicatif, une seule
   saisie vivante par élève, jour et demi-journée), inscrite dans `reset_school_data` et `delete_school_year`.

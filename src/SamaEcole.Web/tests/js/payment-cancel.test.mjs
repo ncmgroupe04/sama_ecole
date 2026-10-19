@@ -117,3 +117,68 @@ test('le bouton disparaît quand le délai de grâce calculé par le serveur est
     assert.equal(state.isPaymentCancellable({ status: 'Cancelled', cancellableUntil: inOneHour }), false);
     assert.equal(state.isPaymentCancellable({ status: 'Paid' }), true, 'sans échéance connue, le serveur tranche');
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Réglage du Directeur (la Finance peut-elle annuler ?) et contre-passation hors délai (Directeur seul)
+// ---------------------------------------------------------------------------------------------------------------
+
+function mixinWithSettings({ role, settings, getFails = false } = {}) {
+    const api = {
+        post: async () => ({}),
+        get: async () => { if (getFails) throw new Error('réseau'); return settings; }
+    };
+    const ctx = loadScripts(['payment-cancel.js'], { preload: { auth: { role }, api } });
+    return ctx.window.paymentCancel.mixin();
+}
+
+test('la Finance perd le bouton quand le Directeur retire le droit, le Directeur le garde toujours', async () => {
+    const finance = mixinWithSettings({ role: 'Finance', settings: { allowFinanceToCancelPayments: false } });
+    assert.equal(finance.canCancelPayment, true, 'ouvert par défaut avant la lecture du réglage');
+    await finance.initPaymentCancel();
+    assert.equal(finance.canCancelPayment, false);
+
+    const directeur = mixinWithSettings({ role: 'Directeur', settings: { allowFinanceToCancelPayments: false } });
+    await directeur.initPaymentCancel();
+    assert.equal(directeur.canCancelPayment, true, 'le réglage ne concerne que la Finance');
+});
+
+test('réglage activé ou illisible : la Finance garde le bouton (le serveur reste l\'arbitre)', async () => {
+    const on = mixinWithSettings({ role: 'Finance', settings: { allowFinanceToCancelPayments: true } });
+    await on.initPaymentCancel();
+    assert.equal(on.canCancelPayment, true);
+
+    const broken = mixinWithSettings({ role: 'Finance', getFails: true });
+    await broken.initPaymentCancel();
+    assert.equal(broken.canCancelPayment, true);
+});
+
+test('hors délai de grâce, seul le Directeur voit « Contre-passer »', () => {
+    const past = { paymentId: 'p-1', status: 'Paid', cancellableUntil: new Date(Date.now() - 3600_000).toISOString() };
+    const within = { paymentId: 'p-2', status: 'Paid', cancellableUntil: new Date(Date.now() + 3600_000).toISOString() };
+    const cancelled = { ...past, status: 'Cancelled' };
+
+    const directeur = mixin({ role: 'Directeur' });
+    assert.equal(directeur.isPaymentReversible(past), true);
+    assert.equal(directeur.isPaymentReversible(within), false, 'dans le délai : annulation ordinaire');
+    assert.equal(directeur.isPaymentReversible(cancelled), false);
+
+    assert.equal(mixin({ role: 'Finance' }).isPaymentReversible(past), false, 'la contre-passation est réservée au Directeur');
+});
+
+test('la contre-passation envoie reversal: true, l\'annulation ordinaire ne l\'envoie pas', async () => {
+    const bodies = [];
+    const state = mixin({ post: async (_url, body) => { bodies.push(plain(body)); return {}; } });
+
+    state.openCancelPayment(PAYMENT, { reversal: true });
+    assert.equal(state.cancelingPayment.reversal, true);
+    state.cancelPaymentChoice = 'Paiement enregistré en double';
+    await state.confirmCancelPayment();
+
+    state.openCancelPayment(PAYMENT);
+    assert.equal(state.cancelingPayment.reversal, false);
+    state.cancelPaymentChoice = 'Montant saisi incorrect';
+    await state.confirmCancelPayment();
+
+    assert.equal(bodies[0].reversal, true);
+    assert.equal('reversal' in bodies[1], false);
+});

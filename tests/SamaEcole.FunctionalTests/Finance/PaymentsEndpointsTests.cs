@@ -5,6 +5,7 @@ using System.Text;
 using FluentAssertions;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace SamaEcole.FunctionalTests.Finance;
@@ -435,7 +436,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     private record CancelResult(
         Guid PaymentId, string ReceiptNumber, decimal CancelledAmount, decimal TotalDue,
-        decimal AmountPaid, decimal RemainingBalance);
+        decimal AmountPaid, decimal RemainingBalance, bool IsReversal = false);
 
     [Fact]
     public async Task Directeur_And_Finance_Can_Cancel_A_Payment_But_Not_The_Secretariat()
@@ -521,5 +522,116 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             HttpMethod.Post, $"/api/v1/finance/payments/{Guid.NewGuid()}/cancel", directeur, new { reason = "Erreur" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ----------------------------------------------------------------------------- Réglage du Directeur : la Finance peut-elle annuler ?
+
+    private async Task SetFinanceMayCancelAsync(string directeurToken, bool allow)
+    {
+        var response = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeurToken, new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = false,
+            allowFinanceToModifyFees = false,
+            allowFinanceToDeleteFees = false,
+            allowFinanceToCancelPayments = allow
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private async Task<PaymentResult> PayAsync(string financeToken, Guid enrollmentId, decimal amount)
+    {
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", financeToken, PaymentBody(enrollmentId, amount));
+        pay.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await pay.Content.ReadFromJsonAsync<PaymentResult>())!;
+    }
+
+    [Fact]
+    public async Task The_Director_Can_Withdraw_And_Restore_The_Finance_Right_To_Cancel_A_Payment()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var directeur = await DirecteurTokenAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var first = await PayAsync(finance, enrollment.EnrollmentId, 10_000m);
+        var second = await PayAsync(finance, enrollment.EnrollmentId, 20_000m);
+
+        // Par défaut le droit est OUVERT (le caissier corrige sa propre erreur) ; le Directeur peut le retirer.
+        await SetFinanceMayCancelAsync(directeur, allow: false);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{first.PaymentId}/cancel", finance, new { reason = "Erreur de saisie" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{first.PaymentId}/cancel", directeur, new { reason = "Erreur de saisie" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK, "le Directeur n'est jamais concerné par le réglage");
+
+        await SetFinanceMayCancelAsync(directeur, allow: true);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{second.PaymentId}/cancel", finance, new { reason = "Erreur de saisie" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task The_Setting_Is_Exposed_With_The_Open_Default_And_Survives_An_Older_Client_That_Omits_It()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var before = await (await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", directeur)).Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        before.GetProperty("allowFinanceToCancelPayments").GetBoolean().Should().BeTrue("ouvert par défaut");
+
+        await SetFinanceMayCancelAsync(directeur, allow: false);
+
+        // Un ancien client n'envoie pas le champ : il ne doit pas réinitialiser le réglage.
+        var oldClient = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeur, new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = false,
+            allowFinanceToModifyFees = false,
+            allowFinanceToDeleteFees = false
+        });
+        oldClient.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var after = await (await SendAsync(HttpMethod.Get, "/api/v1/schools/current/settings", directeur)).Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        after.GetProperty("allowFinanceToCancelPayments").GetBoolean().Should().BeFalse();
+    }
+
+    // ----------------------------------------------------------------------------- Contre-passation (hors délai de 48 h)
+
+    [Fact]
+    public async Task Past_The_Grace_Period_Only_The_Director_Can_Pass_A_Reversal_And_Only_When_Asked_Explicitly()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var directeur = await DirecteurTokenAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var payment = await PayAsync(finance, enrollment.EnrollmentId, 40_000m);
+
+        await _factory.SeedAsOwnerAsync(async db =>
+        {
+            var row = await db.Payments.IgnoreQueryFilters().SingleAsync(p => p.Id == payment.PaymentId);
+            row.PaidAt = DateTimeOffset.UtcNow.AddHours(-72);
+        });
+
+        var url = $"/api/v1/finance/payments/{payment.PaymentId}/cancel";
+
+        var ordinary = await SendAsync(HttpMethod.Post, url, directeur, new { reason = "Doublon constaté à l'audit" });
+        ordinary.StatusCode.Should().Be(HttpStatusCode.Conflict, "hors délai, l'annulation ordinaire reste refusée");
+        (await ordinary.Content.ReadAsStringAsync()).Should().Contain("PAYMENT_CANCELLATION_WINDOW_EXPIRED").And.Contain("contre-passation");
+
+        (await SendAsync(HttpMethod.Post, url, finance, new { reason = "Tentative", reversal = true }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden, "la Finance ne peut pas passer de contre-passation");
+
+        var reversal = await SendAsync(HttpMethod.Post, url, directeur, new { reason = "Doublon constaté à l'audit", reversal = true });
+        reversal.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await reversal.Content.ReadFromJsonAsync<CancelResult>())!;
+        result.IsReversal.Should().BeTrue();
+        result.AmountPaid.Should().Be(0m);
     }
 }

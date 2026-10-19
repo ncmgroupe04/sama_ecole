@@ -900,6 +900,12 @@
  class="mt-2 text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mx-auto">
  Annuler le paiement
  </button>
+ <button type="button" x-show="isPaymentReversible(payment)" x-cloak
+ x-on:click="openCancelPayment(payment, { reversal: true })"
+ title="Délai de 48 h dépassé : contre-passation (écriture inverse datée d'aujourd'hui), réservée au Directeur"
+ class="mt-2 text-amber-700 hover:bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mx-auto">
+ Contre-passer
+ </button>
  </td>
  </tr>
  </template>

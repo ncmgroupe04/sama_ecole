@@ -8,8 +8,10 @@
  * `afterPaymentCancelled()` (à fournir) recharge ce que l'écran affiche : solde, historique…
  *
  * Le motif est OBLIGATOIRE côté serveur (CancelPaymentCommandValidator, 3 à 500 caractères) : ce fichier
- * ne fait qu'aider à le composer. Le Directeur seul peut annuler (FinanceController) ; `canCancelPayment`
- * n'est qu'un confort d'affichage.
+ * ne fait qu'aider à le composer. Le Directeur et la Finance annulent dans le délai de grâce de 48 h ; passé ce délai,
+ * seul le Directeur peut passer une CONTRE-PASSATION (même route, `reversal: true`) : écriture inverse datée du jour,
+ * les périodes déjà arrêtées ne sont pas réécrites. `canCancelPayment` / `canReversePayment` ne sont qu'un confort
+ * d'affichage : le serveur revérifie.
  */
 (function () {
     const OTHER = 'Autre motif';
@@ -39,9 +41,13 @@
 
         mixin() {
             return {
+                // Directeur : toujours. Finance : tant que le Directeur ne lui a pas retiré ce droit
+                // (SchoolSettings.allowFinanceToCancelPayments, vrai par défaut) — affiné par initPaymentCancel().
+                // Propriété simple, PAS un getter : le mixin est copié par décomposition (...mixin()).
                 canCancelPayment: ['Directeur', 'Finance'].includes(window.auth.role),
+                canReversePayment: window.auth.role === 'Directeur',
                 cancelPaymentReasons: REASONS,
-                cancelingPayment: null, // { paymentId, receiptNumber, amount }
+                cancelingPayment: null, // { paymentId, receiptNumber, amount, reversal }
                 cancelPaymentOutcomes: OUTCOMES,
                 cancelPaymentOutcome: 'KeptBySchool',
                 cancelPaymentChoice: '',
@@ -49,11 +55,27 @@
                 cancelPaymentError: null,
                 isCancelingPayment: false,
 
-                openCancelPayment(payment) {
+                /**
+                 * À appeler depuis l'init() de la page hôte : lit le réglage du Directeur. Seule la Finance en dépend ;
+                 * en cas d'échec de lecture on garde le défaut (ouvert) — le serveur reste l'arbitre (403 sinon).
+                 */
+                async initPaymentCancel() {
+                    if (window.auth.role !== 'Finance') return;
+                    try {
+                        const settings = await window.api.get('/schools/current/settings');
+                        this.canCancelPayment = settings.allowFinanceToCancelPayments !== false;
+                    } catch {
+                        // silence-volontaire : confort d'affichage, le défaut ouvert est celui du serveur.
+                    }
+                },
+
+                /** `options.reversal` : contre-passation d'un versement hors délai (bouton réservé au Directeur). */
+                openCancelPayment(payment, options) {
                     this.cancelingPayment = {
                         paymentId: payment.paymentId,
                         receiptNumber: payment.receiptNumber,
-                        amount: payment.amount
+                        amount: payment.amount,
+                        reversal: !!(options && options.reversal)
                     };
                     this.cancelPaymentChoice = '';
                     this.cancelPaymentOutcome = 'KeptBySchool';
@@ -78,6 +100,16 @@
                     if (!payment || payment.status === 'Cancelled') return false;
                     if (!payment.cancellableUntil) return true;
                     return Date.now() <= new Date(payment.cancellableUntil).getTime();
+                },
+
+                /**
+                 * Hors délai de grâce, seul le Directeur peut encore corriger : par contre-passation. Le même calcul
+                 * que isPaymentCancellable, inversé — `cancellableUntil` vient du serveur.
+                 */
+                isPaymentReversible(payment) {
+                    if (!this.canReversePayment || !payment || payment.status === 'Cancelled') return false;
+                    if (!payment.cancellableUntil) return false;
+                    return Date.now() > new Date(payment.cancellableUntil).getTime();
                 },
 
                 /** Le champ de saisie libre est obligatoire pour « Autre motif », facultatif sinon. */
@@ -111,7 +143,9 @@
                     this.isCancelingPayment = true;
                     this.cancelPaymentError = null;
                     try {
-                        await window.api.post(`/finance/payments/${this.cancelingPayment.paymentId}/cancel`, { reason, outcome: this.cancelPaymentOutcome });
+                        const body = { reason, outcome: this.cancelPaymentOutcome };
+                        if (this.cancelingPayment.reversal) body.reversal = true;
+                        await window.api.post(`/finance/payments/${this.cancelingPayment.paymentId}/cancel`, body);
                         this.closeCancelPayment();
                         // Le solde, le total versé et l'historique changent : l'écran se relit.
                         await this.afterPaymentCancelled();

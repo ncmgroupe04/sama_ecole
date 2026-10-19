@@ -789,7 +789,9 @@ Secrétariat, Directeur, Finance.
 - **Session de caisse obligatoire** : la journée d'encaissement s'ouvre par une session avec un fonds
   initial déclaré ; tant qu'aucune session n'est ouverte, la recherche d'élève et le formulaire
   d'encaissement restent masqués (§15.1).
-- Encaissement, historique, **annulation avec motif**, remboursement, impression de reçu ; moyens de
+- Encaissement, historique, **annulation avec motif** (Directeur et Finance pendant 48 h — droit de la Finance retirable par le
+  Directeur dans Paramètres — puis **contre-passation** par le Directeur seul, écriture inverse datée du jour),
+  remboursement, impression de reçu ; moyens de
   paiement : espèces, chèque, virement, Mobile Money (Wave, Orange Money) enregistré manuellement
   en V1 (§7.3).
 - **Reçu au format exact** de `docs/design-references/receipt-reference.png`, avec la mention fixe et

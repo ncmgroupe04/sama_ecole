@@ -4509,7 +4509,7 @@ paths:
   /finance/payments/{id}/cancel:
     post:
       tags: [Finance]
-      summary: Annuler un paiement saisi par erreur (Directeur ou Finance, sous 48 h)
+      summary: Annuler un paiement saisi par erreur (Directeur ou Finance sous 48 h ; contre-passation au-delà, Directeur seul)
       description: |
         Le paiement n'est jamais supprimé ni réécrit : il passe au statut `Cancelled` avec son motif, la date
         et l'auteur de l'annulation ; son numéro de reçu reste consommé (aucun trou dans le carnet). Le montant
@@ -4518,6 +4518,14 @@ paths:
         Refusé (409) si le paiement est déjà annulé (`PAYMENT_ALREADY_CANCELLED`) ou si le délai de grâce
         de 48 h après l'encaissement est dépassé (`PAYMENT_CANCELLATION_WINDOW_EXPIRED`) ; pendant ce délai,
         l'annulation reste possible même si la session de caisse est clôturée.
+
+        Droit de la Finance : Directeur toujours ; Finance tant que le Directeur ne lui a pas retiré ce droit
+        (`allowFinanceToCancelPayments` des paramètres de l'école, vrai par défaut) — 403 sinon.
+
+        CONTRE-PASSATION : passé le délai de 48 h, le Directeur peut renvoyer `reversal: true`. Même opération,
+        comptabilisée par le registre daté comme une écriture inverse datée d'aujourd'hui : les périodes déjà arrêtées
+        ne sont pas réécrites, le versement d'origine y reste compté et signalé « annulé le … ». 403 pour tout autre
+        rôle ; sans `reversal`, un versement hors délai reste refusé (409). La réponse porte `isReversal`.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -4529,6 +4537,10 @@ paths:
               required: [reason]
               properties:
                 reason: { type: string, minLength: 3, maxLength: 500, description: Motif obligatoire }
+                reversal:
+                  type: boolean
+                  default: false
+                  description: Contre-passation d'un versement hors délai de 48 h (Directeur seul). Sans effet dans le délai.
                 outcome:
                   type: string
                   enum: [KeptBySchool, ReusedForEnrollment, RefundedToParent]
@@ -6775,6 +6787,14 @@ components:
             Délègue à la Finance le droit de supprimer une catégorie de frais ou une ligne de
             barème (voir CanDeleteFeesHandler). Commutateur distinct du précédent : supprimer est un
             geste plus lourd de conséquences qu'ajuster un montant. Fermé par défaut.
+        allowFinanceToCancelPayments:
+          type: boolean
+          default: true
+          description: >-
+            La Finance (le caissier) peut annuler un paiement saisi par erreur, dans le délai de 48 h
+            (voir CanCancelPaymentsHandler). OUVERT par défaut ; le Directeur peut retirer ce droit. À l'écriture,
+            absent ou null = inchangé (un ancien client ne le réinitialise pas). La contre-passation au-delà du
+            délai reste réservée au Directeur dans tous les cas.
         directorSignatureUrl:
           type: string
           nullable: true

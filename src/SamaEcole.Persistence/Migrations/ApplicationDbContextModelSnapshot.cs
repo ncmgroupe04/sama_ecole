@@ -4525,6 +4525,11 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllowFinanceToCancelPayments")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("AllowFinanceToDeleteFees")
                         .HasColumnType("boolean");
 

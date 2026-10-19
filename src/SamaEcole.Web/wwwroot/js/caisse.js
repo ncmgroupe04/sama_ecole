@@ -186,6 +186,7 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.idempotencyKey = window.networkGuard.newIdempotencyKey();
+            this.initPaymentCancel();
             if (this.canRecordPayment) this.loadCurrentSession();
             if (window.formDraft && window.formDraft.has('caisse_form')) {
                 this.hasDraft = true;

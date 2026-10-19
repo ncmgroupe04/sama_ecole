@@ -64,6 +64,10 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.AllowSecretaryToManageGrading = request.AllowSecretaryToManageGrading;
         settings.AllowFinanceToModifyFees = request.AllowFinanceToModifyFees;
         settings.AllowFinanceToDeleteFees = request.AllowFinanceToDeleteFees;
+        if (request.AllowFinanceToCancelPayments is { } allowCancel)
+        {
+            settings.AllowFinanceToCancelPayments = allowCancel;
+        }
         settings.DirectorSignatureUrl = string.IsNullOrWhiteSpace(request.DirectorSignatureUrl) ? null : request.DirectorSignatureUrl.Trim();
         settings.SecretarySignatureUrl = string.IsNullOrWhiteSpace(request.SecretarySignatureUrl) ? null : request.SecretarySignatureUrl.Trim();
         settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();
