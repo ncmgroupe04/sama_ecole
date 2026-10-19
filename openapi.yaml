@@ -24,6 +24,7 @@ tags:
   - name: Schools
   - name: SchoolYears
   - name: SchoolCalendar
+  - name: RollBook
   - name: Classrooms
   - name: Subjects
   - name: Coefficients
@@ -1968,6 +1969,149 @@ paths:
         '204': { description: Fermeture supprimée (logiquement) }
         '403': { description: Réservé au Directeur }
         '404': { description: Fermeture introuvable dans cet établissement }
+
+  /roll-book:
+    get:
+      tags: [RollBook]
+      summary: Grille mensuelle du cahier de roulement d'une classe
+      description: >-
+        Une case par élève et par demi-journée (matin / après-midi, coupure à 13 h comme l'alternance FR/AR). Chaque
+        case fusionne la SAISIE du cahier (`source: Entry`, prioritaire) et le statut DÉRIVÉ des appels par séance
+        (`source: Derived`) ; seules les cases renseignées sont listées. Les jours de classe excluent les jours de repos
+        hebdomadaires, les fermetures du calendrier (`/school-calendar/closures`) et ce qui dépasse l'année scolaire.
+        Une absence partielle (absent à une partie seulement des séances de la demi-journée) est un constat dérivé,
+        jamais saisissable. `unplacedSessions` compte les appels par séance sans créneau d'emploi du temps, qu'on ne
+        sait pas placer dans une demi-journée. Un Enseignant n'accède qu'aux classes où il est affecté (403 sinon).
+        Module Pédagogie requis.
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: month, in: query, required: true, schema: { type: string, pattern: '^\d{4}-\d{2}$', example: '2026-11' } }
+      responses:
+        '200':
+          description: La grille du mois
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RollBookGrid' }
+        '403': { description: Rôle non autorisé, Enseignant non affecté à la classe, ou module Pédagogie désactivé }
+        '422':
+          description: Mois mal formé, classe inconnue, ou aucune année scolaire ne couvre le mois
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /roll-book/entries:
+    put:
+      tags: [RollBook]
+      summary: Enregistrer un lot de cases du cahier de roulement
+      description: >-
+        Lot ATOMIQUE : tout passe ou rien. `status` nul = revenir au statut calculé (la saisie existante est supprimée
+        logiquement). Refusé (422) : jour futur, jour hors de toute année scolaire, élève d'une autre classe, case en
+        double dans le lot, minutes de retard sur un statut autre que Late, lot de plus de 2000 cases. Une saisie un
+        jour non travaillé est acceptée mais ne compte pas dans les taux. 409 si la même case est saisie en même
+        temps ailleurs. Directeur, Secrétariat, Surveillant, Enseignant (borné à ses classes), SuperAdmin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId, entries]
+              properties:
+                classroomId: { type: string, format: uuid }
+                entries:
+                  type: array
+                  maxItems: 2000
+                  items: { $ref: '#/components/schemas/RollBookEntryInput' }
+      responses:
+        '200':
+          description: Résultat du lot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: integer }
+                  updated: { type: integer }
+                  reverted: { type: integer }
+        '403': { description: Enseignant non affecté à la classe }
+        '409': { description: Case saisie en même temps par un autre utilisateur }
+        '422':
+          description: Lot invalide (voir la description)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /roll-book/entries/{id}:
+    delete:
+      tags: [RollBook]
+      summary: Retirer la saisie d'une case (retour au statut calculé)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Saisie retirée (suppression logique) }
+        '403': { description: Enseignant non affecté à la classe }
+        '404': { description: Saisie introuvable dans cet établissement }
+
+  /roll-book/pdf:
+    get:
+      tags: [RollBook]
+      summary: Cahier de roulement imprimable pour l'inspection (PDF A4 paysage)
+      description: >-
+        Exactement UNE période : `month` (AAAA-MM, le cahier mensuel) ou `termId` (la période d'évaluation : une grille par
+        mois, le récapitulatif mois par mois, puis — pour la Direction, le Secrétariat et le Super Admin seulement — la
+        synthèse du niveau, compteurs sommés). Le bandeau officiel (République, Ministère, IA, IEF, établissement) est
+        imprimé en français, en arabe ou les deux selon `lang` : `fr`, `ar` (page de droite à gauche) ou `bi` (grille de gauche
+        à droite, libellés français puis arabe). Sans `lang`, `bi` pour une école Franco-Arabe, `fr` sinon ; `ar` et `bi`
+        exigent le module Franco-Arabe (422 sinon). Un nom d'école ou d'inspection non renseigné en arabe laisse une ligne
+        pointillée à compléter à la main. Les cases, compteurs et taux sont ceux de `GET /roll-book` et `/roll-book/stats` :
+        le document ne calcule rien. Réponse `application/pdf`, `Content-Disposition: inline`. Directeur, Secrétariat,
+        Surveillant, Super Admin ; jamais l'Enseignant (403).
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: month, in: query, required: false, schema: { type: string, example: '2026-11' } }
+        - { name: termId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: lang, in: query, required: false, schema: { type: string, enum: [fr, ar, bi] } }
+      responses:
+        '200':
+          description: Le cahier de roulement en PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé (dont l'Enseignant), ou module Pédagogie désactivé }
+        '422':
+          description: Période absente ou double, mois mal formé, classe ou période introuvable, hors année scolaire, ou langue arabe/bilingue sans module Franco-Arabe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /roll-book/stats:
+    get:
+      tags: [RollBook]
+      summary: Statistiques d'assiduité d'un mois ou d'une période d'évaluation
+      description: >-
+        Compteurs en demi-journées et taux — présence = (présents + retards + absences partielles) / renseignées ;
+        absence = (justifiées + non justifiées) / renseignées ; assiduité = (présents + retards + partielles + absences
+        justifiées) / renseignées ; couverture = renseignées / attendues. Les taux sont null tant que rien n'est
+        renseigné. Une classe et un niveau SOMMENT les compteurs avant de diviser (jamais une moyenne de taux). Portée
+        `class` : élèves d'une classe, avec la classe et son niveau ; portée `level` : toutes les classes de l'école
+        regroupées par niveau. Exactement UNE période : `month` ou `termId`. Directeur, Secrétariat, SuperAdmin.
+      parameters:
+        - { name: scope, in: query, required: true, schema: { type: string, enum: [class, level] } }
+        - { name: classroomId, in: query, required: false, schema: { type: string, format: uuid }, description: "Obligatoire pour scope=class" }
+        - { name: month, in: query, required: false, schema: { type: string, example: '2026-11' } }
+        - { name: termId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Les statistiques
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RollBookStats' }
+        '403': { description: Rôle non autorisé }
+        '422':
+          description: Portée inconnue, aucune période ou deux périodes, classe ou période introuvable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /classrooms:
     get:
@@ -6667,6 +6811,127 @@ components:
           description: >-
             Postérieure à `startDate`, et comprise entre 3 et 18 mois après elle — de quoi
             intercepter la faute de frappe sur le millésime.
+
+    RollBookCounts:
+      type: object
+      description: Compteurs de demi-journées et taux (null tant que rien n'est renseigné).
+      properties:
+        present: { type: integer }
+        late: { type: integer }
+        partialAbsence: { type: integer }
+        justifiedAbsence: { type: integer }
+        unjustifiedAbsence: { type: integer }
+        recorded: { type: integer, description: Demi-journées renseignées (le dénominateur des taux) }
+        lateMinutes: { type: integer }
+        presenceRate: { type: number, format: double, nullable: true, description: '(présents + retards + partielles) / renseignées' }
+        absenceRate: { type: number, format: double, nullable: true, description: '(justifiées + non justifiées) / renseignées' }
+        assiduityRate: { type: number, format: double, nullable: true, description: "(présents + retards + partielles + justifiées) / renseignées : seules les absences non justifiées pénalisent" }
+        coverage: { type: number, format: double, nullable: true, description: 'renseignées / attendues (0..1)' }
+
+    RollBookEntryInput:
+      type: object
+      required: [studentId, date, halfDay]
+      properties:
+        studentId: { type: string, format: uuid }
+        date: { type: string, format: date }
+        halfDay: { type: string, enum: [Morning, Afternoon] }
+        status:
+          type: string
+          nullable: true
+          enum: [Present, Late, JustifiedAbsence, UnjustifiedAbsence]
+          description: Nul = revenir au statut calculé.
+        lateMinutes: { type: integer, minimum: 0, maximum: 600, default: 0, description: "Uniquement avec le statut Late." }
+        reason: { type: string, nullable: true, maxLength: 300 }
+
+    RollBookGrid:
+      type: object
+      properties:
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        level: { type: string, description: "Niveau lu dans le nom de la classe (CM2, Sixième…), à défaut son niveau textuel" }
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string }
+        month: { type: string, example: '2026-11' }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        classDays: { type: integer }
+        activeHalves: { type: array, items: { type: string, enum: [Morning, Afternoon] }, description: "Demi-journées où la classe a cours (emploi du temps + saisies) ; sert à la couverture" }
+        unplacedSessions: { type: integer }
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+              isClassDay: { type: boolean }
+              offReason: { type: string, nullable: true, enum: [RestDay, Closure, OutsideYear] }
+              closureLabel: { type: string, nullable: true }
+              closureLabelAr: { type: string, nullable: true }
+        students:
+          type: array
+          items:
+            type: object
+            properties:
+              studentId: { type: string, format: uuid }
+              matricule: { type: string }
+              fullName: { type: string }
+              fullNameAr: { type: string, nullable: true }
+              counts: { $ref: '#/components/schemas/RollBookCounts' }
+              cells:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    halfDay: { type: string, enum: [Morning, Afternoon] }
+                    mark: { type: string, enum: [Present, Late, PartialAbsence, JustifiedAbsence, UnjustifiedAbsence] }
+                    source: { type: string, enum: [Derived, Entry] }
+                    lateMinutes: { type: integer }
+                    reason: { type: string, nullable: true }
+                    entryId: { type: string, format: uuid, nullable: true }
+        totals: { $ref: '#/components/schemas/RollBookCounts' }
+
+    RollBookStats:
+      type: object
+      properties:
+        scope: { type: string, enum: [class, level] }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string }
+        students:
+          type: array
+          description: Renseigné seulement pour la portée class.
+          items:
+            type: object
+            properties:
+              studentId: { type: string, format: uuid }
+              matricule: { type: string }
+              fullName: { type: string }
+              fullNameAr: { type: string, nullable: true }
+              counts: { $ref: '#/components/schemas/RollBookCounts' }
+        classes:
+          type: array
+          items:
+            type: object
+            properties:
+              classroomId: { type: string, format: uuid }
+              name: { type: string }
+              level: { type: string }
+              studentCount: { type: integer }
+              classDays: { type: integer }
+              counts: { $ref: '#/components/schemas/RollBookCounts' }
+        levels:
+          type: array
+          items:
+            type: object
+            properties:
+              level: { type: string }
+              classCount: { type: integer }
+              studentCount: { type: integer }
+              counts: { $ref: '#/components/schemas/RollBookCounts' }
+        totals: { $ref: '#/components/schemas/RollBookCounts' }
 
     SchoolClosure:
       type: object

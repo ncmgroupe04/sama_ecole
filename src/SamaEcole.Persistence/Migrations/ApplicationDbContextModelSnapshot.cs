@@ -3957,6 +3957,86 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("report_card_remarks", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.RollBookEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClassroomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HalfDay")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LateMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("RecordedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "SchoolYearId");
+
+                    b.HasIndex("SchoolId", "ClassroomId", "Date");
+
+                    b.HasIndex("SchoolId", "StudentId", "Date", "HalfDay")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("roll_book_entries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_roll_book_entries_late_minutes", "\"LateMinutes\" BETWEEN 0 AND 600");
+
+                            t.HasCheckConstraint("CK_roll_book_entries_minutes_need_late", "\"Status\" = 'Late' OR \"LateMinutes\" = 0");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.Room", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7746,6 +7826,36 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.Term", null)
                         .WithMany()
                         .HasForeignKey("SchoolId", "TermId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.RollBookEntry", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Classroom", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "ClassroomId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.SchoolYear", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SchoolYearId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "StudentId")
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

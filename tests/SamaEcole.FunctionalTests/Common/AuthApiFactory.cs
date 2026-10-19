@@ -485,6 +485,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Présences (ticket JGK-D06) : student_attendances référence attendance_sheets ET students ;
         // attendance_sheets référence classrooms, subjects et school_years. Donc les lignes élève
         // d'abord, la fiche ensuite, le tout AVANT les tables référencées plus bas.
+        // Saisies du cahier de roulement : FK Restrict vers students, classrooms et school_years.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM roll_book_entries;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_attendances;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM attendance_sheets;");
 
