@@ -30,10 +30,10 @@ public class ModalShellRenderTests(AuthApiFactory factory) : IClassFixture<AuthA
     [Fact]
     public async Task A_Title_Declared_With_Modal_Title_Is_Rendered_In_The_Window_Header()
     {
-        // Direct enfant de <modal-shell> (Buildings : « Supprimer le bâtiment »).
+        // Direct enfant de <modal-shell> (Buildings : la fenêtre de suppression guidée partagée, titre « Supprimer »).
         var html = await HtmlAsync("/infrastructures");
 
-        Regex.IsMatch(html, @"<h2[^>]*>\s*Supprimer le bâtiment\s*</h2>").Should().BeTrue("le titre de la fenêtre de suppression doit s'afficher");
+        Regex.IsMatch(html, @"<h2[^>]*>\s*Supprimer\s*</h2>").Should().BeTrue("le titre de la fenêtre de suppression doit s'afficher");
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class ModalShellRenderTests(AuthApiFactory factory) : IClassFixture<AuthA
     {
         var html = await HtmlAsync("/infrastructures");
 
-        html.Should().Contain("n'apparaîtra plus dans les sélecteurs", "le sous-titre de la fenêtre de suppression");
+        html.Should().Contain("Nom et description du bâtiment physique.", "le sous-titre de la fenêtre de création d'un bâtiment");
         html.Should().NotContain("<modal-subtitle>");
     }
 
