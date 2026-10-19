@@ -14,7 +14,7 @@
  <template x-if="guidedDelete && guidedDelete.phase === 'financial'">
  <div class="rounded-xl border-l-4 border-rose-500 bg-rose-50 p-4 text-sm text-rose-800">
  <p class="font-semibold" x-text="guidedDelete.impact ? guidedDelete.impact.message : ''"></p>
- <p class="mt-2">Annulez d'abord le ou les paiements depuis l'onglet « Paiements » de la fiche : la suppression sera alors possible.</p>
+ <p class="mt-2" x-text="guidedDeleteTexts.financialHint"></p>
  </div>
  </template>
 
@@ -26,7 +26,7 @@
  <li>
  <span class="font-semibold" x-text="link.label"></span>
  <span class="text-slate-500" x-show="link.breakable" x-text="' — ' + link.breakAction"></span>
- <span class="text-rose-600" x-show="!link.breakable"> — à traiter avant (non rompable ici)</span>
+ <span class="text-rose-600" x-show="!link.breakable" x-text="' — à traiter avant : ' + (link.breakAction || 'non rompable ici')"></span>
  </li>
  </template>
  </ul>
@@ -38,7 +38,7 @@
  </template>
 
  <p x-show="guidedDelete && guidedDelete.phase === 'ready'" x-cloak class="text-base font-medium leading-relaxed text-slate-700">
- Cette fiche sera supprimée et n'apparaîtra plus nulle part ; son matricule redeviendra disponible. Une trace de la suppression est conservée.
+ <span x-text="guidedDeleteTexts.readyText"></span>
  </p>
 
  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">

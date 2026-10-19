@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Classrooms.Commands.UnlinkClassroomDependencies;
+using SamaEcole.Application.Classrooms.Queries.GetClassroomDeletionImpact;
 using SamaEcole.Application.Classrooms.Commands.RestoreClassroom;
 using SamaEcole.Application.Classrooms.Queries.GetDeletedClassrooms;
 using SamaEcole.Application.Classrooms.Commands.CreateClassroom;
@@ -87,6 +90,31 @@ public class ClassroomsController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteClassroomCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une classe (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetClassroomDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens non financiers de la classe (archivage logique, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkClassroomDependenciesCommand(id), cancellationToken));
 
     /// <summary>
     /// Génère et télécharge le PDF contenant les cartes scolaires (avec QR Code)

@@ -8,6 +8,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+ <script src="~/js/guided-delete.js" asp-append-version="true"></script>
  <script src="~/js/subjects.js" asp-append-version="true"></script>
  <script src="~/js/coefficients.js" asp-append-version="true"></script>
  <script src="~/js/class-subjects.js" asp-append-version="true"></script>
@@ -795,27 +796,8 @@
   </confirm-dialog-body>
  </modal-shell>
 
- @* Confirmation : suppression d'une matière *@
- <modal-shell open="deletingSubject" on-close="closeDelete()" size="md">
-  <modal-title>Supprimer la matière</modal-title>
-  <modal-subtitle>
-   <span class="font-semibold text-slate-900" x-text="deletingSubject ? deletingSubject.name : ''"></span>
-   sera archivée et n'apparaîtra plus dans les sélecteurs de matière.
-  </modal-subtitle>
-
-  <div x-show="deleteSubjectError" x-cloak class="form-error-banner" x-text="deleteSubjectError"></div>
-
-  <p class="text-base font-medium leading-relaxed text-slate-700">
-   Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.
-  </p>
-
-  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
-   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-modal-danger">
-    <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>
-   </button>
-  </div>
- </modal-shell>
+ @* Suppression guidée d'une matière : analyse des liens, rupture explicite *@
+ <partial name="_GuidedDeleteModal" />
 
  @* Confirmation : matière supprimée *@
  <modal-shell open="showDeletedDialog" size="md" on-close="showDeletedDialog = false" title="Matière supprimée">

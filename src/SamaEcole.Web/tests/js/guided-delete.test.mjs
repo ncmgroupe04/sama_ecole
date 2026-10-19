@@ -22,7 +22,7 @@ const IMPACT_FINANCIAL = {
 };
 const IMPACT_FREE = { canDelete: true, financialBlock: false, message: null, links: [] };
 
-function mixin({ impacts, calls = [], failDelete } = {}) {
+function mixin({ impacts, calls = [], failDelete, config = {}, resource = 'students' } = {}) {
     const queue = [...impacts];
     const api = {
         get: async (url) => { calls.push(['GET', url]); return queue.length > 1 ? queue.shift() : queue[0]; },
@@ -34,8 +34,8 @@ function mixin({ impacts, calls = [], failDelete } = {}) {
         }
     };
     const ctx = loadScripts(['guided-delete.js'], { preload: { api } });
-    const state = ctx.window.guidedDelete.mixin({ resource: 'students' });
-    state.afterGuidedDelete = async () => { state.refreshed = true; };
+    const state = ctx.window.guidedDelete.mixin({ resource, ...config });
+    state.afterGuidedDelete = async (target) => { state.refreshed = true; state.deletedTarget = plain(target); };
     return { state, calls };
 }
 
@@ -121,4 +121,41 @@ test('un lien non rompable (matériel prêté) masque le bouton de rupture', asy
 
     assert.equal(state.guidedDelete.phase, 'links');
     assert.equal(state.guidedDeleteAllBreakable(), false);
+});
+
+test('le hook de fin reçoit la cible supprimée (le nom sert à annoncer la suppression)', async () => {
+    const { state } = mixin({ impacts: [IMPACT_FREE] });
+    await state.openGuidedDelete(TARGET);
+
+    await state.confirmGuidedDelete();
+    await flush();
+
+    assert.deepEqual(state.deletedTarget, { id: 's-1', name: 'Awa Fall', rowVersion: 42 });
+});
+
+test('la ressource pilote les routes : classes, matières, enseignants', async () => {
+    for (const resource of ['classrooms', 'subjects', 'teachers']) {
+        const { state, calls } = mixin({ impacts: [IMPACT_LINKS], resource });
+        await state.openGuidedDelete({ id: 'x-1', name: 'Élément', rowVersion: 7 });
+        state.guidedDelete.confirmed = true;
+
+        await state.confirmGuidedDelete();
+        await flush();
+
+        assert.deepEqual(plain(calls.map(([method, url]) => [method, url])), [
+            ['GET', `/${resource}/x-1/deletion-impact`],
+            ['POST', `/${resource}/x-1/unlink-dependencies`],
+            ['DELETE', `/${resource}/x-1?rowVersion=7`]
+        ]);
+    }
+});
+
+test("les textes d'aide ont une valeur par défaut et se personnalisent par écran", () => {
+    const defaults = mixin({ impacts: [IMPACT_FREE] }).state.guidedDeleteTexts;
+    assert.match(defaults.financialHint, /donnée financière/);
+    assert.match(defaults.readyText, /supprimé/);
+
+    const custom = mixin({ impacts: [IMPACT_FREE], config: { financialHint: 'Annulez les paiements.', readyText: 'Cette classe sera supprimée.' } }).state.guidedDeleteTexts;
+    assert.equal(custom.financialHint, 'Annulez les paiements.');
+    assert.equal(custom.readyText, 'Cette classe sera supprimée.');
 });

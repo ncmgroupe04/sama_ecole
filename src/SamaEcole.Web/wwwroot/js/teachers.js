@@ -206,9 +206,12 @@ document.addEventListener('alpine:init', () => {
         photoUploadError: null,
 
         // Suppression de la fiche (modale de confirmation)
-        deletingTeacherRecord: null, // { id, fullName, rowVersion }
-        isDeletingTeacherRecord: false,
-        deleteTeacherRecordError: null,
+        // Suppression guidée de la fiche (guided-delete.js) : analyse des liens, blocage financier (fiche de paie), rupture explicite.
+        ...window.guidedDelete.mixin({
+            resource: 'teachers',
+            financialHint: "Les fiches de paie sont des pièces comptables conservées : l'enseignant ne peut pas être supprimé. Vous pouvez clôturer son contrat à la place.",
+            readyText: "Cette fiche sera supprimée avec les matières que l'enseignant est qualifié pour enseigner, et n'apparaîtra plus nulle part. Une trace de la suppression est conservée."
+        }),
         showTeacherDeletedDialog: false,
 
         init() {
@@ -677,41 +680,15 @@ document.addEventListener('alpine:init', () => {
 
         openDeleteTeacher() {
             if (!this.detail) return;
-            this.deletingTeacherRecord = { id: this.detail.id, fullName: this.detail.fullName, rowVersion: this.detail.rowVersion };
-            this.deleteTeacherRecordError = null;
+            this.openGuidedDelete({ id: this.detail.id, name: this.detail.fullName, rowVersion: this.detail.rowVersion });
         },
 
-        closeDeleteTeacher() {
-            this.deletingTeacherRecord = null;
-            this.deleteTeacherRecordError = null;
-        },
-
-        async confirmDeleteTeacher() {
-            if (!this.deletingTeacherRecord) return;
-
-            this.isDeletingTeacherRecord = true;
-            this.deleteTeacherRecordError = null;
-            try {
-                await window.api.delete(`/teachers/${this.deletingTeacherRecord.id}?rowVersion=${this.deletingTeacherRecord.rowVersion}`);
-                this.deletingTeacherRecord = null;
-                this.closeDetail();
-                this.page = 1;
-                await this.loadTeachers();
-                this.showTeacherDeletedDialog = true;
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    // Une attribution classe/matière/année existe déjà (DeleteTeacherCommandHandler) :
-                    // le message serveur est déjà explicite, on l'affiche tel quel.
-                    this.deleteTeacherRecordError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteTeacherRecordError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
-                    await this.refreshTeacherDetail();
-                } else {
-                    this.deleteTeacherRecordError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingTeacherRecord = false;
-            }
+        /** Appelé par guided-delete.js une fois l'enseignant supprimé : fermer la fiche, relire la liste, annoncer. */
+        async afterGuidedDelete() {
+            this.closeDetail();
+            this.page = 1;
+            await this.loadTeachers();
+            this.showTeacherDeletedDialog = true;
         },
 
         /** Affectations regroupées par année scolaire (l'historique), année active en tête. */

@@ -17,7 +17,7 @@ const CATALOG = [
 
 async function classroomsView({ role = 'Directeur', catalogFails = false } = {}) {
     const calls = [];
-    const ctx = loadScripts(['classrooms.js'], {
+    const ctx = loadScripts(['guided-delete.js', 'classrooms.js'], {
         preload: {
             auth: { role },
             pdfPreview: { state: () => ({}) },

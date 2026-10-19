@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Subjects.Commands.UnlinkSubjectDependencies;
+using SamaEcole.Application.Subjects.Queries.GetSubjectDeletionImpact;
 using SamaEcole.Application.Subjects.Commands.CreateSubject;
 using SamaEcole.Application.Subjects.Commands.DeleteSubject;
 using SamaEcole.Application.Subjects.Commands.UpdateSubject;
@@ -100,4 +103,29 @@ public class SubjectsController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteSubjectCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'une matière (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSubjectDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens non financiers de la matière (archivage logique, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkSubjectDependenciesCommand(id), cancellationToken));
 }

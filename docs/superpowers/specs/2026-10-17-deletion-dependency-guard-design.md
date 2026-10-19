@@ -228,6 +228,14 @@ Ce catalogue est un point de départ : l'inventaire exhaustif est une étape d'i
    (elle ne réémet pas d'elle-même un numéro supprimé) ; l'historique financier d'un élève supprimé reste lisible
    (« (élève supprimé) » dans les états).
 2. **PR2 — Classe, Matière, Enseignant.**
+   *Livrée (branche `feat/guided-deletion-classes-subjects-teachers`, plan `docs/superpowers/plans/2026-10-18-guided-deletion-classes-subjects-teachers.md`).*
+   Précisions d'implémentation : socle générique (`EntityDeletionPolicy`, `EntityDeletionAnalyzer`) partagé avec les élèves ;
+   classe — un paiement non annulé sur une inscription bloque, les **élèves rattachés ne se rompent pas** (à transférer ou à
+   supprimer d'abord, `Student.ClassroomId` étant obligatoire) ; matière — les notes sont archivées après confirmation, les
+   **activités d'un domaine ne se rompent pas** (une par une, comme avant) ; enseignant — une fiche de paie bloque, le contrat
+   (avec historique et relevés d'heures) et les affectations se rompent, le matériel prêté non restitué ne se rompt pas, et les
+   **matières enseignées sont intrinsèques à la fiche** (la création en exige au moins une) : archivées avec elle, annoncées dans
+   la fenêtre de confirmation. Un enseignant qualifié sans affectation est donc supprimable directement.
 3. **PR3 — Salle, Bâtiment, Frais, Année scolaire, Inventaire.**
 
 Chaque PR est indépendante pour la recette ; la PR1 pose les contrats que les suivantes réutilisent.

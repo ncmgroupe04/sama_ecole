@@ -1,5 +1,6 @@
-using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Classrooms.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,28 +23,11 @@ public class DeleteClassroomCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Classe {request.Id} introuvable.");
 
-        // Règle métier obligatoire : une classe encore liée à des élèves ACTIFS ne peut pas être
-        // archivée (elle disparaîtrait de tous les sélecteurs, rendant ces fiches orphelines de
-        // classe active).
-        //
-        // `!s.IsDeleted` est écrit ICI explicitement, en plus du Global Query Filter qui le pose
-        // déjà : une fiche élève ARCHIVÉE ne doit jamais bloquer l'archivage de sa classe — c'est
-        // exactement le faux positif remonté du terrain (« l'élève a été supprimé mais l'API dit
-        // qu'il est encore rattaché »). Le rendre visible au callsite garde la règle lisible et la
-        // met à l'abri d'un éventuel `.IgnoreQueryFilters()` ajouté un jour à cette requête.
-        var attachedStudentCount = await dbContext.Students
-            .CountAsync(s => s.ClassroomId == request.Id && !s.IsDeleted, cancellationToken);
-
-        if (attachedStudentCount > 0)
-        {
-            var studentPhrase = attachedStudentCount > 1
-                ? $"{attachedStudentCount} élèves y sont encore rattachés"
-                : "1 élève y est encore rattaché";
-
-            throw new BusinessRuleException(
-                $"Impossible de supprimer la classe « {classroom.Name} » : {studentPhrase}. "
-                + "Transférez ces élèves vers une autre classe ou supprimez leur fiche, puis réessayez.");
-        }
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkClassroomDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, ClassroomDeletionPolicy.Policy, request.Id, cancellationToken);
 
         // Même verrou optimiste que UpdateClassroomCommandHandler (AGENTS.md règle #5).
         dbContext.SetOriginalConcurrencyToken(classroom, request.RowVersion);

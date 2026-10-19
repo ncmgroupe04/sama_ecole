@@ -2193,6 +2193,55 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'Jeton de concurrence périmé, ou des élèves sont rattachés à cette classe' }
 
+  /classrooms/{id}/deletion-impact:
+    get:
+      tags: [Classrooms]
+      summary: Ce qui empêche ou accompagne la suppression d'une classe (lecture seule)
+      description: |
+        `financialBlock` : un paiement non annulé sur une inscription de la classe (`FINANCIAL_RECORDS_EXIST`) interdit la suppression, sans option de rupture. Sinon `links` énumère précisément les liens
+        (inscriptions, matières de la classe, affectations d'enseignants, emploi du temps, frais, cahier de texte, feuilles d'appel, dossiers d'examen, coefficients, relances), chacun `breakable` ou non (élèves rattachés (à transférer ou à supprimer d'abord)). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /classrooms/{id}/unlink-dependencies:
+    post:
+      tags: [Classrooms]
+      summary: Rompre explicitement les liens non financiers d'une classe
+      description: |
+        Archive (suppression logique, auteur et date conservés) inscriptions, matières de la classe, affectations d'enseignants, emploi du temps, frais, cahier de texte, feuilles d'appel, dossiers d'examen, coefficients, relances. Ne supprime pas l'élément : c'est `DELETE`,
+        qui ne rompt jamais rien et répond 409 `DEPENDENCIES_EXIST` (liste des liens) ou `FINANCIAL_RECORDS_EXIST`. Tracée dans
+        le journal d'audit. 409 : `FINANCIAL_RECORDS_EXIST` ou `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
+
   /subjects:
     get:
       tags: [Subjects]
@@ -2290,6 +2339,55 @@ paths:
         '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'Jeton de concurrence périmé, notes déjà saisies, ou domaine portant encore des activités' }
+
+  /subjects/{id}/deletion-impact:
+    get:
+      tags: [Subjects]
+      summary: Ce qui empêche ou accompagne la suppression d'une matière (lecture seule)
+      description: |
+        Sinon `links` énumère précisément les liens
+        (notes (archivées après confirmation), classes, dispenses, coefficients, affectations, enseignants, emploi du temps, cahier de texte, feuilles d'appel, programmes, normes d'heures), chacun `breakable` ou non (activités d'un domaine (à supprimer ou rattacher une par une)). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /subjects/{id}/unlink-dependencies:
+    post:
+      tags: [Subjects]
+      summary: Rompre explicitement les liens non financiers d'une matière
+      description: |
+        Archive (suppression logique, auteur et date conservés) notes (archivées après confirmation), classes, dispenses, coefficients, affectations, enseignants, emploi du temps, cahier de texte, feuilles d'appel, programmes, normes d'heures. Ne supprime pas l'élément : c'est `DELETE`,
+        qui ne rompt jamais rien et répond 409 `DEPENDENCIES_EXIST` (liste des liens) ou `FINANCIAL_RECORDS_EXIST`. Tracée dans
+        le journal d'audit. 409 : `FINANCIAL_RECORDS_EXIST` ou `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
 
   /coefficients/catalog:
     get:
@@ -2748,7 +2846,7 @@ paths:
         précisément les liens (inscriptions, matières suivies, notes…), chacun `breakable` ou non (matériel prêté non
         restitué : à traiter avant). `canDelete` : plus aucun lien.
       parameters:
-        - $ref: '#/components/parameters/EntityId'
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200':
           description: Analyse
@@ -2783,7 +2881,7 @@ paths:
         d'audit. Réponse : l'analyse mise à jour. 409 : `FINANCIAL_RECORDS_EXIST` (paiement non annulé) ou
         `DEPENDENCIES_NOT_BREAKABLE` (matériel prêté non restitué).
       parameters:
-        - $ref: '#/components/parameters/EntityId'
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
         '403': { description: Réservé au Directeur et au Secrétariat }
@@ -2913,6 +3011,55 @@ paths:
         '403': { description: Réservé au Directeur et au Secrétariat }
         '404': { description: Enseignant introuvable dans l'établissement courant }
         '409': { description: 'Jeton de concurrence périmé, ou une attribution existe déjà' }
+
+  /teachers/{id}/deletion-impact:
+    get:
+      tags: [Teachers]
+      summary: Ce qui empêche ou accompagne la suppression d'un enseignant (lecture seule)
+      description: |
+        `financialBlock` : une fiche de paie émise sur l'un de ses contrats (`FINANCIAL_RECORDS_EXIST`) interdit la suppression, sans option de rupture. Sinon `links` énumère précisément les liens
+        (contrat (avec historique et relevés d'heures), affectations, matières, emploi du temps, pointages, cahier de texte, prêts de matériel clos), chacun `breakable` ou non (matériel prêté non restitué (enregistrer d'abord la restitution)). `canDelete` : plus aucun lien.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Analyse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canDelete: { type: boolean }
+                  financialBlock: { type: boolean }
+                  message: { type: string, nullable: true }
+                  links:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        label: { type: string }
+                        count: { type: integer }
+                        breakable: { type: boolean }
+                        breakAction: { type: string }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /teachers/{id}/unlink-dependencies:
+    post:
+      tags: [Teachers]
+      summary: Rompre explicitement les liens non financiers d'un enseignant
+      description: |
+        Archive (suppression logique, auteur et date conservés) contrat (avec historique et relevés d'heures), affectations, matières, emploi du temps, pointages, cahier de texte, prêts de matériel clos. Ne supprime pas l'élément : c'est `DELETE`,
+        qui ne rompt jamais rien et répond 409 `DEPENDENCIES_EXIST` (liste des liens) ou `FINANCIAL_RECORDS_EXIST`. Tracée dans
+        le journal d'audit. 409 : `FINANCIAL_RECORDS_EXIST` ou `DEPENDENCIES_NOT_BREAKABLE`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Liens rompus ; analyse à jour (même schéma que deletion-impact) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'FINANCIAL_RECORDS_EXIST ou DEPENDENCIES_NOT_BREAKABLE' }
 
   /teachers/{id}/assignments:
     post:

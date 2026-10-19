@@ -7,8 +7,12 @@
  *
  * Usage dans un composant Alpine :
  *     Alpine.data('x', () => ({
- *         ...window.guidedDelete.mixin({ resource: 'students' }),
- *         async afterGuidedDelete() { … }   // à fournir : relire la liste, annoncer la suppression
+ *         ...window.guidedDelete.mixin({
+ *             resource: 'students',
+ *             financialHint: '…',   // que faire quand une donnée financière bloque (optionnel)
+ *             readyText: '…'        // phrase de confirmation simple (optionnel)
+ *         }),
+ *         async afterGuidedDelete(target) { … }   // à fournir : relire la liste, annoncer ; target = { id, name, rowVersion }
  *     }))
  *
  * Phases de `guidedDelete.phase` : 'loading' (analyse), 'financial' (blocage : aucune option de rupture),
@@ -21,6 +25,12 @@
 
             return {
                 guidedDelete: null, // { id, name, rowVersion, phase, impact, confirmed, error, busy }
+                guidedDeleteTexts: {
+                    financialHint: config.financialHint
+                        || "Une donnée financière enregistrée interdit la suppression : traitez-la d'abord, la suppression sera alors possible.",
+                    readyText: config.readyText
+                        || "Cet élément sera supprimé et n'apparaîtra plus nulle part. Une trace de la suppression est conservée."
+                },
 
                 async openGuidedDelete({ id, name, rowVersion }) {
                     this.guidedDelete = { id, name, rowVersion, phase: 'loading', impact: null, confirmed: false, error: null, busy: false };
@@ -72,8 +82,9 @@
                             await window.api.post(`/${resource}/${state.id}/unlink-dependencies`, {});
                         }
                         await window.api.delete(`/${resource}/${state.id}?rowVersion=${state.rowVersion}`);
+                        const target = { id: state.id, name: state.name, rowVersion: state.rowVersion };
                         this.guidedDelete = null;
-                        await this.afterGuidedDelete();
+                        await this.afterGuidedDelete(target);
                     } catch (err) {
                         const message = (err && err.message) || 'Erreur lors de la suppression.';
                         if (err && err.code === 'CONCURRENCY_CONFLICT') {

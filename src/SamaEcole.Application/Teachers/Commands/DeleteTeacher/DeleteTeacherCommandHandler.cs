@@ -1,5 +1,6 @@
-using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Teachers.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,16 +22,15 @@ public class DeleteTeacherCommandHandler(
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Enseignant {request.Id} introuvable.");
 
-        // Règle métier obligatoire : un enseignant déjà attribué à une classe/matière/année ne peut
-        // pas être archivé — l'historique des affectations (JGK-D04) référence sa fiche.
-        var hasAssignments = await dbContext.TeacherAssignments
-            .AnyAsync(a => a.TeacherId == request.Id, cancellationToken);
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkTeacherDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, TeacherDeletionPolicy.Policy, request.Id, cancellationToken);
 
-        if (hasAssignments)
-        {
-            throw new BusinessRuleException(
-                "Impossible de supprimer : cet élément possède des données liées (des attributions classe/matière existent déjà pour cet enseignant).");
-        }
+        // Les matières enseignées font partie de la fiche : elles sont archivées avec elle (annoncé à l'écran).
+        await EntityDeletionAnalyzer.ArchiveIntrinsicAsync(
+            dbContext, TeacherDeletionPolicy.Policy, request.Id, actorId.ToString(), cancellationToken);
 
         // Même verrou optimiste que UpdateTeacherCommandHandler (AGENTS.md règle #5).
         dbContext.SetOriginalConcurrencyToken(teacher, request.RowVersion);

@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Teachers.Commands.UnlinkTeacherDependencies;
+using SamaEcole.Application.Teachers.Queries.GetTeacherDeletionImpact;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
 using SamaEcole.Application.Teachers.Commands.CorrectTeacherMatricule;
@@ -293,4 +296,29 @@ public class TeachersController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteTeacherCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'un enseignant (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTeacherDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens non financiers de l'enseignant (archivage logique, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkTeacherDependenciesCommand(id), cancellationToken));
 }
