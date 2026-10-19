@@ -27,15 +27,18 @@ public class GetPaymentReceiptQueryHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
-        // Jointures toutes filtrées sur le même tenant (filtre global + RLS) : aucune fuite d'un paiement,
-        // d'un élève ou d'une classe d'une autre école.
+        // Le paiement est lu sous le filtre de tenant (filtre global + RLS) : celui d'une autre école est introuvable.
+        // L'inscription, l'élève, la classe et l'année peuvent avoir été ARCHIVÉS depuis (élève supprimé après
+        // l'annulation de ses paiements) : le reçu, pièce comptable, reste lisible — ils sont donc lus sans filtre
+        // d'archivage, avec le SchoolId rétabli à la main (IgnoreQueryFilters retire aussi le filtre de tenant).
         var row = await (
             from p in dbContext.Payments.AsNoTracking()
-            join e in dbContext.Enrollments.AsNoTracking() on p.EnrollmentId equals e.Id
-            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
-            join c in dbContext.Classrooms.AsNoTracking() on e.ClassroomId equals c.Id
-            join y in dbContext.SchoolYears.AsNoTracking() on e.SchoolYearId equals y.Id
+            join e in dbContext.Enrollments.IgnoreQueryFilters().AsNoTracking() on p.EnrollmentId equals e.Id
+            join s in dbContext.Students.IgnoreQueryFilters().AsNoTracking() on e.StudentId equals s.Id
+            join c in dbContext.Classrooms.IgnoreQueryFilters().AsNoTracking() on e.ClassroomId equals c.Id
+            join y in dbContext.SchoolYears.IgnoreQueryFilters().AsNoTracking() on e.SchoolYearId equals y.Id
             where p.Id == request.PaymentId
+                  && e.SchoolId == schoolId && s.SchoolId == schoolId && c.SchoolId == schoolId && y.SchoolId == schoolId
             select new
             {
                 p.ReceiptNumber,

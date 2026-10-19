@@ -19,7 +19,7 @@ const dto = () => ({
 
 function students({ role = 'Secretariat', get = async () => dto(), put = async () => ({}) } = {}) {
     const calls = { get: [], put: [] };
-    const ctx = loadScripts(['subject-exemptions.js', 'payment-cancel.js', 'students.js'], {
+    const ctx = loadScripts(['subject-exemptions.js', 'payment-cancel.js', 'guided-delete.js', 'students.js'], {
         preload: {
             auth: { role, canView: () => true },
             pdfPreview: { state: () => ({}) },

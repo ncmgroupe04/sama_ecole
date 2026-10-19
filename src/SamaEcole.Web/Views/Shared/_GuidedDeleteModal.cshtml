@@ -1,0 +1,52 @@
+@* Suppression guidée — état et méthodes fournis par wwwroot/js/guided-delete.js (window.guidedDelete.mixin()), à inclure
+   dans le composant Alpine de la page hôte. Quatre phases : analyse, blocage financier (aucune option de rupture),
+   liens à rompre (case de confirmation obligatoire), confirmation simple. *@
+<modal-shell open="guidedDelete" on-close="closeGuidedDelete()" size="md">
+ <modal-title>Supprimer</modal-title>
+ <modal-subtitle>
+ <span class="font-semibold text-slate-900" x-text="guidedDelete ? guidedDelete.name : ''"></span>
+ </modal-subtitle>
+
+ <div x-show="guidedDelete && guidedDelete.error" x-cloak class="form-error-banner" x-text="guidedDelete ? guidedDelete.error : ''"></div>
+
+ <p x-show="guidedDelete && guidedDelete.phase === 'loading'" class="text-base text-slate-700">Analyse des liens…</p>
+
+ <template x-if="guidedDelete && guidedDelete.phase === 'financial'">
+ <div class="rounded-xl border-l-4 border-rose-500 bg-rose-50 p-4 text-sm text-rose-800">
+ <p class="font-semibold" x-text="guidedDelete.impact ? guidedDelete.impact.message : ''"></p>
+ <p class="mt-2">Annulez d'abord le ou les paiements depuis l'onglet « Paiements » de la fiche : la suppression sera alors possible.</p>
+ </div>
+ </template>
+
+ <template x-if="guidedDelete && guidedDelete.phase === 'links'">
+ <div class="space-y-3">
+ <p class="text-base font-medium leading-relaxed text-slate-700" x-text="guidedDelete.impact && guidedDelete.impact.message ? guidedDelete.impact.message : ''"></p>
+ <ul class="list-disc pl-5 text-sm text-slate-700">
+ <template x-for="link in (guidedDelete.impact ? guidedDelete.impact.links : [])" :key="link.kind">
+ <li>
+ <span class="font-semibold" x-text="link.label"></span>
+ <span class="text-slate-500" x-show="link.breakable" x-text="' — ' + link.breakAction"></span>
+ <span class="text-rose-600" x-show="!link.breakable"> — à traiter avant (non rompable ici)</span>
+ </li>
+ </template>
+ </ul>
+ <label class="flex items-start gap-2 text-sm text-slate-700" x-show="guidedDeleteAllBreakable()">
+ <input type="checkbox" class="mt-0.5" x-model="guidedDelete.confirmed" />
+ <span>Je comprends que ces liens seront rompus (archivés, avec une trace) avant la suppression.</span>
+ </label>
+ </div>
+ </template>
+
+ <p x-show="guidedDelete && guidedDelete.phase === 'ready'" x-cloak class="text-base font-medium leading-relaxed text-slate-700">
+ Cette fiche sera supprimée et n'apparaîtra plus nulle part ; son matricule redeviendra disponible. Une trace de la suppression est conservée.
+ </p>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" @@click="closeGuidedDelete()" class="btn-modal-secondary group">Retour</button>
+ <button type="button" @@click="confirmGuidedDelete()" class="btn-modal-danger" x-cloak
+ x-show="guidedDelete && (guidedDelete.phase === 'ready' || (guidedDelete.phase === 'links' && guidedDeleteAllBreakable()))"
+ :disabled="guidedDelete && guidedDelete.busy">
+ <span x-text="guidedDelete && guidedDelete.busy ? 'Suppression...' : (guidedDelete && guidedDelete.phase === 'links' ? 'Rompre les liens et supprimer' : 'Supprimer')"></span>
+ </button>
+ </div>
+</modal-shell>

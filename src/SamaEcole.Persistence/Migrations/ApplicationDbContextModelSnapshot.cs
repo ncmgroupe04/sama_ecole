@@ -5073,12 +5073,13 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId", "IenNumber")
                         .IsUnique()
-                        .HasFilter("\"IenNumber\" IS NOT NULL");
+                        .HasFilter("\"IenNumber\" IS NOT NULL AND \"IsDeleted\" = false");
 
                     b.HasIndex("SchoolId", "InstructorId");
 
                     b.HasIndex("SchoolId", "Matricule")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("students", (string)null);
                 });

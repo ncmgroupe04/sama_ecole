@@ -71,19 +71,19 @@ public class GetDailyCashRegisterPdfQueryHandler(
         // correction se compensent).
         var entries = await PaymentLedger.EntriesAsync(dbContext, targetStart, targetStart.AddDays(1), cancellationToken);
 
-        var enrollmentIds = entries.Select(e => e.EnrollmentId).Distinct().ToList();
-        var students = await (
-            from e in dbContext.Enrollments.AsNoTracking()
-            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
-            where enrollmentIds.Contains(e.Id)
-            select new { EnrollmentId = e.Id, s.FullName, s.Matricule })
-            .ToDictionaryAsync(x => x.EnrollmentId, cancellationToken);
+        // L'élève d'un versement annulé peut avoir été supprimé depuis : son nom reste imprimé, suivi de
+        // « (élève supprimé) » (PaymentOwnerResolver).
+        var owners = await PaymentOwnerResolver.ResolveAsync(
+            dbContext,
+            currentSchoolId ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant."),
+            entries.Select(e => e.EnrollmentId).Distinct().ToList(),
+            cancellationToken);
 
         var validPayments = entries
             .OrderByDescending(e => e.At)
             .Select(e =>
             {
-                var student = students.GetValueOrDefault(e.EnrollmentId);
+                var owner = owners.GetValueOrDefault(e.EnrollmentId);
                 var note = e.IsReversal
                     ? $"Annulation du reçu encaissé le {e.PaidAt:dd/MM/yyyy} — "
                       + $"{(string.IsNullOrWhiteSpace(e.CancellationReason) ? "sans motif" : e.CancellationReason)} "
@@ -93,7 +93,7 @@ public class GetDailyCashRegisterPdfQueryHandler(
                         : null;
 
                 return new DailyCashRegisterPaymentDto(
-                    e.At, student?.FullName ?? "Inconnu", student?.Matricule ?? "—",
+                    e.At, owner?.DisplayName ?? "Inconnu", owner?.Matricule ?? "—",
                     e.ReceiptNumber, e.Method.ToString(), e.Amount, e.IsReversal, note);
             })
             .ToList();

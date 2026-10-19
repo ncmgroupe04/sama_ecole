@@ -27,6 +27,7 @@
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
  <script src="~/js/subject-exemptions.js" asp-append-version="true"></script>
  <script src="~/js/import-errors.js" asp-append-version="true"></script>
+ <script src="~/js/guided-delete.js" asp-append-version="true"></script>
  <script src="~/js/payment-cancel.js" asp-append-version="true"></script>
  <script src="~/js/students.js" asp-append-version="true"></script>
 }
@@ -1094,27 +1095,8 @@
  </confirm-dialog-body>
  </modal-shell>
 
- <!-- Confirmation : suppression de la fiche élève -->
- <modal-shell open="deletingStudentRecord" on-close="closeDeleteStudent()" size="md">
- <modal-title>Supprimer la fiche</modal-title>
- <modal-subtitle>
- <span class="font-semibold text-slate-900" x-text="deletingStudentRecord ? deletingStudentRecord.fullName : ''"></span>
- sera archivée et n'apparaîtra plus dans la liste des élèves.
- </modal-subtitle>
-
- <div x-show="deleteStudentRecordError" x-cloak class="form-error-banner" x-text="deleteStudentRecordError"></div>
-
- <p class="text-base font-medium leading-relaxed text-slate-700">
- Réservé à une fiche créée par pure erreur de saisie : impossible si une inscription ou une note existe déjà pour cet élève.
- </p>
-
- <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="closeDeleteStudent()" class="btn-modal-secondary group">Annuler</button>
- <button type="button" @@click="confirmDeleteStudent()" :disabled="isDeletingStudentRecord" class="btn-modal-danger">
- <span x-text="isDeletingStudentRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
- </button>
- </div>
- </modal-shell>
+ <!-- Suppression guidée de la fiche élève : analyse des liens, blocage financier, rupture explicite -->
+ <partial name="_GuidedDeleteModal" />
 
  <!-- Confirmation : suppression d'une fiche élève -->
  <modal-shell open="showStudentDeletedDialog" size="md" on-close="showStudentDeletedDialog = false" title="Fiche supprimée">

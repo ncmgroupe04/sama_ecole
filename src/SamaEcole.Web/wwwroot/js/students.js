@@ -243,10 +243,9 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // Suppression de la fiche (modale de confirmation)
-        deletingStudentRecord: null, // { id, fullName, rowVersion }
-        isDeletingStudentRecord: false,
-        deleteStudentRecordError: null,
+        // Suppression guidée de la fiche : état et méthodes partagés (guided-delete.js). Modal :
+        // Views/Shared/_GuidedDeleteModal.cshtml. showStudentDeletedDialog : confirmation après suppression.
+        ...window.guidedDelete.mixin({ resource: 'students' }),
         showStudentDeletedDialog: false,
 
         // Cycle de vie d'une inscription : annulation (erreur de saisie)
@@ -886,46 +885,20 @@ document.addEventListener('alpine:init', () => {
 
         openDeleteStudent() {
             if (!this.studentDetail || !this.detailStudent) return;
-            this.deletingStudentRecord = {
+            this.openGuidedDelete({
                 id: this.detailStudent.id,
-                fullName: this.studentDetail.identity.fullName,
+                name: this.studentDetail.identity.fullName,
                 rowVersion: this.studentDetail.identity.rowVersion
-            };
-            this.deleteStudentRecordError = null;
+            });
         },
 
-        closeDeleteStudent() {
-            this.deletingStudentRecord = null;
-            this.deleteStudentRecordError = null;
-        },
-
-        async confirmDeleteStudent() {
-            if (!this.deletingStudentRecord) return;
-
-            this.isDeletingStudentRecord = true;
-            this.deleteStudentRecordError = null;
-            try {
-                await window.api.delete(`/students/${this.deletingStudentRecord.id}?rowVersion=${this.deletingStudentRecord.rowVersion}`);
-                this.addedStudentName = ''; // évite d'afficher un nom périmé dans une autre confirmation
-                this.deletingStudentRecord = null;
-                this.closeDetail();
-                this.page = 1;
-                await this.loadStudents();
-                this.showStudentDeletedDialog = true;
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    // Une inscription ou une note existe déjà (DeleteStudentCommandHandler) : le
-                    // message serveur est déjà explicite, on l'affiche tel quel.
-                    this.deleteStudentRecordError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteStudentRecordError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
-                    await this.refreshStudentDetail();
-                } else {
-                    this.deleteStudentRecordError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingStudentRecord = false;
-            }
+        /** Appelé par guided-delete.js une fois l'élève supprimé : fermer la fiche, relire la liste, annoncer. */
+        async afterGuidedDelete() {
+            this.addedStudentName = ''; // évite d'afficher un nom périmé dans une autre confirmation
+            this.closeDetail();
+            this.page = 1;
+            await this.loadStudents();
+            this.showStudentDeletedDialog = true;
         },
 
         // ------------------------------------------------------------ Inscriptions : annulation (erreur de saisie)
