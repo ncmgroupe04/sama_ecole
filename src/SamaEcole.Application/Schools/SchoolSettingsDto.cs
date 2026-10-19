@@ -70,4 +70,7 @@ public record SchoolSettingsDto(
     /// par l'appelant (un DTO partiel) : le client le lit comme « tous les cycles ». Ajouté en DERNIÈRE position
     /// pour ne pas décaler les appels positionnels existants.
     /// </summary>
-    IReadOnlyList<string>? ManagedCycles = null);
+    IReadOnlyList<string>? ManagedCycles = null,
+
+    /// <summary>La Finance peut-elle annuler un versement (délai de 48 h) ? Réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
+    bool AllowFinanceToCancelPayments = true);

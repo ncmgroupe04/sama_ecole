@@ -40,6 +40,7 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
     private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount);
     private record SchoolYearDto(Guid Id, string Label, DateOnly StartDate, DateOnly EndDate, bool IsActive, bool IsClosed);
     private record FeeCategoryDto(Guid Id, string Name, bool IsRecurring);
+    private record PaymentCreated(Guid PaymentId);
     private record Receipt(Guid EnrollmentId, string ReceiptNumber, string Matricule, decimal TotalDue);
     private record AuditLogEntry(Guid Id, string ActorFullName, string Module, string Action, bool Success, string? FailureReason, string? IpAddress, DateTimeOffset OccurredAt);
     private record PaginatedAuditLogs(List<AuditLogEntry> Items, int TotalCount, int Page, int PageSize);
@@ -74,6 +75,8 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
             new { feeCategoryId = category.Id, amount, overwriteExisting = false });
         applyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    private Guid _paymentId;
 
     /// <summary>École prête, un élève inscrit et un versement encaissé : renvoie l'année scolaire à exporter.</summary>
     private async Task<Guid> SeedEnrolledAndPaidStudentAsync()
@@ -119,6 +122,7 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         var payment = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             new { enrollmentId = receipt.EnrollmentId, amount = 50_000m, method = "MobileMoney", category = "Tuition" });
         payment.StatusCode.Should().Be(HttpStatusCode.Created);
+        _paymentId = (await payment.Content.ReadFromJsonAsync<PaymentCreated>())!.PaymentId;
 
         return year.Id;
     }
@@ -225,5 +229,24 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
 
         // Les 3 fichiers existent toujours, avec seulement leur ligne d'en-tête.
         entries["eleves.csv"].Trim().Should().Be("Matricule,Nom complet,Date de naissance,Genre,Classe,Niveau,Nom du tuteur,Téléphone du tuteur");
+    }
+
+    [Fact]
+    public async Task A_Cancelled_Payment_Stays_In_The_Archive_Marked_Cancelled_With_Its_Reason_And_Destination()
+    {
+        var yearId = await SeedEnrolledAndPaidStudentAsync();
+        var directeur = await DirecteurTokenAsync();
+
+        var cancel = await SendAsync(HttpMethod.Post, $"/api/v1/finance/payments/{_paymentId}/cancel", directeur,
+            new { reason = "Paiement enregistré en double", outcome = "RefundedToParent" });
+        cancel.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{yearId}/export", directeur);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payments = ReadZipEntries(await response.Content.ReadAsByteArrayAsync())["paiements.csv"];
+
+        // La trace n'est pas perdue à l'export : le versement figure, marqué annulé, avec son motif et la destination de l'argent.
+        payments.Should().Contain("50000").And.Contain("Annulé").And.Contain("Paiement enregistré en double").And.Contain("Remboursé au parent");
+        payments.Should().StartWith("Reçu N°,Matricule,Élève,Montant (FCFA),Mode,Date,Statut,Annulé le,Motif d'annulation,Destination de l'argent");
     }
 }

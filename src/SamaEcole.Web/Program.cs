@@ -133,6 +133,8 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new CanModifyFeesRequirement()));
     options.AddPolicy(FinancePolicies.CanDeleteFees, policy =>
         policy.Requirements.Add(new CanDeleteFeesRequirement()));
+    options.AddPolicy(FinancePolicies.CanCancelPayments, policy =>
+        policy.Requirements.Add(new CanCancelPaymentsRequirement()));
 
     // Resource-based (audit BOLA/IDOR abonnements) — voir SchoolResourceAuthorizationHandler.
     options.AddPolicy(SchoolResourcePolicies.CanAccessSchoolResource, policy =>
@@ -141,6 +143,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, CanManageGradingScaleHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CanModifyFeesHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CanDeleteFeesHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanCancelPaymentsHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SchoolResourceAuthorizationHandler>();
 
 // Contrôle d'accès par formule ([RequireFeature]) — les politiques « Feature:… » ne sont PAS

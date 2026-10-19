@@ -60,5 +60,8 @@ public record UpdateSchoolSettingsCommand(
     int CustomPeriodCount = 3,
 
     /// <summary>Jours ouvrés (« Monday » … « Sunday »). Absent ou null = inchangé, jamais « remettre le défaut ».</summary>
-    IReadOnlyList<string>? WorkingDays = null) : IRequest<SchoolSettingsDto>;
+    IReadOnlyList<string>? WorkingDays = null,
+
+    /// <summary>Droit de la Finance d'annuler un versement (48 h). Absent ou null = inchangé : un ancien client qui ne l'envoie pas ne doit pas le réinitialiser.</summary>
+    bool? AllowFinanceToCancelPayments = null) : IRequest<SchoolSettingsDto>;
 

@@ -71,5 +71,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         // Une école neuve, elle, a TOUJOURS une ligne dès sa création (provision_school_director) avec
         // ProfileEtablissement = NULL — elle ne passe donc jamais par CETTE branche.
         ProfileEtablissement.General.ToString(),
-        ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.All));
+        ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.All),
+        AllowFinanceToCancelPayments: SchoolSettingsDefaults.AllowFinanceToCancelPayments);
 }

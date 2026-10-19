@@ -2,7 +2,7 @@
    (window.paymentCancel.mixin()), à inclure dans le composant Alpine de la page hôte.
    Motif obligatoire : liste proposée + champ de saisie (obligatoire pour « Autre motif »). *@
 <modal-shell open="cancelingPayment" on-close="closeCancelPayment()" size="md">
- <modal-title>Annuler le paiement</modal-title>
+ <modal-title><span x-text="cancelingPayment && cancelingPayment.reversal ? 'Contre-passer le paiement' : 'Annuler le paiement'"></span></modal-title>
  <modal-subtitle>
  Reçu <span class="font-semibold text-slate-900" x-text="cancelingPayment ? cancelingPayment.receiptNumber : ''"></span>
  — <span class="font-semibold text-slate-900" x-text="cancelingPayment ? Number(cancelingPayment.amount).toLocaleString('fr-FR') + ' FCFA' : ''"></span>
@@ -10,8 +10,13 @@
 
  <div x-show="cancelPaymentError" x-cloak class="form-error-banner" x-text="cancelPaymentError"></div>
 
+ <div x-show="cancelingPayment && cancelingPayment.reversal" x-cloak class="mb-3 rounded-xl border-l-4 border-warning bg-warning-bg p-4 text-sm text-slate-700">
+ <p class="font-semibold text-slate-900">Le délai d'annulation de 48 heures est dépassé : contre-passation.</p>
+ <p class="mt-1">Une écriture inverse, datée d'aujourd'hui, est passée : les journées et périodes déjà arrêtées ne sont pas modifiées, et le versement d'origine y reste compté, signalé « annulé le … ». Réservée au Directeur.</p>
+ </div>
+
  <p class="text-base font-medium leading-relaxed text-slate-700">
- Le montant est rendu au solde de l'élève. Le reçu n'est pas supprimé : il reste dans l'historique, marqué « Annulé », avec son motif, et son numéro ne sera jamais réutilisé. Possible pendant 48 heures après l'encaissement, même si la caisse a été clôturée ; ensuite, c'est définitif.
+ Le montant est rendu au solde de l'élève. Le reçu n'est pas supprimé : il reste dans l'historique, marqué « Annulé », avec son motif, et son numéro ne sera jamais réutilisé. Possible pendant 48 heures après l'encaissement, même si la caisse a été clôturée ; ensuite, seul le Directeur peut passer une contre-passation.
  </p>
 
  <div class="mt-4 space-y-3">
@@ -52,7 +57,7 @@
  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="closeCancelPayment()" class="btn-modal-secondary group">Retour</button>
  <button type="button" @@click="confirmCancelPayment()" :disabled="isCancelingPayment" class="btn-modal-danger">
- <span x-text="isCancelingPayment ? 'Annulation...' : 'Annuler le paiement'"></span>
+ <span x-text="isCancelingPayment ? 'En cours...' : (cancelingPayment && cancelingPayment.reversal ? 'Contre-passer le paiement' : 'Annuler le paiement')"></span>
  </button>
  </div>
 </modal-shell>

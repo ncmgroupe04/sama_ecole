@@ -14,4 +14,7 @@ public static class FinancePolicies
     /// CanDeleteFeesRequirement pour la règle et CanDeleteFeesHandler pour son évaluation.
     /// </summary>
     public const string CanDeleteFees = "CanDeleteFees";
+
+    /// <summary>Annuler un versement (48 h) : Directeur toujours, Finance sauf retrait du droit par le Directeur (CanCancelPaymentsHandler).</summary>
+    public const string CanCancelPayments = "CanCancelPayments";
 }

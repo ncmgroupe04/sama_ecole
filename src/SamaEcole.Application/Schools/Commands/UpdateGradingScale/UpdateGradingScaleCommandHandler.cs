@@ -51,6 +51,7 @@ public class UpdateGradingScaleCommandHandler(
             settings.AllowFinanceToDeleteFees,
             settings.DirectorSignatureUrl,
             settings.CashierSignatureUrl,
-            settings.OfficialStampUrl);
+            settings.OfficialStampUrl,
+            AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments);
     }
 }

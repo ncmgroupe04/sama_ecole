@@ -1187,6 +1187,23 @@
  class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
  </button>
  </div>
+ <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-4 sm:col-span-2">
+ <span id="delegation-switch-finance-cancel-label" class="text-sm font-medium text-slate-700 flex-1">
+ Autoriser la Finance à annuler un paiement saisi par erreur
+ <span class="block text-xs font-normal text-slate-500 mt-0.5">
+ Possible pendant 48 heures après l'encaissement, le reçu étant conservé et marqué « Annulé ». Au-delà, seul le Directeur peut passer une contre-passation.
+ </span>
+ </span>
+ <button type="button" role="switch" aria-labelledby="delegation-switch-finance-cancel-label"
+ :aria-checked="config.allowFinanceToCancelPayments.toString()"
+ x-on:click="config.allowFinanceToCancelPayments = !config.allowFinanceToCancelPayments; saveConfig(false)"
+ :disabled="configSaving"
+ :class="config.allowFinanceToCancelPayments ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50">
+ <span aria-hidden="true" :class="config.allowFinanceToCancelPayments ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
  </div>
  </div>
 

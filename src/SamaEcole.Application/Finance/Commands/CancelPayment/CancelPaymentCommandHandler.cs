@@ -14,9 +14,11 @@ namespace SamaEcole.Application.Finance.Commands.CancelPayment;
 ///     sur l'inscription, donc sous son verrou optimiste xmin, exactement comme l'encaissement : une annulation
 ///     concurrente de la même ligne, ou un encaissement simultané, fait perdre le second et lui renvoie un 409
 ///     — jamais un solde faux. Le paiement lui-même ne porte pas de jeton, c'est l'inscription qui sérialise.
-///   • Délai de grâce de 48 h (<see cref="PaymentCancellationPolicy"/>) : au-delà, l'annulation est bloquée
-///     définitivement. En deçà, elle reste possible même si la session de caisse est clôturée ; les états de
-///     caisse qui ignorent les paiements annulés se recalculent alors sans ce versement.
+///   • Délai de grâce de 48 h (<see cref="PaymentCancellationPolicy"/>) : en deçà, l'annulation reste possible même
+///     si la session de caisse est clôturée ; les états de caisse se recalculent alors sans ce versement. Au-delà,
+///     l'annulation ordinaire est refusée (409) : seule la CONTRE-PASSATION, demandée explicitement et réservée au
+///     Directeur, passe — le registre daté la comptabilise comme une écriture inverse datée du jour, sans réécrire
+///     les périodes déjà arrêtées.
 /// </summary>
 public class CancelPaymentCommandHandler(
     IApplicationDbContext dbContext,
@@ -43,16 +45,27 @@ public class CancelPaymentCommandHandler(
         }
 
         // Délai de grâce (48 h après l'encaissement) : une erreur remarquée le lendemain reste corrigeable,
-        // même si la session de caisse est déjà clôturée. Passé ce délai, c'est définitif — la correction
-        // passera par une contre-passation, pas par une annulation rétroactive.
+        // même si la session de caisse est déjà clôturée. Passé ce délai, seule la contre-passation (écriture
+        // inverse datée du jour, voir PaymentLedger) est possible : explicite et réservée au Directeur.
         var now = timeProvider.GetUtcNow();
+        var isReversal = PaymentCancellationPolicy.IsPastGracePeriod(payment.PaidAt, now);
 
-        if (now > PaymentCancellationPolicy.DeadlineFor(payment.PaidAt))
+        if (isReversal)
         {
-            throw new BusinessRuleException(
-                $"Impossible d'annuler le paiement {payment.ReceiptNumber} : le délai d'annulation de "
-                + $"{(int)PaymentCancellationPolicy.GracePeriod.TotalHours} heures après l'encaissement est dépassé.",
-                "PAYMENT_CANCELLATION_WINDOW_EXPIRED");
+            var hours = (int)PaymentCancellationPolicy.GracePeriod.TotalHours;
+
+            if (!request.Reversal)
+            {
+                throw new BusinessRuleException(
+                    $"Impossible d'annuler le paiement {payment.ReceiptNumber} : le délai d'annulation de {hours} heures "
+                    + "après l'encaissement est dépassé. Le Directeur peut passer une contre-passation (écriture inverse datée d'aujourd'hui).",
+                    "PAYMENT_CANCELLATION_WINDOW_EXPIRED");
+            }
+
+            if (currentUser.Role != Role.Directeur)
+            {
+                throw new UnauthorizedAccessException("Seul le Directeur peut passer une contre-passation.");
+            }
         }
 
         // Inscription chargée SUIVIE : c'est son xmin qui sert de jeton optimiste au SaveChanges.
@@ -92,6 +105,7 @@ public class CancelPaymentCommandHandler(
             enrollment.TotalDue,
             enrollment.AmountPaid,
             enrollment.TotalDue - enrollment.AmountPaid,
-            now);
+            now,
+            isReversal);
     }
 }

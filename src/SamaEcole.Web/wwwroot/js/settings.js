@@ -115,6 +115,8 @@ document.addEventListener('alpine:init', () => {
             allowSecretaryToManageGrading: false,
             allowFinanceToModifyFees: false,
             allowFinanceToDeleteFees: false,
+            // Droit de la Finance d'annuler un versement (48 h) : OUVERT par défaut, le Directeur peut le retirer.
+            allowFinanceToCancelPayments: true,
             // Modules activés/désactivés par le Directeur (Paramètres ⬺ Modules & fonctionnalités) —
             // second axe, indépendant de la formule d'abonnement (featureGate/window.features).
             isPedagogyEnabled: true,
@@ -357,6 +359,7 @@ document.addEventListener('alpine:init', () => {
                     allowSecretaryToManageGrading: config.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: config.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: config.allowFinanceToDeleteFees,
+                    allowFinanceToCancelPayments: config.allowFinanceToCancelPayments,
                     isPedagogyEnabled: config.isPedagogyEnabled,
                     isFinanceEnabled: config.isFinanceEnabled,
                     isInternatEnabled: config.isInternatEnabled,
@@ -824,6 +827,7 @@ document.addEventListener('alpine:init', () => {
                     allowSecretaryToManageGrading: this.config.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: this.config.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees,
+                    allowFinanceToCancelPayments: this.config.allowFinanceToCancelPayments,
                     isPedagogyEnabled: this.config.isPedagogyEnabled,
                     isFinanceEnabled: this.config.isFinanceEnabled,
                     isInternatEnabled: this.config.isInternatEnabled,
@@ -849,6 +853,7 @@ document.addEventListener('alpine:init', () => {
                     allowSecretaryToManageGrading: saved.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: saved.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees,
+                    allowFinanceToCancelPayments: saved.allowFinanceToCancelPayments,
                     isPedagogyEnabled: saved.isPedagogyEnabled,
                     isFinanceEnabled: saved.isFinanceEnabled,
                     isInternatEnabled: saved.isInternatEnabled,

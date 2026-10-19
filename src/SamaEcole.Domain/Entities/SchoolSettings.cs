@@ -63,6 +63,14 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// </summary>
     public bool AllowFinanceToDeleteFees { get; set; } = SchoolSettingsDefaults.AllowFinanceToDeleteFees;
 
+    /// <summary>
+    /// Au choix du Directeur de CHAQUE école : autorise la Finance (le caissier) à ANNULER un versement saisi par erreur,
+    /// dans le délai de grâce de 48 h (PaymentCancellationPolicy). Vrai par défaut : le caissier corrige sa propre erreur
+    /// de caisse sans attendre la direction ; le Directeur peut retirer ce droit. La contre-passation au-delà du délai
+    /// reste, elle, réservée au Directeur dans tous les cas. Lu par CanCancelPaymentsHandler (SamaEcole.Web.Authorization).
+    /// </summary>
+    public bool AllowFinanceToCancelPayments { get; set; } = SchoolSettingsDefaults.AllowFinanceToCancelPayments;
+
     /// <summary>URL de l'image de la signature du directeur, injectée sur les reçus et bulletins.</summary>
     public string? DirectorSignatureUrl { get; set; }
 
@@ -234,6 +242,9 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Délégation à la Finance désactivée tant que le Directeur ne l'a pas explicitement activée.</summary>
     public const bool AllowFinanceToDeleteFees = false;
+
+    /// <summary>Annuler un versement est le geste quotidien du caissier : ouvert par défaut, retirable par le Directeur.</summary>
+    public const bool AllowFinanceToCancelPayments = true;
 
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];

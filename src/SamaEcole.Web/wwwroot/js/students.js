@@ -309,6 +309,7 @@ document.addEventListener('alpine:init', () => {
 
         // Initialisation
         init() {
+            this.initPaymentCancel();
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('classroomId')) {
                 this.classroomFilter = urlParams.get('classroomId');

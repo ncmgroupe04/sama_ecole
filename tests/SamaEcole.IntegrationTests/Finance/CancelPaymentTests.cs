@@ -92,8 +92,85 @@ public class CancelPaymentTests : IAsyncLifetime
             new RecordPaymentCommand(Inscription, amount, PaymentMethod.Cash), CancellationToken.None);
     }
 
-    private static CancelPaymentCommandHandler NewHandler(IApplicationDbContext ctx, Guid actor) =>
-        new(ctx, new FixedUser(actor), TimeProvider.System, new NoKpiCache());
+    private static CancelPaymentCommandHandler NewHandler(IApplicationDbContext ctx, Guid actor, Role role = Role.Directeur) =>
+        new(ctx, new FixedUser(actor, role), TimeProvider.System, new NoKpiCache());
+
+    /// <summary>Recule la date d'encaissement : le versement sort (ou non) du délai de grâce de 48 h.</summary>
+    private async Task BackdateAsync(Guid paymentId, TimeSpan age)
+    {
+        await using var owner = _db.NewOwnerContext();
+        var payment = await owner.Payments.IgnoreQueryFilters().SingleAsync(p => p.Id == paymentId);
+        payment.PaidAt = DateTimeOffset.UtcNow - age;
+        await owner.SaveChangesAsync(CancellationToken.None);
+    }
+
+    // ----------------------------------------------------------------------------- Contre-passation (hors délai de 48 h)
+
+    [Fact]
+    public async Task Past_The_Grace_Period_An_Ordinary_Cancellation_Is_Refused_And_Points_To_The_Reversal()
+    {
+        var payment = await RecordAsync(30_000m);
+        await BackdateAsync(payment.PaymentId, TimeSpan.FromHours(72));
+
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var act = async () => await NewHandler(ctx, Directeur).Handle(
+            new CancelPaymentCommand(payment.PaymentId, "Erreur de saisie"), CancellationToken.None);
+
+        var error = (await act.Should().ThrowAsync<BusinessRuleException>()).Which;
+        error.Code.Should().Be("PAYMENT_CANCELLATION_WINDOW_EXPIRED");
+        error.Message.Should().Contain("contre-passation");
+    }
+
+    [Fact]
+    public async Task Past_The_Grace_Period_The_Director_Can_Pass_A_Reversal_Which_Keeps_The_Row_And_Gives_The_Amount_Back()
+    {
+        var payment = await RecordAsync(30_000m);
+        await BackdateAsync(payment.PaymentId, TimeSpan.FromHours(72));
+
+        await using (var ctx = _db.NewAppContext(EcoleA))
+        {
+            var result = await NewHandler(ctx, Directeur).Handle(
+                new CancelPaymentCommand(payment.PaymentId, "Doublon constaté à l'audit", Reversal: true), CancellationToken.None);
+
+            result.IsReversal.Should().BeTrue();
+            result.AmountPaid.Should().Be(0m);
+        }
+
+        await using var check = _db.NewAppContext(EcoleA);
+        var stored = await check.Payments.SingleAsync(p => p.Id == payment.PaymentId);
+        stored.Status.Should().Be(PaymentStatus.Cancelled, "la ligne et son reçu restent, marqués annulés — jamais effacés");
+        stored.CancelledAt.Should().NotBeNull("la date de l'écriture inverse est celle d'aujourd'hui");
+        stored.CancelledAt!.Value.Should().BeAfter(stored.PaidAt.AddHours(48));
+        stored.CancellationReason.Should().Be("Doublon constaté à l'audit");
+    }
+
+    [Fact]
+    public async Task Past_The_Grace_Period_The_Finance_Role_Cannot_Pass_A_Reversal()
+    {
+        var payment = await RecordAsync(30_000m);
+        await BackdateAsync(payment.PaymentId, TimeSpan.FromHours(72));
+
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var act = async () => await NewHandler(ctx, Caissier, Role.Finance).Handle(
+            new CancelPaymentCommand(payment.PaymentId, "Tentative", Reversal: true), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+
+        await using var check = _db.NewAppContext(EcoleA);
+        (await check.Payments.SingleAsync(p => p.Id == payment.PaymentId)).Status.Should().NotBe(PaymentStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task Within_The_Grace_Period_The_Reversal_Flag_Changes_Nothing_And_Is_Not_Reported_As_A_Reversal()
+    {
+        var payment = await RecordAsync(30_000m);
+
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var result = await NewHandler(ctx, Caissier, Role.Finance).Handle(
+            new CancelPaymentCommand(payment.PaymentId, "Mauvais montant", Reversal: true), CancellationToken.None);
+
+        result.IsReversal.Should().BeFalse("dans le délai de grâce c'est une annulation ordinaire, ouverte à la Finance");
+    }
 
     [Fact]
     public async Task Cancelling_A_Payment_Keeps_The_Row_Marks_It_Cancelled_And_Gives_The_Amount_Back_To_The_Balance()
@@ -279,10 +356,10 @@ public class CancelPaymentTests : IAsyncLifetime
         public Guid? CurrentSchoolId => schoolId;
     }
 
-    private sealed class FixedUser(Guid userId) : ICurrentUserService
+    private sealed class FixedUser(Guid userId, Role role = SamaEcole.Domain.Enums.Role.Directeur) : ICurrentUserService
     {
         public Guid? UserId => userId;
-        public Role? Role => SamaEcole.Domain.Enums.Role.Directeur;
+        public Role? Role => role;
         public string? IpAddress => null;
     }
 

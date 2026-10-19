@@ -40,5 +40,6 @@ public static class SchoolSettingsDtoMapper
         settings.CustomPeriodCount,
         SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
         settings.ProfileEtablissement?.ToString(),
-        ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.FromStored(settings.ManagedCycles)));
+        ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.FromStored(settings.ManagedCycles)),
+        AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments);
 }
