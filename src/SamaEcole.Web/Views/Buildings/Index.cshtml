@@ -4,6 +4,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+    <script src="~/js/guided-delete.js" asp-append-version="true"></script>
     <script src="~/js/buildings.js" asp-append-version="true"></script>
 }
 
@@ -243,24 +244,6 @@
   </template>
  </modal-shell>
 
- <modal-shell open="deletingBuilding" on-close="closeDeleteBuilding()" size="md">
-  <modal-title>Supprimer le bâtiment</modal-title>
-  <modal-subtitle>
-   <span class="font-semibold text-slate-900" x-text="deletingBuilding ? deletingBuilding.name : ''"></span>
-   sera archivé et n'apparaîtra plus dans les sélecteurs.
-  </modal-subtitle>
-  <div x-show="deleteBuildingError" x-cloak class="form-error-banner" x-text="deleteBuildingError"></div>
-  <p class="text-base font-medium leading-relaxed text-slate-700">
-   Impossible si des salles sont encore rattachées à ce bâtiment : supprimez-les d'abord.
-  </p>
-  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDeleteBuilding()" class="btn-modal-secondary group">Annuler</button>
-   <button type="button" x-on:click="confirmDeleteBuilding()" :disabled="isDeletingBuilding" class="btn-modal-danger">
-    <span x-text="isDeletingBuilding ? 'Suppression...' : 'Supprimer le bâtiment'"></span>
-   </button>
-  </div>
- </modal-shell>
-
  @* ═══════════════════════════════════════════════════════════════════════════
     MODALES — Salles
     ═══════════════════════════════════════════════════════════════════════════ *@
@@ -331,25 +314,5 @@
   </template>
  </modal-shell>
 
- @* Dortoir (module Internat, room.type === 'Dortoir') partage cette modale avec les salles
-    ordinaires : deleteRoomWording() (buildings.js) accorde titre, question et participe au
-    type réel plutôt que de renvoyer systématiquement « salle ». Question directe plutôt que
-    l'ancienne phrase déclarative — c'est une suppression, elle doit se lire comme telle. *@
- <modal-shell open="deletingRoom" on-close="closeDeleteRoom()" size="md">
-  <modal-title><span x-text="deleteRoomWording().title"></span></modal-title>
-  <modal-subtitle>
-   Voulez-vous vraiment supprimer
-   <span class="font-semibold text-slate-900" x-text="deletingRoom ? deletingRoom.name : ''"></span>
-   ?
-   <span x-text="deletingRoom ? deleteRoomWording().demonstrative[0].toUpperCase() + deleteRoomWording().demonstrative.slice(1) : ''"></span>
-   sera <span x-text="deleteRoomWording().archived"></span> et n'apparaîtra plus dans la liste.
-  </modal-subtitle>
-  <div x-show="deleteRoomError" x-cloak class="form-error-banner" x-text="deleteRoomError"></div>
-  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDeleteRoom()" class="btn-modal-secondary group">Annuler</button>
-   <button type="button" x-on:click="confirmDeleteRoom()" :disabled="isDeletingRoom" class="btn-modal-danger">
-    <span x-text="isDeletingRoom ? 'Suppression...' : deleteRoomWording().title"></span>
-   </button>
-  </div>
- </modal-shell>
+ <partial name="_GuidedDeleteModal" />
 </div>

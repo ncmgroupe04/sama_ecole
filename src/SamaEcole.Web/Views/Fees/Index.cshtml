@@ -4,6 +4,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+ <script src="~/js/guided-delete.js" asp-append-version="true"></script>
  <script src="~/js/fees.js" asp-append-version="true"></script>
 }
 
@@ -328,27 +329,7 @@
  </ul>
  </modal-shell>
 
- <!-- Confirmation : suppression d'une catégorie (cascade sur tout son barème) -->
- <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">
- <modal-title>Supprimer la catégorie</modal-title>
- <modal-subtitle>
- <span class="font-semibold text-slate-900" x-text="deletingCategory ? deletingCategory.name : ''"></span>
- et tous les montants déjà définis pour cette catégorie disparaîtront de cet écran.
- </modal-subtitle>
-
- <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
-
- <p class="text-base font-medium leading-relaxed text-slate-700">
- L'historique comptable des paiements déjà encaissés reste intact : cette action n'efface aucune donnée financière, elle masque seulement la catégorie pour les nouvelles inscriptions.
- </p>
-
- <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
- <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
- <span x-text="isDeletingCategory ? 'Suppression...' : 'Supprimer la catégorie'"></span>
- </button>
- </div>
- </modal-shell>
+ <partial name="_GuidedDeleteModal" />
 
  <!-- Confirmation : suppression d'une ligne de barème -->
  <modal-shell open="deletingFee" on-close="closeDeleteFee()" size="md">

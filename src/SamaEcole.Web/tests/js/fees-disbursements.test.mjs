@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { loadScripts } from './harness.mjs';
 
 function bootFees() {
-    const ctx = loadScripts(['fees.js'], {
+    const ctx = loadScripts(['guided-delete.js', 'fees.js'], {
         preload: {
             auth: { role: 'Directeur', accessToken: 'jwt', isAuthenticated: () => false, isAccessTokenStale: () => false, redirectToLogin() {} },
             toast: { success() {}, error() {} }

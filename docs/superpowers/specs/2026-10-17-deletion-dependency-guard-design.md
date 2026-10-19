@@ -236,7 +236,16 @@ Ce catalogue est un point de départ : l'inventaire exhaustif est une étape d'i
    (avec historique et relevés d'heures) et les affectations se rompent, le matériel prêté non restitué ne se rompt pas, et les
    **matières enseignées sont intrinsèques à la fiche** (la création en exige au moins une) : archivées avec elle, annoncées dans
    la fenêtre de confirmation. Un enseignant qualifié sans affectation est donc supprimable directement.
-3. **PR3 — Salle, Bâtiment, Frais, Année scolaire, Inventaire.**
+3. **PR3 — Bâtiment, Salle, Catégorie de frais, Catégorie d'inventaire, Bien d'inventaire.**
+   *Livrée (branche `feat/guided-deletion-infra-fees-inventory`, plan `docs/superpowers/plans/2026-10-18-guided-deletion-infra-fees-inventory.md`).*
+   Précisions d'implémentation : bâtiment — les **salles ne se rompent pas** (une par une, comme avant) ; salle — les biens rangés
+   dedans sont **détachés** (emplacement vidé, rien n'est archivé) ; catégorie de frais — une **inscription qui la facture ou un
+   paiement non annulé** bloque sans option de rupture, les lignes du barème s'archivent explicitement (l'ancien code les
+   archivait en cascade, sans le dire) ; catégorie d'inventaire — les **biens ne se rompent pas** ; bien — un **prêt en cours ne
+   se rompt pas** (restitution d'abord), les prêts clos sont intrinsèques (archivés avec lui), le journal de stock reste
+   append-only. La colonne fantôme `Enrollment.RoomId` (jamais renseignée) est ignorée par le test de couverture.
+   **Année scolaire : reportée à une PR séparée** (parcours existant : confirmation par saisie du libellé, mode test purgé /
+   mode réel archivé si l'année est vide, à réconcilier avec le blocage financier).
 
 Chaque PR est indépendante pour la recette ; la PR1 pose les contrats que les suivantes réutilisent.
 

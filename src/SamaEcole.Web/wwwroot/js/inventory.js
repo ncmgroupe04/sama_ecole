@@ -74,6 +74,7 @@ document.addEventListener('alpine:init', () => {
     ];
 
     Alpine.data('inventoryView', () => ({
+        ...window.guidedDelete.mixin({ resource: 'inventory/items' }),
         ...window.pdfPreview.state(),
 
         tab: 'catalogue', // 'catalogue' | 'categories' | 'mouvements' | 'prets'
@@ -425,38 +426,29 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // ------------------------------------------------------------ Biens : suppression
-        deletingItem: null,
-        isDeletingItem: false,
-        deleteItemError: null,
+        // ------------------------------------------------------------ Suppression guidée (biens et catégories)
 
         openDeleteItem(item) {
-            this.deletingItem = { id: item.id, name: item.name, rowVersion: item.rowVersion };
-            this.deleteItemError = null;
+            return this.openGuidedDelete({
+                id: item.id, name: item.name, rowVersion: item.rowVersion, resource: 'inventory/items',
+                readyText: "Ce bien sera supprimé et n'apparaîtra plus dans le catalogue. Une trace de la suppression est conservée."
+            });
         },
 
-        closeDeleteItem() { this.deletingItem = null; this.deleteItemError = null; },
+        openDeleteCategory(category) {
+            return this.openGuidedDelete({
+                id: category.id, name: category.name, rowVersion: category.rowVersion, resource: 'inventory/categories',
+                readyText: "Cette catégorie sera supprimée et n'apparaîtra plus dans les sélecteurs. Une trace de la suppression est conservée."
+            });
+        },
 
-        async confirmDeleteItem() {
-            if (!this.deletingItem) return;
-            this.isDeletingItem = true;
-            this.deleteItemError = null;
-            try {
-                await window.api.delete(`/inventory/items/${this.deletingItem.id}?rowVersion=${this.deletingItem.rowVersion}`);
-                this.deletingItem = null;
-                toast.success('Bien archivé.');
+        async afterGuidedDelete(target) {
+            if (target.resource === 'inventory/categories') {
+                toast.success('Catégorie supprimée.');
+                await this.loadCategories();
+            } else {
+                toast.success('Bien supprimé.');
                 await this.loadItems();
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    this.deleteItemError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteItemError = "Ce bien vient d'être modifié par un autre utilisateur. Rafraîchissez la page puis réessayez.";
-                    await this.loadItems();
-                } else {
-                    this.deleteItemError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingItem = false;
             }
         },
 
@@ -546,40 +538,6 @@ document.addEventListener('alpine:init', () => {
                 }
             } finally {
                 this.isSavingEditCategory = false;
-            }
-        },
-
-        deletingCategory: null,
-        isDeletingCategory: false,
-        deleteCategoryError: null,
-
-        openDeleteCategory(category) {
-            this.deletingCategory = { id: category.id, name: category.name, rowVersion: category.rowVersion };
-            this.deleteCategoryError = null;
-        },
-
-        closeDeleteCategory() { this.deletingCategory = null; this.deleteCategoryError = null; },
-
-        async confirmDeleteCategory() {
-            if (!this.deletingCategory) return;
-            this.isDeletingCategory = true;
-            this.deleteCategoryError = null;
-            try {
-                await window.api.delete(`/inventory/categories/${this.deletingCategory.id}?rowVersion=${this.deletingCategory.rowVersion}`);
-                this.deletingCategory = null;
-                toast.success('Catégorie archivée.');
-                await this.loadCategories();
-            } catch (err) {
-                if (err.code === 'BUSINESS_RULE_VIOLATION') {
-                    this.deleteCategoryError = err.message;
-                } else if (err.code === 'CONCURRENCY_CONFLICT') {
-                    this.deleteCategoryError = "Cette catégorie vient d'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.";
-                    await this.loadCategories();
-                } else {
-                    this.deleteCategoryError = (err && err.message) || 'Erreur lors de la suppression.';
-                }
-            } finally {
-                this.isDeletingCategory = false;
             }
         },
 

@@ -1,4 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,27 +22,15 @@ public class DeleteFeeCategoryCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Catégorie de frais {request.Id} introuvable.");
 
-        var classFees = await dbContext.ClassFees
-            .Where(f => f.FeeCategoryId == request.Id)
-            .ToListAsync(cancellationToken);
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkFeeCategoryDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, FeeCategoryDeletionPolicy.Policy, request.Id, cancellationToken);
 
-        var actorIdText = actorId.ToString();
+        category.SoftDelete(actorId.ToString());
 
-        // Une seule transaction : soit la catégorie ET tout son barème disparaissent ensemble, soit
-        // rien — un échec au milieu ne doit pas laisser une catégorie supprimée avec des lignes de
-        // barème orphelines encore visibles (voir DeleteFeeCategoryCommand pour le raisonnement).
-        await dbContext.ExecuteInTransactionAsync(async ct =>
-        {
-            foreach (var fee in classFees)
-            {
-                fee.SoftDelete(actorIdText);
-            }
-
-            category.SoftDelete(actorIdText);
-
-            await dbContext.SaveChangesAsync(ct);
-            return 0;
-        }, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

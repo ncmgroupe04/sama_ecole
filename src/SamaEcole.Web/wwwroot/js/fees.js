@@ -23,6 +23,7 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('feesView', () => ({
+        ...window.guidedDelete.mixin({ resource: 'finance/fee-categories' }),
         categories: [],
         classrooms: [],
         fees: [],
@@ -61,10 +62,7 @@ document.addEventListener('alpine:init', () => {
             return this.isDirecteur || (window.auth.role === 'Finance' && this.allowFinanceToDeleteFees);
         },
 
-        // Suppression d'une catégorie (modale de confirmation)
-        deletingCategory: null, // { id, name }
-        isDeletingCategory: false,
-        deleteCategoryError: null,
+        // Suppression d'une catégorie : modale partagée (guided-delete.js)
         showCategoryDeletedDialog: false,
         deletedCategoryName: '',
 
@@ -242,33 +240,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         openDeleteCategory(category) {
-            this.deletingCategory = category;
-            this.deleteCategoryError = null;
+            return this.openGuidedDelete({
+                id: category.id, name: category.name, resource: 'finance/fee-categories',
+                financialHint: "Des inscriptions ou des paiements enregistrés utilisent cette catégorie : elle ne peut pas être supprimée. Un paiement annulé ne bloque plus.",
+                readyText: "Cette catégorie sera supprimée et n'apparaîtra plus pour les nouvelles inscriptions. L'historique comptable des paiements reste intact."
+            });
         },
 
-        closeDeleteCategory() {
-            this.deletingCategory = null;
-            this.deleteCategoryError = null;
-        },
-
-        /** Supprime la catégorie ET tout son barème en cascade (soft delete côté serveur, AGENTS.md règle #6). */
-        async confirmDeleteCategory() {
-            if (!this.deletingCategory) return;
-
-            this.isDeletingCategory = true;
-            this.deleteCategoryError = null;
-            try {
-                await window.api.delete(`/finance/fee-categories/${this.deletingCategory.id}`);
-                this.deletedCategoryName = this.deletingCategory.name;
-                this.deletingCategory = null;
-                window.softDeleteTrash.notifyChanged('fee-categories');
-                await this.loadAll();
-                this.showCategoryDeletedDialog = true;
-            } catch (err) {
-                this.deleteCategoryError = (err && err.message) || 'Erreur lors de la suppression de la catégorie.';
-            } finally {
-                this.isDeletingCategory = false;
-            }
+        async afterGuidedDelete(target) {
+            this.deletedCategoryName = target.name;
+            window.softDeleteTrash.notifyChanged('fee-categories');
+            await this.loadAll();
+            this.showCategoryDeletedDialog = true;
         },
 
         // ------------------------------------------------- Montant standard (Option 1)

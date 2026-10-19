@@ -615,13 +615,19 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_Directeur_Can_Delete_A_Fee_Category_Cascading_Its_Fees()
+    public async Task A_Directeur_Can_Delete_A_Fee_Category_After_Explicitly_Breaking_Its_Fee_Schedule()
     {
         var directeur = await DirecteurTokenAsync();
         await CreateClassroomAsync(directeur, "CI");
         await CreateClassroomAsync(directeur, "CP");
         var category = await CreateCategoryAsync(directeur, "Mensualité");
         await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+
+        // Plus de cascade silencieuse (spec 2026-10-17) : le barème est un lien listé, à rompre explicitement.
+        (await SendAsync(HttpMethod.Delete, $"/api/v1/finance/fee-categories/{category.Id}", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/finance/fee-categories/{category.Id}/unlink-dependencies", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
 
         var response = await SendAsync(HttpMethod.Delete, $"/api/v1/finance/fee-categories/{category.Id}", directeur);
 
@@ -632,7 +638,7 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
             .Should().BeEmpty("la catégorie supprimée ne doit plus apparaître");
 
         (await ListFeesAsync(directeur)).Should()
-            .BeEmpty("ses lignes de barème doivent disparaître avec elle (cascade en transaction)");
+            .BeEmpty("ses lignes de barème doivent disparaître avec elle (archivées par la rupture explicite)");
     }
 
     [Fact]

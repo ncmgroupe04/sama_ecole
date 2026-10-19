@@ -1,3 +1,6 @@
+using SamaEcole.Application.Common.Deletion;
+using SamaEcole.Application.Buildings.Commands.UnlinkBuildingDependencies;
+using SamaEcole.Application.Buildings.Queries.GetBuildingDeletionImpact;
 using SamaEcole.Application.Buildings.Commands.CreateBuilding;
 using SamaEcole.Application.Buildings.Commands.DeleteBuilding;
 using SamaEcole.Application.Buildings.Commands.RestoreBuilding;
@@ -71,6 +74,31 @@ public class BuildingsController(ISender mediator) : ControllerBase
         await mediator.Send(new DeleteBuildingCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>
+    /// Ce qui empêche ou accompagne la suppression d'un bâtiment (spec 2026-10-17, §3) : blocage financier ou liste précise des
+    /// liens à rompre. Lecture seule.
+    /// </summary>
+    [HttpGet("{id:guid}/deletion-impact")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> BuildingDeletionImpact(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetBuildingDeletionImpactQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Rupture EXPLICITE des liens du bâtiment (archivage ou détachement, tracé). Ne supprime pas l'élément.
+    /// 409 : blocage financier ou lien non rompable.
+    /// </summary>
+    [HttpPost("{id:guid}/unlink-dependencies")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<DeletionImpact>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnlinkBuildingDependencies(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new UnlinkBuildingDependenciesCommand(id), cancellationToken));
 
     /// <summary>Corbeille : bâtiments supprimés de l'école courante.</summary>
     [HttpGet("deleted")]

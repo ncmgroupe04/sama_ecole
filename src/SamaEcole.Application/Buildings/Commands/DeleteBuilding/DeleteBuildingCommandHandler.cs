@@ -1,5 +1,6 @@
-using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Buildings.Deletion;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,16 +22,11 @@ public class DeleteBuildingCommandHandler(
             .FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Bâtiment {request.Id} introuvable.");
 
-        // Règle métier obligatoire : un bâtiment encore lié à des salles ne peut pas être archivé
-        // (mêmes principes que DeleteClassroomCommandHandler vis-à-vis des élèves).
-        var hasRooms = await dbContext.Rooms
-            .AnyAsync(r => r.BuildingId == request.Id, cancellationToken);
-
-        if (hasRooms)
-        {
-            throw new BusinessRuleException(
-                "Impossible de supprimer : ce bâtiment possède des salles rattachées.");
-        }
+        // Spec 2026-10-17 : la suppression NE ROMPT JAMAIS un lien. Une donnée financière active la refuse (texte
+        // imposé) ; tout autre lien restant la refuse en les énumérant — l'utilisateur les rompt avant, explicitement
+        // (UnlinkBuildingDependenciesCommand).
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, BuildingDeletionPolicy.Policy, request.Id, cancellationToken);
 
         dbContext.SetOriginalConcurrencyToken(building, request.RowVersion);
 

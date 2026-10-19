@@ -130,7 +130,7 @@ test('le hook de fin reçoit la cible supprimée (le nom sert à annoncer la sup
     await state.confirmGuidedDelete();
     await flush();
 
-    assert.deepEqual(state.deletedTarget, { id: 's-1', name: 'Awa Fall', rowVersion: 42 });
+    assert.deepEqual(state.deletedTarget, { id: 's-1', name: 'Awa Fall', rowVersion: 42, resource: 'students' });
 });
 
 test('la ressource pilote les routes : classes, matières, enseignants', async () => {
@@ -158,4 +158,39 @@ test("les textes d'aide ont une valeur par défaut et se personnalisent par écr
     const custom = mixin({ impacts: [IMPACT_FREE], config: { financialHint: 'Annulez les paiements.', readyText: 'Cette classe sera supprimée.' } }).state.guidedDeleteTexts;
     assert.equal(custom.financialHint, 'Annulez les paiements.');
     assert.equal(custom.readyText, 'Cette classe sera supprimée.');
+});
+
+test("une page peut supprimer plusieurs types d'éléments : la ressource se surcharge à l'ouverture", async () => {
+    const { state, calls } = mixin({ impacts: [IMPACT_FREE], resource: 'buildings' });
+
+    await state.openGuidedDelete({ id: 'r-1', name: 'Salle 1', rowVersion: 3, resource: 'rooms' });
+    await state.confirmGuidedDelete();
+    await flush();
+
+    assert.deepEqual(plain(calls.map(([method, url]) => [method, url])), [
+        ['GET', '/rooms/r-1/deletion-impact'],
+        ['DELETE', '/rooms/r-1?rowVersion=3']
+    ]);
+    assert.equal(state.deletedTarget.resource, 'rooms');
+});
+
+test("une suppression sans jeton de version n'envoie aucun paramètre rowVersion", async () => {
+    const { state, calls } = mixin({ impacts: [IMPACT_FREE], resource: 'finance/fee-categories' });
+
+    await state.openGuidedDelete({ id: 'c-1', name: 'Scolarité' });
+    await state.confirmGuidedDelete();
+    await flush();
+
+    assert.deepEqual(plain(calls[1]), ['DELETE', '/finance/fee-categories/c-1']);
+});
+
+test("les textes se surchargent à l'ouverture et reviennent aux valeurs de la page pour l'élément suivant", async () => {
+    const { state } = mixin({ impacts: [IMPACT_FREE], config: { readyText: 'Texte de la page.' } });
+
+    await state.openGuidedDelete({ ...TARGET, readyText: 'Texte de cet élément.' });
+    assert.equal(state.guidedDeleteTexts.readyText, 'Texte de cet élément.');
+
+    state.closeGuidedDelete();
+    await state.openGuidedDelete(TARGET);
+    assert.equal(state.guidedDeleteTexts.readyText, 'Texte de la page.');
 });
