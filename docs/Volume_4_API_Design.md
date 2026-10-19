@@ -367,8 +367,9 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 > elles ne valent **qu'en mode test** : les deux fonctions PostgreSQL le revérifient elles-mêmes, en
 > plus du Handler, parce qu'un `SECURITY DEFINER` est exempté de RLS et qu'un futur appelant pourrait
 > oublier la règle. En **mode réel**, `reset-data` répond 409 `RESET_UNAVAILABLE_LIVE_MODE`, et
-> `DELETE /school-years/{id}` n'accepte qu'une année **vide** — qu'il archive en suppression logique —
-> et refuse les autres en 409 `SCHOOL_YEAR_HAS_DATA`. Le retour au mode test
+> `DELETE /school-years/{id}` est une suppression guidée : un paiement non annulé la bloque (409
+> `FINANCIAL_RECORDS_EXIST`), les autres liens sont énumérés (409 `DEPENDENCIES_EXIST`) et rompus explicitement par
+> `POST /school-years/{id}/unlink-dependencies` ; l'année est alors archivée en suppression logique. Le retour au mode test
 > (`POST /schools/current/dev/revert-to-test`) n'est **monté** que sur les environnements jetables ;
 > l'écran affiche malgré tout son bouton, désactivé, pour que l'absence s'explique. Périmètre exact de
 > la purge et arbitrages : `ACTIVE_CONTEXT.md` §2.

@@ -8,6 +8,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Deletion;
 using SamaEcole.Application.Inventory.Deletion;
 using SamaEcole.Application.Rooms.Deletion;
+using SamaEcole.Application.SchoolYears.Deletion;
 using SamaEcole.Application.Subjects.Deletion;
 using SamaEcole.Application.Teachers.Deletion;
 using SamaEcole.Domain.Entities;
@@ -38,6 +39,9 @@ public class DeletionDependencyCoverageTests
         yield return [typeof(InventoryCategory), InventoryCategoryDeletionPolicy.Dependencies, none];
         // Le journal de stock est append-only : trace immuable ignorée ; les prêts clos sont intrinsèques.
         yield return [typeof(InventoryItem), InventoryItemDeletionPolicy.Dependencies.Concat(InventoryItemDeletionPolicy.Intrinsic).ToList(), InventoryItemDeletionPolicy.IgnoredDependents];
+        // Année scolaire (mode réel) : les paiements sont couverts par la règle financière (via les inscriptions) ; la configuration
+        // de l'année (trimestres, affectations, fermetures) est intrinsèque.
+        yield return [typeof(SchoolYear), SchoolYearDeletionPolicy.Dependencies.Concat(SchoolYearDeletionPolicy.Intrinsic).ToList(), none];
     }
 
     [Theory]

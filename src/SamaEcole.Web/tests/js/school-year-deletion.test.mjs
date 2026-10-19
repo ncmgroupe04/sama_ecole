@@ -109,3 +109,107 @@ test('la confirmation et l\'erreur sont oubliées à la fermeture de la modale',
     assert.equal(view.deleteConfirmation, '');
     assert.equal(view.deleteError, null);
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Mode réel : suppression guidée (analyse, blocage financier, rupture explicite avant la suppression)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Composant en mode réel, avec une analyse serveur donnée ; `calls` garde l'ordre des appels d'écriture. */
+async function liveView(impact) {
+    const calls = [];
+    const ctx = loadScripts(['school-years.js'], {
+        preload: {
+            auth: { role: 'Directeur' },
+            api: {
+                get: async (endpoint) => {
+                    if (endpoint === '/schools/current/mode') return { isLive: true };
+                    if (endpoint.endsWith('/deletion-impact')) { calls.push(`GET ${endpoint}`); return impact; }
+                    return [YEAR];
+                },
+                post: async (endpoint) => { calls.push(`POST ${endpoint}`); return impact; },
+                delete: async (endpoint) => { calls.push(`DELETE ${endpoint}`); return { label: YEAR.label, wasPurged: false }; },
+                toMessage: (_e, fallback) => fallback,
+                toFieldErrors: (_e, fallback) => ({ global: fallback })
+            },
+            softDeleteTrash: { notifyChanged() {} }
+        }
+    });
+    const view = ctx.component('schoolYearsView');
+    await flush();
+    return { view, calls };
+}
+
+const LINKS = {
+    canDelete: false, financialBlock: false, message: 'Cette année scolaire est actuellement rattachée à 2 inscriptions.',
+    links: [{ kind: 'Enrollment', label: '2 inscriptions', count: 2, breakable: true, breakAction: "Annuler l'inscription et l'archiver" }]
+};
+
+test('mode réel : ouvrir la modale lit l\'analyse, mode test : aucune lecture', async () => {
+    const live = await liveView(LINKS);
+    await live.view.openDelete(YEAR);
+    assert.deepEqual(plainCalls(live.calls), ['GET /school-years/y-1/deletion-impact']);
+    assert.equal(live.view.deleteImpact.links.length, 1);
+
+    const test_ = await schoolYearsView({ mode: { isLive: false } });
+    await test_.openDelete(YEAR);
+    assert.equal(test_.deleteImpact, null, "l'effacement définitif de la zone de test n'a rien à analyser");
+});
+
+function plainCalls(calls) { return JSON.parse(JSON.stringify(calls)); }
+
+test('mode réel : des liens rompables exigent la case cochée en plus du libellé', async () => {
+    const { view } = await liveView(LINKS);
+    await view.openDelete(YEAR);
+    view.deleteConfirmation = '2025-2026';
+
+    assert.equal(view.deleteNeedsLinksConfirmation, true);
+    assert.equal(view.canSubmitDelete, false, 'case non cochée : le bouton reste inerte');
+
+    view.deleteLinksConfirmed = true;
+    assert.equal(view.canSubmitDelete, true);
+});
+
+test('mode réel : un blocage financier ne se contourne jamais', async () => {
+    const { view } = await liveView({ canDelete: false, financialBlock: true, message: 'Impossible de supprimer cette année scolaire…', links: [] });
+    await view.openDelete(YEAR);
+    view.deleteConfirmation = '2025-2026';
+    view.deleteLinksConfirmed = true;
+
+    assert.equal(view.deleteBlocked, true);
+    assert.equal(view.canSubmitDelete, false);
+});
+
+test('mode réel : un lien non rompable bloque aussi', async () => {
+    const { view } = await liveView({ ...LINKS, links: [{ ...LINKS.links[0], breakable: false }] });
+    await view.openDelete(YEAR);
+    view.deleteConfirmation = '2025-2026';
+    view.deleteLinksConfirmed = true;
+
+    assert.equal(view.canSubmitDelete, false);
+});
+
+test('mode réel : la rupture précède la suppression, en deux appels distincts', async () => {
+    const { view, calls } = await liveView(LINKS);
+    await view.openDelete(YEAR);
+    view.deleteConfirmation = '2025-2026';
+    view.deleteLinksConfirmed = true;
+
+    await view.submitDelete();
+
+    assert.deepEqual(plainCalls(calls), [
+        'GET /school-years/y-1/deletion-impact',
+        'POST /school-years/y-1/unlink-dependencies',
+        'DELETE /school-years/y-1'
+    ]);
+});
+
+test('mode réel : une année sans lien se supprime sans rupture', async () => {
+    const { view, calls } = await liveView({ canDelete: true, financialBlock: false, message: null, links: [] });
+    await view.openDelete(YEAR);
+    view.deleteConfirmation = '2025-2026';
+
+    assert.equal(view.deleteNeedsLinksConfirmation, false);
+    await view.submitDelete();
+
+    assert.deepEqual(plainCalls(calls), ['GET /school-years/y-1/deletion-impact', 'DELETE /school-years/y-1']);
+});

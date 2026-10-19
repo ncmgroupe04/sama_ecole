@@ -127,7 +127,7 @@
  @* Suppression — Directeur seul (DELETE /school-years/{id}). Proposée sur TOUTE année, y
  compris active ou terminée : c'est justement une année créée en double, ou archivée par
  erreur, qu'on veut pouvoir retirer. La modale exige la recopie du libellé, et le serveur
- refuse en mode réel toute année qui porte des données (409 SCHOOL_YEAR_HAS_DATA). *@
+ analyse en mode réel ce que l'année porte : un paiement non annulé la bloque, les autres liens sont listés et rompus après confirmation. *@
  <button x-show="canDelete(year)" x-cloak
  x-on:click="openDelete(year)"
  title="Supprimer cette année scolaire"
@@ -346,7 +346,7 @@
  Suppression d'une année scolaire. Même patron de garde que la « Zone de danger » : un mot à
  RECOPIER — ici le libellé de l'année, pas un mot générique, pour obliger à regarder la ligne
  visée — et rien d'autre. Le texte change avec le régime de l'établissement (isLiveMode), car
- ce n'est pas la même opération : effacement en mode test, archivage d'une année vide en mode réel.
+ ce n'est pas la même opération : effacement en mode test, suppression guidée (liens listés, rupture confirmée, archivage) en mode réel.
  *@
  <modal-shell open="yearToDelete" on-close="closeDelete()" title="Supprimer l'année scolaire" size="md">
  <template x-if="yearToDelete">
@@ -366,20 +366,50 @@
  </div>
  </div>
 
- @* Mode RÉEL : archivage, et seulement si l'année est vide. *@
- <div x-show="isLiveMode" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-4">
+ @* Mode RÉEL : analyse des liens (GET deletion-impact), puis rupture confirmée et archivage. *@
+ <div x-show="isLiveMode" x-cloak>
+ <div class="rounded-xl border-l-4 border-warning bg-warning-bg p-4">
  <div class="flex items-start gap-3">
  <icon name="alert-circle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
  <div class="text-sm text-slate-700">
  <p class="font-semibold text-slate-900">L'établissement est en mode réel.</p>
  <p class="mt-1">
- L'année <span class="font-semibold" x-text="yearToDelete?.label"></span> ne sera retirée que
- si elle ne porte AUCUNE donnée. Dès qu'une inscription, une note ou un appel y est
- rattaché, la suppression est refusée : ces écritures sont la contrepartie de reçus déjà
- remis aux familles. Exportez l'année pour l'archiver hors de la plateforme.
+ L'année <span class="font-semibold" x-text="yearToDelete?.label"></span> sera archivée : une
+ trace de la suppression est conservée. Un paiement encaissé sur l'année l'interdit ; les
+ autres données (inscriptions, notes, appels, examens) sont listées ci-dessous et archivées
+ après votre confirmation. Exportez l'année pour la conserver hors de la plateforme.
  </p>
  </div>
  </div>
+ </div>
+
+ <p x-show="isLoadingDeleteImpact" x-cloak class="mt-4 text-sm text-slate-600">Analyse des liens…</p>
+
+ <template x-if="deleteImpact && deleteImpact.financialBlock">
+ <div class="mt-4 rounded-xl border-l-4 border-rose-500 bg-rose-50 p-4 text-sm text-rose-800">
+ <p class="font-semibold" x-text="deleteImpact.message"></p>
+ <p class="mt-2">Des paiements non annulés sont enregistrés sur cette année : annulez-les d'abord depuis la caisse, la suppression sera alors possible.</p>
+ </div>
+ </template>
+
+ <template x-if="deleteImpact && !deleteImpact.financialBlock && deleteImpact.links.length > 0">
+ <div class="mt-4 space-y-3">
+ <p class="text-sm font-medium text-slate-700" x-text="deleteImpact.message"></p>
+ <ul class="list-disc pl-5 text-sm text-slate-700">
+ <template x-for="link in deleteImpact.links" :key="link.kind">
+ <li>
+ <span class="font-semibold" x-text="link.label"></span>
+ <span class="text-slate-500" x-show="link.breakable" x-text="' — ' + link.breakAction"></span>
+ <span class="text-rose-600" x-show="!link.breakable" x-text="' — à traiter avant : ' + link.breakAction"></span>
+ </li>
+ </template>
+ </ul>
+ <label class="flex items-start gap-2 text-sm text-slate-700" x-show="deleteNeedsLinksConfirmation">
+ <input type="checkbox" class="mt-0.5" x-model="deleteLinksConfirmed" />
+ <span>Je comprends que ces liens seront rompus (archivés, avec une trace) avant la suppression.</span>
+ </label>
+ </div>
+ </template>
  </div>
 
  <p x-show="yearToDelete?.isActive" x-cloak class="mt-4 text-sm text-slate-600">
@@ -396,7 +426,7 @@
  <label for="delete-year-confirmation" class="sr-only">Libellé de l'année</label>
  <input id="delete-year-confirmation" type="text" x-model="deleteConfirmation" autocomplete="off"
  :placeholder="yearToDelete?.label" class="input-field" :class="deleteError && 'input-field-error'"
- x-on:keydown.enter.prevent="deleteConfirmationMatches && submitDelete()">
+ x-on:keydown.enter.prevent="canSubmitDelete && submitDelete()">
  </div>
 
  <div x-show="deleteError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteError"></div>
@@ -404,8 +434,8 @@
  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="submitDelete()"
- :disabled="!deleteConfirmationMatches || isDeleting" class="btn-modal-danger disabled:cursor-not-allowed disabled:opacity-50">
- <span x-text="isDeleting ? 'Suppression…' : 'Supprimer cette année'"></span>
+ :disabled="!canSubmitDelete" class="btn-modal-danger disabled:cursor-not-allowed disabled:opacity-50">
+ <span x-text="isDeleting ? 'Suppression…' : (isLiveMode && deleteNeedsLinksConfirmation ? 'Rompre les liens et supprimer cette année' : 'Supprimer cette année')"></span>
  </button>
  </div>
  </div>

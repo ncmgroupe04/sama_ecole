@@ -65,11 +65,16 @@ document.addEventListener('alpine:init', () => {
         // --- Suppression (DELETE /school-years/{id}) ---
         //
         // isLiveMode change le RÉCIT, jamais la règle : en mode test l'année et ses données sont
-        // effacées, en mode réel elle n'est archivée que si elle est vide (le serveur refuse en 409
-        // sinon — DeleteSchoolYearCommandHandler). L'écran doit dire laquelle des deux va se produire
-        // AVANT le clic, sans quoi le Directeur ne sait pas ce qu'il confirme.
+        // effacées ; en mode réel (suppression guidée, spec 2026-10-17) un paiement non annulé la bloque,
+        // les autres liens sont listés par GET /school-years/{id}/deletion-impact et rompus explicitement
+        // (POST …/unlink-dependencies) après confirmation, puis l'année est archivée. L'écran doit dire
+        // lequel des deux régimes va s'appliquer AVANT le clic, sans quoi le Directeur ne sait pas ce
+        // qu'il confirme.
         isLiveMode: false,
         yearToDelete: null,
+        deleteImpact: null, // analyse serveur (mode réel uniquement) : { canDelete, financialBlock, message, links[] }
+        isLoadingDeleteImpact: false,
+        deleteLinksConfirmed: false,
         deleteConfirmation: '',
         isDeleting: false,
         deleteError: null,
@@ -366,10 +371,51 @@ document.addEventListener('alpine:init', () => {
 
         // ------------------------------------------------------------------ Suppression
 
-        openDelete(year) {
+        async openDelete(year) {
             this.yearToDelete = year;
             this.deleteConfirmation = '';
             this.deleteError = null;
+            this.deleteImpact = null;
+            this.deleteLinksConfirmed = false;
+
+            // En mode test l'effacement définitif emporte tout : rien à analyser.
+            if (!this.isLiveMode) return;
+            await this.loadDeleteImpact();
+        },
+
+        async loadDeleteImpact() {
+            const year = this.yearToDelete;
+            if (!year) return;
+
+            this.isLoadingDeleteImpact = true;
+            try {
+                const impact = await window.api.get(`/school-years/${year.id}/deletion-impact`);
+                if (this.yearToDelete === year) this.deleteImpact = impact;
+            } catch (err) {
+                this.deleteError = window.api.toMessage(err, "Impossible d'analyser les liens de cette année.");
+            } finally {
+                this.isLoadingDeleteImpact = false;
+            }
+        },
+
+        /** Vrai quand rien ne peut être rompu ici : paiement non annulé, ou lien à traiter ailleurs. */
+        get deleteBlocked() {
+            const impact = this.deleteImpact;
+            return !!impact && (impact.financialBlock || (impact.links || []).some((link) => !link.breakable));
+        },
+
+        /** Vrai quand des liens rompables sont à confirmer avant la suppression (case à cocher). */
+        get deleteNeedsLinksConfirmation() {
+            const impact = this.deleteImpact;
+            return !!impact && !impact.financialBlock && (impact.links || []).length > 0 && !this.deleteBlocked;
+        },
+
+        /** Bouton rouge : libellé recopié, analyse lue (mode réel), rien de bloquant, liens confirmés. */
+        get canSubmitDelete() {
+            if (!this.deleteConfirmationMatches || this.isDeleting) return false;
+            if (!this.isLiveMode) return true;
+            if (this.isLoadingDeleteImpact || !this.deleteImpact || this.deleteBlocked) return false;
+            return !this.deleteNeedsLinksConfirmation || this.deleteLinksConfirmed;
         },
 
         closeDelete() {
@@ -380,6 +426,8 @@ document.addEventListener('alpine:init', () => {
             this.yearToDelete = null;
             this.deleteConfirmation = '';
             this.deleteError = null;
+            this.deleteImpact = null;
+            this.deleteLinksConfirmed = false;
         },
 
         /**
@@ -395,17 +443,24 @@ document.addEventListener('alpine:init', () => {
         },
 
         async submitDelete() {
-            if (!this.yearToDelete || !this.deleteConfirmationMatches || this.isDeleting) return;
+            if (!this.yearToDelete || !this.canSubmitDelete) return;
 
             this.isDeleting = true;
             this.deleteError = null;
             try {
+                // Rupture explicite des liens (deux appels distincts, jamais fusionnés côté serveur), puis suppression.
+                if (this.isLiveMode && this.deleteNeedsLinksConfirmation) {
+                    await window.api.post(`/school-years/${this.yearToDelete.id}/unlink-dependencies`, {});
+                }
+
                 const result = await window.api.delete(`/school-years/${this.yearToDelete.id}`, {
                     confirmation: this.deleteConfirmation.trim()
                 });
 
                 this.yearToDelete = null;
                 this.deleteConfirmation = '';
+                this.deleteImpact = null;
+                this.deleteLinksConfirmed = false;
                 this.deleteResult = result;
                 window.softDeleteTrash.notifyChanged('school-years');
 
@@ -413,6 +468,9 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 this.deleteError = window.api.toMessage(
                     err, "La suppression a échoué. L'année scolaire n'a pas été modifiée.");
+                // Un paiement ou un lien est apparu entre-temps : on réaffiche l'analyse à jour.
+                this.deleteLinksConfirmed = false;
+                if (this.isLiveMode) await this.loadDeleteImpact();
             } finally {
                 this.isDeleting = false;
             }

@@ -1,5 +1,7 @@
+using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.SchoolYears.Deletion;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -71,7 +73,7 @@ public class DeleteSchoolYearCommandHandler(
             {
                 var summary = wentLiveAt is null
                     ? await purgeService.PurgeAsync(schoolId, year.Id, ct)
-                    : await ArchiveEmptyYearAsync(year, actorId, ct);
+                    : await ArchiveYearAsync(year, actorId, ct);
 
                 var fallback = year.IsActive ? await ActivateFallbackYearAsync(year, today, ct) : null;
 
@@ -95,14 +97,17 @@ public class DeleteSchoolYearCommandHandler(
     }
 
     /// <summary>
-    /// MODE RÉEL. L'année n'est retirée que si elle ne porte rien : sinon ses inscriptions et ses
-    /// paiements — contrepartie de reçus déjà remis — disparaîtraient avec elle (AGENTS.md règle #6).
+    /// MODE RÉEL. La suppression ne rompt jamais rien (spec 2026-10-17) : un paiement non annulé bloque (409
+    /// FINANCIAL_RECORDS_EXIST), tout autre lien encore présent donne un 409 DEPENDENCIES_EXIST qui les énumère — c'est
+    /// <c>POST /school-years/{id}/unlink-dependencies</c> qui les rompt, après confirmation. La configuration de l'année
+    /// (trimestres, affectations d'enseignants, jours de fermeture) la suit dans l'archivage, annoncée à l'écran.
     /// Retour <c>null</c> : il n'y a jamais de lignes effacées à rapporter sur ce chemin.
     /// </summary>
-    private async Task<SchoolDataResetSummary?> ArchiveEmptyYearAsync(
+    private async Task<SchoolDataResetSummary?> ArchiveYearAsync(
         SchoolYear year, Guid actorId, CancellationToken cancellationToken)
     {
-        await EnsureYearCarriesNoDataAsync(year, cancellationToken);
+        await EntityDeletionAnalyzer.EnsureDeletableAsync(
+            dbContext, SchoolYearDeletionPolicy.Policy, year.Id, cancellationToken);
 
         var tracked = await dbContext.SchoolYears.FirstAsync(y => y.Id == year.Id, cancellationToken);
 
@@ -112,82 +117,12 @@ public class DeleteSchoolYearCommandHandler(
         tracked.IsActive = false;
         tracked.SoftDelete(actorId.ToString());
 
-        // Les trimestres et les affectations d'enseignants sont la CONFIGURATION de cette année, pas
-        // des données saisies : ils la suivent dans l'archivage, sinon ils resteraient visibles en
-        // rattachement d'un exercice qui n'existe plus.
-        var terms = await dbContext.Terms
-            .Where(t => t.SchoolYearId == year.Id)
-            .ToListAsync(cancellationToken);
-
-        var assignments = await dbContext.TeacherAssignments
-            .Where(a => a.SchoolYearId == year.Id)
-            .ToListAsync(cancellationToken);
-
-        foreach (var term in terms)
-        {
-            term.SoftDelete(actorId.ToString());
-        }
-
-        foreach (var assignment in assignments)
-        {
-            assignment.SoftDelete(actorId.ToString());
-        }
+        await EntityDeletionAnalyzer.ArchiveIntrinsicAsync(
+            dbContext, SchoolYearDeletionPolicy.Policy, year.Id, actorId.ToString(), cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return null;
-    }
-
-    /// <summary>
-    /// « Vide » se juge sur les données MÉTIER de l'exercice, y compris celles déjà en suppression
-    /// logique : une inscription annulée reste la contrepartie d'un reçu émis. Les trimestres et les
-    /// affectations d'enseignants n'entrent PAS dans ce compte — ils sont créés avec l'année (les
-    /// trimestres le sont automatiquement) et n'ont jamais rien enregistré à eux seuls.
-    /// </summary>
-    private async Task EnsureYearCarriesNoDataAsync(SchoolYear year, CancellationToken cancellationToken)
-    {
-        var termIds = await dbContext.Terms
-            .IgnoreQueryFilters()
-            .Where(t => t.SchoolId == year.SchoolId && t.SchoolYearId == year.Id)
-            .Select(t => t.Id)
-            .ToListAsync(cancellationToken);
-
-        // Le compte inclut les lignes en suppression logique : IgnoreQueryFilters retire AUSSI le
-        // filtre de tenant, d'où le SchoolId réaffirmé à chaque fois (la policy RLS reste, elle, en
-        // vigueur — c'est la seconde barrière de la règle #2).
-        Task<int> CountAsync<T>(IQueryable<T> source, System.Linq.Expressions.Expression<Func<T, bool>> predicate)
-            where T : class, ITenantEntity =>
-            source.IgnoreQueryFilters()
-                .Where(e => e.SchoolId == year.SchoolId)
-                .Where(predicate)
-                .CountAsync(cancellationToken);
-
-        var counts = new (string Noun, string Plural, int Count)[]
-        {
-            ("inscription", "inscriptions", await CountAsync(dbContext.Enrollments, e => e.SchoolYearId == year.Id)),
-            ("note", "notes", await CountAsync(dbContext.Grades, g => termIds.Contains(g.TermId))),
-            ("appréciation de bulletin", "appréciations de bulletin",
-                await CountAsync(dbContext.ReportCardRemarks, r => termIds.Contains(r.TermId))),
-            ("fiche d'appel", "fiches d'appel", await CountAsync(dbContext.AttendanceSheets, s => s.SchoolYearId == year.Id)),
-            ("session d'examen", "sessions d'examens", await CountAsync(dbContext.ExamSessions, s => s.SchoolYearId == year.Id)),
-            ("certificat de mutation", "certificats de mutation",
-                await CountAsync(dbContext.StudentMutationCertificates, c => c.SchoolYearId == year.Id))
-        };
-
-        var carried = counts.Where(c => c.Count > 0).ToList();
-
-        if (carried.Count == 0)
-        {
-            return;
-        }
-
-        var detail = string.Join(", ", carried.Select(c => $"{c.Count} {(c.Count > 1 ? c.Plural : c.Noun)}"));
-
-        throw new BusinessRuleException(
-            $"L'année scolaire « {year.Label} » ne peut pas être supprimée : elle porte {detail}. "
-            + "Ces données font partie de la comptabilité de l'établissement et ne peuvent plus être effacées. "
-            + "Exportez l'année (bouton d'export) pour l'archiver hors de la plateforme ; elle reste consultable en lecture seule.",
-            "SCHOOL_YEAR_HAS_DATA");
     }
 
     /// <summary>

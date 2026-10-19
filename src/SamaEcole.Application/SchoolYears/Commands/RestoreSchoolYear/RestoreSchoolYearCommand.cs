@@ -9,7 +9,7 @@ namespace SamaEcole.Application.SchoolYears.Commands.RestoreSchoolYear;
 
 /// <summary>
 /// POST /api/v1/school-years/{id}/restore — restaure une année scolaire archivée (mode réel), avec les
-/// trimestres et les affectations d'enseignants qui l'ont suivie dans l'archivage.
+/// trimestres, les affectations d'enseignants et les jours de fermeture qui l'ont suivie dans l'archivage.
 /// </summary>
 public record RestoreSchoolYearCommand(Guid Id) : IRequest<RestoreSchoolYearResult>;
 
@@ -119,6 +119,13 @@ public class RestoreSchoolYearCommandHandler(
                     assignment.Restore();
                     assignments++;
                 }
+
+                // Jours de fermeture de l'année (configuration, archivés avec elle) : ils reviennent avec elle.
+                var closureRows = await dbContext.SchoolClosures.IgnoreQueryFilters()
+                    .Where(c => c.SchoolId == year.SchoolId && c.SchoolYearId == year.Id
+                                && c.IsDeleted && c.DeletedAt >= deletedAt)
+                    .ToListAsync(ct);
+                foreach (var closure in closureRows) closure.Restore();
             },
             cancellationToken);
 
