@@ -53,6 +53,7 @@ public class ApplicationDbContext(
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Term> Terms => Set<Term>();
     public DbSet<SchoolClosure> SchoolClosures => Set<SchoolClosure>();
+    public DbSet<RollBookEntry> RollBookEntries => Set<RollBookEntry>();
     public DbSet<Grade> Grades => Set<Grade>();
     public DbSet<Mention> Mentions => Set<Mention>();
     public DbSet<Teacher> Teachers => Set<Teacher>();
