@@ -51,7 +51,7 @@ public class SearchStudentsForCashierQueryHandler(IApplicationDbContext dbContex
         SearchStudentsForCashierQuery request, CancellationToken cancellationToken)
     {
         var search = request.Search.Trim().ToLower();
-        if (search.Length < 2) return [];
+        if (search.Length == 0) return [];
 
         var activeYearId = await dbContext.SchoolYears.AsNoTracking()
             .Where(y => y.IsActive)
