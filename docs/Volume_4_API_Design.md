@@ -615,7 +615,7 @@ Cycle de vie : `Pending` → `Sent` (accepté par l'agrégateur) → `Delivered`
 - La réclamation d'un lot pose un **bail** (`FOR UPDATE SKIP LOCKED` + `NextAttemptAt` repoussé) : deux instances de l'application ne peuvent pas envoyer deux fois le même SMS au parent.
 - Tout message est **historisé** avec son statut (`Pending`, `Sent`, `Delivered`, `Failed`, `InsufficientCredit`) et son coût.
 - `POST /sms/dues-reminders` **ne renvoie pas d'erreur** si certains SMS ne partent pas : il retourne `{ queuedCount, skippedCount, firstSkipReason }`. `queuedCount` compte les messages **acceptés en file**, jamais les messages remis — la remise est asynchrone et inconnue au retour de la requête.
-- La relance ne vise que les inscriptions `Confirmed` présentant un reliquat.
+- La relance ne vise que les inscriptions `Confirmed` ayant au moins une échéance en retard ; le SMS annonce le montant en retard, pas le reliquat annuel.
 - Le webhook DLR est **fermé par défaut** : sans `Sms__WebhookSecret`, toute signature est rejetée (401). Un accusé sans correspondance (rejeu, message inconnu) renvoie `200` — un statut d'échec ferait réémettre l'agrégateur en boucle.
 
 ---
