@@ -278,9 +278,11 @@ document.addEventListener('alpine:init', () => {
 
         // ---------------------------------------------------------------- Guichet rapide (pop-up)
 
-        /** Échéances de l'ENGAGEMENT INITIAL encore dues — les lignes proposées dans la pop-up. */
+        /** Échéances À RÉGLER MAINTENANT (engagement initial + mensualités échues) encore dues — les
+         *  lignes proposées dans la pop-up. `isDueNow` est servi par le serveur ; le repli sur
+         *  `isInitialScope` ne sert qu'à un payload antérieur. */
         quickPayRows() {
-            return (this.balance?.installments ?? []).filter((i) => i.isInitialScope && i.remainingDue > 0);
+            return (this.balance?.installments ?? []).filter((i) => (i.isDueNow ?? i.isInitialScope) && i.remainingDue > 0);
         },
 
         /** Total des lignes actuellement COCHÉES — pilote le « Total à encaisser » et le bouton. */
@@ -388,12 +390,12 @@ document.addEventListener('alpine:init', () => {
 
         /**
          * MONTANT ÉCHU à ce jour : l'engagement initial (frais d'inscription, uniforme… + le PREMIER
-         * mois de scolarité) non encore réglé — jamais les mensualités FUTURES, qui n'ont pas lieu
-         * d'être encaissées d'avance. C'est ce que le secrétariat programme à l'inscription et que le
-         * tuteur règle EN UNE FOIS en arrivant à la caisse, muni de sa fiche.
+         * mois de scolarité) PLUS les mensualités dont la date est atteinte, non encore réglés —
+         * jamais les mensualités FUTURES, qui n'ont pas lieu d'être encaissées d'avance. Un élève
+         * qui a réglé son inscription mais pas ses mois échus doit encore apparaître à la caisse.
          *
          * Le serveur le calcule (StudentBalanceDto.dueNowTotal) à partir des échéances marquées
-         * `isInitialScope` — source de vérité unique. Le repli ne sert qu'à un payload servi par un
+         * `isDueNow` — source de vérité unique. Le repli ne sert qu'à un payload servi par un
          * cache antérieur : il recompose la même somme depuis les mêmes échéances.
          *
          * PLUS de filtre « date d'échéance <= aujourd'hui » : une année qui démarre le mois prochain
@@ -404,7 +406,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.balance) return 0;
             if (typeof this.balance.dueNowTotal === 'number') return this.balance.dueNowTotal;
             return (this.balance.installments || [])
-                .filter((inst) => inst.isInitialScope && inst.remainingDue > 0)
+                .filter((inst) => (inst.isDueNow ?? inst.isInitialScope) && inst.remainingDue > 0)
                 .reduce((sum, inst) => sum + inst.remainingDue, 0);
         },
 
