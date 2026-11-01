@@ -102,7 +102,7 @@ test('rouvrir le guichet après [Annuler] repart sur toutes les cases cochées',
 
 test('searchStudents accepte un matricule d\'un seul caractère sans bloquer la recherche', async () => {
     const calls = [];
-    const ctx = loadScripts(['caisse.js'], {
+    const ctx = loadScripts(['payment-cancel.js', 'caisse.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },
