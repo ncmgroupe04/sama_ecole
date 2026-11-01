@@ -513,7 +513,7 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
             .Handle(new DeleteBuildingCommand(buildingId, rowVersion), default);
 
         (await act.Should().ThrowAsync<BusinessRuleException>())
-            .Which.Message.Should().Contain("salles rattachées");
+            .Which.Message.Should().Contain("rattaché à 1 salle");
 
         await using var owner = _db.NewOwnerContext();
         var row = await owner.Buildings.IgnoreQueryFilters().SingleAsync(b => b.Id == buildingId);
