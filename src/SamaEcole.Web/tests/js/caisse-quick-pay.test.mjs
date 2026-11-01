@@ -100,6 +100,32 @@ test('rouvrir le guichet après [Annuler] repart sur toutes les cases cochées',
     assert.equal(v.quickPay.amount, 69000);
 });
 
+test('searchStudents accepte un matricule d\'un seul caractère sans bloquer la recherche', async () => {
+    const calls = [];
+    const ctx = loadScripts(['caisse.js'], {
+        preload: {
+            auth: { role: 'Directeur' },
+            pdfPreview: { state: () => ({}) },
+            networkGuard: { newIdempotencyKey: () => 'key' },
+            formatFCFA: (n) => String(n),
+            api: {
+                get: async (url) => {
+                    calls.push(url);
+                    return [{ id: 'student-1', matricule: 'A', fullName: 'Alpha' }];
+                },
+                toMessage: () => 'Erreur'
+            }
+        }
+    });
+    const view = ctx.initAlpine().get('caisseView')();
+    view.studentSearch = 'A';
+    await view.searchStudents();
+
+    assert.deepEqual(calls, ['/finance/students/search?q=A']);
+    assert.equal(view.students.length, 1);
+    assert.equal(view.students[0].matricule, 'A');
+});
+
 test('quickPayNote extrait « Mois 1 » d\'une désignation de mensualité, null sinon', () => {
     const v = caisseView();
     assert.equal(v.quickPayNote('Mensualité (Mois 1)'), 'Mois 1');

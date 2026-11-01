@@ -232,7 +232,7 @@ document.addEventListener('alpine:init', () => {
             this.clearSelection();
             const q = this.studentSearch.trim();
 
-            if (q.length < 2) {
+            if (q.length === 0) {
                 this.students = [];
                 this.studentsLoaded = false;
                 this.studentSearchError = null;
