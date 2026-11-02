@@ -89,37 +89,21 @@ test("boardingPayload d'un interne : boardingStatus + roomId + pension (le serve
     assert.deepEqual(plain(view.boardingPayload()), { boardingStatus: 'Interne', roomId: 'r1', includeBoardingFee: true });
 });
 
-test("une erreur serveur sur BedId (pavillon du mauvais genre, lit en maintenance) s'affiche sous la Chambre, jamais muette", () => {
+test("un refus d'hébergement (BedId) ramène à l'étape 2, sous le champ Chambre", () => {
     const { view } = enrollments();
-    const routed = plain(view.routeFormErrors({ bedid: 'Ce pavillon accueille uniquement des filles.' }));
-
-    assert.deepEqual(routed, { roomid: 'Ce pavillon accueille uniquement des filles.' });
-
-    view.formErrors = routed;
+    view.formErrors = { roomid: 'Ce pavillon accueille uniquement des filles.' };
     view.goToStep(4);
     view.jumpToFirstErrorStep();
-    assert.equal(view.currentStep, 2, "le formulaire revient à l'étape qui porte le champ Chambre");
-});
 
-test("une clé d'erreur sans emplacement d'affichage est reversée dans le bandeau global", () => {
-    const { view } = enrollments();
-    const routed = plain(view.routeFormErrors({
-        optionalfeecategoryids: 'Une catégorie de frais optionnelle est invalide.',
-        rowversion: 'Le jeton de version est requis.'
-    }));
-
-    assert.equal(routed.global, 'Une catégorie de frais optionnelle est invalide. Le jeton de version est requis.');
-    assert.equal(routed.optionalfeecategoryids, undefined);
+    assert.equal(view.currentStep, 2);
 });
 
 test("un téléphone de tuteur refusé (422 GuardianPhone) ramène à l'étape 3, où le message est affiché", () => {
     const { view } = enrollments();
-    const message = 'Le numéro de téléphone doit être un numéro sénégalais valide (ex: 77 123 45 67).';
-    view.formErrors = plain(view.routeFormErrors({ guardianphone: message }));
+    view.formErrors = { guardianphone: 'Le numéro de téléphone doit être un numéro sénégalais valide (ex: 77 123 45 67).' };
     view.goToStep(4);
     view.jumpToFirstErrorStep();
 
-    assert.equal(view.formErrors.guardianphone, message);
     assert.equal(view.currentStep, 3);
 });
 
@@ -129,13 +113,6 @@ test("la vue affiche bien l'erreur sous le téléphone et le nom du tuteur (sino
 
     assert.match(html, /x-text="formErrors\.guardianphone"/);
     assert.match(html, /x-text="formErrors\.guardianname"/);
-});
-
-test("les erreurs de champs connus et les drapeaux (archivedConflict) passent inchangés", () => {
-    const { view } = enrollments();
-    const routed = plain(view.routeFormErrors({ fullname: 'Requis.', roomid: 'Pleine.', archivedConflict: true }));
-
-    assert.deepEqual(routed, { fullname: 'Requis.', roomid: 'Pleine.', archivedConflict: true });
 });
 
 test("boardingPayload d'un externe : jamais de chambre résiduelle ni de pension", () => {

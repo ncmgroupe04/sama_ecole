@@ -208,7 +208,7 @@ window.api = {
      * Les clés sont mises en minuscules pour correspondre aux noms attendus par les vues
      * (createErrors.fullname, createErrors.classroomid…).
      */
-    toFieldErrors(error, fallbackMessage) {
+    toFieldErrors(error, fallbackMessage, aliases) {
         // Déjà porté par la modale universelle « Accès refusé » (access-denied.js) : aucun message
         // local, sinon il s'affiche en double derrière la modale.
         if (error && error.handledGlobally) return {};
@@ -226,14 +226,57 @@ window.api = {
             const errors = {};
 
             Object.entries(details).forEach(([field, messages]) => {
-                errors[field.toLowerCase()] = Array.isArray(messages) ? messages[0] : String(messages);
+                const text = Array.isArray(messages) ? messages[0] : String(messages);
+                const key = field.toLowerCase();
+                const target = (aliases && aliases[key]) || key;
+                errors[target] = errors[target] ? `${errors[target]} ${text}` : text;
             });
 
-            if (Object.keys(errors).length > 0) return errors;
+            if (Object.keys(errors).length > 0) return this.surfaceUnmappedErrors(errors);
         }
 
         // Pas de détail par champ : conflit (409), règle métier, panne réseau… → message global.
         return { global: (error && error.message) || fallbackMessage };
+    },
+
+    /**
+     * Clés d'erreur qu'une page SAIT afficher : toutes celles que ses éléments `x-text` lisent
+     * (`createErrors.fullname`, `errors['email']`…). Convention commune à tous les écrans : chaque champ a son
+     * `<p x-text="xxxErrors.champ">`, et le bandeau du haut lit `.global`. `null` quand la page n'affiche aucune
+     * erreur par champ (pas de DOM, ou écran à bandeau unique) — il n'y a alors rien à comparer.
+     */
+    displayedErrorKeys() {
+        if (typeof document === 'undefined' || !document.querySelectorAll) return null;
+
+        const keys = new Set();
+        const pattern = /\b\w*[Ee]rrors?\s*(?:\.\s*(\w+)|\[\s*['"]([^'"]+)['"]\s*\])/g;
+        document.querySelectorAll('[x-text]').forEach((el) => {
+            for (const m of (el.getAttribute('x-text') || '').matchAll(pattern)) {
+                keys.add((m[1] || m[2]).toLowerCase());
+            }
+        });
+        return keys.size > 0 ? keys : null;
+    },
+
+    /**
+     * Aucune erreur serveur ne doit rester muette. Un 422 peut porter une clé (`GuardianPhone`, `BedId`…) que le
+     * formulaire n'affiche nulle part : l'erreur était reçue puis jetée, et l'utilisateur voyait « Enregistrer »
+     * sans aucun effet. Le message d'une telle clé est donc AJOUTÉ au bandeau `global` (la clé d'origine est
+     * conservée : le code d'un écran peut la lire). Sans effet quand tout est affichable. Un `console.warn`
+     * nomme le champ manquant pour que le développeur ajoute son emplacement à la vue.
+     */
+    surfaceUnmappedErrors(errors) {
+        const shown = this.displayedErrorKeys();
+        if (!shown) return errors;
+
+        const orphans = Object.entries(errors)
+            .filter(([key, value]) => key !== 'global' && typeof value === 'string' && !shown.has(key));
+        if (orphans.length === 0) return errors;
+
+        console.warn('[api] Erreur serveur sans emplacement d\'affichage dans cette page :',
+            orphans.map(([key]) => key).join(', '));
+        errors.global = [errors.global, ...orphans.map(([, value]) => value)].filter(Boolean).join(' ');
+        return errors;
     },
 
     /**
