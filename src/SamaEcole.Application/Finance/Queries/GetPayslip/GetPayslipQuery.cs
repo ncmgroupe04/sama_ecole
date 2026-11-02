@@ -28,7 +28,11 @@ public record PayslipDto(
     string? SchoolAddress,
     string? SchoolCity,
     string? SchoolNinea,
-    string? SchoolLogoUrl);
+    string? SchoolLogoUrl,
+    DateTimeOffset? PaidAt = null,
+    string? PaidWith = null,
+    DateTimeOffset? CancelledAt = null,
+    string? CancellationReason = null);
 
 public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetPayslipQuery, PayslipDto>
@@ -45,7 +49,7 @@ public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
             ?? throw new KeyNotFoundException($"Fiche de paie introuvable : {request.FichePaieId}");
 
         // Teacher/User sont chargés séparément (jointure conditionnelle peu naturelle en LINQ-to-SQL) :
-        // un contrat porte l'un OU l'autre, jamais les deux (CreateEmployeeContractCommandValidator).
+        // un contrat porte l'un des trois (enseignant, utilisateur, personne sans compte), jamais plusieurs.
         string employeeFullName;
         string employeeRole;
         if (row.Contract.TeacherId.HasValue)
@@ -55,12 +59,17 @@ public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
             employeeFullName = teacher.FullName;
             employeeRole = "Enseignant";
         }
-        else
+        else if (row.Contract.UserId.HasValue)
         {
             var user = await dbContext.Users.AsNoTracking()
-                .FirstAsync(u => u.Id == row.Contract.UserId!.Value, cancellationToken);
+                .FirstAsync(u => u.Id == row.Contract.UserId.Value, cancellationToken);
             employeeFullName = user.FullName;
             employeeRole = user.Role.ToString();
+        }
+        else
+        {
+            employeeFullName = row.Contract.ExternalFullName ?? "—";
+            employeeRole = string.IsNullOrWhiteSpace(row.Contract.ExternalJobTitle) ? "Personnel" : row.Contract.ExternalJobTitle!;
         }
 
         var f2 = row.FichePaie;
@@ -86,6 +95,10 @@ public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
             row.School.Address,
             ReceiptCity.FromAddress(row.School.Address),
             row.School.Ninea,
-            row.School.LogoUrl);
+            row.School.LogoUrl,
+            f2.PaidAt,
+            f2.PaidWith?.ToString(),
+            f2.CancelledAt,
+            f2.CancellationReason);
     }
 }

@@ -68,6 +68,10 @@ public class UpdateSchoolSettingsCommandHandler(
         {
             settings.AllowFinanceToCancelPayments = allowCancel;
         }
+        if (request.AllowFinanceToCancelPayslips is { } allowCancelPayslips)
+        {
+            settings.AllowFinanceToCancelPayslips = allowCancelPayslips;
+        }
         settings.DirectorSignatureUrl = string.IsNullOrWhiteSpace(request.DirectorSignatureUrl) ? null : request.DirectorSignatureUrl.Trim();
         settings.SecretarySignatureUrl = string.IsNullOrWhiteSpace(request.SecretarySignatureUrl) ? null : request.SecretarySignatureUrl.Trim();
         settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();

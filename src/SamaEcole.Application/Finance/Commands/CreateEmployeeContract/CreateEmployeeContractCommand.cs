@@ -10,9 +10,10 @@ namespace SamaEcole.Application.Finance.Commands.CreateEmployeeContract;
 
 /// <summary>
 /// Contrat de travail — prérequis à la génération d'une fiche de paie (<c>GenerateFichePaieCommand</c>).
-/// Lié à EXACTEMENT une personne : un enseignant (<see cref="TeacherId"/>) OU un membre du personnel
+/// Lié à EXACTEMENT une personne : un enseignant (<see cref="TeacherId"/>), OU un membre du personnel
 /// non-enseignant compte utilisateur de la plateforme (<see cref="UserId"/>, ex. Secrétariat,
-/// Surveillant, Directeur), jamais les deux ni aucun.
+/// Surveillant, Directeur), OU un membre du personnel SANS compte (<see cref="ExternalFullName"/> : gardien,
+/// cuisinier, agent d'entretien… Volume 1 §14.7), jamais deux à la fois ni aucun.
 /// </summary>
 public record CreateEmployeeContractCommand(
     Guid? TeacherId,
@@ -22,15 +23,21 @@ public record CreateEmployeeContractCommand(
     decimal HourlyRate,
     decimal TransportAllowance,
     PayoutMethod PayoutMethod = PayoutMethod.Cash,
-    string? PayoutAccountReference = null) : IRequest<Guid>;
+    string? PayoutAccountReference = null,
+    string? ExternalFullName = null,
+    string? ExternalJobTitle = null,
+    string? ExternalPhone = null) : IRequest<Guid>;
 
 public class CreateEmployeeContractCommandValidator : AbstractValidator<CreateEmployeeContractCommand>
 {
     public CreateEmployeeContractCommandValidator()
     {
         RuleFor(v => v)
-            .Must(v => v.TeacherId.HasValue ^ v.UserId.HasValue)
-            .WithMessage("Le contrat doit être lié à un enseignant OU un utilisateur, jamais les deux ni aucun.");
+            .Must(v => new[] { v.TeacherId.HasValue, v.UserId.HasValue, !string.IsNullOrWhiteSpace(v.ExternalFullName) }.Count(x => x) == 1)
+            .WithMessage("Le contrat doit être lié à un enseignant, à un utilisateur OU à une personne sans compte (nom saisi), jamais plusieurs ni aucun.");
+        RuleFor(v => v.ExternalFullName).MaximumLength(150);
+        RuleFor(v => v.ExternalJobTitle).MaximumLength(100);
+        RuleFor(v => v.ExternalPhone).MaximumLength(30);
 
         RuleFor(v => v.Type).IsInEnum();
         RuleFor(v => v.BaseSalary).GreaterThanOrEqualTo(0);
@@ -68,12 +75,27 @@ public class CreateEmployeeContractCommandHandler(IApplicationDbContext context,
                 throw new NotFoundException(nameof(Teacher), request.TeacherId.Value);
             }
         }
-        else
+        else if (request.UserId.HasValue)
         {
             var userExists = await context.Users.AnyAsync(u => u.Id == request.UserId!.Value, cancellationToken);
             if (!userExists)
             {
                 throw new NotFoundException(nameof(User), request.UserId!.Value);
+            }
+        }
+
+        else
+        {
+            // Personnel sans compte : pas de clé d'unicité naturelle (contrairement à TeacherId/UserId), donc un
+            // garde-fou sur le nom, sans quoi un double clic ou un doublon de saisie créerait deux contrats actifs.
+            var name = request.ExternalFullName!.Trim();
+            var duplicate = await context.EmployeeContracts.AnyAsync(
+                c => c.TeacherId == null && c.UserId == null && c.EndDate == null
+                     && c.ExternalFullName != null && c.ExternalFullName.ToLower() == name.ToLower(),
+                cancellationToken);
+            if (duplicate)
+            {
+                throw new BusinessRuleException($"Un contrat actif existe déjà pour « {name} ».");
             }
         }
 
@@ -87,7 +109,10 @@ public class CreateEmployeeContractCommandHandler(IApplicationDbContext context,
             HourlyRate = request.HourlyRate,
             TransportAllowance = request.TransportAllowance,
             PayoutMethod = request.PayoutMethod,
-            PayoutAccountReference = string.IsNullOrWhiteSpace(request.PayoutAccountReference) ? null : request.PayoutAccountReference.Trim()
+            PayoutAccountReference = string.IsNullOrWhiteSpace(request.PayoutAccountReference) ? null : request.PayoutAccountReference.Trim(),
+            ExternalFullName = Clean(request.ExternalFullName),
+            ExternalJobTitle = Clean(request.ExternalJobTitle),
+            ExternalPhone = Clean(request.ExternalPhone)
         };
 
         context.EmployeeContracts.Add(contract);
@@ -95,4 +120,6 @@ public class CreateEmployeeContractCommandHandler(IApplicationDbContext context,
 
         return contract.Id;
     }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

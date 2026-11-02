@@ -59,7 +59,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         string EvaluationPeriodType = "Trimester",
         int CustomPeriodCount = 3,
         IReadOnlyList<string>? WorkingDays = null,
-        bool? AllowFinanceToCancelPayments = null);
+        bool? AllowFinanceToCancelPayments = null,
+        bool? AllowFinanceToCancelPayslips = null);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -121,7 +122,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.EvaluationPeriodType,
                 request.CustomPeriodCount,
                 request.WorkingDays,
-                request.AllowFinanceToCancelPayments),
+                request.AllowFinanceToCancelPayments,
+                request.AllowFinanceToCancelPayslips),
             cancellationToken);
 
         return Ok(result);

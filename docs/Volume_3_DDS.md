@@ -667,7 +667,7 @@ Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou ty
 - `inventory_categories (1) — (N) inventory_items`, `inventory_items (1) — (N) stock_movements`
 - `inventory_items (1) — (N) item_assignments`, chaque fiche pointant vers **un seul** bénéficiaire : `Students`, `Teachers` **ou** `Users` (contrainte `CHECK`, §5.9)
 - `Rooms (1) — (N) inventory_items` (emplacement d'entreposage, facultatif — un lot peut n'avoir qu'un libellé libre)
-- `Teachers (1) — (N) EmployeeContracts` (historique de contrats, jamais supprimé — §4.5), `EmployeeContracts (1) — (N) FichePaies`, `EmployeeContracts (1) — (N) TeacherHourRecords`
+- `Teachers (1) — (N) EmployeeContracts` (historique de contrats, jamais supprimé — §4.5 ; un contrat porte `TeacherId`, `UserId` **ou** `ExternalFullName/ExternalJobTitle/ExternalPhone` pour le personnel sans compte, migration `AddPayslipCancellationPaymentAndExternalStaff`), `EmployeeContracts (1) — (N) FichePaies` (colonnes d'annulation `CancelledAt/CancelledByUserId/CancellationReason/ReplacedByFichePaieId` et de règlement `PaidAt/PaidByUserId/PaidWith/DisbursementId` — `DisbursementId` sans clé étrangère ; unicité `(SchoolId, EmployeeContractId, Month, Year)` **filtrée sur `CancelledAt IS NULL`**), `EmployeeContracts (1) — (N) TeacherHourRecords`
 - `Teachers (1) — (N) ScheduleSlots`, `Teachers (1) — (N) TeacherAttendances`
 - `exam_sessions (1) — (N) exam_dossiers`, `exam_dossiers (1) — (0..1) exam_results` (§5.10)
 - `Students (1) — (N) exam_dossiers` (un élève accumule un dossier par session au fil des années)

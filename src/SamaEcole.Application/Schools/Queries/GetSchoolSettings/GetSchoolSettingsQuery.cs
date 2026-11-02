@@ -72,5 +72,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         // ProfileEtablissement = NULL — elle ne passe donc jamais par CETTE branche.
         ProfileEtablissement.General.ToString(),
         ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.All),
-        AllowFinanceToCancelPayments: SchoolSettingsDefaults.AllowFinanceToCancelPayments);
+        AllowFinanceToCancelPayments: SchoolSettingsDefaults.AllowFinanceToCancelPayments,
+        AllowFinanceToCancelPayslips: SchoolSettingsDefaults.AllowFinanceToCancelPayslips);
 }

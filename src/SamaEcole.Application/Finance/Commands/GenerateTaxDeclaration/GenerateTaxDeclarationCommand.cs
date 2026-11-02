@@ -36,7 +36,7 @@ public class GenerateTaxDeclarationCommandHandler(
 
         // 2. Fetch all FichePaies for the period
         var fiches = await context.FichePaies
-            .Where(f => f.Month == request.Month && f.Year == request.Year)
+            .Where(f => f.Month == request.Month && f.Year == request.Year && f.CancelledAt == null)
             .ToListAsync(cancellationToken);
 
         // 3. TVA collectée : somme de VatAmount des encaissements du mois (Payment.VatRate/VatAmount,
