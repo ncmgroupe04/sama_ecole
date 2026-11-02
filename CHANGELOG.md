@@ -41,7 +41,7 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Interne
 
-- Console Super Admin, « Offrir un accès » : la durée se choisit désormais en **mois ou en jours** (`durationDays`, 1 à 1825, en plus de `durationMonths`, exactement l'une des deux). L'échéance reste comptée depuis aujourd'hui et remplace l'échéance actuelle de l'abonnement ; l'écran le rappelle. Aucune migration.
+- Console Super Admin, « Offrir un accès » : la durée se choisit désormais en **mois ou en jours** (`durationDays`, 1 à 1825, en plus de `durationMonths`, exactement l'une des deux). L'échéance reste comptée depuis aujourd'hui et remplace l'échéance actuelle de l'abonnement ; l'écran le rappelle. Aucune migration. Corrige au passage la validation de la durée, qui ne s'exécutait jamais (commande déclarée en `IRequest` simple) : une durée hors limites (ex. 100 mois) était acceptée.
 - Migration `AddAllowFinanceToCancelPaymentsToSchoolSettings` : colonne `school_settings.AllowFinanceToCancelPayments`, booléen non nul, défaut vrai (additive ; les écoles existantes gardent le droit actuel de la Finance).
 
 - Migration `AddRollBookEntries` : table `roll_book_entries` (RLS, sans `DELETE` pour le rôle applicatif, une seule
