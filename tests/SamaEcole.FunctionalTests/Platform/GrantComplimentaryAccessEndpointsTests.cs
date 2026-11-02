@@ -92,6 +92,75 @@ public class GrantComplimentaryAccessEndpointsTests(AuthApiFactory factory) : IC
     }
 
     [Fact]
+    public async Task SuperAdmin_Should_Grant_A_Complimentary_Access_For_A_Number_Of_Days()
+    {
+        var approval = await CreateSchoolWithSubscriptionAsync("École Cadeau Jours", "cadeau-jours@platform.sn");
+        var superAdmin = await LoginAsSuperAdminAsync();
+
+        var before = DateOnly.FromDateTime(DateTime.UtcNow);
+        var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/v1/admin/platform/schools/{approval.SchoolId}/complimentary-access")
+        {
+            Content = JsonContent.Create(new { plan = "Standard", durationDays = 10 })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", superAdmin.AccessToken);
+
+        var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        var after = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, "body was: {0}", body);
+
+        var subscription = await factory.GetSubscriptionAsync(approval.SchoolId);
+        subscription!.Status.Should().Be(SubscriptionStatus.Active);
+        subscription.ExpiresAt.Should().NotBeNull();
+        // Encadré par avant/après l'appel : le test ne casse pas s'il traverse minuit UTC.
+        subscription.ExpiresAt!.Value.Should().BeOnOrAfter(before.AddDays(10)).And.BeOnOrBefore(after.AddDays(10));
+    }
+
+    [Theory]
+    [InlineData("durationMonths", 100)]
+    [InlineData("durationMonths", 0)]
+    [InlineData("durationDays", 2000)]
+    [InlineData("durationDays", 0)]
+    public async Task A_Duration_Out_Of_Range_Must_Be_Rejected_With_A_Validation_Error(string field, int value)
+    {
+        // Régression : la commande était déclarée en IRequest simple, donc ValidationBehavior ne s'exécutait pas
+        // et ces durées étaient acceptées (le validateur existait mais n'était jamais appelé).
+        var approval = await CreateSchoolWithSubscriptionAsync($"École Cadeau {field}{value}", $"cadeau-{field}-{value}@platform.sn".ToLowerInvariant());
+        var superAdmin = await LoginAsSuperAdminAsync();
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/v1/admin/platform/schools/{approval.SchoolId}/complimentary-access")
+        {
+            Content = JsonContent.Create(new Dictionary<string, object> { ["plan"] = "Standard", [field] = value })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", superAdmin.AccessToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Giving_Both_Months_And_Days_Must_Be_Rejected_With_A_Validation_Error()
+    {
+        var approval = await CreateSchoolWithSubscriptionAsync("École Cadeau Double", "cadeau-double@platform.sn");
+        var superAdmin = await LoginAsSuperAdminAsync();
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/v1/admin/platform/schools/{approval.SchoolId}/complimentary-access")
+        {
+            Content = JsonContent.Create(new { plan = "Standard", durationMonths = 1, durationDays = 10 })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", superAdmin.AccessToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
     public async Task A_Directeur_Must_Not_Be_Allowed_To_Grant_Complimentary_Access()
     {
         var approval = await CreateSchoolWithSubscriptionAsync("École Cadeau Interdite", "interdit@platform.sn");

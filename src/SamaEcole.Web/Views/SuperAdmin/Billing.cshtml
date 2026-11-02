@@ -246,9 +246,18 @@
  </select>
  </div>
  <div>
- <label class="form-label-inverse">Durée (mois)</label>
- <input type="number" min="1" max="60" x-model.number="grantAccessForm.durationMonths"
+ <label class="form-label-inverse">Durée</label>
+ <div class="flex gap-2">
+ <input type="number" min="1" :max="grantAccessForm.unit === 'days' ? 1825 : 60" x-model.number="grantAccessForm.amount"
+ aria-label="Durée de l'accès offert"
  class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+ <select x-model="grantAccessForm.unit" aria-label="Unité de la durée"
+ class="w-32 shrink-0 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold">
+ <option value="months" class="font-semibold">Mois</option>
+ <option value="days" class="font-semibold">Jours</option>
+ </select>
+ </div>
+ <p class="mt-1 text-xs text-zinc-500">Comptée à partir d'aujourd'hui : elle remplace la date de fin actuelle, elle ne s'y ajoute pas.</p>
  </div>
  </div>
 

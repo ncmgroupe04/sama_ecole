@@ -1055,7 +1055,9 @@ paths:
         Aucun paiement : AGENTS.md règle #11 ne s'applique pas ici, ce n'est pas une confirmation
         d'encaissement. Écrit directement l'abonnement via la fonction SECURITY DEFINER
         `grant_complimentary_subscription` (le Super Admin n'a pas de SchoolId propre pour une écriture
-        EF normale sur une table RLS). `durationMonths` entre 1 et 60.
+        EF normale sur une table RLS). Durée en mois (`durationMonths`, 1 à 60) OU en jours
+        (`durationDays`, 1 à 1825), exactement l'une des deux. L'échéance est comptée depuis aujourd'hui :
+        elle remplace l'échéance actuelle de l'abonnement, elle ne s'y ajoute pas.
       parameters:
         - name: schoolId
           in: path
@@ -8624,10 +8626,12 @@ components:
 
     GrantComplimentaryAccessRequest:
       type: object
-      required: [plan, durationMonths]
+      required: [plan]
+      description: Exactement l'une de `durationMonths` / `durationDays` doit être fournie.
       properties:
         plan: { type: string, enum: [Primaire, Standard, Premium] }
         durationMonths: { type: integer, minimum: 1, maximum: 60 }
+        durationDays: { type: integer, minimum: 1, maximum: 1825 }
 
     TopUpSmsCreditsRequest:
       type: object
