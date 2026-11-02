@@ -26,6 +26,8 @@ public static class StudentDependencyCatalog
         DeletionDependencies.Enrollments(id => e => e.StudentId == id),
         DeletionDependencies.Owned<BoardingEnrollment>("BoardingEnrollment", "séjour d'internat", "séjours d'internat", "Libérer le lit et archiver le séjour",
             db => db.BoardingEnrollments, id => e => e.StudentId == id),
+        DeletionDependencies.Owned<BoardingAttendance>("BoardingAttendance", "pointage d'internat", "pointages d'internat", "Archiver ces pointages",
+            db => db.BoardingAttendances, id => e => e.StudentId == id),
         DeletionDependencies.Owned<StudentSubjectEnrollment>("SubjectEnrollment", "matière suivie", "matières suivies", "Retirer l'élève de ces matières",
             db => db.StudentSubjectEnrollments, id => e => e.StudentId == id),
         DeletionDependencies.Owned<StudentSubjectExemption>("SubjectExemption", "dispense de matière", "dispenses de matière", "Retirer ces dispenses",
