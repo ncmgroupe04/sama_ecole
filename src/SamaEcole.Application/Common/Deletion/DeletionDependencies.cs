@@ -76,17 +76,9 @@ public static class DeletionDependencies
             var enrollments = await db.Enrollments.Where(forOwner(ownerId)).ToListAsync(ct);
             var ids = enrollments.Select(e => e.Id).ToList();
 
-            await ArchiveAsync(db.EnrollmentFeeLines.Where(l => ids.Contains(l.EnrollmentId)), actor, ct);
-            await ArchiveAsync(db.FinancialCommitments.Where(c => ids.Contains(c.EnrollmentId)), actor, ct);
-            await ArchiveAsync(db.DebtorReminderBatchItems.Where(i => ids.Contains(i.EnrollmentId)), actor, ct);
-
-            var plans = await db.FeeInstallmentPlans.Where(p => ids.Contains(p.EnrollmentId)).ToListAsync(ct);
-            var planIds = plans.Select(p => p.Id).ToList();
-            await ArchiveAsync(db.FeeInstallments.Where(i => planIds.Contains(i.FeeInstallmentPlanId)), actor, ct);
-            foreach (var plan in plans)
-            {
-                plan.SoftDelete(actor);
-            }
+            // Frais, échéanciers, engagements, relances ET séjour d'internat (lit libéré) : une seule définition de « tout ce
+            // qui est rattaché à une inscription », partagée avec l'annulation d'une inscription.
+            await SamaEcole.Application.Enrollments.EnrollmentLinkRelease.ArchiveAsync(db, ids, actor, ct);
 
             foreach (var enrollment in enrollments)
             {

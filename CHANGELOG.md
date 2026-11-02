@@ -7,6 +7,7 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Annuler une inscription libère maintenant tout ce qui y était rattaché.** Le lit d'internat de l'élève est libéré (il restait « occupé » par une inscription annulée), et son séjour, ses sorties, ses lignes de frais, ses échéanciers et ses relances sont archivés : comme s'il n'avait jamais été inscrit. L'inscription reste visible au statut « Annulée » (numéro de reçu sans trou). Un abandon ou un transfert libère aussi le lit, en gardant l'historique. Vaut pour tous les profils d'école. Dans l'onglet Sorties de l'internat, « Enregistrer le retour » est maintenant un vrai bouton.
 - **Caisse : les mensualités échues sont maintenant signalées.** Une fois l'inscription et le 1er mois réglés, la recherche
   affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,
   fenêtre « Encaisser les frais dus », bouton « Régler les échéances dues ») inclut désormais toute mensualité dont la date
