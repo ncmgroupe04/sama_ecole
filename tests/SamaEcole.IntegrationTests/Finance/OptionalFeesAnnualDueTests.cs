@@ -189,19 +189,37 @@ public class OptionalFeesAnnualDueTests : IAsyncLifetime
     public async Task The_Cashier_Search_Quotes_The_Filtered_Due_And_The_Filtered_Amount_Due_Now()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var handler = new SearchStudentsForCashierQueryHandler(db);
+        var handler = new SearchStudentsForCashierQueryHandler(db, new FixedTime(Now));
 
         var results = await handler.Handle(new SearchStudentsForCashierQuery("elev"), CancellationToken.None);
+
+        // Le 15/01/2027, l'année ayant démarré le 01/10/2026, les mensualités des mois 1 à 4 (échéances
+        // des 01/10, 01/11, 01/12 et 01/01) sont atteintes : elles sont à régler maintenant, pas
+        // seulement le 1er mois.
+        const int MonthsDueOnTheSearchDate = 4;
 
         var modou = results.Single(r => r.FullName == "Modou Fall");
         modou.TotalDue.Should().Be(ModouTotal);
         modou.RemainingBalance.Should().Be(ModouTotal);
-        // Engagement initial = frais ponctuels + 1er mois : sans uniforme ni tenue pour Modou.
-        modou.DueNowTotal.Should().Be(Inscription + Mensualite);
+        // Sans uniforme ni tenue pour Modou.
+        modou.DueNowTotal.Should().Be(Inscription + Mensualite * MonthsDueOnTheSearchDate);
 
         var awa = results.Single(r => r.FullName == "Awa Ndiaye");
         awa.TotalDue.Should().Be(AwaTotal);
-        awa.DueNowTotal.Should().Be(Inscription + Uniforme + TenueSport + Mensualite);
+        awa.DueNowTotal.Should().Be(Inscription + Uniforme + TenueSport + Mensualite * MonthsDueOnTheSearchDate);
+    }
+
+    [Fact]
+    public async Task The_Cashier_Search_Quotes_Only_The_Initial_Commitment_Before_The_School_Year_Starts()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+        var beforeStart = new DateTimeOffset(SchoolYearStart.AddDays(-20).ToDateTime(new TimeOnly(10, 0)), TimeSpan.Zero);
+        var handler = new SearchStudentsForCashierQueryHandler(db, new FixedTime(beforeStart));
+
+        var results = await handler.Handle(new SearchStudentsForCashierQuery("elev"), CancellationToken.None);
+
+        // Aucune échéance n'est encore atteinte : seul l'engagement initial (inscription + 1er mois) est dû.
+        results.Single(r => r.FullName == "Modou Fall").DueNowTotal.Should().Be(Inscription + Mensualite);
     }
 
     // ------------------------------------------------------------------ Tableau de bord

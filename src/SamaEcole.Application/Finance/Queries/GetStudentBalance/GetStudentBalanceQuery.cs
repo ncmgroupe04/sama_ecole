@@ -33,10 +33,10 @@ public record StudentBalanceDto(
     IReadOnlyList<StudentBalancePaymentDto> PaymentsHistory,
 
     /// <summary>
-    /// Somme des <see cref="InstallmentDto.RemainingDue"/> des échéances de l'ENGAGEMENT INITIAL
-    /// (<see cref="InstallmentDto.IsInitialScope"/>) : ce que le tuteur doit régler EN UNE FOIS à la
-    /// caisse, muni de la fiche du secrétariat — frais ponctuels + premier mois de scolarité, jamais
-    /// le cumul annuel. Montant proposé par défaut au guichet rapide (pop-up d'encaissement).
+    /// Somme des <see cref="InstallmentDto.RemainingDue"/> des échéances À RÉGLER MAINTENANT
+    /// (<see cref="InstallmentDto.IsDueNow"/>) : l'engagement initial (frais ponctuels + premier mois
+    /// de scolarité) ET les mensualités dont la date est atteinte, jamais les mois à venir ni le
+    /// cumul annuel. Montant proposé par défaut au guichet rapide (pop-up d'encaissement).
     /// </summary>
     decimal DueNowTotal);
 
@@ -52,6 +52,10 @@ public record InstallmentDto(
     /// <summary>Voir <see cref="InstallmentScheduleCalculator.CalculatedInstallment.IsInitialScope"/> :
     /// échéance de l'engagement initial (frais ponctuel entier, ou premier mois d'un frais récurrent).</summary>
     bool IsInitialScope,
+
+    /// <summary>Voir <see cref="InstallmentScheduleCalculator.CalculatedInstallment.IsDueNow"/> :
+    /// échéance à encaisser maintenant (engagement initial OU date d'échéance atteinte).</summary>
+    bool IsDueNow,
 
     /// <summary>Catégorie de frais d'origine — sert à ventiler le reçu de caisse quand plusieurs
     /// échéances sont réglées d'un coup. <c>null</c> pour un échéancier personnalisé.</summary>
@@ -133,11 +137,12 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
                 new DateTimeOffset(c.DueDate.ToDateTime(TimeOnly.MinValue), now.Offset),
                 c.Status.ToString(),
                 c.IsInitialScope,
+                c.IsDueNow,
                 c.FeeCategoryId))
             .ToList();
 
         var dueNowTotal = installments
-            .Where(i => i.IsInitialScope)
+            .Where(i => i.IsDueNow)
             .Sum(i => i.RemainingDue);
 
         return new StudentBalanceDto(

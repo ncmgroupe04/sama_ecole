@@ -49,7 +49,17 @@ public static class InstallmentScheduleCalculator
         /// pas d'avance une mensualité qui n'est pas échue. Pour un échéancier personnalisé, seule
         /// la première échéance (SequenceNo 1) est marquée.
         /// </summary>
-        bool IsInitialScope = false);
+        bool IsInitialScope = false,
+
+        /// <summary>
+        /// Vrai si cette échéance est À RÉGLER À LA CAISSE MAINTENANT : l'engagement initial
+        /// (<see cref="IsInitialScope"/>), PLUS toute échéance dont la date est atteinte
+        /// (<c>DueDate &lt;= today</c>) — typiquement les mensualités des mois 2..N d'une année déjà
+        /// commencée. Sans cela, une fois l'inscription et le 1er mois réglés, la caisse affichait
+        /// « frais du jour réglés » alors que des mois échus restaient impayés. Les mois à venir
+        /// (<c>DueDate &gt; today</c>) n'y sont toujours jamais : on n'encaisse pas d'avance.
+        /// </summary>
+        bool IsDueNow = false);
 
     /// <param name="customInstallments">
     /// Échéances du plan ACTIF de l'inscription, DÉJÀ TRIÉES par SequenceNo — null ou vide si aucun
@@ -121,7 +131,8 @@ public static class InstallmentScheduleCalculator
                         : InstallmentState.Pending;
 
             result.Add(new CalculatedInstallment(
-                id, label, amount, paidForThis, remainingDue, dueDate, status, feeCategoryId, isInitialScope));
+                id, label, amount, paidForThis, remainingDue, dueDate, status, feeCategoryId, isInitialScope,
+                IsDueNow: isInitialScope || dueDate <= today));
         }
     }
 }

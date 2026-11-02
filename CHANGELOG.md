@@ -7,6 +7,10 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Caisse : les mensualités échues sont maintenant signalées.** Une fois l'inscription et le 1er mois réglés, la recherche
+  affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,
+  fenêtre « Encaisser les frais dus », bouton « Régler les échéances dues ») inclut désormais toute mensualité dont la date
+  est atteinte ; les mois à venir n'y figurent toujours pas. Vaut pour tous les profils, internat compris.
 - **Contre-passation d'un paiement** (fiche élève, historique des paiements) : passé le délai d'annulation de 48 heures, le
   Directeur peut « contre-passer » un versement. Le reçu est conservé et marqué annulé ; l'écriture inverse est datée
   d'aujourd'hui, donc les journées et périodes déjà arrêtées ne changent pas. Réservée au Directeur.

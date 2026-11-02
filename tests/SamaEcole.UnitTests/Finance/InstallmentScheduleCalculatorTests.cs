@@ -133,6 +133,47 @@ public class InstallmentScheduleCalculatorTests
     }
 
     [Fact]
+    public void DueNow_Is_Only_The_Initial_Scope_Before_Any_Month_Is_Reached()
+    {
+        var lines = new List<EnrollmentFeeLine> { OneOffLine(35_000m), RecurringLine(22_000m, 9) };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: SchoolYearStart.AddDays(-10), lines, SchoolYearStart, customInstallments: null);
+
+        result.Where(i => i.IsDueNow).Select(i => i.Label)
+            .Should().BeEquivalentTo(["Inscription", "Mensualité (Mois 1)"]);
+    }
+
+    [Fact]
+    public void DueNow_Includes_Every_Month_Whose_Due_Date_Is_Reached_But_Never_Future_Months()
+    {
+        // 15/12/2026 : échéances des 01/10 (mois 1), 01/11 (mois 2) et 01/12 (mois 3) atteintes ; 01/01 non.
+        var lines = new List<EnrollmentFeeLine> { OneOffLine(35_000m), RecurringLine(22_000m, 9) };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: new DateOnly(2026, 12, 15), lines, SchoolYearStart, customInstallments: null);
+
+        result.Where(i => i.IsDueNow).Select(i => i.Label).Should().BeEquivalentTo(
+            ["Inscription", "Mensualité (Mois 1)", "Mensualité (Mois 2)", "Mensualité (Mois 3)"]);
+        result.Where(i => i.IsDueNow).Sum(i => i.RemainingDue).Should().Be(35_000m + 3 * 22_000m);
+    }
+
+    [Fact]
+    public void DueNow_Reports_The_Overdue_Months_Once_The_Initial_Commitment_Is_Paid()
+    {
+        // Le cas signalé en production : inscription + 1er mois réglés (57 000), mais les mois 2 et 3,
+        // échus, ne l'étaient pas — la caisse affichait « frais du jour réglés ».
+        var lines = new List<EnrollmentFeeLine> { OneOffLine(35_000m), RecurringLine(22_000m, 9) };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 57_000m, today: new DateOnly(2026, 12, 15), lines, SchoolYearStart, customInstallments: null);
+
+        result.Where(i => i.IsDueNow && i.RemainingDue > 0).Select(i => i.Label)
+            .Should().BeEquivalentTo(["Mensualité (Mois 2)", "Mensualité (Mois 3)"]);
+        result.Where(i => i.IsDueNow).Sum(i => i.RemainingDue).Should().Be(2 * 22_000m);
+    }
+
+    [Fact]
     public void InitialScope_RemainingDue_Sum_Is_OneOff_Plus_A_Single_Month()
     {
         var lines = new List<EnrollmentFeeLine>
