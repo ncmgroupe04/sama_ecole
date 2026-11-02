@@ -16,13 +16,25 @@ public class BoardingAttendanceConfiguration : IEntityTypeConfiguration<Boarding
 
         builder.Property(a => a.Note).HasMaxLength(300);
 
-        // Un pointage par pensionnaire et par nuit (index partiel : une saisie corrigée se recrée).
-        builder.HasIndex(a => new { a.BoardingEnrollmentId, a.Date }).IsUnique()
-            .HasDatabaseName("UX_boarding_attendances_night")
+        // Un pointage par élève, par session et par jour (index partiel : une saisie corrigée se recrée).
+        builder.HasIndex(a => new { a.StudentId, a.SessionId, a.Date }).IsUnique()
+            .HasDatabaseName("UX_boarding_attendances_session_day")
             .HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(a => new { a.SchoolId, a.SessionId, a.Date });
         builder.HasIndex(a => new { a.SchoolId, a.Date });
+        builder.HasIndex(a => new { a.SchoolId, a.BoardingEnrollmentId });
 
         builder.HasOne<School>().WithMany().HasForeignKey(a => a.SchoolId).OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<AttendanceSession>().WithMany()
+            .HasForeignKey(a => new { a.SchoolId, a.SessionId })
+            .HasPrincipalKey(s => new { s.SchoolId, s.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Student>().WithMany()
+            .HasForeignKey(a => new { a.SchoolId, a.StudentId })
+            .HasPrincipalKey(s => new { s.SchoolId, s.Id })
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<BoardingEnrollment>().WithMany()
             .HasForeignKey(a => new { a.SchoolId, a.BoardingEnrollmentId })

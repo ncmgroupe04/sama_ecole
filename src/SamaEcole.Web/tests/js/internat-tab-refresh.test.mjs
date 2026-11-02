@@ -182,7 +182,7 @@ for (const [label, spec] of Object.entries(COMPONENTS)) {
 async function bootAttendance(lines = [{ boarderId: 'a', studentName: 'Awa', matricule: 'M-1', roomName: 'C1', bedNumber: 1, onLeave: false, recorded: false, isPresent: null, note: null }]) {
     const { calls, count } = counter();
     let current = SHEET(lines);
-    const ctx = loadScripts(['internat-helpers.js', 'internat-attendance.js'], {
+    const ctx = loadScripts(['internat-helpers.js', 'attendance-logic.js', 'internat-attendance.js'], {
         preload: {
             auth: AUTH('Directeur'), pdfPreview: PDF,
             api: api(calls, { '/boarding/dormitories': [{ id: 'd1', name: 'Pavillon 1' }], '/boarding/attendance?': () => current })
@@ -238,7 +238,7 @@ test('pointage : pas de rechargement pendant un enregistrement ni pendant la con
 test('pointage : sans feuille affichée, l\'ouverture relit les pavillons (un pavillon créé entre-temps est proposé)', async () => {
     const { calls, count } = counter();
     let dormitories = [{ id: 'd1', name: 'P1' }, { id: 'd2', name: 'P2' }];
-    const ctx = loadScripts(['internat-helpers.js', 'internat-attendance.js'], {
+    const ctx = loadScripts(['internat-helpers.js', 'attendance-logic.js', 'internat-attendance.js'], {
         preload: { auth: AUTH('Directeur'), pdfPreview: PDF, api: api(calls, { '/boarding/dormitories': () => dormitories, '/boarding/attendance?': SHEET() }) }
     });
     ctx.window.internatHelpers.today = () => '2026-10-11';

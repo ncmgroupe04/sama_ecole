@@ -59,7 +59,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     private record Installment(
         string Id, string Designation, decimal Amount, decimal AmountPaid, decimal RemainingDue,
-        DateTimeOffset DueDate, string Status, bool IsInitialScope, Guid? FeeCategoryId);
+        DateTimeOffset DueDate, string Status, bool IsInitialScope, bool IsDueNow, Guid? FeeCategoryId);
 
     private record CashierSearchResult(
         Guid Id, string Matricule, string FullName, string? ClassroomName,
@@ -106,8 +106,12 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         applyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>École prête + un élève inscrit : renvoie l'inscription à encaisser (Id + montant dû).</summary>
-    private async Task<Receipt> SeedEnrolledStudentAsync()
+    /// <summary>
+    /// École prête + un élève inscrit : renvoie l'inscription à encaisser (Id + montant dû).
+    /// <paramref name="yearStartedDaysAgo"/> règle l'ancienneté de l'année active : à 10 jours seul l'engagement
+    /// initial (inscription + 1er mois) est échu ; plus ancienne, des mensualités s'y ajoutent.
+    /// </summary>
+    private async Task<Receipt> SeedEnrolledStudentAsync(int yearStartedDaysAgo = 10)
     {
         var directeur = await DirecteurTokenAsync();
 
@@ -119,7 +123,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         var yearResponse = await SendAsync(HttpMethod.Post, "/api/v1/school-years", directeur, new
         {
             label = $"{Today.Year}-{Today.Year + 1}",
-            startDate = Today.AddDays(-150).ToString("yyyy-MM-dd"),
+            startDate = Today.AddDays(-yearStartedDaysAgo).ToString("yyyy-MM-dd"),
             endDate = Today.AddDays(+120).ToString("yyyy-MM-dd")
         });
         yearResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -376,6 +380,46 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         initialScope.Should().OnlyContain(i => i.FeeCategoryId != null);
         balance.Installments.Where(i => !i.IsInitialScope)
             .Should().OnlyContain(i => i.Designation.StartsWith("Mensualité (Mois "));
+    }
+
+    [Fact]
+    public async Task Cashier_Search_And_Balance_Flag_The_Overdue_Months_Once_The_Year_Has_Started()
+    {
+        // Année commencée il y a 75 jours : les mensualités des mois 1, 2 et 3 sont échues, pas le mois 4.
+        var enrollment = await SeedEnrolledStudentAsync(yearStartedDaysAgo: 75);
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        const decimal expectedDueNow = Inscription + Mensualite * 3;
+
+        var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
+        var balance = (await (await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+        balance.DueNowTotal.Should().Be(expectedDueNow);
+        balance.Installments.Where(i => i.IsDueNow).Select(i => i.Designation).Should().BeEquivalentTo(
+            ["Inscription", "Mensualité (Mois 1)", "Mensualité (Mois 2)", "Mensualité (Mois 3)"]);
+
+        // Le tuteur règle l'engagement initial seulement : les mois 2 et 3, échus, doivent rester signalés.
+        var initial = balance.Installments.Where(i => i.IsInitialScope).ToList();
+        var payResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance, new
+        {
+            enrollmentId = enrollment.EnrollmentId,
+            amount = Inscription + Mensualite,
+            method = "Cash",
+            breakdowns = initial.Select(i => new { feeCategoryId = i.FeeCategoryId, amountAllocated = i.RemainingDue, label = (string?)null }).ToArray()
+        });
+        payResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var searchResponse = await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/search?q={enrollment.Matricule}", finance);
+        var hit = (await searchResponse.Content.ReadFromJsonAsync<List<CashierSearchResult>>())!
+            .Single(h => h.Matricule == enrollment.Matricule);
+        hit.DueNowTotal.Should().Be(Mensualite * 2, "les mois 2 et 3 sont échus et impayés");
+
+        var after = (await (await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+        after.DueNowTotal.Should().Be(Mensualite * 2);
     }
 
     [Fact]

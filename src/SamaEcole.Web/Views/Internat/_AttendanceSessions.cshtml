@@ -1,0 +1,143 @@
+@*
+    Configuration des sessions de pointage (Directeur) — modale de l'onglet « Pointage » de /internat. Composant Alpine `attendanceSessionsConfig`
+    (wwwroot/js/attendance-sessions.js), ouvert par l'événement `open-attendance-sessions`. Les sessions sont libres : nom, public (internes par
+    pavillon, demi-pensionnaires ou tous les pensionnaires par classe, élèves d'une Halqa), jours, repère horaire, activation et ordre.
+*@
+<div x-data="attendanceSessionsConfig()" x-on:open-attendance-sessions.window="open()">
+    <modal-shell open="isOpen" on-close="close()" size="xl" title="Sessions de pointage">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-600">
+                Une session est un appel que vous décidez de faire : la nuit, le matin, un repas, la Halqa… Créez celles qui servent à votre école, nommez-les, choisissez
+                les jours et l'ordre d'affichage. Le repère horaire n'est qu'une indication.
+            </p>
+
+            <p x-show="error" x-cloak class="field-error" role="alert" x-text="error"></p>
+            <p x-show="notice" x-cloak class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status" x-text="notice"></p>
+
+            <div x-show="loading" x-cloak class="space-y-2"><div class="h-12 rounded skeleton"></div><div class="h-12 rounded skeleton"></div></div>
+
+            <!-- Liste des sessions : ordre = ordre d'affichage -->
+            <template x-if="!loading && sessions.length === 0">
+                <div class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+                    Aucune session. Ajoutez-en une à partir d'un modèle ci-dessous, ou créez la vôtre.
+                </div>
+            </template>
+
+            <ul x-show="!loading && sessions.length > 0" x-cloak class="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                <template x-for="(session, index) in sessions" :key="session.id">
+                    <li class="flex flex-wrap items-center gap-3 px-3 py-3" :class="session.isActive ? '' : 'bg-slate-50'">
+                        <div class="flex flex-col">
+                            <button type="button" class="rounded p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-30" :disabled="index === 0 || busy"
+                                    :aria-label="'Monter ' + session.name" x-on:click="move(session, -1)"><icon name="arrow-up" class="w-4 h-4" /></button>
+                            <button type="button" class="rounded p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-30" :disabled="index === sessions.length - 1 || busy"
+                                    :aria-label="'Descendre ' + session.name" x-on:click="move(session, 1)"><icon name="arrow-down" class="w-4 h-4" /></button>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium text-slate-800">
+                                <span x-text="session.name"></span>
+                                <span x-show="!session.isActive" x-cloak class="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">Désactivée</span>
+                            </p>
+                            <p class="text-xs text-slate-500">
+                                <span x-text="audienceLabel(session)"></span> · <span x-text="daysSummary(session)"></span><span x-show="session.timeLabel"> · <span x-text="session.timeLabel"></span></span>
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button type="button" class="btn-modal-secondary group" :disabled="busy" x-on:click="toggleActive(session)"
+                                    x-text="session.isActive ? 'Désactiver' : 'Activer'"></button>
+                            <button type="button" class="rounded p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" :aria-label="'Modifier ' + session.name" x-on:click="editSession(session)">
+                                <icon name="pencil" class="w-4 h-4" />
+                            </button>
+                            <button type="button" class="rounded p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-700" :aria-label="'Supprimer ' + session.name" x-on:click="askDelete(session)">
+                                <icon name="trash-2" class="w-4 h-4" />
+                            </button>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+
+            <!-- Modèles proposés en un clic : préremplissent le formulaire -->
+            <div x-show="availableTemplates.length > 0" x-cloak>
+                <p class="text-sm font-semibold text-slate-700">Ajouter à partir d'un modèle</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <template x-for="template in availableTemplates" :key="template.code">
+                        <button type="button" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:border-primary-400 hover:text-primary-700"
+                                :title="template.description" x-on:click="useTemplate(template)">
+                            + <span x-text="template.name"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-between gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="newSession()">
+                    <icon name="plus" class="w-4 h-4" />
+                    Nouvelle session
+                </button>
+                <button type="button" class="btn-modal-primary group" x-on:click="close()">Terminer</button>
+            </div>
+        </div>
+    </modal-shell>
+
+    <!-- Formulaire d'une session -->
+    <modal-shell open="form.open" on-close="closeForm()" size="md" title="Session de pointage">
+        <div class="space-y-4">
+            <div>
+                <label for="session-name" class="form-label">Nom</label>
+                <input id="session-name" type="text" x-model="form.name" maxlength="60" class="input-field mt-1" autocomplete="off" placeholder="Ex. Déjeuner">
+            </div>
+
+            <div>
+                <label class="form-label">Qui pointe-t-on ?</label>
+                <select-field model="form.audience" options-expr="audienceChoices" disabled="audienceLocked" />
+                <p x-show="audienceLocked" x-cloak class="mt-1 text-xs text-slate-500">Des pointages existent déjà : le public ne peut plus changer. Créez une nouvelle session si besoin.</p>
+            </div>
+
+            <div>
+                <label class="form-label">Jours concernés</label>
+                <div class="mt-1 flex flex-wrap gap-2" role="group" aria-label="Jours concernés">
+                    <template x-for="day in dayChoices" :key="day.value">
+                        <button type="button" class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                                :class="form.days.includes(day.value) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'"
+                                :aria-pressed="form.days.includes(day.value)" :aria-label="day.long" x-on:click="toggleDay(day.value)" x-text="day.short"></button>
+                    </template>
+                </div>
+                <p class="mt-1 text-xs text-slate-500">Un jour hors sélection est signalé à l'écran, jamais bloqué.</p>
+            </div>
+
+            <div>
+                <label for="session-time" class="form-label">Repère horaire <span class="font-normal text-slate-400">(facultatif)</span></label>
+                <input id="session-time" type="text" x-model="form.timeLabel" maxlength="40" class="input-field mt-1" autocomplete="off" placeholder="Ex. 19 h 30">
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" class="checkbox-field" x-model="form.isActive">
+                Session active (proposée au pointage)
+            </label>
+
+            <div x-show="form.error" x-cloak class="form-error-banner"><span x-text="form.error"></span></div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeForm()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="form.saving" x-on:click="saveForm()">
+                    <span x-text="form.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+
+    <!-- Suppression : confirmée, et refusée par le serveur pour une session déjà pointée -->
+    <modal-shell open="removal.open" on-close="cancelDelete()" size="md" title="Supprimer cette session ?">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-700">
+                « <strong x-text="removal.session ? removal.session.name : ''"></strong> » sera supprimée. Une session qui a déjà des pointages ne peut pas l'être : désactivez-la.
+            </p>
+            <div x-show="removal.error" x-cloak class="form-error-banner"><span x-text="removal.error"></span></div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="cancelDelete()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="removal.deleting" x-on:click="confirmDelete()">
+                    <span x-text="removal.deleting ? 'Suppression…' : 'Supprimer'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
+</div>

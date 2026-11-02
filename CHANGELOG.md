@@ -7,6 +7,10 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Caisse : les mensualités échues sont maintenant signalées.** Une fois l'inscription et le 1er mois réglés, la recherche
+  affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,
+  fenêtre « Encaisser les frais dus », bouton « Régler les échéances dues ») inclut désormais toute mensualité dont la date
+  est atteinte ; les mois à venir n'y figurent toujours pas. Vaut pour tous les profils, internat compris.
 - **Relance d'impayés par SMS : seules les familles en retard sont relancées.** Auparavant, tout élève dont le total payé était inférieur au
   total dû recevait un SMS annonçant le reliquat de l'année entière, même s'il était à jour de ses mensualités ou si l'année n'avait pas
   commencé. Le SMS ne part désormais que pour un élève ayant une échéance en retard, et annonce le montant en retard.

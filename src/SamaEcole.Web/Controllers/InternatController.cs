@@ -1,3 +1,4 @@
+using SamaEcole.Application.Boarding.Attendance.Sessions;
 using SamaEcole.Application.Internat;
 using SamaEcole.Application.Internat.Commands.AssignInstructor;
 using SamaEcole.Application.Internat.Commands.CreateInstructor;
@@ -42,6 +43,8 @@ public class InternatController(ISender mediator) : ControllerBase
     private const string HalqaReadRoles = "Directeur,Secretariat,Surveillant,Enseignant";
     private const string HizbWriteRoles = "Directeur,Enseignant";
     private const string AssignRoles = "Directeur";
+
+    public record RecordHalqaAttendanceRequest(Guid SessionId, Guid? InstructorId, DateOnly Date, List<SessionEntryInput>? Entries);
 
     // Gestion des fiches d'Oustaz : écriture réservée au Directeur ; la liste sert aussi à la Direction élargie
     // (Secrétariat, Surveillant) qui doit reconnaître l'Oustaz d'un élève.
@@ -242,4 +245,57 @@ public class InternatController(ISender mediator) : ControllerBase
             new UpdateHizbProgressCommand(
                 studentId, request.HizbNumber, request.CompletedQuarters, request.Rating, request.RowVersion),
             cancellationToken));
+
+    // ---------------------------------------------------------------- Appel de la Halqa (sessions de pointage)
+
+    /// <summary>
+    /// Les sessions de pointage ACTIVES d'une Halqa (« Appel de la Halqa »…) : ce que l'Oustaz peut pointer. La configuration des
+    /// sessions est celle de la Direction, sous /api/v1/boarding/attendance/sessions.
+    /// </summary>
+    [HttpGet("attendance/sessions")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<IReadOnlyList<AttendanceSessionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListHalqaAttendanceSessions(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ListAttendanceSessionsQuery(ActiveOnly: true, Audience: AttendanceAudience.Halqa), cancellationToken));
+
+    /// <summary>
+    /// Feuille d'appel de la Halqa pour une session et un jour. Un Oustaz lit SA Halqa (<c>instructorId</c> inutile, et 403 s'il en
+    /// vise une autre) ; la Direction désigne l'Oustaz.
+    /// </summary>
+    [HttpGet("attendance/sheet")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<SessionSheetDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetHalqaAttendanceSheet(
+        [FromQuery] Guid sessionId, [FromQuery] Guid? instructorId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSessionSheetQuery(sessionId, instructorId, date), cancellationToken));
+
+    /// <summary>L'appel de la Halqa. Un Oustaz ne pointe que SA Halqa (403 sinon). Réponse LIGNE PAR LIGNE.</summary>
+    [HttpPost("attendance")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<RecordSessionAttendanceResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RecordHalqaAttendance(
+        [FromBody] RecordHalqaAttendanceRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new RecordSessionAttendanceCommand(request.SessionId, request.InstructorId, request.Date, request.Entries ?? []), cancellationToken));
+
+    /// <summary>Récapitulatif mensuel de l'appel d'une Halqa (<c>month=AAAA-MM</c>). Un Oustaz lit SA Halqa.</summary>
+    [HttpGet("attendance/monthly-summary")]
+    [Authorize(Roles = HalqaReadRoles)]
+    [ProducesResponseType<MonthlySummaryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetHalqaMonthlySummary(
+        [FromQuery] string? month, [FromQuery] Guid sessionId, [FromQuery] Guid? instructorId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new GetMonthlyAttendanceSummaryQuery(AttendanceMonth.Parse(month), sessionId, instructorId), cancellationToken));
 }
+

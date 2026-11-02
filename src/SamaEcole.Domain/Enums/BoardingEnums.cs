@@ -16,6 +16,25 @@ public enum BoardingRegime
 }
 
 /// <summary>
+/// À qui s'adresse une session de pointage (<see cref="Entities.AttendanceSession"/>) : elle détermine la liste d'élèves de la feuille
+/// d'appel et le groupe choisi (pavillon, classe ou Oustaz).
+/// </summary>
+public enum AttendanceAudience
+{
+    /// <summary>Les internes ayant un lit, regroupés par pavillon.</summary>
+    Interns,
+
+    /// <summary>Les demi-pensionnaires, regroupés par classe.</summary>
+    HalfBoarders,
+
+    /// <summary>Tous les pensionnaires (internes et demi-pensionnaires), regroupés par classe.</summary>
+    AllBoarders,
+
+    /// <summary>Les élèves de la Halqa d'un Oustaz.</summary>
+    Halqa
+}
+
+/// <summary>
 /// Statut d'un lit. Seuls <c>Available</c> et <c>Maintenance</c> sont STOCKÉS (contrainte CHECK en base) ;
 /// <c>Occupied</c> est projeté à la lecture depuis le séjour actif (spec N2) — jamais une seconde source de vérité.
 /// </summary>

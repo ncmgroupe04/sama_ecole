@@ -427,6 +427,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // comptes plus bas. Enfants avant parents. Sans elle, un test qui affecte un élève ferait échouer le nettoyage du
         // suivant en 23503.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_attendances;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM attendance_sessions;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_leaves;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM boarding_enrollments;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM beds;");

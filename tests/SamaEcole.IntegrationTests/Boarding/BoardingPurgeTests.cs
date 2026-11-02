@@ -67,10 +67,11 @@ public class BoardingPurgeTests : IAsyncLifetime
         var bedA = await _sql.InsertBedAsync(EcoleA, EcoleA, roomA);
         var active = await _sql.InsertBoarderAsync(EcoleA, EcoleA, EleveA, InscriptionActive, bed: bedA);
         var past = await _sql.InsertBoarderAsync(EcoleA, EcoleA, EleveA, InscriptionPassee, active: false);
-        foreach (var boarder in new[] { active, past })
+        // Un pointage par élève, session et nuit : le séjour de l'année passée est pointé une nuit de CETTE année-là.
+        foreach (var (boarder, night) in new[] { (active, "2026-10-02"), (past, "2026-05-02") })
         {
             await _sql.InsertLeaveAsync(EcoleA, EcoleA, boarder);
-            await _sql.InsertAttendanceAsync(EcoleA, EcoleA, boarder);
+            await _sql.InsertAttendanceAsync(EcoleA, EcoleA, boarder, night);
         }
 
         var dormitoryB = await _sql.InsertDormitoryAsync(EcoleB, EcoleB);
@@ -141,7 +142,7 @@ public class BoardingPurgeTests : IAsyncLifetime
 
     private static readonly string[] BoardingTables =
     [
-        "boarding_attendances", "boarding_leaves", "boarding_enrollments", "beds", "dormitory_rooms", "dormitories"
+        "boarding_attendances", "attendance_sessions", "boarding_leaves", "boarding_enrollments", "beds", "dormitory_rooms", "dormitories"
     ];
 
     private static Enrollment NewEnrollment(Guid id, Guid school, Guid student, Guid year, Guid classroom, string receipt) => new()

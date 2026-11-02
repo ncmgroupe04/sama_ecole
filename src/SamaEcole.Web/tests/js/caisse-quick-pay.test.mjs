@@ -102,7 +102,7 @@ test('rouvrir le guichet après [Annuler] repart sur toutes les cases cochées',
 
 test('searchStudents accepte un matricule d\'un seul caractère sans bloquer la recherche', async () => {
     const calls = [];
-    const ctx = loadScripts(['caisse.js'], {
+    const ctx = loadScripts(['payment-cancel.js', 'caisse.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },
@@ -124,6 +124,25 @@ test('searchStudents accepte un matricule d\'un seul caractère sans bloquer la 
     assert.deepEqual(calls, ['/finance/students/search?q=A']);
     assert.equal(view.students.length, 1);
     assert.equal(view.students[0].matricule, 'A');
+});
+
+test("un mois échu non réglé est proposé au guichet même quand l'engagement initial est soldé", () => {
+    const v = caisseView();
+    v.balance = {
+        installments: [
+            { id: 'i1', designation: 'Inscription', remainingDue: 0, isInitialScope: true, isDueNow: true },
+            { id: 'i2', designation: 'Mensualité (Mois 1)', remainingDue: 0, isInitialScope: true, isDueNow: true },
+            { id: 'i3', designation: 'Mensualité (Mois 2)', remainingDue: 22000, isInitialScope: false, isDueNow: true },
+            { id: 'i4', designation: 'Mensualité (Mois 3)', remainingDue: 22000, isInitialScope: false, isDueNow: false }
+        ],
+        dueNowTotal: 22000
+    };
+
+    assert.deepEqual(v.quickPayRows().map((r) => r.id), ['i3']);
+    assert.equal(v.dueNowTotal, 22000);
+    v.openQuickPay();
+    assert.equal(v.quickPay.open, true);
+    assert.equal(v.quickPay.amount, 22000);
 });
 
 test('quickPayNote extrait « Mois 1 » d\'une désignation de mensualité, null sinon', () => {
