@@ -5,6 +5,7 @@ using SamaEcole.Application.Boarding;
 using SamaEcole.Application.Boarding.Attendance;
 using SamaEcole.Application.Boarding.Attendance.GetAttendanceSheet;
 using SamaEcole.Application.Boarding.Attendance.RecordAttendance;
+using SamaEcole.Application.Boarding.Attendance.Sessions;
 using SamaEcole.Application.Boarding.Beds.ChangeBedStatus;
 using SamaEcole.Application.Boarding.Beds.CreateBed;
 using SamaEcole.Application.Boarding.Beds.DeleteBed;
@@ -25,6 +26,7 @@ using SamaEcole.Application.Boarding.Dormitories.RestoreDormitory;
 using SamaEcole.Application.Boarding.Documents;
 using SamaEcole.Application.Boarding.Documents.BoarderSheet;
 using SamaEcole.Application.Boarding.Documents.DormitoryRegister;
+using SamaEcole.Application.Boarding.Documents.MonthlyAttendanceSummary;
 using SamaEcole.Application.Boarding.Dormitories.UpdateDormitory;
 using SamaEcole.Application.Boarding.Leaves;
 using SamaEcole.Application.Boarding.Leaves.DeclareLeave;
@@ -58,6 +60,9 @@ public class BoardingController(ISender mediator) : ControllerBase
     private const string ReadRoles = "Directeur,Secretariat,Surveillant";
     private const string ManageRoles = "Directeur,Secretariat";
 
+    // Configuration des sessions de pointage : la Direction décide de ce qui est pointé, pas le Surveillant.
+    private const string SessionRoles = "Directeur";
+
     public record CreateDormitoryRequest(
         string Name, DormitoryGender Gender, string? SupervisorName, string? SupervisorPhone,
         Guid? SupervisorUserId, string? Notes);
@@ -86,7 +91,14 @@ public class BoardingController(ISender mediator) : ControllerBase
 
     public record ReturnLeaveRequest(uint RowVersion, DateOnly? ActualReturnDate);
 
-    public record RecordAttendanceRequest(DateOnly Date, Guid DormitoryId, List<AttendanceEntryInput>? Entries);
+    public record RecordAttendanceRequest(DateOnly Date, Guid DormitoryId, List<AttendanceEntryInput>? Entries, Guid? SessionId = null);
+
+    public record AttendanceSessionRequest(
+        string Name, AttendanceAudience Audience, List<int>? Days, string? TimeLabel, bool? IsActive);
+
+    public record ReorderAttendanceSessionsRequest(List<Guid>? OrderedIds);
+
+    public record RecordSessionAttendanceRequest(Guid SessionId, Guid? GroupId, DateOnly Date, List<SessionEntryInput>? Entries);
 
     // ------------------------------------------------------------------ Pavillons
 
@@ -472,7 +484,7 @@ public class BoardingController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RecordAttendance(
         [FromBody] RecordAttendanceRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
-            new RecordAttendanceCommand(request.Date, request.DormitoryId, request.Entries ?? []), cancellationToken));
+            new RecordAttendanceCommand(request.Date, request.DormitoryId, request.Entries ?? [], request.SessionId), cancellationToken));
 
     /// <summary>Feuille d'appel du soir d'un pavillon (absents en permission pré-remplis).</summary>
     [HttpGet("attendance")]
@@ -482,8 +494,147 @@ public class BoardingController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> GetAttendanceSheet(
-        [FromQuery] Guid dormitoryId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetAttendanceSheetQuery(dormitoryId, date), cancellationToken));
+        [FromQuery] Guid dormitoryId, [FromQuery] DateOnly date, [FromQuery] Guid? sessionId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetAttendanceSheetQuery(dormitoryId, date, sessionId), cancellationToken));
+
+    // ------------------------------------------------------------------ Sessions de pointage (configuration)
+
+    /// <summary>
+    /// Les sessions de pointage de l'école, dans l'ordre choisi par la Direction. <c>activeOnly</c> : seulement celles qu'on peut
+    /// pointer (écrans de pointage) ; sans lui, toutes (écran de configuration).
+    /// </summary>
+    [HttpGet("attendance/sessions")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<IReadOnlyList<AttendanceSessionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListAttendanceSessions([FromQuery] bool activeOnly, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ListAttendanceSessionsQuery(activeOnly), cancellationToken));
+
+    /// <summary>Les groupes pointables d'une session : pavillons (internes), classes avec pensionnaires, ou Oustaz actifs (Halqa).</summary>
+    [HttpGet("attendance/groups")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<IReadOnlyList<AttendanceGroupDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ListAttendanceGroups([FromQuery] Guid sessionId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ListAttendanceGroupsQuery(sessionId), cancellationToken));
+
+    /// <summary>Les modèles proposés pour créer une session en un clic (Appel de nuit, Déjeuner, Appel de la Halqa…).</summary>
+    [HttpGet("attendance/session-templates")]
+    [Authorize(Roles = SessionRoles)]
+    [ProducesResponseType<IReadOnlyList<AttendanceSessionTemplateDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListAttendanceSessionTemplates(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ListAttendanceSessionTemplatesQuery(), cancellationToken));
+
+    [HttpPost("attendance/sessions")]
+    [Authorize(Roles = SessionRoles)]
+    [ProducesResponseType<AttendanceSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CreateAttendanceSession(
+        [FromBody] AttendanceSessionRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new CreateAttendanceSessionCommand(request.Name, request.Audience, request.Days ?? [], request.TimeLabel, request.IsActive ?? true),
+            cancellationToken));
+
+    [HttpPut("attendance/sessions/{id:guid}")]
+    [Authorize(Roles = SessionRoles)]
+    [ProducesResponseType<AttendanceSessionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateAttendanceSession(
+        Guid id, [FromBody] AttendanceSessionRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new UpdateAttendanceSessionCommand(id, request.Name, request.Audience, request.Days ?? [], request.TimeLabel, request.IsActive ?? true),
+            cancellationToken));
+
+    /// <summary>Supprime une session JAMAIS pointée (409 sinon : la désactiver).</summary>
+    [HttpDelete("attendance/sessions/{id:guid}")]
+    [Authorize(Roles = SessionRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteAttendanceSession(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteAttendanceSessionCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Ordre d'affichage : la liste COMPLÈTE des sessions, dans l'ordre voulu.</summary>
+    [HttpPut("attendance/sessions/order")]
+    [Authorize(Roles = SessionRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ReorderAttendanceSessions(
+        [FromBody] ReorderAttendanceSessionsRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ReorderAttendanceSessionsCommand(request.OrderedIds ?? []), cancellationToken);
+        return NoContent();
+    }
+
+    // ------------------------------------------------------------------ Pointage par session (classe ou Halqa) et récapitulatif
+
+    /// <summary>
+    /// Feuille d'appel d'une session pour un groupe : une classe (pensionnaires) ou la Halqa d'un Oustaz (<c>groupId</c>). Un pavillon
+    /// (session des internes) se lit sous <c>attendance?dormitoryId=</c>.
+    /// </summary>
+    [HttpGet("attendance/sheet")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<SessionSheetDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetSessionSheet(
+        [FromQuery] Guid sessionId, [FromQuery] Guid? groupId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSessionSheetQuery(sessionId, groupId, date), cancellationToken));
+
+    /// <summary>Pointage collectif d'une session pour un groupe (classe ou Halqa). Réponse LIGNE PAR LIGNE.</summary>
+    [HttpPost("attendance/sheet")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<RecordSessionAttendanceResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RecordSessionAttendance(
+        [FromBody] RecordSessionAttendanceRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new RecordSessionAttendanceCommand(request.SessionId, request.GroupId, request.Date, request.Entries ?? []), cancellationToken));
+
+    /// <summary>
+    /// Récapitulatif d'un mois (<c>month=AAAA-MM</c>) : par élève, présents / absents / en permission / non pointés, sur les jours où la
+    /// session a été pointée pour le groupe (pavillon, classe ou Oustaz selon la session).
+    /// </summary>
+    [HttpGet("attendance/monthly-summary")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<MonthlySummaryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetMonthlyAttendanceSummary(
+        [FromQuery] string? month, [FromQuery] Guid sessionId, [FromQuery] Guid? groupId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new GetMonthlyAttendanceSummaryQuery(AttendanceMonth.Parse(month), sessionId, groupId), cancellationToken));
+
+    /// <summary>« Récapitulatif mensuel du pointage » imprimable. Tracé dans le journal d'audit.</summary>
+    [HttpGet("attendance/monthly-summary/pdf")]
+    [Authorize(Roles = ReadRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetMonthlyAttendanceSummaryPdf(
+        [FromQuery] string? month, [FromQuery] Guid sessionId, [FromQuery] Guid? groupId, CancellationToken cancellationToken)
+        => PdfFile(
+            await mediator.Send(new GetMonthlyAttendanceSummaryPdfQuery(AttendanceMonth.Parse(month), sessionId, groupId), cancellationToken),
+            "Recapitulatif-Pointage");
 
     // ------------------------------------------------------------------ Documents PDF
 
@@ -512,8 +663,8 @@ public class BoardingController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> GetDormitoryRegisterPdf(
-        Guid id, [FromQuery] DateOnly? date, CancellationToken cancellationToken)
-        => PdfFile(await mediator.Send(new GetDormitoryRegisterPdfQuery(id, date), cancellationToken), "Registre-Pavillon");
+        Guid id, [FromQuery] DateOnly? date, [FromQuery] Guid? sessionId, CancellationToken cancellationToken)
+        => PdfFile(await mediator.Send(new GetDormitoryRegisterPdfQuery(id, date, sessionId), cancellationToken), "Registre-Pavillon");
 
     /// <summary>Nom de fichier assaini : ASCII (lettres, chiffres, tiret, souligné), les espaces deviennent des tirets.</summary>
     private IActionResult PdfFile(BoardingPdfResult result, string prefix)

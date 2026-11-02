@@ -90,6 +90,7 @@ public class BoardingSchemaIsolationTests : IAsyncLifetime
     [InlineData("boarding_enrollments")]
     [InlineData("boarding_leaves")]
     [InlineData("boarding_attendances")]
+    [InlineData("attendance_sessions")]
     public async Task The_Application_Role_Cannot_Physically_Delete_Any_Boarding_Row(string table)
     {
         var act = async () => await _sql.ExecuteAsync(EcoleA, $"DELETE FROM {table}");
