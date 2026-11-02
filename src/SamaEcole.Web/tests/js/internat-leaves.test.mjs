@@ -52,6 +52,7 @@ function boot({ role = 'Directeur', fail = () => undefined, list = { items: [LEA
                 get: (endpoint) => record('GET', endpoint, undefined, route(endpoint)),
                 post: (endpoint, body) => record('POST', endpoint, body, LEAVE('new')),
                 put: (endpoint, body) => record('PUT', endpoint, body, LEAVE('l1', { status: 'Returned', actualReturnDate: TODAY, rowVersion: 22 })),
+                delete: (endpoint) => record('DELETE', endpoint, undefined, null),
                 toMessage: (err, fallback) => (err && err.handledGlobally ? '' : (err && err.message) || fallback)
             }
         }
@@ -340,6 +341,36 @@ test('CONCURRENCY_CONFLICT sur le retour : registre rechargé, confirmation bloq
 
     assert.match(t.returnModal.error, /modifié par une autre personne/);
     assert.equal(t.returnModal.stale, true);
+    assert.equal(calls.filter((c) => c.endpoint.startsWith('/boarding/leaves?')).length, before + 1);
+});
+
+// ---------------------------------------------------------------- composant : annulation d'une sortie saisie par erreur
+
+test('annuler une sortie : DELETE avec le rowVersion de la sortie, puis registre relu', async () => {
+    const { tab, calls } = boot();
+    const t = await ready(tab());
+    const before = calls.filter((c) => c.endpoint.startsWith('/boarding/leaves?')).length;
+    t.openCancel(t.items[0]);
+
+    assert.equal(t.cancelModal.open, true);
+    await t.submitCancel();
+
+    const del = calls.find((c) => c.method === 'DELETE');
+    assert.equal(del.endpoint, '/boarding/leaves/l1?rowVersion=21');
+    assert.equal(t.cancelModal.open, false);
+    assert.match(t.notice, /sortie de Awa Diop a été annulée/);
+    assert.equal(calls.filter((c) => c.endpoint.startsWith('/boarding/leaves?')).length, before + 1, 'registre relu');
+});
+
+test('annuler une sortie : CONCURRENCY_CONFLICT affiche un message et relit le registre, la fenêtre reste ouverte', async () => {
+    const { tab, calls } = boot({ fail: (m) => (m === 'DELETE' ? apiError('CONCURRENCY_CONFLICT') : undefined) });
+    const t = await ready(tab());
+    const before = calls.filter((c) => c.endpoint.startsWith('/boarding/leaves?')).length;
+    t.openCancel(t.items[0]);
+    await t.submitCancel();
+
+    assert.ok(t.cancelModal.error);
+    assert.equal(t.cancelModal.open, true);
     assert.equal(calls.filter((c) => c.endpoint.startsWith('/boarding/leaves?')).length, before + 1);
 });
 

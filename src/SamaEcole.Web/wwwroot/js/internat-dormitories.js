@@ -20,6 +20,7 @@ document.addEventListener('alpine:init', () => {
     /** Segment d'URL de l'API (`/boarding/{segment}/{id}`) et clé de corbeille (trash.js › KINDS) de chaque type supprimable. */
     const ROUTE_SEGMENT = { dormitory: 'dormitories', room: 'rooms', bed: 'beds' };
     const TRASH_KIND = { dormitory: 'dormitories', room: 'dormitory-rooms', bed: 'beds' };
+    const DELETION_KIND = { dormitory: 'Dormitory', room: 'Room', bed: 'Bed' };
 
     Alpine.data('dormitoriesTab', () => ({
         loading: true,
@@ -34,7 +35,7 @@ document.addEventListener('alpine:init', () => {
 
         form: { open: false, mode: 'create', id: null, rowVersion: null, values: {}, errors: {}, saving: false, error: '', archivedConflict: false },
         roomForm: { open: false, dormitory: null, values: {}, errors: {}, saving: false, error: '', archivedConflict: false },
-        removal: { open: false, kind: null, item: null, saving: false, error: '' },
+        removal: { open: false, kind: null, item: null, saving: false, error: '', impact: null, targets: {}, reassigning: '' },
 
         async init() {
             this.canManage = WRITE_ROLES.includes(window.auth.role);
@@ -213,7 +214,92 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------------ Suppression (logique) — restauration par la corbeille
 
         openRemoval(kind, item) {
-            this.removal = { open: true, kind, item, saving: false, error: '' };
+            this.removal = { open: true, kind, item, saving: false, error: '', impact: null, targets: {}, reassigning: '' };
+            this.loadImpact();
+        },
+
+        /**
+         * GET /boarding/deletion-impact : chambres, lits et élèves rattachés, et les lits libres ailleurs où réaffecter ces élèves D'ABORD.
+         * Un échec est affiché ; la fenêtre reste celle de la suppression directe (le serveur refuse
+         * s'il reste des liens).
+         */
+        async loadImpact() {
+            const removal = this.removal;
+            if (!removal.open || !removal.item) return;
+            try {
+                const impact = await window.api.get(
+                    `/boarding/deletion-impact?kind=${DELETION_KIND[removal.kind]}&id=${removal.item.id}`);
+                if (this.removal === removal) removal.impact = impact && Array.isArray(impact.occupants) ? impact : null;
+            } catch (err) {
+                // L'erreur est AUSSI posée sur l'état de la page (this.error) : exigence du garde-fou « aucun chargement muet ».
+                this.error = this.helpers().errorMessage(
+                    err, "Les éléments rattachés n'ont pas pu être chargés : la suppression simple reste possible si l'élément est vide.");
+                if (this.removal === removal) {
+                    removal.impact = null;
+                    removal.error = this.error;
+                }
+            }
+        },
+
+        get removalHasLinks() {
+            const impact = this.removal.impact;
+            return !!impact && (impact.roomCount > 0 || impact.bedCount > 0 || impact.occupants.length > 0);
+        },
+
+        get freeBedOptions() {
+            const impact = this.removal.impact;
+            return impact ? impact.freeBeds.map((b) => ({ value: b.bedId, label: b.label })) : [];
+        },
+
+        /** Réaffecte UN élève dans le lit choisi (POST /boarding/assign-bed, jeton de son séjour), puis relit l'analyse. */
+        async reassignOccupant(occupant) {
+            const removal = this.removal;
+            const bedId = removal.targets[occupant.boarderId];
+            if (!bedId) {
+                removal.error = 'Choisissez un lit libre pour cet élève.';
+                return;
+            }
+
+            removal.reassigning = occupant.boarderId;
+            removal.error = '';
+            try {
+                await window.api.post('/boarding/assign-bed', {
+                    enrollmentId: occupant.enrollmentId, regime: 'Interne', bedId,
+                    includeBoardingFee: false, rowVersion: occupant.rowVersion
+                });
+                delete removal.targets[occupant.boarderId];
+                await this.loadImpact();
+                await this.refresh();
+            } catch (err) {
+                removal.error = this.helpers().errorMessage(err, "Impossible de réaffecter l'élève.");
+                await this.loadImpact();
+            } finally {
+                removal.reassigning = '';
+            }
+        },
+
+        /** « Rompre les liens et supprimer » : POST /boarding/deletions — les élèves restants redeviennent « en attente de lit ». */
+        async breakLinksAndDelete() {
+            const removal = this.removal;
+            if (!removal.item) return;
+
+            removal.saving = true;
+            removal.error = '';
+            try {
+                await window.api.post('/boarding/deletions', {
+                    kind: DELETION_KIND[removal.kind], id: removal.item.id, rowVersion: removal.item.rowVersion
+                });
+                this.closeRemoval();
+                if (removal.kind === 'dormitory') this.detail = null;
+                this.notice = 'Liens rompus et élément supprimé. Il reste restaurable depuis « éléments supprimés ».';
+                if (window.softDeleteTrash) window.softDeleteTrash.notifyChanged(TRASH_KIND[removal.kind]);
+                await this.refresh();
+            } catch (err) {
+                removal.error = this.helpers().errorMessage(err, 'Erreur lors de la suppression.');
+                if (err && err.code === 'CONCURRENCY_CONFLICT') await this.refresh();
+            } finally {
+                removal.saving = false;
+            }
         },
 
         closeRemoval() { this.removal.open = false; },

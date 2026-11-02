@@ -41,7 +41,7 @@ function apiError(code, status = 409, message = 'technical') {
  * @param {string} options.role       rôle de l'utilisateur connecté
  * @param {Function} options.fail     (method, endpoint) → Error | undefined : fait échouer un appel
  */
-function boot({ role = 'Directeur', fail = () => undefined } = {}) {
+function boot({ role = 'Directeur', fail = () => undefined, impact = null } = {}) {
     const calls = [];
     const trash = { notified: [], opened: [] };
 
@@ -57,7 +57,9 @@ function boot({ role = 'Directeur', fail = () => undefined } = {}) {
             auth: { role },
             softDeleteTrash: { notifyChanged: (k) => trash.notified.push(k), openFor: (k, n) => trash.opened.push([k, n]) },
             api: {
-                get: (endpoint) => record('GET', endpoint, undefined, endpoint === '/boarding/dormitories' ? DORMITORIES : DETAIL),
+                get: (endpoint) => record('GET', endpoint, undefined,
+                    endpoint.startsWith('/boarding/deletion-impact') ? impact
+                        : endpoint === '/boarding/dormitories' ? DORMITORIES : DETAIL),
                 post: (endpoint, body) => record('POST', endpoint, body, {}),
                 put: (endpoint, body) => record('PUT', endpoint, body, {}),
                 delete: (endpoint) => record('DELETE', endpoint, undefined, null),
@@ -326,6 +328,68 @@ test('suppression d\'un pavillon non vide : RESOURCE_IN_USE expliqué, rien n\'e
     assert.equal(tab.removal.open, true, 'la modale reste ouverte avec l\'explication');
     assert.deepEqual(plain(t.trash.notified), [], 'rien n\'a été supprimé : la corbeille n\'est pas notifiée');
     assert.equal(tab.dormitories.length, 2);
+});
+
+const IMPACT = (extra = {}) => ({
+    label: 'Pavillon Oustaz Ahmad', roomCount: 1, bedCount: 2,
+    occupants: [{ boarderId: 'bo1', enrollmentId: 'e1', studentName: 'Awa Diop', matricule: 'M-1', location: 'Chambre 101 — Lit 1', rowVersion: 77 }],
+    freeBeds: [{ bedId: 'bf1', label: 'Pavillon Fatima — Chambre 201 — Lit 1' }], ...extra
+});
+
+test('suppression d\'un élément qui contient des élèves : l\'analyse propose d\'abord les lits libres ailleurs', async () => {
+    const t = boot({ impact: IMPACT() });
+    const tab = await ready(t.tab());
+
+    tab.openRemoval('dormitory', DORMITORIES[0]);
+    await flush();
+
+    assert.equal(t.calls.at(-1).endpoint, `/boarding/deletion-impact?kind=Dormitory&id=${DORMITORIES[0].id}`);
+    assert.equal(tab.removalHasLinks, true);
+    assert.deepEqual(plain(tab.freeBedOptions), [{ value: 'bf1', label: 'Pavillon Fatima — Chambre 201 — Lit 1' }]);
+});
+
+test('un élément vide : aucune rupture proposée, la suppression directe reste celle d\'avant', async () => {
+    const t = boot({ impact: IMPACT({ roomCount: 0, bedCount: 0, occupants: [], freeBeds: [] }) });
+    const tab = await ready(t.tab());
+
+    tab.openRemoval('bed', DETAIL.rooms[0].beds[1]);
+    await flush();
+
+    assert.equal(tab.removalHasLinks, false);
+});
+
+test('réaffecter un élève avant de supprimer : POST assign-bed avec le jeton de son séjour, sans refacturer', async () => {
+    const t = boot({ impact: IMPACT() });
+    const tab = await ready(t.tab());
+    tab.openRemoval('dormitory', DORMITORIES[0]);
+    await flush();
+
+    tab.removal.targets.bo1 = '';
+    await tab.reassignOccupant(tab.removal.impact.occupants[0]);
+    assert.match(tab.removal.error, /lit libre/i, 'sans lit choisi : aucun appel');
+    assert.equal(t.calls.some((c) => c.method === 'POST'), false);
+
+    tab.removal.targets.bo1 = 'bf1';
+    await tab.reassignOccupant(tab.removal.impact.occupants[0]);
+
+    const post = t.calls.find((c) => c.method === 'POST');
+    assert.equal(post.endpoint, '/boarding/assign-bed');
+    assert.deepEqual(post.body, { enrollmentId: 'e1', regime: 'Interne', bedId: 'bf1', includeBoardingFee: false, rowVersion: 77 });
+});
+
+test('« Rompre les liens et supprimer » : POST /boarding/deletions, corbeille notifiée, fenêtre fermée', async () => {
+    const t = boot({ impact: IMPACT() });
+    const tab = await ready(t.tab());
+    tab.openRemoval('dormitory', DORMITORIES[0]);
+    await flush();
+
+    await tab.breakLinksAndDelete();
+
+    const post = t.calls.find((c) => c.method === 'POST');
+    assert.equal(post.endpoint, '/boarding/deletions');
+    assert.deepEqual(post.body, { kind: 'Dormitory', id: DORMITORIES[0].id, rowVersion: DORMITORIES[0].rowVersion });
+    assert.deepEqual(plain(t.trash.notified), ['dormitories']);
+    assert.equal(tab.removal.open, false);
 });
 
 test('libellé de confirmation : un lit se désigne par son numéro, le reste par son nom', async () => {

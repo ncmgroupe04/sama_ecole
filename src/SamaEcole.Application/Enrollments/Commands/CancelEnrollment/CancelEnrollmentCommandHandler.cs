@@ -6,11 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Enrollments.Commands.CancelEnrollment;
 
-public class CancelEnrollmentCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
+public class CancelEnrollmentCommandHandler(
+    IApplicationDbContext dbContext, IKpiCacheService kpiCache, ICurrentUserService currentUser)
     : IRequestHandler<CancelEnrollmentCommand, Unit>
 {
     public async Task<Unit> Handle(CancelEnrollmentCommand request, CancellationToken cancellationToken)
     {
+        var actorId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Utilisateur courant inconnu.");
+
         // Le Global Query Filter + la policy RLS bornent déjà la recherche à l'école courante : viser
         // une inscription d'une autre école renvoie 404, jamais une annulation silencieuse.
         var enrollment = await dbContext.Enrollments
@@ -46,6 +50,11 @@ public class CancelEnrollmentCommandHandler(IApplicationDbContext dbContext, IKp
         // Statut Cancelled SANS SoftDelete — voir le commentaire de CancelEnrollmentCommand : la ligne
         // doit rester visible dans l'historique scolaire, jamais masquée par le Global Query Filter.
         enrollment.Status = EnrollmentStatus.Cancelled;
+
+        // « Comme s'il n'avait jamais été inscrit » : le lit d'internat est libéré et tout ce qui était rattaché (séjour, sorties,
+        // pointages, lignes de frais, échéanciers, engagements, relances) est archivé dans la même transaction — pour tous les
+        // profils d'école. Sans cela, un lit restait occupé par une inscription annulée (lit « fantôme »).
+        await EnrollmentLinkRelease.ArchiveAsync(dbContext, [enrollment.Id], actorId.ToString(), cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
