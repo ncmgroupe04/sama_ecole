@@ -75,9 +75,10 @@ test('le garde-fou reconnaît bien une liste absolue (il ne rassure pas à tort)
  * Toutes les fenêtres partagent la MÊME apparence (verre dépoli) parce qu'elles passent par <modal-shell>. Une vue qui
  * recompose sa propre fenêtre (`fixed inset-0` + panneau) en réintroduit une différente. Exceptions documentées :
  *  - Halqa.cshtml : tiroir de saisie des quarts, déjà en verre dépoli, conçu pour la tablette de l'Oustaz ;
+ *  - _HalqaRoll.cshtml : tiroir de l'appel de la Halqa (même conception tablette, même verre dépoli), extrait en partiel ;
  *  - AnnuaireB2C.cshtml : fiche publique, qui reprend la même surface mais ne charge pas ui-components.js.
  */
-const OWN_DIALOG_ALLOWED = new Set(['Internat/Halqa.cshtml', 'Home/AnnuaireB2C.cshtml']);
+const OWN_DIALOG_ALLOWED = new Set(['Internat/Halqa.cshtml', 'Internat/_HalqaRoll.cshtml', 'Home/AnnuaireB2C.cshtml']);
 
 test('aucune vue ne recompose sa propre fenêtre : toutes passent par <modal-shell>', () => {
     const offenders = [];
