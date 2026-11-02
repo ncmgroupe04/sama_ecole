@@ -152,6 +152,8 @@ document.addEventListener('alpine:init', () => {
         open: false, loading: false, data: null, error: '', editing: false, saving: false, form: null, errors: {}
     });
 
+    const emptyRemoval = () => ({ open: false, item: null, error: '', saving: false });
+
     Alpine.data('boardersTab', () => ({
         // Modale d'aperçu PDF commune (wwwroot/js/pdf-preview.js) : fiche du pensionnaire.
         ...window.pdfPreview.state(),
@@ -172,6 +174,7 @@ document.addEventListener('alpine:init', () => {
         statusChoices: window.boardersLogic.STATUS_CHOICES,
         regimeChoices: window.boardersLogic.REGIME_CHOICES,
         panel: emptyPanel(),
+        removal: emptyRemoval(),
         searchDebounce: null,
         listSeq: 0,
         detailSeq: 0,
@@ -376,6 +379,37 @@ document.addEventListener('alpine:init', () => {
                 }
             } finally {
                 panel.saving = false;
+            }
+        },
+
+        // ------------------------------------------------------------------ Suppression d'un séjour saisi par erreur
+
+        openRemoval(item) {
+            this.removal = { ...emptyRemoval(), open: true, item };
+        },
+
+        closeRemoval() {
+            this.removal.open = false;
+        },
+
+        /** DELETE /boarding/boarders/{id}?rowVersion= : séjour archivé (lit libéré) avec ses sorties et pointages — rien n'est effacé. */
+        async confirmRemoval() {
+            const removal = this.removal;
+            if (!removal.item) return;
+
+            removal.saving = true;
+            removal.error = '';
+            try {
+                await window.api.delete(`/boarding/boarders/${removal.item.id}?rowVersion=${removal.item.rowVersion}`);
+                this.notice = `Le séjour de ${removal.item.studentName} a été supprimé.`;
+                this.closeRemoval();
+                await this.load();
+            } catch (err) {
+                removal.error = this.helpers().errorMessage(err, 'Impossible de supprimer le séjour.');
+                // Séjour modifié ou déjà supprimé par un autre : la liste est relue, la fenêtre se ferme à la main.
+                if (err && (err.code === 'CONCURRENCY_CONFLICT' || err.status === 404)) await this.load();
+            } finally {
+                removal.saving = false;
             }
         }
     }));

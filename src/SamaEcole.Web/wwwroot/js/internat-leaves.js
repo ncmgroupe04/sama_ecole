@@ -119,6 +119,8 @@ document.addEventListener('alpine:init', () => {
 
     const blankReturn = () => ({ open: false, leave: null, date: '', error: '', saving: false, stale: false });
 
+    const blankCancel = () => ({ open: false, leave: null, error: '', saving: false });
+
     Alpine.data('leavesTab', () => ({
         loading: true,
         loadedAt: 0,
@@ -135,6 +137,7 @@ document.addEventListener('alpine:init', () => {
         reasonChoices: window.internatHelpers.LEAVE_REASONS,
         declare: blankDeclare(window.internatHelpers),
         returnModal: blankReturn(),
+        cancelModal: blankCancel(),
         searchDebounce: null,
         listSeq: 0,
         searchSeq: 0,
@@ -315,6 +318,37 @@ document.addEventListener('alpine:init', () => {
                     modal.stale = true;
                     await this.load();
                 }
+            } finally {
+                modal.saving = false;
+            }
+        },
+
+        // ------------------------------------------------------------------ Annulation (sortie déclarée par erreur)
+
+        openCancel(leave) {
+            this.cancelModal = { ...blankCancel(), open: true, leave };
+        },
+
+        closeCancel() {
+            this.cancelModal.open = false;
+        },
+
+        /** DELETE /boarding/leaves/{id}?rowVersion= : la sortie est archivée (suppression logique) et disparaît du registre. */
+        async submitCancel() {
+            const modal = this.cancelModal;
+            if (!modal.leave) return;
+
+            modal.saving = true;
+            modal.error = '';
+            try {
+                await window.api.delete(`/boarding/leaves/${modal.leave.id}?rowVersion=${modal.leave.rowVersion}`);
+                this.notice = `La sortie de ${modal.leave.studentName} a été annulée.`;
+                this.closeCancel();
+                await this.load();
+            } catch (err) {
+                modal.error = this.helpers().errorMessage(err, "Impossible d'annuler la sortie.");
+                // Sortie modifiée ou déjà supprimée par un autre : le registre est relu, la fenêtre se ferme à la main.
+                if (err && (err.code === 'CONCURRENCY_CONFLICT' || err.status === 404)) await this.load();
             } finally {
                 modal.saving = false;
             }

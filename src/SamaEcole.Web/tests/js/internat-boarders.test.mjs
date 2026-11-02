@@ -60,6 +60,7 @@ function boot({ role = 'Directeur', detail = DETAIL(), list = { items: [ITEM('s1
             api: {
                 get: (endpoint) => record('GET', endpoint, undefined, route(endpoint)),
                 put: (endpoint, body) => record('PUT', endpoint, body, detail),
+                delete: (endpoint) => record('DELETE', endpoint, undefined, null),
                 toMessage: (err, fallback) => (err && err.handledGlobally ? '' : (err && err.message) || fallback)
             }
         }
@@ -362,6 +363,39 @@ test('un formulaire invalide n\'envoie rien', async () => {
 
     assert.equal(calls.some((c) => c.method === 'PUT'), false);
     assert.ok(t.panel.errors.allowedExitPersons);
+});
+
+test('supprimer un séjour saisi par erreur : DELETE avec le rowVersion du séjour, puis liste relue', async () => {
+    const { tab, calls } = boot();
+    const t = tab();
+    await flush();
+    const before = calls.filter((c) => c.endpoint.startsWith('/boarding/boarders?')).length;
+    t.openRemoval(t.items[0]);
+
+    assert.equal(t.removal.open, true);
+    await t.confirmRemoval();
+
+    const del = calls.find((c) => c.method === 'DELETE');
+    assert.equal(del.endpoint, '/boarding/boarders/s1?rowVersion=11');
+    assert.equal(t.removal.open, false);
+    assert.match(t.notice, /séjour de Awa Diop a été supprimé/);
+    assert.equal(calls.filter((c) => c.endpoint.startsWith('/boarding/boarders?')).length, before + 1, 'liste relue');
+});
+
+test('supprimer un séjour : un conflit de version affiche un message et relit la liste, la fenêtre reste ouverte', async () => {
+    const conflict = new Error('technical');
+    conflict.code = 'CONCURRENCY_CONFLICT';
+    conflict.status = 409;
+    const { tab, calls } = boot({ fail: (m) => (m === 'DELETE' ? conflict : undefined) });
+    const t = tab();
+    await flush();
+    const before = calls.filter((c) => c.endpoint.startsWith('/boarding/boarders?')).length;
+    t.openRemoval(t.items[0]);
+    await t.confirmRemoval();
+
+    assert.ok(t.removal.error);
+    assert.equal(t.removal.open, true);
+    assert.equal(calls.filter((c) => c.endpoint.startsWith('/boarding/boarders?')).length, before + 1);
 });
 
 test('fermer la fiche : plus d\'édition ni de données', async () => {

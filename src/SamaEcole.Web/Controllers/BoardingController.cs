@@ -12,6 +12,7 @@ using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
 using SamaEcole.Application.Boarding.Boarders.AssignBed;
+using SamaEcole.Application.Boarding.Boarders.DeleteBoarder;
 using SamaEcole.Application.Boarding.Boarders.EndBoarding;
 using SamaEcole.Application.Boarding.Boarders.FindBoardableStudents;
 using SamaEcole.Application.Boarding.Boarders.GetBoarder;
@@ -30,6 +31,7 @@ using SamaEcole.Application.Boarding.Documents.MonthlyAttendanceSummary;
 using SamaEcole.Application.Boarding.Dormitories.UpdateDormitory;
 using SamaEcole.Application.Boarding.Leaves;
 using SamaEcole.Application.Boarding.Leaves.DeclareLeave;
+using SamaEcole.Application.Boarding.Leaves.DeleteLeave;
 using SamaEcole.Application.Boarding.Leaves.ListLeaves;
 using SamaEcole.Application.Boarding.Leaves.RecordReturn;
 using SamaEcole.Application.Boarding.Rooms.CreateDormitoryRoom;
@@ -350,6 +352,23 @@ public class BoardingController(ISender mediator) : ControllerBase
     }
 
     /// <summary>
+    /// Supprime un séjour saisi par erreur : archivé (lit libéré) avec ses sorties et pointages, comme s'il n'avait jamais eu lieu.
+    /// Rien n'est effacé ; la pension déjà facturée reste due. Distinct de <c>unassign-bed</c>, qui garde l'historique.
+    /// </summary>
+    [HttpDelete("boarders/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteBoarder(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteBoarderCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Recherche des élèves à affecter (inscriptions non annulées de l'année active, 2 caractères au moins, 20 résultats au plus). Décrit le SÉJOUR
     /// actif — <c>boarderId</c>, régime, lit, <c>rowVersion</c> du séjour — pour alimenter <c>assign-bed</c> (transfert) sans second appel.
     /// </summary>
@@ -450,6 +469,20 @@ public class BoardingController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RecordReturn(
         Guid id, [FromBody] ReturnLeaveRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new RecordReturnCommand(id, request.RowVersion, request.ActualReturnDate), cancellationToken));
+
+    /// <summary>Annule une sortie déclarée par erreur : archivée, elle disparaît du registre (rien n'est effacé).</summary>
+    [HttpDelete("leaves/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteLeave(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteLeaveCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
 
     /// <summary>Registre des sorties, plus récentes d'abord. <c>status</c> : Pending, Active, Overdue ou Returned.</summary>
     [HttpGet("leaves")]

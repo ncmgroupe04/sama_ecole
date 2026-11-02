@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Boarding.Assignments;
+using SamaEcole.Application.Boarding.Boarders.DeleteBoarder;
+using SamaEcole.Application.Boarding.Leaves.DeleteLeave;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments.Commands.CancelEnrollment;
@@ -171,6 +173,62 @@ public class EnrollmentEndsStayTests : IAsyncLifetime
         await using var owner = _db.NewOwnerContext();
         (await owner.BoardingEnrollments.IgnoreQueryFilters().SingleAsync(b => b.Id == _stays["abandonEnSortie"])).IsActive
             .Should().BeTrue("rien n'est modifié quand l'opération est refusée");
+    }
+
+    [Fact]
+    public async Task Deleting_A_Stay_Frees_The_Bed_And_Archives_Its_Leaves_But_Keeps_The_Fees()
+    {
+        uint stayVersion;
+        await using (var ctx = _db.NewAppContext(Ecole))
+        {
+            var stay = await ctx.BoardingEnrollments.FirstAsync(b => b.Id == _stays["annulee"]);
+            stayVersion = ctx.Entry(stay).Property<uint>("xmin").CurrentValue;
+        }
+
+        await using (var ctx = _db.NewAppContext(Ecole))
+        {
+            await new DeleteBoarderCommandHandler(ctx, new TestCurrentUser(Acteur))
+                .Handle(new DeleteBoarderCommand(_stays["annulee"], stayVersion), CancellationToken.None);
+        }
+
+        await using var owner = _db.NewOwnerContext();
+        var deleted = await owner.BoardingEnrollments.IgnoreQueryFilters().SingleAsync(b => b.Id == _stays["annulee"]);
+        (deleted.IsActive, deleted.BedId, deleted.IsDeleted).Should().Be((false, null, true));
+        (await owner.BoardingLeaves.IgnoreQueryFilters().SingleAsync(l => l.BoardingEnrollmentId == deleted.Id)).IsDeleted.Should().BeTrue();
+        (await owner.EnrollmentFeeLines.IgnoreQueryFilters().SingleAsync(l => l.EnrollmentId == _enrollments["annulee"])).IsDeleted
+            .Should().BeFalse("la pension déjà facturée reste due");
+        (await owner.Enrollments.IgnoreQueryFilters().SingleAsync(e => e.Id == _enrollments["annulee"])).Status
+            .Should().Be(EnrollmentStatus.Confirmed, "seul le séjour est supprimé, pas l'inscription");
+
+        await using var app = _db.NewAppContext(Ecole);
+        (await BoardingOccupancyHelper.ActiveBedIdsAsync(app)).Should().NotContain(Lit1);
+    }
+
+    [Fact]
+    public async Task Cancelling_A_Leave_Archives_Only_That_Leave_And_Unblocks_The_Release()
+    {
+        Guid leaveId;
+        uint leaveVersion;
+        await using (var ctx = _db.NewAppContext(Ecole))
+        {
+            var leave = await ctx.BoardingLeaves.FirstAsync(l => l.BoardingEnrollmentId == _stays["abandonEnSortie"]);
+            leaveId = leave.Id;
+            leaveVersion = ctx.Entry(leave).Property<uint>("xmin").CurrentValue;
+        }
+
+        await using (var ctx = _db.NewAppContext(Ecole))
+        {
+            await new DeleteLeaveCommandHandler(ctx, new TestCurrentUser(Acteur))
+                .Handle(new DeleteLeaveCommand(leaveId, leaveVersion), CancellationToken.None);
+        }
+
+        await using var owner = _db.NewOwnerContext();
+        (await owner.BoardingLeaves.IgnoreQueryFilters().SingleAsync(l => l.Id == leaveId)).IsDeleted.Should().BeTrue();
+        (await owner.BoardingEnrollments.IgnoreQueryFilters().SingleAsync(b => b.Id == _stays["abandonEnSortie"])).IsActive
+            .Should().BeTrue("annuler une sortie ne touche pas au séjour");
+
+        // Plus de sortie ouverte : l'abandon, refusé tant qu'elle existait, passe maintenant.
+        await DropOutAsync("abandonEnSortie");
     }
 
     private static class BoardingOccupancyHelper

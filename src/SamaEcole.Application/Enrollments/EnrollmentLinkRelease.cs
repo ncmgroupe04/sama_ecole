@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Deletion;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Entities;
 
 namespace SamaEcole.Application.Enrollments;
 
@@ -50,6 +51,16 @@ public static class EnrollmentLinkRelease
             .Where(b => enrollmentIds.Contains(b.EnrollmentId))
             .ToListAsync(cancellationToken);
 
+        await ArchiveStaysAsync(db, stays, actor, cancellationToken);
+    }
+
+    /// <summary>
+    /// Archive ces séjours avec leurs sorties et pointages. Un séjour actif est d'abord clos, son lit libéré. Partagé avec la
+    /// suppression d'un séjour saisi par erreur (onglet Pensionnaires).
+    /// </summary>
+    public static async Task ArchiveStaysAsync(
+        IApplicationDbContext db, IReadOnlyCollection<BoardingEnrollment> stays, string actor, CancellationToken cancellationToken)
+    {
         if (stays.Count == 0)
         {
             return;
