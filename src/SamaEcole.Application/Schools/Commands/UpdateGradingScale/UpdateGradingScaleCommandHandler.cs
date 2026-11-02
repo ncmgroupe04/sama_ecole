@@ -52,6 +52,7 @@ public class UpdateGradingScaleCommandHandler(
             settings.DirectorSignatureUrl,
             settings.CashierSignatureUrl,
             settings.OfficialStampUrl,
-            AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments);
+            AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments,
+            AllowFinanceToCancelPayslips: settings.AllowFinanceToCancelPayslips);
     }
 }

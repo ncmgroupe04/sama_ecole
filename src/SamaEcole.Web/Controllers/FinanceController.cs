@@ -589,7 +589,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
 
     /// <summary>Annule une fiche de paie erronée sans la supprimer ; contre-passe le décaissement si elle était payée (Volume 1 §14.5).</summary>
     [HttpPost("payroll/{id:guid}/cancel")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Policy = FinancePolicies.CanCancelPayslips)]
     [ProducesResponseType<CancelFichePaieResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -601,7 +601,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
 
     /// <summary>Annule la fiche erronée puis en génère une nouvelle pour la même période, sur les termes actuels du contrat (Volume 1 §14.5).</summary>
     [HttpPost("payroll/{id:guid}/regenerate")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Policy = FinancePolicies.CanCancelPayslips)]
     [ProducesResponseType<RegenerateFichePaieResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

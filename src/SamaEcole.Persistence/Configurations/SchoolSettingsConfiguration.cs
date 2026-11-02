@@ -32,6 +32,7 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         builder.Property(s => s.AllowFinanceToDeleteFees).IsRequired();
         // Défaut en base = vrai : les écoles déjà en production gardent le droit actuel de la Finance d'annuler un versement.
         builder.Property(s => s.AllowFinanceToCancelPayments).IsRequired().HasDefaultValue(true);
+        builder.Property(s => s.AllowFinanceToCancelPayslips).IsRequired().HasDefaultValue(true);
 
         // Défaut en base = 7 (SchoolSettingsDefaults.DebtorReminderThresholdDays) : les écoles déjà
         // existantes reçoivent la même valeur par défaut qu'une école neuve, jamais 0 (qui relancerait

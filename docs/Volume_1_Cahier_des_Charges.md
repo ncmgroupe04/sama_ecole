@@ -667,6 +667,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - **Garde-fou fiscal.** Une fiche ne peut plus être annulée dès qu'une **déclaration fiscale** existe pour sa période : cette déclaration est un document déposé, elle ne se réécrit pas en silence.
 - Si la fiche annulée **avait été payée** (§14.6), le décaissement « Salaires » correspondant est **contre-passé** par une écriture inverse datée du jour de l'annulation ; l'écriture d'origine n'est jamais supprimée. Il faudra payer la nouvelle fiche.
 - Rôles : Directeur, Finance. Concurrence : verrou optimiste, conflit = `409`.
+- **Interrupteur du Directeur.** Dans Paramètres, le Directeur peut **retirer à la Finance** le droit d'annuler ou de corriger une fiche (« Autoriser la Finance à annuler ou corriger une fiche de paie », ouvert par défaut). Retiré, la Finance reçoit `403` sur l'annulation et la régénération et ne voit plus ces boutons ; elle peut toujours générer et payer les fiches. Le Directeur garde toujours la main. Même mécanique que le droit d'annuler un versement.
 
 ### 14.6 Règlement du salaire, trésorerie et reçu *(ajouté le 02/11/2026)*
 

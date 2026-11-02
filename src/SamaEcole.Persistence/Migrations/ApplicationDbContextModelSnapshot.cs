@@ -4651,6 +4651,11 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("AllowFinanceToCancelPayslips")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("AllowFinanceToDeleteFees")
                         .HasColumnType("boolean");
 

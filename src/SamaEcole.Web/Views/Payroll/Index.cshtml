@@ -179,9 +179,9 @@
                                     <div class="flex flex-wrap items-center justify-end gap-2">
                                         <button type="button" x-show="payslip.status === 'Generated'" x-cloak
                                                 x-on:click="openPayslipAction(payslip, 'pay')" class="btn-modal-primary group">Payer</button>
-                                        <button type="button" x-show="payslip.status !== 'Cancelled'" x-cloak
+                                        <button type="button" x-show="canCancelPayslip && payslip.status !== 'Cancelled'" x-cloak
                                                 x-on:click="openPayslipAction(payslip, 'regenerate')" class="btn-modal-secondary group">Corriger</button>
-                                        <button type="button" x-show="payslip.status !== 'Cancelled'" x-cloak
+                                        <button type="button" x-show="canCancelPayslip && payslip.status !== 'Cancelled'" x-cloak
                                                 x-on:click="openPayslipAction(payslip, 'cancel')" class="btn-modal-secondary group">Annuler</button>
                                         <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
                                                 class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">

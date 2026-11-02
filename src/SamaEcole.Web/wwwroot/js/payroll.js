@@ -62,6 +62,10 @@ document.addEventListener('alpine:init', () => {
         printingPayslipId: null,
 
         // Payer / corriger / annuler une fiche (Volume 1 §14.5 et §14.6).
+        // Directeur : toujours. Finance : tant que le Directeur ne lui a pas retiré ce droit
+        // (SchoolSettings.allowFinanceToCancelPayslips, vrai par défaut). Confort d'affichage : le serveur reste
+        // l'arbitre (403 si le droit est retiré).
+        canCancelPayslip: ['Directeur', 'Finance'].includes(window.auth.role),
         isPayslipActionOpen: false,
         isSubmittingPayslipAction: false,
         payslipAction: { kind: 'pay', id: '', status: '', employeeFullName: '', periodLabel: '', netSalary: 0, paymentMethod: 'Cash', date: '', reason: '', rowVersion: 0 },
@@ -95,6 +99,7 @@ document.addEventListener('alpine:init', () => {
         taxForm: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
 
         init() {
+            this.loadCancelPayslipRight();
             this.loadContracts();
             this.loadTeachers();
             this.loadUsers();
@@ -301,6 +306,17 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des fiches de paie.');
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        /** Seule la Finance dépend du réglage du Directeur ; en cas d'échec de lecture on garde le défaut (ouvert). */
+        async loadCancelPayslipRight() {
+            if (window.auth.role !== 'Finance') return;
+            try {
+                const settings = await window.api.get('/schools/current/settings');
+                this.canCancelPayslip = settings.allowFinanceToCancelPayslips !== false;
+            } catch {
+                // silence-volontaire : confort d'affichage, le défaut ouvert est celui du serveur.
             }
         },
 
