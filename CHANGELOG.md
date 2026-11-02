@@ -7,6 +7,7 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Internat : « Rompre les liens et supprimer » (pavillon, chambre, lit).** Si l'élément contient des chambres, des lits ou des élèves, la fenêtre de suppression propose d'abord de réaffecter chaque élève dans un lit libre ailleurs ; « Rompre les liens et supprimer » archive ensuite l'élément avec ses chambres et ses lits (restaurables) et remet les élèves restants « en attente de lit ».
 - **Internat : annuler une sortie et supprimer un séjour saisis par erreur.** Onglet Sorties : « Annuler la sortie » (archivée, elle disparaît du registre). Onglet Pensionnaires : « Supprimer le séjour » (lit libéré, séjour archivé avec ses sorties et pointages ; la pension déjà facturée reste due). « Enregistrer le retour » est maintenant un vrai bouton.
 - **Annuler une inscription libère maintenant tout ce qui y était rattaché.** Le lit d'internat de l'élève est libéré (il restait « occupé » par une inscription annulée), et son séjour, ses sorties, ses lignes de frais, ses échéanciers et ses relances sont archivés : comme s'il n'avait jamais été inscrit. L'inscription reste visible au statut « Annulée » (numéro de reçu sans trou). Un abandon ou un transfert libère aussi le lit, en gardant l'historique. Vaut pour tous les profils d'école. Dans l'onglet Sorties de l'internat, « Enregistrer le retour » est maintenant un vrai bouton.
 - **Caisse : les mensualités échues sont maintenant signalées.** Une fois l'inscription et le 1er mois réglés, la recherche

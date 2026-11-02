@@ -234,17 +234,63 @@
     <!-- Modale de suppression : jamais de confirm() natif -->
     <modal-shell open="removal.open" on-close="closeRemoval()" size="md" title="Confirmer la suppression">
         <div class="space-y-4">
-            <p class="text-sm text-slate-600">
-                Supprimer <strong x-text="removalLabel()"></strong> ? L'élément reste restaurable depuis « éléments supprimés ». Un élément qui contient
-                encore des chambres, des lits ou des pensionnaires ne peut pas être supprimé.
+            <p class="text-sm text-slate-600" x-show="!removalHasLinks">
+                Supprimer <strong x-text="removalLabel()"></strong> ? L'élément reste restaurable depuis « éléments supprimés ».
             </p>
+
+            <!-- Liens à rompre : on propose d'abord de réaffecter les élèves, puis de tout supprimer -->
+            <div x-show="removalHasLinks" x-cloak class="space-y-3">
+                <p class="text-sm text-slate-600">
+                    <strong x-text="removalLabel()"></strong> contient encore
+                    <span x-text="removal.impact ? removal.impact.roomCount + ' chambre(s), ' + removal.impact.bedCount + ' lit(s) et ' + removal.impact.occupants.length + ' élève(s)' : ''"></span>.
+                    « Rompre les liens et supprimer » archive l'élément avec ses chambres et ses lits (restaurables).
+                </p>
+
+                <template x-if="removal.impact && removal.impact.occupants.length > 0">
+                    <div class="space-y-2">
+                        <p class="text-sm font-medium text-slate-700">
+                            Réaffectez d'abord ces élèves dans un lit libre. Ceux que vous laissez ici garderont leur séjour mais n'auront plus de lit
+                            (« en attente de lit »).
+                        </p>
+                        <p x-show="freeBedOptions.length === 0" x-cloak class="text-xs text-amber-700">
+                            Aucun lit libre ailleurs : créez un lit d'abord, ou rompez les liens pour les remettre « en attente de lit ».
+                        </p>
+                        <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                            <template x-for="o in removal.impact.occupants" :key="o.boarderId">
+                                <li class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-medium text-slate-800" x-text="o.studentName"></p>
+                                        <p class="text-xs text-slate-400" x-text="o.matricule + ' · ' + o.location"></p>
+                                    </div>
+                                    <div class="flex items-center gap-2" x-show="freeBedOptions.length > 0" x-cloak>
+                                        <div class="w-56">
+                                            <select-field model="removal.targets[o.boarderId]" options-expr="freeBedOptions"
+                                                          placeholder="Choisir un lit libre…" aria-label="Lit libre" />
+                                        </div>
+                                        <button type="button" class="btn-modal-secondary group whitespace-nowrap"
+                                                :disabled="removal.reassigning === o.boarderId || removal.saving"
+                                                x-on:click="reassignOccupant(o)">
+                                            <span x-text="removal.reassigning === o.boarderId ? 'Réaffectation…' : 'Réaffecter'"></span>
+                                        </button>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+            </div>
 
             <div x-show="removal.error" x-cloak class="form-error-banner"><span x-text="removal.error"></span></div>
 
             <div class="flex justify-end gap-3 pt-2">
                 <button type="button" class="btn-modal-secondary group" x-on:click="closeRemoval()">Annuler</button>
-                <button type="button" class="btn-modal-primary group" :disabled="removal.saving" x-on:click="confirmRemoval()">
+                <button type="button" class="btn-modal-primary group" x-show="!removalHasLinks"
+                        :disabled="removal.saving" x-on:click="confirmRemoval()">
                     <span x-text="removal.saving ? 'Suppression…' : 'Supprimer'"></span>
+                </button>
+                <button type="button" class="btn-modal-primary group" x-show="removalHasLinks" x-cloak
+                        :disabled="removal.saving || removal.reassigning !== ''" x-on:click="breakLinksAndDelete()">
+                    <span x-text="removal.saving ? 'Suppression…' : 'Rompre les liens et supprimer'"></span>
                 </button>
             </div>
         </div>

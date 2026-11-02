@@ -12,6 +12,7 @@ using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
 using SamaEcole.Application.Boarding.Boarders.AssignBed;
+using SamaEcole.Application.Boarding.Deletion;
 using SamaEcole.Application.Boarding.Boarders.DeleteBoarder;
 using SamaEcole.Application.Boarding.Boarders.EndBoarding;
 using SamaEcole.Application.Boarding.Boarders.FindBoardableStudents;
@@ -82,6 +83,8 @@ public class BoardingController(ISender mediator) : ControllerBase
     public record ChangeBedStatusRequest(BedStatus Status, uint RowVersion);
 
     public record AssignBedRequest(Guid EnrollmentId, BoardingRegime Regime, Guid? BedId, bool IncludeBoardingFee, uint? RowVersion);
+
+    public record BreakLinksAndDeleteRequest(BoardingDeletionKind Kind, Guid Id, uint RowVersion);
 
     public record UpdateBoarderProfileRequest(
         string? MedicalNotes, string? EmergencyContactName, string? EmergencyContactPhone,
@@ -316,6 +319,38 @@ public class BoardingController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RestoreBed(Guid id, CancellationToken cancellationToken)
     {
         await mediator.Send(new RestoreBedCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    // ------------------------------------------------------------------ Suppression avec rupture des liens
+
+    /// <summary>
+    /// Analyse avant suppression d'un pavillon, d'une chambre ou d'un lit : chambres et lits rattachés, élèves qui y dorment et lits
+    /// libres ailleurs pour les réaffecter d'abord. Lecture seule.
+    /// </summary>
+    [HttpGet("deletion-impact")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoardingDeletionImpactDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDeletionImpact(
+        [FromQuery] BoardingDeletionKind kind, [FromQuery] Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetBoardingDeletionImpactQuery(kind, id), cancellationToken));
+
+    /// <summary>
+    /// « Rompre les liens et supprimer » : l'élément, ses chambres et ses lits sont archivés (restaurables) ; les élèves qui y dormaient
+    /// gardent leur séjour sans lit (« en attente de lit »). Rien n'est effacé. 409 si <c>rowVersion</c> est périmé.
+    /// </summary>
+    [HttpPost("deletions")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> BreakLinksAndDelete(
+        [FromBody] BreakLinksAndDeleteRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new BreakLinksAndDeleteCommand(request.Kind, request.Id, request.RowVersion), cancellationToken);
         return NoContent();
     }
 
