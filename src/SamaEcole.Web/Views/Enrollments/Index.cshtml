@@ -413,11 +413,13 @@
  <div x-show="currentStep === 3 && mode === 'NewEnrollment'" x-cloak class="form-grid">
  <div>
  <label for="enr-guardian" class="form-label">Nom du tuteur</label>
- <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field">
+ <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field" :class="formErrors.guardianname && 'input-field-error'">
+ <p x-show="formErrors.guardianname" x-cloak x-text="formErrors.guardianname" class="field-error"></p>
  </div>
  <div>
  <label for="enr-guardian-phone" class="form-label">Téléphone du tuteur</label>
- <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field">
+ <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field" :class="formErrors.guardianphone && 'input-field-error'">
+ <p x-show="formErrors.guardianphone" x-cloak x-text="formErrors.guardianphone" class="field-error"></p>
  </div>
  </div>
  @* Réinscription : les coordonnées du tuteur restent celles déjà enregistrées sur la fiche de

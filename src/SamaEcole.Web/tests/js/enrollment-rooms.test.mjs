@@ -112,6 +112,25 @@ test("une clé d'erreur sans emplacement d'affichage est reversée dans le bande
     assert.equal(routed.optionalfeecategoryids, undefined);
 });
 
+test("un téléphone de tuteur refusé (422 GuardianPhone) ramène à l'étape 3, où le message est affiché", () => {
+    const { view } = enrollments();
+    const message = 'Le numéro de téléphone doit être un numéro sénégalais valide (ex: 77 123 45 67).';
+    view.formErrors = plain(view.routeFormErrors({ guardianphone: message }));
+    view.goToStep(4);
+    view.jumpToFirstErrorStep();
+
+    assert.equal(view.formErrors.guardianphone, message);
+    assert.equal(view.currentStep, 3);
+});
+
+test("la vue affiche bien l'erreur sous le téléphone et le nom du tuteur (sinon le 422 reste muet)", async () => {
+    const { readFile } = await import('node:fs/promises');
+    const html = await readFile(new URL('../../Views/Enrollments/Index.cshtml', import.meta.url), 'utf8');
+
+    assert.match(html, /x-text="formErrors\.guardianphone"/);
+    assert.match(html, /x-text="formErrors\.guardianname"/);
+});
+
 test("les erreurs de champs connus et les drapeaux (archivedConflict) passent inchangés", () => {
     const { view } = enrollments();
     const routed = plain(view.routeFormErrors({ fullname: 'Requis.', roomid: 'Pleine.', archivedConflict: true }));
