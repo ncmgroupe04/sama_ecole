@@ -16,6 +16,19 @@
  * n'inscrivent pas, mais l'API répond 403 de toute façon (le service Finance ne compose jamais un
  * montant dû, AGENTS.md règle #4).
  */
+// Étape du formulaire qui affiche l'erreur de chaque champ (clés en minuscules, comme toFieldErrors).
+// Toute clé absente d'ici n'a pas d'emplacement d'affichage : voir routeFormErrors().
+const STEP_OF_FIELD = {
+    fullname: 1, birthdate: 1, gender: 1, birthplace: 1, studentid: 1,
+    classroomid: 2, roomid: 2, boardingstatus: 2, subjectoptionids: 2, previousschoolname: 2,
+    guardianname: 3, guardianphone: 3,
+    global: 4, schoolyear: 4
+};
+
+// Clés serveur qui désignent un champ que cet écran présente sous un autre nom : le lit est choisi par le serveur,
+// l'utilisateur ne voit que la chambre.
+const FIELD_ALIASES = { bedid: 'roomid' };
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('enrollmentsView', () => ({
         // Seuls le Directeur et le Secrétariat inscrivent (règle #4). Confort d'affichage : l'API garde.
@@ -546,7 +559,7 @@ document.addEventListener('alpine:init', () => {
                 if (window.formDraft) window.formDraft.clear('enrollment_form');
                 this.hasDraft = false;
             } catch (err) {
-                this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
+                this.formErrors = this.routeFormErrors(window.api.toFieldErrors(err, "Erreur lors de l'inscription."));
                 this.jumpToFirstErrorStep();
             } finally {
                 this.isSubmitting = false;
@@ -561,16 +574,38 @@ document.addEventListener('alpine:init', () => {
          * invisible sous un x-show="currentStep === n" fermé.
          */
         jumpToFirstErrorStep() {
-            const stepOfField = {
-                fullname: 1, birthdate: 1, gender: 1, birthplace: 1, studentid: 1,
-                classroomid: 2, roomid: 2, boardingstatus: 2, subjectoptionids: 2, previousschoolname: 2,
-                guardianname: 3, guardianphone: 3,
-                global: 4, schoolyear: 4
-            };
             const erroredKeys = Object.keys(this.formErrors);
             if (erroredKeys.length === 0) return;
-            const steps = erroredKeys.map((k) => stepOfField[k]).filter(Boolean);
+            const steps = erroredKeys.map((k) => STEP_OF_FIELD[k]).filter(Boolean);
             if (steps.length > 0) this.goToStep(Math.min(...steps));
+        },
+
+        /**
+         * Aucune erreur serveur ne doit rester muette. Le formulaire n'affiche un message que sous les champs de
+         * STEP_OF_FIELD (et dans les deux bandeaux du haut) : une erreur portée par une autre clé était reçue puis
+         * jetée — l'utilisateur cliquait « Inscrire l'élève » et rien ne se passait.
+         *
+         * Cas réel : l'affectation d'hébergement (BoardingAssignmentService) rejette sous `BedId` (« Ce pavillon accueille
+         * uniquement des garçons/filles », « Ce lit est en maintenance »), alors que cet écran ne montre qu'une CHAMBRE.
+         * On rabat donc `bedid` sur le champ Chambre, et toute autre clé inconnue (RowVersion, OptionalFeeCategoryIds…)
+         * est reversée dans le bandeau global plutôt qu'avalée.
+         */
+        routeFormErrors(errors) {
+            const routed = {};
+            const orphans = [];
+            for (const [key, value] of Object.entries(errors || {})) {
+                if (typeof value !== 'string') { routed[key] = value; continue; } // drapeaux (archivedConflict)
+                const target = FIELD_ALIASES[key] || key;
+                if (STEP_OF_FIELD[target]) {
+                    routed[target] = routed[target] ? `${routed[target]} ${value}` : value;
+                } else {
+                    orphans.push(value);
+                }
+            }
+            if (orphans.length > 0) {
+                routed.global = [routed.global, ...orphans].filter(Boolean).join(' ');
+            }
+            return routed;
         },
 
         /** Fenêtre de confirmation → « Imprimer le reçu » : on ferme le dialogue et on révèle le reçu. */
