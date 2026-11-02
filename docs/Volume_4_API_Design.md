@@ -387,11 +387,14 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | Méthode | Route | Description |
 |---|---|---|
 | `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
-| `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) |
+| `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) pour un enseignant (`teacherId`), un utilisateur (`userId`) **ou** une personne sans compte (`externalFullName`, `externalJobTitle?`, `externalPhone?` — §14.7) : exactement l'un des trois |
 | `PATCH` | `/api/v1/finance/employee-contracts/{id}` | Réviser un contrat actif (salaire, taux, prime, moyen de paiement) |
 | `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |
 | `POST` | `/api/v1/finance/payroll` | Générer la fiche de paie d'un employé pour un mois donné |
-| `GET` | `/api/v1/finance/payroll/{id}/pdf` | Bulletin de salaire (PDF A4) |
+| `GET` | `/api/v1/finance/payroll/{id}/pdf` | Bulletin de salaire (PDF A4) ; vaut **reçu de paiement** une fois la fiche payée, porte « FICHE ANNULÉE » si annulée |
+| `POST` | `/api/v1/finance/payroll/{id}/pay` | Régler le net d'une fiche : crée le décaissement « Salaires » (Volume 1 §14.6). Corps : `paymentMethod`, `date`, `rowVersion` |
+| `POST` | `/api/v1/finance/payroll/{id}/cancel` | Annuler une fiche sans la supprimer, contre-passe le décaissement si payée (§14.5). Corps : `reason`, `rowVersion` |
+| `POST` | `/api/v1/finance/payroll/{id}/regenerate` | Annuler puis régénérer la fiche sur les termes actuels du contrat (§14.5). Corps : `reason`, `rowVersion`, `hoursWorked?`, `transportAllowance?` |
 | `POST` | `/api/v1/finance/employee-contracts/{contractId}/hour-records` | Déclarer des heures effectuées (vacataires) |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records` | Relevé des heures déclarées |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records/sheet` | Fiche de suivi des heures (données) |

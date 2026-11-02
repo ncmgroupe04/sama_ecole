@@ -27,6 +27,9 @@ document.addEventListener('alpine:init', () => {
             employeeKind: 'teacher',
             teacherId: '',
             userId: '',
+            externalFullName: '',
+            externalJobTitle: '',
+            externalPhone: '',
             type: 'Permanent',
             baseSalary: '',
             hourlyRate: '',
@@ -57,6 +60,17 @@ document.addEventListener('alpine:init', () => {
             transportAllowance: 0
         },
         printingPayslipId: null,
+
+        // Payer / corriger / annuler une fiche (Volume 1 §14.5 et §14.6).
+        isPayslipActionOpen: false,
+        isSubmittingPayslipAction: false,
+        payslipAction: { kind: 'pay', id: '', status: '', employeeFullName: '', periodLabel: '', netSalary: 0, paymentMethod: 'Cash', date: '', reason: '', rowVersion: 0 },
+        payslipPaymentMethodOptions: [
+            { value: 'Cash', label: 'Espèces' },
+            { value: 'Transfer', label: 'Virement bancaire' },
+            { value: 'MobileMoney', label: 'Mobile money (Wave, Orange Money)' },
+            { value: 'Cheque', label: 'Chèque' }
+        ],
         downloadingCertificateId: null,
 
         // Suggestion d'heures (ticket JGK-K01) — voir loadSuggestedHours ci-dessous.
@@ -153,6 +167,7 @@ document.addEventListener('alpine:init', () => {
         openContractModal() {
             this.contractForm = {
                 employeeKind: 'teacher', teacherId: '', userId: '',
+                externalFullName: '', externalJobTitle: '', externalPhone: '',
                 type: 'Permanent', baseSalary: '', hourlyRate: '', transportAllowance: '',
                 payoutMethod: 'Cash', payoutAccountReference: ''
             };
@@ -160,9 +175,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async submitContract() {
-            const employeeId = this.contractForm.employeeKind === 'teacher' ? this.contractForm.teacherId : this.contractForm.userId;
+            const kind = this.contractForm.employeeKind;
+            const employeeId = kind === 'teacher' ? this.contractForm.teacherId
+                : kind === 'user' ? this.contractForm.userId
+                : (this.contractForm.externalFullName || '').trim();
             if (!employeeId) {
-                toast.error('Veuillez sélectionner un employé.');
+                toast.error(kind === 'external' ? 'Veuillez saisir le nom de la personne.' : 'Veuillez sélectionner un employé.');
                 return;
             }
 
@@ -171,6 +189,9 @@ document.addEventListener('alpine:init', () => {
                 await api.post('/finance/employee-contracts', {
                     teacherId: this.contractForm.employeeKind === 'teacher' ? this.contractForm.teacherId : null,
                     userId: this.contractForm.employeeKind === 'user' ? this.contractForm.userId : null,
+                    externalFullName: kind === 'external' ? this.contractForm.externalFullName.trim() : null,
+                    externalJobTitle: kind === 'external' ? ((this.contractForm.externalJobTitle || '').trim() || null) : null,
+                    externalPhone: kind === 'external' ? ((this.contractForm.externalPhone || '').trim() || null) : null,
                     type: this.contractForm.type,
                     baseSalary: Number(this.contractForm.baseSalary) || 0,
                     hourlyRate: Number(this.contractForm.hourlyRate) || 0,
@@ -280,6 +301,61 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des fiches de paie.');
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        // Moyen de règlement proposé par défaut : celui du contrat (PayoutMethod RH -> PaymentMethod des décaissements).
+        defaultPaymentMethodFor(payslip) {
+            const contract = this.contracts.find((c) => c.id === payslip.employeeContractId);
+            switch (contract && contract.payoutMethod) {
+                case 'BankTransfer': return 'Transfer';
+                case 'Wave':
+                case 'OrangeMoney': return 'MobileMoney';
+                default: return 'Cash';
+            }
+        },
+
+        openPayslipAction(payslip, kind) {
+            this.payslipAction = {
+                kind,
+                id: payslip.id,
+                status: payslip.status,
+                employeeFullName: payslip.employeeFullName,
+                periodLabel: this.monthLabel(payslip.month) + ' ' + payslip.year,
+                netSalary: payslip.netSalary,
+                paymentMethod: this.defaultPaymentMethodFor(payslip),
+                date: new Date().toISOString().split('T')[0],
+                reason: '',
+                rowVersion: payslip.rowVersion
+            };
+            this.isPayslipActionOpen = true;
+        },
+
+        async submitPayslipAction() {
+            const a = this.payslipAction;
+            if (a.kind !== 'pay' && (!a.reason || a.reason.trim().length < 5)) {
+                toast.error('Le motif est obligatoire (5 caractères minimum).');
+                return;
+            }
+
+            this.isSubmittingPayslipAction = true;
+            try {
+                if (a.kind === 'pay') {
+                    await api.post(`/finance/payroll/${a.id}/pay`, { paymentMethod: a.paymentMethod, date: a.date, rowVersion: a.rowVersion });
+                    toast.success('Paiement enregistré : la dépense « Salaires » est en trésorerie. Imprimez le reçu pour signature.');
+                } else if (a.kind === 'regenerate') {
+                    await api.post(`/finance/payroll/${a.id}/regenerate`, { reason: a.reason.trim(), rowVersion: a.rowVersion });
+                    toast.success('Fiche annulée et régénérée sur le contrat actuel.');
+                } else {
+                    await api.post(`/finance/payroll/${a.id}/cancel`, { reason: a.reason.trim(), rowVersion: a.rowVersion });
+                    toast.success('Fiche annulée.');
+                }
+                this.isPayslipActionOpen = false;
+                await this.loadPayslips();
+            } catch (err) {
+                toast.error(window.api.toMessage(err, "Erreur lors de l'opération sur la fiche de paie."));
+            } finally {
+                this.isSubmittingPayslipAction = false;
             }
         },
 

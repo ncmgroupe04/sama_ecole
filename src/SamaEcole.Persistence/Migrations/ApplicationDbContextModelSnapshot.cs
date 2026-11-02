@@ -1553,6 +1553,18 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("ExternalFullName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ExternalJobTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<decimal>("HourlyRate")
                         .HasColumnType("numeric");
 
@@ -2376,6 +2388,16 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<decimal>("Brs")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2390,6 +2412,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("DisbursementId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("EmployeeContractId")
                         .HasColumnType("uuid");
@@ -2414,6 +2439,19 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<decimal>("NetSalary")
                         .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PaidByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PaidWith")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("ReplacedByFichePaieId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -2446,7 +2484,8 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("SchoolId");
 
                     b.HasIndex("SchoolId", "EmployeeContractId", "Month", "Year")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"CancelledAt\" IS NULL");
 
                     b.ToTable("fiche_paies", (string)null);
                 });

@@ -35,6 +35,18 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
             {
                 column.Item().Element(ComposeHeader);
 
+                if (payslip.CancelledAt is not null)
+                {
+                    column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Red.Darken2).Padding(6).Column(c =>
+                    {
+                        c.Item().AlignCenter().Text("FICHE ANNULÉE — SANS VALEUR").Bold().FontSize(12).FontColor(Colors.Red.Darken2);
+                        if (!string.IsNullOrWhiteSpace(payslip.CancellationReason))
+                        {
+                            c.Item().AlignCenter().Text($"Motif : {payslip.CancellationReason}").FontSize(8).FontColor(Colors.Red.Darken2);
+                        }
+                    });
+                }
+
                 column.Item().PaddingTop(16).AlignCenter()
                     .Text("BULLETIN DE PAIE").Bold().FontSize(15);
                 column.Item().AlignCenter().Text(PeriodLabel()).FontSize(10).FontColor(Colors.Grey.Darken2);
@@ -44,6 +56,10 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
                 column.Item().PaddingTop(16).Element(ComposeEmployeeBlock);
                 column.Item().PaddingTop(14).Element(ComposeEarningsTable);
                 column.Item().PaddingTop(6).Element(ComposeNetPayBlock);
+                if (payslip.PaidAt is not null && payslip.CancelledAt is null)
+                {
+                    column.Item().PaddingTop(10).Element(ComposePaymentReceipt);
+                }
                 column.Item().PaddingTop(30).Element(ComposeSignatures);
             });
         });
@@ -144,6 +160,31 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
             row.RelativeItem().AlignRight().Text(FormatMoney(payslip.NetSalary)).Bold().FontSize(13);
         });
     }
+
+    /// <summary>
+    /// Reçu de paiement du salaire (Volume 1 §14.6) : le bulletin d'une fiche réglée vaut reçu. Il est signé par
+    /// l'employé(e), ce qui permet de payer une personne sans compte (gardien…) en gardant une pièce justificative.
+    /// </summary>
+    private void ComposePaymentReceipt(IContainer container)
+    {
+        container.Border(0.5f).BorderColor(Colors.Grey.Darken1).Padding(8).Column(c =>
+        {
+            c.Item().Text("REÇU DE PAIEMENT DU SALAIRE").Bold().FontSize(10);
+            c.Item().PaddingTop(3).Text(
+                $"Reçu de {payslip.SchoolName} la somme nette de {FormatMoney(payslip.NetSalary)}, " +
+                $"réglée le {payslip.PaidAt!.Value:dd/MM/yyyy} {PaymentMethodLabel(payslip.PaidWith)}, " +
+                $"pour la période de {PeriodLabel()}.").FontSize(9);
+        });
+    }
+
+    private static string PaymentMethodLabel(string? method) => method switch
+    {
+        "Cash" => "en espèces",
+        "Cheque" => "par chèque",
+        "Transfer" => "par virement",
+        "MobileMoney" => "par mobile money",
+        _ => string.Empty
+    };
 
     private void ComposeSignatures(IContainer container)
     {

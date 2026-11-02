@@ -153,12 +153,13 @@
                             <th class="py-3 px-4">Période</th>
                             <th class="py-3 px-4 text-right">Brut</th>
                             <th class="py-3 px-4 text-right">Net à payer</th>
-                            <th class="py-3 px-4 text-right">Bulletin</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <tr x-show="!isLoading && payslips.length === 0" x-cloak>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <empty-state icon="document" title="Aucune fiche de paie sur cette période."
                                     hint="Générez une fiche pour un contrat existant." />
                             </td>
@@ -169,13 +170,26 @@
                                 <td class="py-3 px-4 text-slate-600" x-text="monthLabel(payslip.month) + ' ' + payslip.year"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(payslip.grossSalary)"></td>
                                 <td class="py-3 px-4 text-right font-semibold text-slate-900 amount" x-text="formatAmount(payslip.netSalary)"></td>
+                                <td class="py-3 px-4">
+                                    <span x-show="payslip.status === 'Generated'" class="status-badge-warning"><span class="status-dot" aria-hidden="true"></span>À payer</span>
+                                    <span x-show="payslip.status === 'Paid'" x-cloak class="status-badge-success"><span class="status-dot" aria-hidden="true"></span><span x-text="'Payée le ' + formatDate(payslip.paidAt)"></span></span>
+                                    <span x-show="payslip.status === 'Cancelled'" x-cloak class="status-badge-neutral" :title="payslip.cancellationReason"><span class="status-dot" aria-hidden="true"></span>Annulée</span>
+                                </td>
                                 <td class="py-3 px-4 text-right">
-                                    <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
-                                            class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
-                                        <icon name="print" class="w-4 h-4" x-show="printingPayslipId !== payslip.id" />
-                                        <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingPayslipId === payslip.id" x-cloak />
-                                        <span x-text="printingPayslipId === payslip.id ? 'Génération...' : 'Bulletin PDF'"></span>
-                                    </button>
+                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                        <button type="button" x-show="payslip.status === 'Generated'" x-cloak
+                                                x-on:click="openPayslipAction(payslip, 'pay')" class="btn-modal-primary group">Payer</button>
+                                        <button type="button" x-show="payslip.status !== 'Cancelled'" x-cloak
+                                                x-on:click="openPayslipAction(payslip, 'regenerate')" class="btn-modal-secondary group">Corriger</button>
+                                        <button type="button" x-show="payslip.status !== 'Cancelled'" x-cloak
+                                                x-on:click="openPayslipAction(payslip, 'cancel')" class="btn-modal-secondary group">Annuler</button>
+                                        <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
+                                                class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
+                                            <icon name="print" class="w-4 h-4" x-show="printingPayslipId !== payslip.id" />
+                                            <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingPayslipId === payslip.id" x-cloak />
+                                            <span x-text="printingPayslipId === payslip.id ? 'Génération...' : (payslip.status === 'Paid' ? 'Reçu PDF' : 'Bulletin PDF')"></span>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -251,6 +265,9 @@
                     <label class="flex items-center gap-2 text-sm">
                         <input type="radio" class="radio-field" x-model="contractForm.employeeKind" value="user" /> Utilisateur (non-enseignant)
                     </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="radio" class="radio-field" x-model="contractForm.employeeKind" value="external" /> Personnel sans compte (gardien…)
+                    </label>
                 </div>
             </div>
 
@@ -264,6 +281,24 @@
                 <select-field model="contractForm.userId" placeholder="Sélectionnez un utilisateur..."
                     options-expr="users.map(u => ({value: u.id, label: u.fullName + ' (' + u.role + ')'}))" />
                 <p class="mt-1 text-xs text-slate-400" x-show="users.length === 0">Aucun utilisateur accessible (réservé au Directeur).</p>
+            </div>
+
+            <div x-show="contractForm.employeeKind === 'external'" x-cloak class="space-y-3">
+                <div class="form-grid">
+                    <div>
+                        <label class="form-label">Nom complet <span class="text-red-500">*</span></label>
+                        <input type="text" maxlength="150" x-model="contractForm.externalFullName" placeholder="ex : Moussa Diop" class="input-field mt-1" />
+                    </div>
+                    <div>
+                        <label class="form-label">Fonction</label>
+                        <input type="text" maxlength="100" x-model="contractForm.externalJobTitle" placeholder="ex : Gardien" class="input-field mt-1" />
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">Téléphone</label>
+                    <input type="text" maxlength="30" x-model="contractForm.externalPhone" placeholder="ex : 77 000 00 00" class="input-field mt-1" />
+                </div>
+                <p class="text-xs text-slate-500">Cette personne n'aura pas de compte : elle est payée et reçoit son reçu, sans jamais se connecter.</p>
             </div>
 
             <div>
@@ -378,6 +413,54 @@
                 <button type="submit" class="btn-modal-primary group" :disabled="isClosingContract">
                     <span x-show="!isClosingContract">Clôturer</span>
                     <span x-show="isClosingContract">Clôture...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- ===================== Modale : Payer / Corriger / Annuler une fiche (Volume 1 §14.5 et §14.6) ===================== -->
+    <modal-shell size="60" open="isPayslipActionOpen" title="Fiche de paie">
+        <form x-on:submit.prevent="submitPayslipAction()" novalidate class="space-y-5">
+            <p class="text-base font-medium leading-relaxed text-slate-700">
+                <span class="font-semibold text-slate-900" x-text="payslipAction.employeeFullName"></span> —
+                <span x-text="payslipAction.periodLabel"></span> · net
+                <span class="font-semibold text-slate-900 amount" x-text="formatAmount(payslipAction.netSalary)"></span>
+            </p>
+
+            <p x-show="payslipAction.kind === 'pay'" class="text-sm text-slate-600">
+                Le règlement crée une dépense « Salaires » en trésorerie et en comptabilité, et le bulletin sert de reçu à faire signer.
+            </p>
+            <p x-show="payslipAction.kind === 'regenerate'" x-cloak class="text-sm text-slate-600">
+                La fiche actuelle est annulée (conservée, marquée annulée) et une nouvelle est calculée sur le contrat tel qu'il est maintenant.
+                Si le contrat est faux, corrigez-le d'abord dans l'onglet Contrats.
+                <span x-show="payslipAction.status === 'Paid'">Le paiement déjà enregistré est contre-passé : il faudra payer la nouvelle fiche.</span>
+            </p>
+            <p x-show="payslipAction.kind === 'cancel'" x-cloak class="text-sm text-slate-600">
+                La fiche est annulée sans être supprimée.
+                <span x-show="payslipAction.status === 'Paid'">Le paiement déjà enregistré est contre-passé en trésorerie.</span>
+            </p>
+
+            <div x-show="payslipAction.kind === 'pay'" class="form-grid">
+                <div>
+                    <label class="form-label">Moyen de règlement</label>
+                    <select-field model="payslipAction.paymentMethod" options-expr="payslipPaymentMethodOptions" />
+                </div>
+                <div>
+                    <label class="form-label">Date du règlement</label>
+                    <date-field model="payslipAction.date" required="true" aria-label="Date du règlement" class="mt-1" />
+                </div>
+            </div>
+
+            <div x-show="payslipAction.kind !== 'pay'" x-cloak>
+                <label class="form-label">Motif <span class="text-red-500">*</span></label>
+                <textarea x-model="payslipAction.reason" rows="2" placeholder="Ex. Erreur de montant sur le contrat…" class="input-field mt-1"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isPayslipActionOpen = false" class="btn-modal-secondary group">Fermer</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isSubmittingPayslipAction">
+                    <span x-show="!isSubmittingPayslipAction" x-text="payslipAction.kind === 'pay' ? 'Enregistrer le paiement' : (payslipAction.kind === 'regenerate' ? 'Annuler et régénérer' : 'Annuler la fiche')"></span>
+                    <span x-show="isSubmittingPayslipAction">Traitement...</span>
                 </button>
             </div>
         </form>

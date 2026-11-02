@@ -42,7 +42,7 @@ public class GetHourRecordSheetQueryHandler(IApplicationDbContext dbContext)
             {
                 c.Id,
                 c.HourlyRate,
-                EmployeeFullName = c.Teacher != null ? c.Teacher.FullName : c.User!.FullName,
+                EmployeeFullName = c.Teacher != null ? c.Teacher.FullName : c.User != null ? c.User.FullName : c.ExternalFullName ?? "—",
                 School = sch
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Contrat introuvable : {request.EmployeeContractId}");

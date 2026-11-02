@@ -39,7 +39,8 @@ public class GenerateFichePaieCommandHandler(
         var existing = await context.FichePaies
             .AnyAsync(f => f.EmployeeContractId == request.EmployeeContractId && 
                            f.Month == request.Month && 
-                           f.Year == request.Year, cancellationToken);
+                           f.Year == request.Year &&
+                           f.CancelledAt == null, cancellationToken);
                            
         if (existing)
             throw new BusinessRuleException("Une fiche de paie existe déjà pour ce mois.");
