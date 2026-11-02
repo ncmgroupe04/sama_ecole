@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Subscriptions;
 using SamaEcole.Domain.Enums;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,27 @@ namespace SamaEcole.Application.Platform.Commands.ReviewWavePayment;
 ///     clics simultanés ne prolongent l'abonnement qu'une seule fois ;
 ///   · l'acte est journalisé dans l'audit de l'école cible, attribué au Super Admin.
 /// </summary>
-public record ReviewWavePaymentCommand(Guid PaymentId, bool Approve) : IRequest;
+/// <param name="TransactionRef">
+/// Identifiant de la transaction Wave retrouvée sur le relevé — OBLIGATOIRE pour valider, inutile pour rejeter. Il est
+/// unique : un même règlement ne peut pas activer deux abonnements (le lien marchand ne porte aucune référence).
+/// </param>
+public record ReviewWavePaymentCommand(Guid PaymentId, bool Approve, string? TransactionRef = null) : IRequest;
+
+public class ReviewWavePaymentCommandValidator : AbstractValidator<ReviewWavePaymentCommand>
+{
+    public ReviewWavePaymentCommandValidator()
+    {
+        RuleFor(c => c.PaymentId).NotEmpty();
+
+        // Lettres, chiffres, « _ » et « - » seulement (ex. T_XXXXXXXXXX) : aucune ponctuation libre dans une clé unique.
+        RuleFor(c => c.TransactionRef)
+            .NotEmpty().WithMessage("Saisissez l'identifiant de la transaction Wave (visible sur le relevé du compte marchand).")
+            .MinimumLength(6).WithMessage("L'identifiant de transaction Wave est trop court.")
+            .MaximumLength(64)
+            .Matches("^[A-Za-z0-9_-]+$").WithMessage("L'identifiant de transaction ne contient que des lettres, chiffres, « _ » et « - ».")
+            .When(c => c.Approve);
+    }
+}
 
 public class ReviewWavePaymentCommandHandler(
     ISubscriptionPaymentStore paymentStore,
@@ -48,16 +69,22 @@ public class ReviewWavePaymentCommandHandler(
         var now = timeProvider.GetUtcNow();
         var finalStatus = request.Approve ? SubscriptionPaymentStatus.Confirmed : SubscriptionPaymentStatus.Failed;
 
+        // Normalisé en majuscules : « t_ab12cd » et « T_AB12CD » sont la même transaction pour l'index unique.
+        var transactionRef = request.Approve ? request.TransactionRef!.Trim().ToUpperInvariant() : null;
+
         // Trace d'audit du rapprochement manuel, rangée là où le webhook rangerait le sien (WebhookPayloadRaw).
         var payload = JsonSerializer.Serialize(new
         {
             source = "wave-merchant-manual",
             decision = request.Approve ? "approved" : "rejected",
             reviewedBy = superAdminId,
-            reviewedAt = now
+            reviewedAt = now,
+            transactionRef
         });
 
-        var result = await paymentStore.ConfirmAsync(request.PaymentId, finalStatus, payload, cancellationToken)
+        var result = (request.Approve
+                ? await paymentStore.ConfirmWavePaymentAsync(request.PaymentId, transactionRef!, payload, cancellationToken)
+                : await paymentStore.ConfirmAsync(request.PaymentId, finalStatus, payload, cancellationToken))
             ?? throw new BusinessRuleException(
                 "Cette demande de paiement a déjà été traitée.", "WAVE_PAYMENT_ALREADY_REVIEWED");
 

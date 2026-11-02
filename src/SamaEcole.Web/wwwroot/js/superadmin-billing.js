@@ -31,7 +31,17 @@ document.addEventListener('alpine:init', () => {
         waveError: null,
         waveReviewTarget: null,
         waveReviewApprove: true,
+        // Case « j'ai vu ce paiement sur mon relevé Wave » : valider sans elle est impossible. Un lien marchand
+        // statique n'envoie aucun signal à la plateforme, donc rien d'autre ne prouve que l'argent est arrivé.
+        waveReviewChecked: false,
+        // Identifiant de la transaction Wave (relevé du compte marchand) : unique côté serveur, un même règlement ne
+        // peut activer qu'un seul abonnement.
+        waveReviewTransactionRef: '',
         isReviewingWave: false,
+
+        get canApproveWave() {
+            return this.waveReviewChecked && /^[A-Za-z0-9_-]{6,64}$/.test(this.waveReviewTransactionRef.trim());
+        },
 
         async loadWavePayments() {
             try {
@@ -44,19 +54,27 @@ document.addEventListener('alpine:init', () => {
         openWaveReview(payment, approve) {
             this.waveReviewTarget = payment;
             this.waveReviewApprove = approve;
+            this.waveReviewChecked = false;
+            this.waveReviewTransactionRef = '';
             this.waveError = null;
         },
 
         closeWaveReview() {
             this.waveReviewTarget = null;
+            this.waveReviewChecked = false;
+            this.waveReviewTransactionRef = '';
         },
 
         async confirmWaveReview() {
+            // Garde côté client en plus du bouton désactivé : valider exige la case cochée et l'identifiant de transaction.
+            if (this.waveReviewApprove && !this.canApproveWave) return;
             this.isReviewingWave = true;
             this.waveError = null;
             const action = this.waveReviewApprove ? 'approve' : 'reject';
             try {
-                await window.api.post('/admin/platform/wave-payments/' + this.waveReviewTarget.paymentId + '/' + action);
+                await window.api.post(
+                    '/admin/platform/wave-payments/' + this.waveReviewTarget.paymentId + '/' + action,
+                    this.waveReviewApprove ? { transactionRef: this.waveReviewTransactionRef.trim() } : undefined);
                 this.waveReviewTarget = null;
                 await Promise.all([this.loadWavePayments(), this.load()]);
             } catch (err) {
