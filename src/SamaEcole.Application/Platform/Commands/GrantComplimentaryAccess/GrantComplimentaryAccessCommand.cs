@@ -20,7 +20,19 @@ public record GrantComplimentaryAccessCommand : IRequest
 {
     public required Guid SchoolId { get; init; }
     public required SubscriptionPlan Plan { get; init; }
-    public required int DurationMonths { get; init; }
+
+    /// <summary>Durée en mois. Exactement l'une de <see cref="DurationMonths"/> / <see cref="DurationDays"/> est renseignée.</summary>
+    public int? DurationMonths { get; init; }
+
+    /// <summary>Durée en jours, pour un geste commercial plus fin qu'un mois entier.</summary>
+    public int? DurationDays { get; init; }
+
+    /// <summary>
+    /// Échéance de l'accès offert, comptée depuis <paramref name="today"/> : elle REMPLACE l'échéance actuelle de
+    /// l'abonnement (elle ne s'y ajoute pas), comme avant l'ajout de la durée en jours.
+    /// </summary>
+    public DateOnly ExpiresAtFrom(DateOnly today)
+        => DurationDays is { } days ? today.AddDays(days) : today.AddMonths(DurationMonths!.Value);
 }
 
 public class GrantComplimentaryAccessCommandHandler(
@@ -37,7 +49,7 @@ public class GrantComplimentaryAccessCommandHandler(
             ?? throw new UnauthorizedAccessException("Aucun utilisateur authentifié.");
 
         var now = timeProvider.GetUtcNow();
-        var expiresAt = DateOnly.FromDateTime(now.UtcDateTime).AddMonths(request.DurationMonths);
+        var expiresAt = request.ExpiresAtFrom(DateOnly.FromDateTime(now.UtcDateTime));
 
         var granted = await subscriptionAdminStore.GrantComplimentaryAccessAsync(
             request.SchoolId, request.Plan, expiresAt, promoCodeId: null, cancellationToken);
