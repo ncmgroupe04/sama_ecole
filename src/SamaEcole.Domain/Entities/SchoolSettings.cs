@@ -71,6 +71,13 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// </summary>
     public bool AllowFinanceToCancelPayments { get; set; } = SchoolSettingsDefaults.AllowFinanceToCancelPayments;
 
+    /// <summary>
+    /// La Finance peut-elle annuler / corriger (régénérer) une fiche de paie (Volume 1 §14.5) ? Vrai par défaut ; le
+    /// Directeur peut retirer ce droit, auquel cas seul le Directeur annule une fiche. Payer une fiche, lui, reste
+    /// ouvert à la Finance. Lu par CanCancelPayslipsHandler (SamaEcole.Web.Authorization).
+    /// </summary>
+    public bool AllowFinanceToCancelPayslips { get; set; } = SchoolSettingsDefaults.AllowFinanceToCancelPayslips;
+
     /// <summary>URL de l'image de la signature du directeur, injectée sur les reçus et bulletins.</summary>
     public string? DirectorSignatureUrl { get; set; }
 
@@ -245,6 +252,9 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Annuler un versement est le geste quotidien du caissier : ouvert par défaut, retirable par le Directeur.</summary>
     public const bool AllowFinanceToCancelPayments = true;
+
+    /// <summary>Corriger sa propre erreur de paie est un geste courant de la Finance : ouvert par défaut, retirable par le Directeur.</summary>
+    public const bool AllowFinanceToCancelPayslips = true;
 
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];

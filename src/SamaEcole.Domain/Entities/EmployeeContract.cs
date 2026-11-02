@@ -10,6 +10,15 @@ public class EmployeeContract : AuditableEntity, ITenantEntity
     public Guid? TeacherId { get; set; }
     public Guid? UserId { get; set; }
 
+    /// <summary>
+    /// Personnel SANS compte (gardien, cuisinier, agent d'entretien…, Volume 1 §14.7) : ni Teacher ni User,
+    /// seulement une identité saisie sur le contrat. Renseigné UNIQUEMENT quand <see cref="TeacherId"/> et
+    /// <see cref="UserId"/> sont nuls. Cette personne ne se connecte jamais à la plateforme.
+    /// </summary>
+    public string? ExternalFullName { get; set; }
+    public string? ExternalJobTitle { get; set; }
+    public string? ExternalPhone { get; set; }
+
     public ContractType Type { get; set; }
 
     public decimal BaseSalary { get; set; }

@@ -73,4 +73,7 @@ public record SchoolSettingsDto(
     IReadOnlyList<string>? ManagedCycles = null,
 
     /// <summary>La Finance peut-elle annuler un versement (délai de 48 h) ? Réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
-    bool AllowFinanceToCancelPayments = true);
+    bool AllowFinanceToCancelPayments = true,
+
+    /// <summary>La Finance peut-elle annuler / corriger une fiche de paie ? Réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
+    bool AllowFinanceToCancelPayslips = true);

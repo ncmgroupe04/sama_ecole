@@ -17,4 +17,7 @@ public static class FinancePolicies
 
     /// <summary>Annuler un versement (48 h) : Directeur toujours, Finance sauf retrait du droit par le Directeur (CanCancelPaymentsHandler).</summary>
     public const string CanCancelPayments = "CanCancelPayments";
+
+    /// <summary>Annuler / corriger une fiche de paie : Directeur toujours, Finance sauf retrait du droit par le Directeur (CanCancelPayslipsHandler).</summary>
+    public const string CanCancelPayslips = "CanCancelPayslips";
 }

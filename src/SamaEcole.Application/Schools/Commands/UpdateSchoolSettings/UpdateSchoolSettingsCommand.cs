@@ -63,5 +63,8 @@ public record UpdateSchoolSettingsCommand(
     IReadOnlyList<string>? WorkingDays = null,
 
     /// <summary>Droit de la Finance d'annuler un versement (48 h). Absent ou null = inchangé : un ancien client qui ne l'envoie pas ne doit pas le réinitialiser.</summary>
-    bool? AllowFinanceToCancelPayments = null) : IRequest<SchoolSettingsDto>;
+    bool? AllowFinanceToCancelPayments = null,
+
+    /// <summary>Droit de la Finance d'annuler / corriger une fiche de paie. Absent ou null = inchangé (même raison que ci-dessus).</summary>
+    bool? AllowFinanceToCancelPayslips = null) : IRequest<SchoolSettingsDto>;
 

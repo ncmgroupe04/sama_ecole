@@ -48,8 +48,8 @@ public class GetWorkCertificateQueryHandler(IApplicationDbContext dbContext, Tim
                 c.Id,
                 c.Type,
                 c.CreatedAt,
-                EmployeeFullName = c.Teacher != null ? c.Teacher.FullName : c.User!.FullName,
-                EmployeeRole = c.Teacher != null ? "Enseignant" : c.User!.Role.ToString(),
+                EmployeeFullName = c.Teacher != null ? c.Teacher.FullName : c.User != null ? c.User.FullName : c.ExternalFullName ?? "—",
+                EmployeeRole = c.Teacher != null ? "Enseignant" : c.User != null ? c.User.Role.ToString() : (c.ExternalJobTitle ?? "Personnel"),
                 School = sch
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Contrat introuvable : {request.ContractId}");

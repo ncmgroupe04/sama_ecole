@@ -640,13 +640,14 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'établissement enregistre un **contrat** par membre du personnel : enseignant titulaire, enseignant vacataire, personnel administratif ou de service.
 - Un contrat porte le type de rémunération : **salaire mensuel fixe** ou **taux horaire** (vacataires).
 - Un contrat n'est jamais supprimé physiquement (règle transverse de suppression logique) : il est **clôturé** à une date, et reste consultable pour l'historique de paie et les attestations.
+- Un contrat est lié à **exactement une** personne : un enseignant, un utilisateur de la plateforme, ou un **membre du personnel sans compte** (§14.7).
 
 ### 14.2 Calcul et édition de la paie
 
 - La fiche de paie est générée **par employé et par mois**, à la demande, jamais automatiquement à date fixe.
 - Elle calcule : le **brut** (salaire de base, ou heures × taux horaire pour un vacataire), les **retenues salariales** (IPRES sur base plafonnée, BRS), les **charges patronales** (IPRES employeur, CSS sur base plafonnée, CFCE), et le **net à payer**.
 - Le bulletin de salaire est édité en **PDF A4** à l'en-tête de l'établissement.
-- Une fiche de paie générée est un **instantané** : une modification ultérieure du contrat ne réécrit pas une fiche déjà produite.
+- Une fiche de paie générée est un **instantané** : une modification ultérieure du contrat ne réécrit pas une fiche déjà produite. Une fiche erronée se **corrige par annulation et régénération** (§14.5), jamais par modification ni suppression.
 
 ### 14.3 Suivi des heures des vacataires
 
@@ -656,6 +657,30 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 ### 14.4 Attestation de travail
 
 - Une **attestation de travail** (PDF officiel) est éditable à tout moment à partir d'un contrat, y compris clôturé.
+
+### 14.5 Annulation et régénération d'une fiche de paie *(ajouté le 02/11/2026, arbitrage du porteur du produit)*
+
+- **Constat d'origine.** Un directeur a corrigé le montant d'un contrat après avoir généré la fiche : la fiche, instantané définitif, restait fausse et ne pouvait ni être modifiée, ni supprimée, ni régénérée (une seule fiche par employé et par mois).
+- Une fiche de paie **s'annule, elle ne se supprime pas** : la ligne reste en base, marquée *annulée*, avec l'**auteur**, la **date** et un **motif obligatoire** (5 caractères minimum). Une fiche annulée est imprimable avec la mention « FICHE ANNULÉE — SANS VALEUR » et le motif.
+- **Régénérer** = annuler la fiche puis en produire une **nouvelle pour la même période**, calculée sur les termes **actuels** du contrat (le directeur corrige d'abord le contrat, §14.1). Les heures reprennent celles de la fiche annulée ; la prime de transport reprend celle du contrat. L'opération est atomique : jamais d'état « annulée sans remplaçante ».
+- Seules les fiches **non annulées** comptent pour l'unicité (un employé, un mois), pour la **déclaration fiscale** (§17) et pour la trésorerie.
+- **Garde-fou fiscal.** Une fiche ne peut plus être annulée dès qu'une **déclaration fiscale** existe pour sa période : cette déclaration est un document déposé, elle ne se réécrit pas en silence.
+- Si la fiche annulée **avait été payée** (§14.6), le décaissement « Salaires » correspondant est **contre-passé** par une écriture inverse datée du jour de l'annulation ; l'écriture d'origine n'est jamais supprimée. Il faudra payer la nouvelle fiche.
+- Rôles : Directeur, Finance. Concurrence : verrou optimiste, conflit = `409`.
+- **Interrupteur du Directeur.** Dans Paramètres, le Directeur peut **retirer à la Finance** le droit d'annuler ou de corriger une fiche (« Autoriser la Finance à annuler ou corriger une fiche de paie », ouvert par défaut). Retiré, la Finance reçoit `403` sur l'annulation et la régénération et ne voit plus ces boutons ; elle peut toujours générer et payer les fiches. Le Directeur garde toujours la main. Même mécanique que le droit d'annuler un versement.
+
+### 14.6 Règlement du salaire, trésorerie et reçu *(ajouté le 02/11/2026)*
+
+- Générer une fiche ne décaisse rien. L'action **Payer** enregistre le règlement du **net à payer** : moyen (espèces, virement, mobile money, chèque — proposé d'après le contrat) et date.
+- Le règlement crée un **décaissement de catégorie « Salaires »** au nom de l'employé, sans TVA : il alimente la **trésorerie** et la **comptabilité** comme toute dépense. Une fiche ne se paie qu'**une fois**.
+- Le **bulletin d'une fiche payée sert de reçu de paiement** : il porte la mention « REÇU DE PAIEMENT DU SALAIRE » (montant, date, moyen, période) et les signatures employeur et employé(e).
+- Une fiche **annulée** ne peut pas être payée.
+
+### 14.7 Personnel sans compte *(ajouté le 02/11/2026)*
+
+- Un établissement paie des personnes qui n'ont **aucun besoin de se connecter** (gardien, cuisinier, agent d'entretien…). Elles ne reçoivent **pas de compte** : le contrat porte directement leur **nom complet** (obligatoire), leur **fonction** et leur **téléphone** (facultatifs).
+- Tout le circuit est identique à celui d'un enseignant ou d'un utilisateur : contrat, fiche de paie, règlement en trésorerie (§14.6), reçu signé, attestation de travail, correction (§14.5).
+- Un seul contrat **actif** par nom pour ce type de personnel (contrôle sur le nom, faute de clé d'unicité naturelle).
 
 ---
 

@@ -124,6 +124,19 @@ test('bedOptions : lits libres de la chambre ciblée, ou de tout l\'internat san
     assert.deepEqual(plain(logic.bedOptions(rooms, 'r2')), [], 'chambre complète : aucun lit à proposer');
 });
 
+test('bedOptions : un élève déjà logé voit son lit actuel en tête, seulement si la chambre ciblée le contient', () => {
+    const { logic } = boot();
+    const rooms = logic.flattenRooms([DETAILS.d1, DETAILS.d2]);
+
+    assert.deepEqual(plain(logic.bedOptions(rooms, 'r1', LODGED)), [
+        { value: 'b1', label: 'Pavillon Oustaz Ahmad — Chambre 101 — Lit 1 (lit actuel)' },
+        { value: 'b2', label: 'Pavillon Oustaz Ahmad — Chambre 101 — Lit 2' }
+    ]);
+    assert.deepEqual(plain(logic.bedOptions(rooms, null, LODGED).map((o) => o.value)), ['b1', 'b2', 'b6', 'b7']);
+    assert.deepEqual(plain(logic.bedOptions(rooms, 'r3', LODGED).map((o) => o.value)), ['b6', 'b7'], 'autre chambre : son lit actuel n\'y est pas');
+    assert.deepEqual(plain(logic.bedOptions(rooms, 'r1', EXTERNAL).map((o) => o.value)), ['b2'], 'sans séjour : inchangé');
+});
+
 test('situationLabel et defaultRegime : un externe devient Interne par défaut, un demi-pensionnaire le reste', () => {
     const { logic } = boot();
 
@@ -284,6 +297,24 @@ test('transférer un interne : le rowVersion envoyé est celui du SÉJOUR lu dan
 
     assert.deepEqual(t.calls.find((c) => c.method === 'POST').body,
         { enrollmentId: 'e2', regime: 'Interne', bedId: 'b6', includeBoardingFee: true, rowVersion: 77 });
+});
+
+test('régulariser les frais d\'un interne : son lit actuel est pré-sélectionné, valider ne le déplace pas', async () => {
+    const t = boot();
+    const tab = await ready(t.tab());
+    tab.openChangeOccupantModal(tab.rooms[0], { fullName: 'Awa Diop' });
+    await flush();
+
+    tab.selectStudent(LODGED);
+
+    assert.equal(tab.assignModal.bedId, 'b1', 'le lit où il dort déjà, pas le premier lit libre');
+    assert.equal(tab.isTransfer(), false);
+    assert.equal(tab.canConfirm(), true);
+
+    await tab.confirmAssignment();
+
+    assert.deepEqual(t.calls.find((c) => c.method === 'POST').body,
+        { enrollmentId: 'e2', regime: 'Interne', bedId: 'b1', includeBoardingFee: true, rowVersion: 77 });
 });
 
 test('demi-pensionnaire : aucun lit n\'est envoyé et aucun lit n\'est exigé', async () => {

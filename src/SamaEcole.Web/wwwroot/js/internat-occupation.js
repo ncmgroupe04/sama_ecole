@@ -73,14 +73,21 @@ window.occupationLogic = (() => {
     /**
      * Lits proposables dans la modale : les lits libres de la chambre ciblée, ou de tout l'internat si l'affectation est lancée sans chambre.
      * Chaque option porte le pavillon et la chambre pour lever toute ambiguïté.
+     *
+     * Un élève DÉJÀ logé voit aussi son lit actuel, en tête de liste (si la chambre ciblée le contient) : ce lit n'est pas « libre »,
+     * mais le re-valider ne déplace personne et ajoute seulement les frais d'internat manquants. Sans cela, toute régularisation
+     * de frais forçait un transfert vers un autre lit.
      */
-    function bedOptions(rooms, roomId) {
-        return rooms
-            .filter((r) => !roomId || r.roomId === roomId)
-            .flatMap((r) => freeBeds(r).map((b) => ({
-                value: b.id,
-                label: `${r.dormitoryName} — ${r.roomName} — Lit ${b.bedNumber}`
-            })));
+    function bedOptions(rooms, roomId, candidate = null) {
+        const targeted = rooms.filter((r) => !roomId || r.roomId === roomId);
+        const label = (r, b) => `${r.dormitoryName} — ${r.roomName} — Lit ${b.bedNumber}`;
+        const current = candidate && candidate.bedId
+            ? targeted.flatMap((r) => (r.beds || [])
+                .filter((b) => b.id === candidate.bedId)
+                .map((b) => ({ value: b.id, label: `${label(r, b)} (lit actuel)` })))
+            : [];
+        const free = targeted.flatMap((r) => freeBeds(r).map((b) => ({ value: b.id, label: label(r, b) })));
+        return [...current, ...free];
     }
 
     /** Régime ACTUEL d'un candidat de la recherche : « Externe » s'il n'a pas de séjour actif. */
@@ -254,12 +261,12 @@ document.addEventListener('alpine:init', () => {
             modal.results = [];
             modal.searchTerm = student.fullName;
             modal.regime = this.logic().defaultRegime(student);
-            // Pré-sélection du lit : le premier libre de la chambre ciblée (ou de l'internat). Jamais le lit de l'élève lui-même : il n'est pas « libre ».
+            // Pré-sélection du lit : le lit ACTUEL de l'élève s'il est proposé (valider ne déplace alors personne), sinon le premier libre de la chambre ciblée (ou de l'internat).
             const options = this.bedOptions;
             modal.bedId = options.length > 0 ? options[0].value : '';
         },
 
-        get bedOptions() { return this.logic().bedOptions(this.rooms, this.assignModal.roomId); },
+        get bedOptions() { return this.logic().bedOptions(this.rooms, this.assignModal.roomId, this.assignModal.selected); },
         get situation() { return this.assignModal.selected ? this.logic().situationLabel(this.assignModal.selected) : ''; },
         get regimeChoices() {
             const choices = [{ value: 'Interne', label: 'Interne' }, { value: 'DemiPensionnaire', label: 'Demi-pensionnaire' }];

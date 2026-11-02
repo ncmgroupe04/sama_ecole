@@ -25,6 +25,10 @@ public class EmployeeContractConfiguration : IEntityTypeConfiguration<EmployeeCo
 
         builder.Property(e => e.PayoutAccountReference).HasMaxLength(50);
 
+        builder.Property(e => e.ExternalFullName).HasMaxLength(150);
+        builder.Property(e => e.ExternalJobTitle).HasMaxLength(100);
+        builder.Property(e => e.ExternalPhone).HasMaxLength(30);
+
         builder.HasIndex(e => e.SchoolId);
 
         // Filtre étendu à "EndDate IS NULL" (Volume 1 §14.1) : un contrat CLÔTURÉ ne doit plus bloquer

@@ -21,7 +21,13 @@ public record FichePaieListItemDto(
     decimal Vrs,
     decimal Brs,
     decimal NetSalary,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string Status,
+    DateTimeOffset? PaidAt,
+    string? PaidWith,
+    DateTimeOffset? CancelledAt,
+    string? CancellationReason,
+    uint RowVersion);
 
 public class GetFichePaiesQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetFichePaiesQuery, List<FichePaieListItemDto>>
@@ -48,7 +54,9 @@ public class GetFichePaiesQueryHandler(IApplicationDbContext dbContext)
             .Select(f => new FichePaieListItemDto(
                 f.Id,
                 f.EmployeeContractId,
-                f.EmployeeContract.Teacher != null ? f.EmployeeContract.Teacher.FullName : f.EmployeeContract.User!.FullName,
+                f.EmployeeContract.Teacher != null ? f.EmployeeContract.Teacher.FullName
+                    : f.EmployeeContract.User != null ? f.EmployeeContract.User.FullName
+                    : f.EmployeeContract.ExternalFullName ?? "—",
                 f.Month,
                 f.Year,
                 f.HoursWorked,
@@ -60,7 +68,13 @@ public class GetFichePaiesQueryHandler(IApplicationDbContext dbContext)
                 f.Vrs,
                 f.Brs,
                 f.NetSalary,
-                f.CreatedAt))
+                f.CreatedAt,
+                f.CancelledAt != null ? "Cancelled" : f.PaidAt != null ? "Paid" : "Generated",
+                f.PaidAt,
+                f.PaidWith != null ? f.PaidWith.ToString() : null,
+                f.CancelledAt,
+                f.CancellationReason,
+                EF.Property<uint>(f, "xmin")))
             .ToListAsync(cancellationToken);
     }
 }

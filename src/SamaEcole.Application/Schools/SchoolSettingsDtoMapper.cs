@@ -41,5 +41,6 @@ public static class SchoolSettingsDtoMapper
         SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
         settings.ProfileEtablissement?.ToString(),
         ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.FromStored(settings.ManagedCycles)),
-        AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments);
+        AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments,
+        AllowFinanceToCancelPayslips: settings.AllowFinanceToCancelPayslips);
 }

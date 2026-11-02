@@ -19,7 +19,8 @@ public record EmployeeContractDto(
     string PayoutMethod,
     string? PayoutAccountReference,
     DateOnly? EndDate,
-    uint RowVersion);
+    uint RowVersion,
+    string? ExternalPhone = null);
 
 public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEmployeeContractsQuery, List<EmployeeContractDto>>
@@ -34,8 +35,8 @@ public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
                 c.Id,
                 c.TeacherId,
                 c.UserId,
-                c.Teacher != null ? c.Teacher.FullName : c.User!.FullName,
-                c.Teacher != null ? "Enseignant" : c.User!.Role.ToString(),
+                c.Teacher != null ? c.Teacher.FullName : c.User != null ? c.User.FullName : c.ExternalFullName ?? "—",
+                c.Teacher != null ? "Enseignant" : c.User != null ? c.User.Role.ToString() : (c.ExternalJobTitle ?? "Personnel"),
                 c.Type.ToString(),
                 c.BaseSalary,
                 c.HourlyRate,
@@ -43,7 +44,8 @@ public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
                 c.PayoutMethod.ToString(),
                 c.PayoutAccountReference,
                 c.EndDate,
-                EF.Property<uint>(c, "xmin")))
+                EF.Property<uint>(c, "xmin"),
+                c.ExternalPhone))
             .ToListAsync(cancellationToken);
     }
 }

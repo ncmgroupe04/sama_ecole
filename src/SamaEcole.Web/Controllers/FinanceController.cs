@@ -35,6 +35,9 @@ using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
 using SamaEcole.Application.Finance.Commands.CreateEmployeeContract;
 using SamaEcole.Application.Finance.Commands.UpdateEmployeeContract;
 using SamaEcole.Application.Finance.Commands.CloseEmployeeContract;
+using SamaEcole.Application.Finance.Commands.CancelFichePaie;
+using SamaEcole.Application.Finance.Commands.PayFichePaie;
+using SamaEcole.Application.Finance.Commands.RegenerateFichePaie;
 using SamaEcole.Application.Finance.Queries.GetEmployeeContracts;
 using SamaEcole.Application.Finance.Queries.GetFichePaies;
 using SamaEcole.Application.Finance.Queries.GetPayslipPdf;
@@ -581,6 +584,44 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GeneratePayroll), new { id }, id);
     }
+
+    public record CancelFichePaieRequest(string Reason, uint RowVersion);
+
+    /// <summary>Annule une fiche de paie erronée sans la supprimer ; contre-passe le décaissement si elle était payée (Volume 1 §14.5).</summary>
+    [HttpPost("payroll/{id:guid}/cancel")]
+    [Authorize(Policy = FinancePolicies.CanCancelPayslips)]
+    [ProducesResponseType<CancelFichePaieResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CancelPayroll(Guid id, [FromBody] CancelFichePaieRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new CancelFichePaieCommand(id, request.Reason, request.RowVersion), cancellationToken));
+
+    public record RegenerateFichePaieRequest(string Reason, uint RowVersion, decimal? HoursWorked = null, decimal? TransportAllowance = null);
+
+    /// <summary>Annule la fiche erronée puis en génère une nouvelle pour la même période, sur les termes actuels du contrat (Volume 1 §14.5).</summary>
+    [HttpPost("payroll/{id:guid}/regenerate")]
+    [Authorize(Policy = FinancePolicies.CanCancelPayslips)]
+    [ProducesResponseType<RegenerateFichePaieResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RegeneratePayroll(Guid id, [FromBody] RegenerateFichePaieRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new RegenerateFichePaieCommand(id, request.Reason, request.RowVersion, request.HoursWorked, request.TransportAllowance),
+            cancellationToken));
+
+    public record PayFichePaieRequest(PaymentMethod PaymentMethod, DateOnly Date, uint RowVersion);
+
+    /// <summary>Règle le net d'une fiche : décaissement « Salaires » en trésorerie + bulletin valant reçu (Volume 1 §14.6).</summary>
+    [HttpPost("payroll/{id:guid}/pay")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<PayFichePaieResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> PayPayroll(Guid id, [FromBody] PayFichePaieRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new PayFichePaieCommand(id, request.PaymentMethod, request.Date, request.RowVersion), cancellationToken));
 
     [HttpGet("payroll/{id:guid}/pdf")]
     [Authorize(Roles = "Directeur,Finance")]
