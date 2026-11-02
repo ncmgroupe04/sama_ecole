@@ -661,6 +661,18 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     /// <summary>
+    /// Fixe l'échéance d'un abonnement sans toucher à son statut : simule une échéance dépassée alors que le
+    /// contrôle quotidien n'a pas encore basculé l'abonnement en ReadOnly (le worker est désactivé en test).
+    /// </summary>
+    public async Task SetSubscriptionExpiryAsync(Guid schoolId, DateOnly? expiresAt)
+    {
+        await using var owner = NewOwnerContext();
+
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE subscriptions SET "ExpiresAt" = {expiresAt} WHERE "SchoolId" = {schoolId};""");
+    }
+
+    /// <summary>
     /// Lit une ligne SubscriptionPayment directement en base (ticket JGK-I05) : vérifie ce que l'API ne
     /// peut pas encore exposer elle-même (aucun GET par identifiant, JGK-I07 pas encore livré) — que la
     /// transaction de paiement est bien liée à l'abonnement, avec le bon montant et le bon statut.

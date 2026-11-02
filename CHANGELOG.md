@@ -7,6 +7,8 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
+- **Abonnement : bouton « Renouveler mon abonnement ».** Dans Paramètres › Facturation & historique, le Directeur dispose d'un bouton qui mène à l'écran de paiement, avec un message adapté : abonnement échu (accès en lecture seule), échéance proche (moins de 30 jours) ou en cours (renouvellement à l'avance). La période payée s'ajoute au temps restant : renouveler en avance ne fait perdre aucun jour. L'écran de paiement n'affiche plus « premier paiement » dans ce cas.
+- **Abonnement échu : la lecture seule s'applique dès le lendemain de l'échéance.** Elle ne dépend plus du contrôle quotidien du serveur : l'échéance est vérifiée à chaque requête. Auparavant, un établissement pouvait garder son accès complet quelques heures de plus si le contrôle n'avait pas encore tourné.
 - **Internat : régulariser les frais d'un élève ne le déplace plus de lit.** Dans « Affecter un élève » / « Changer / Libérer », un élève déjà logé voit désormais son lit actuel en tête de liste, présélectionné (« lit actuel »). Valider ajoute les frais d'internat manquants (sans doublon) sans changer personne de lit. Avant, seuls les lits libres étaient proposés : chaque régularisation transférait l'élève vers un autre lit.
 - **Caisse : les mensualités échues sont maintenant signalées.** Une fois l'inscription et le 1er mois réglés, la recherche
   affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,

@@ -142,4 +142,80 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    [Fact]
+    public async Task An_Active_School_Whose_Expiry_Date_Has_Passed_Should_Be_Blocked_Even_Before_The_Daily_Check_Ran()
+    {
+        // Le contrôle quotidien n'a pas basculé le statut (le serveur dormait) : l'échéance dépassée suffit.
+        var approval = await CreateSchoolWithSubscriptionAsync("École Échue 1", "echue1@expiry.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.SetSubscriptionExpiryAsync(approval.SchoolId, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2));
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+        var director = await LoginAsync("echue1@expiry.sn", DirectorPassword);
+
+        var response = await SendAsync(director.AccessToken, HttpMethod.Post, "/api/v1/classrooms", new { name = "6e A" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("SUBSCRIPTION_READ_ONLY");
+    }
+
+    [Fact]
+    public async Task An_Active_School_Whose_Expiry_Date_Has_Passed_Should_Still_Be_Allowed_To_Read()
+    {
+        var approval = await CreateSchoolWithSubscriptionAsync("École Échue 2", "echue2@expiry.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.SetSubscriptionExpiryAsync(approval.SchoolId, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2));
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+        var director = await LoginAsync("echue2@expiry.sn", DirectorPassword);
+
+        var response = await SendAsync(director.AccessToken, HttpMethod.Get, "/api/v1/students");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task An_Active_School_Whose_Expiry_Date_Has_Not_Passed_Should_Not_Be_Restricted()
+    {
+        // Échéance demain (et non « aujourd'hui », pour ne pas dépendre d'un passage de minuit UTC pendant le test).
+        var approval = await CreateSchoolWithSubscriptionAsync("École Échue 3", "echue3@expiry.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.SetSubscriptionExpiryAsync(approval.SchoolId, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+        var director = await LoginAsync("echue3@expiry.sn", DirectorPassword);
+
+        var response = await SendAsync(director.AccessToken, HttpMethod.Post, "/api/v1/classrooms", new { name = "6e B" });
+
+        (await response.Content.ReadAsStringAsync()).Should().NotContain("SUBSCRIPTION_READ_ONLY");
+    }
+
+    [Fact]
+    public async Task An_Active_School_Without_Expiry_Date_Should_Not_Be_Restricted()
+    {
+        var approval = await CreateSchoolWithSubscriptionAsync("École Échue 4", "echue4@expiry.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.SetSubscriptionExpiryAsync(approval.SchoolId, null);
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+        var director = await LoginAsync("echue4@expiry.sn", DirectorPassword);
+
+        var response = await SendAsync(director.AccessToken, HttpMethod.Post, "/api/v1/classrooms", new { name = "6e C" });
+
+        (await response.Content.ReadAsStringAsync()).Should().NotContain("SUBSCRIPTION_READ_ONLY");
+    }
+
+    [Fact]
+    public async Task The_Payments_Path_Should_Not_Be_Intercepted_When_The_Expiry_Date_Has_Passed()
+    {
+        // La voie de sortie (renouvellement) reste ouverte même quand la restriction vient de l'échéance et non du statut.
+        var approval = await CreateSchoolWithSubscriptionAsync("École Échue 5", "echue5@expiry.sn");
+        await factory.SetSubscriptionStatusAsync(approval.SchoolId, SubscriptionStatus.Active);
+        await factory.SetSubscriptionExpiryAsync(approval.SchoolId, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2));
+        await factory.CompleteOnboardingAsync(approval.SchoolId);
+        var director = await LoginAsync("echue5@expiry.sn", DirectorPassword);
+
+        var response = await SendAsync(
+            director.AccessToken, HttpMethod.Post, $"/api/v1/subscriptions/{approval.SchoolId}/payments",
+            new { method = "MobileMoney", billingPeriod = "Monthly" });
+
+        (await response.Content.ReadAsStringAsync()).Should().NotContain("SUBSCRIPTION_READ_ONLY");
+    }
 }

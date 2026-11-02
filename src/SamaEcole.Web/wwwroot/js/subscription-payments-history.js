@@ -1,7 +1,8 @@
 /**
- * Onglet Facturation & Historique (Paramètres, ticket JGK-I07) — lecture seule : le statut de
- * l'abonnement et l'historique des paiements ne se modifient jamais depuis cet écran (seul le webhook
- * signé de l'agrégateur confirme un paiement, AGENTS.md règle #11).
+ * Onglet Facturation & Historique (Paramètres, ticket JGK-I07) — le statut de l'abonnement et l'historique
+ * des paiements ne se modifient jamais depuis cet écran (seul le webhook signé de l'agrégateur confirme un
+ * paiement, AGENTS.md règle #11). Le bouton « Renouveler mon abonnement » ne fait que MENER à l'écran de paiement
+ * (/abonnement/paiement) : rien ne se paie ni ne s'active ici.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('subscriptionPaymentsHistoryView', () => ({
@@ -39,6 +40,49 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isLoading = false;
             }
+        },
+
+        // --- Renouvellement ---------------------------------------------------------------------------
+        // Écran de paiement existant (JGK-I05) ; `renouvellement=1` y adapte les textes (ce n'est pas un premier paiement).
+        renewUrl: '/abonnement/paiement?renouvellement=1',
+        renewalWarningDays: 30,
+
+        /** Jours restants avant l'échéance (négatif = échue). Dates calendaires locales : pas de décalage d'heure d'été/fuseau. */
+        daysUntilExpiry(now = new Date()) {
+            if (!this.subscriptionExpiresAt) return null;
+            const [y, m, d] = String(this.subscriptionExpiresAt).slice(0, 10).split('-').map(Number);
+            const expiry = new Date(y, m - 1, d);
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return Math.round((expiry - today) / 86400000);
+        },
+
+        /** Lecture seule en base, ou échéance dépassée alors que le contrôle quotidien n'a pas encore basculé le statut. */
+        get isExpired() {
+            if (this.subscriptionStatus === 'ReadOnly') return true;
+            const days = this.daysUntilExpiry();
+            return this.subscriptionStatus === 'Active' && days !== null && days < 0;
+        },
+
+        get isExpiringSoon() {
+            const days = this.daysUntilExpiry();
+            return this.subscriptionStatus === 'Active' && days !== null && days >= 0 && days <= this.renewalWarningDays;
+        },
+
+        /** Seul le Directeur régularise l'abonnement ; Suspendu / En attente de paiement ne se règlent pas d'ici. */
+        get canRenew() {
+            return this.isDirecteur && (this.subscriptionStatus === 'Active' || this.subscriptionStatus === 'ReadOnly');
+        },
+
+        get renewalMessage() {
+            if (this.isExpired) {
+                return "Votre abonnement a expiré : l'accès est en lecture seule. Renouvelez-le pour retrouver toutes les fonctions.";
+            }
+            if (this.isExpiringSoon) {
+                const days = this.daysUntilExpiry();
+                const when = days === 0 ? "aujourd'hui" : days === 1 ? 'demain' : `dans ${days} jours`;
+                return `Votre abonnement expire ${when}. Renouvelez-le dès maintenant : la période payée s'ajoute au temps restant, vous ne perdez aucun jour.`;
+            }
+            return "Votre abonnement est en cours. Vous pouvez le renouveler à l'avance : la période payée s'ajoute au temps restant.";
         },
 
         statusLabel(status) {
