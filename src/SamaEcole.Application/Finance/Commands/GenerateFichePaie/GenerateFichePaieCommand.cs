@@ -67,7 +67,8 @@ public class GenerateFichePaieCommandHandler(
             contract.BaseSalary,
             contract.HourlyRate,
             request.HoursWorked,
-            request.TransportAllowance
+            request.TransportAllowance,
+            contract.ApplyStatutoryDeductions
         );
 
         context.FichePaies.Add(fichePaie);

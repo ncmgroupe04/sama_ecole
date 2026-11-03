@@ -86,7 +86,8 @@ public class RegenerateFichePaieCommandHandler(
                 contract.BaseSalary,
                 contract.HourlyRate,
                 request.HoursWorked ?? old.HoursWorked,
-                request.TransportAllowance ?? contract.TransportAllowance);
+                request.TransportAllowance ?? contract.TransportAllowance,
+                contract.ApplyStatutoryDeductions);
 
             dbContext.FichePaies.Add(replacement);
             old.ReplacedByFichePaieId = replacement.Id;

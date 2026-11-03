@@ -528,7 +528,8 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         string Reason,
         uint RowVersion,
         PayoutMethod PayoutMethod = PayoutMethod.Cash,
-        string? PayoutAccountReference = null);
+        string? PayoutAccountReference = null,
+        bool? ApplyStatutoryDeductions = null);
 
     /// <summary>Augmentation de salaire ou révision du taux horaire (Volume 1 §14.1) — la seule voie de modification d'un contrat ACTIF.</summary>
     [HttpPatch("employee-contracts/{id:guid}")]
@@ -544,7 +545,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         var result = await mediator.Send(
             new UpdateEmployeeContractCommand(
                 id, request.BaseSalary, request.HourlyRate, request.TransportAllowance, request.Reason, request.RowVersion,
-                request.PayoutMethod, request.PayoutAccountReference),
+                request.PayoutMethod, request.PayoutAccountReference, request.ApplyStatutoryDeductions),
             cancellationToken);
 
         return Ok(result);

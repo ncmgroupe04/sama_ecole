@@ -686,6 +686,15 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ---
 
+
+### 14.8 Paie sans retenues légales *(ajouté le 03/11/2026)*
+
+- Certaines structures **ne cotisent pas** (par exemple un Daara) : la personne doit recevoir **exactement** son salaire, sans IPRES, CSS, VRS/CFCE ni BRS. Le montant payé est alors le **brut** (salaire de base, ou heures × taux horaire) **plus la prime de transport**, sans aucune retenue ni charge patronale.
+- Les **deux régimes coexistent dans une même école** : le régime se règle **par contrat** (case « Appliquer les retenues légales » à la création et à la modification du contrat). Par défaut, le contrat est **avec retenues** — le calcul du §14.2, inchangé.
+- Chaque fiche garde un **instantané** de son régime : changer le régime d'un contrat ne réécrit jamais une fiche déjà éditée ; il s'applique aux fiches générées ou **régénérées** ensuite (§14.5). Le bulletin PDF d'une fiche sans retenues ne montre aucune ligne de cotisation et porte la mention « Paie sans retenues ».
+- Une fiche sans retenues compte pour **zéro** dans la déclaration des charges sociales (§17.1) : aucune cotisation n'est due sur elle. Le règlement du salaire, la trésorerie, le reçu et l'attestation de travail sont inchangés.
+- Ce réglage est un **choix de l'établissement** : la plateforme ne juge pas des obligations légales de l'employeur, elle applique le régime que le Directeur a déclaré sur le contrat.
+
 ## 15. Caisse & Journal de caisse
 
 **Statut : livré.** Écran `/caisse`. Rôles : Directeur, Finance.

@@ -1535,6 +1535,11 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ApplyStatutoryDeductions")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<decimal>("BaseSalary")
                         .HasColumnType("numeric");
 
@@ -2406,6 +2411,11 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<decimal>("CssEmployer")
                         .HasColumnType("numeric");
+
+                    b.Property<bool>("DeductionsApplied")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");

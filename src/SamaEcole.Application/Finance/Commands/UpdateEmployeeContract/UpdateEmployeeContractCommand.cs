@@ -28,7 +28,8 @@ public record UpdateEmployeeContractCommand(
     string Reason,
     uint RowVersion,
     PayoutMethod PayoutMethod = PayoutMethod.Cash,
-    string? PayoutAccountReference = null) : IRequest<UpdateEmployeeContractResult>, IAuditableRequest;
+    string? PayoutAccountReference = null,
+    bool? ApplyStatutoryDeductions = null) : IRequest<UpdateEmployeeContractResult>, IAuditableRequest;
 
 public record UpdateEmployeeContractResult(
     Guid ContractId,
@@ -37,7 +38,8 @@ public record UpdateEmployeeContractResult(
     decimal TransportAllowance,
     PayoutMethod PayoutMethod,
     string? PayoutAccountReference,
-    uint RowVersion);
+    uint RowVersion,
+    bool ApplyStatutoryDeductions = true);
 
 public class UpdateEmployeeContractCommandHandler(
     IApplicationDbContext dbContext,
@@ -88,17 +90,23 @@ public class UpdateEmployeeContractCommandHandler(
             ? null
             : request.PayoutAccountReference.Trim();
 
+        // Régime de la paie : non fourni (null) = inchangé, pour qu'un client qui ne connaît pas ce champ ne rebascule
+        // jamais un contrat « sans retenues » vers « avec retenues » en renvoyant le reste du formulaire.
+        var newDeductionsRegime = request.ApplyStatutoryDeductions ?? contract.ApplyStatutoryDeductions;
+
         // Rien ne change : ne pas écrire, sans quoi l'historique se remplirait d'entrées vides et le
         // verrou optimiste n'aurait rien à arbitrer.
         if (contract.BaseSalary == request.BaseSalary
             && contract.HourlyRate == request.HourlyRate
             && contract.TransportAllowance == request.TransportAllowance
             && contract.PayoutMethod == request.PayoutMethod
-            && contract.PayoutAccountReference == normalizedReference)
+            && contract.PayoutAccountReference == normalizedReference
+            && contract.ApplyStatutoryDeductions == newDeductionsRegime)
         {
             return new UpdateEmployeeContractResult(
                 contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance,
-                contract.PayoutMethod, contract.PayoutAccountReference, request.RowVersion);
+                contract.PayoutMethod, contract.PayoutAccountReference, request.RowVersion,
+                contract.ApplyStatutoryDeductions);
         }
 
         // Cœur du verrou optimiste : la version LUE PAR LE CLIENT devient la valeur d'origine attendue
@@ -138,6 +146,9 @@ public class UpdateEmployeeContractCommandHandler(
         contract.TransportAllowance = request.TransportAllowance;
         contract.PayoutMethod = request.PayoutMethod;
         contract.PayoutAccountReference = normalizedReference;
+        // Ne touche jamais aux fiches déjà éditées (elles portent leur propre instantané, FichePaie.DeductionsApplied) :
+        // le nouveau régime s'applique aux fiches générées ou régénérées à partir de maintenant.
+        contract.ApplyStatutoryDeductions = newDeductionsRegime;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -151,6 +162,6 @@ public class UpdateEmployeeContractCommandHandler(
 
         return new UpdateEmployeeContractResult(
             contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance,
-            contract.PayoutMethod, contract.PayoutAccountReference, newRowVersion);
+            contract.PayoutMethod, contract.PayoutAccountReference, newRowVersion, contract.ApplyStatutoryDeductions);
     }
 }

@@ -8686,6 +8686,11 @@ components:
         baseSalary: { type: number }
         hourlyRate: { type: number }
         transportAllowance: { type: number }
+        applyStatutoryDeductions:
+          type: boolean
+          description: >-
+            Vrai (défaut) = les fiches de ce contrat portent les retenues et charges légales (IPRES, CSS, VRS/CFCE, BRS).
+            Faux = paie sans retenues (ex. Daara) : net = brut + prime de transport.
         payoutMethod: { $ref: '#/components/schemas/PayoutMethod' }
         payoutAccountReference:
           type: string
@@ -8712,6 +8717,10 @@ components:
         baseSalary: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Permanent." }
         hourlyRate: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Vacataire." }
         transportAllowance: { type: number, minimum: 0 }
+        applyStatutoryDeductions:
+          type: boolean
+          default: true
+          description: Faux pour une paie sans retenues (ex. Daara). Omis = vrai (calcul historique).
         payoutMethod: { allOf: [{ $ref: '#/components/schemas/PayoutMethod' }], default: Cash }
         payoutAccountReference: { type: string, nullable: true, maxLength: 50 }
 
@@ -8722,6 +8731,12 @@ components:
         baseSalary: { type: number, minimum: 0 }
         hourlyRate: { type: number, minimum: 0 }
         transportAllowance: { type: number, minimum: 0 }
+        applyStatutoryDeductions:
+          type: boolean
+          nullable: true
+          description: >-
+            Régime de la paie. Omis ou null = inchangé (un client qui ne connaît pas ce champ ne rebascule jamais un contrat
+            « sans retenues »). S'applique aux fiches générées ou régénérées ensuite ; une fiche déjà éditée garde son régime.
         payoutMethod: { allOf: [{ $ref: '#/components/schemas/PayoutMethod' }], default: Cash }
         payoutAccountReference: { type: string, nullable: true, maxLength: 50 }
         reason: { type: string, minLength: 5, maxLength: 500 }
@@ -8737,6 +8752,7 @@ components:
         baseSalary: { type: number }
         hourlyRate: { type: number }
         transportAllowance: { type: number }
+        applyStatutoryDeductions: { type: boolean }
         payoutMethod: { $ref: '#/components/schemas/PayoutMethod' }
         payoutAccountReference: { type: string, nullable: true }
         rowVersion:

@@ -23,6 +23,9 @@ public class FichePaieConfiguration : IEntityTypeConfiguration<FichePaie>
             .HasFilter("\"CancelledAt\" IS NULL");
 
         builder.Property(f => f.CancellationReason).HasMaxLength(500);
+
+        // Défaut vrai : les fiches déjà éditées ont toutes été calculées avec retenues.
+        builder.Property(f => f.DeductionsApplied).IsRequired().HasDefaultValue(true);
         builder.Property(f => f.PaidWith).HasConversion<string>().HasMaxLength(20);
         builder.Ignore(f => f.IsCancelled);
         builder.Ignore(f => f.IsPaid);

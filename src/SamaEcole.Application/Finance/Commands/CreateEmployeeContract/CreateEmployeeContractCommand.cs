@@ -26,7 +26,8 @@ public record CreateEmployeeContractCommand(
     string? PayoutAccountReference = null,
     string? ExternalFullName = null,
     string? ExternalJobTitle = null,
-    string? ExternalPhone = null) : IRequest<Guid>;
+    string? ExternalPhone = null,
+    bool ApplyStatutoryDeductions = true) : IRequest<Guid>;
 
 public class CreateEmployeeContractCommandValidator : AbstractValidator<CreateEmployeeContractCommand>
 {
@@ -108,6 +109,7 @@ public class CreateEmployeeContractCommandHandler(IApplicationDbContext context,
             BaseSalary = request.BaseSalary,
             HourlyRate = request.HourlyRate,
             TransportAllowance = request.TransportAllowance,
+            ApplyStatutoryDeductions = request.ApplyStatutoryDeductions,
             PayoutMethod = request.PayoutMethod,
             PayoutAccountReference = string.IsNullOrWhiteSpace(request.PayoutAccountReference) ? null : request.PayoutAccountReference.Trim(),
             ExternalFullName = Clean(request.ExternalFullName),
