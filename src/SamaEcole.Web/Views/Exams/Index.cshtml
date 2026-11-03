@@ -782,7 +782,8 @@
             </div>
             <div>
                 <label class="form-label">Notes</label>
-                <textarea x-model="editingDossier.civilStatusNotes" rows="2" maxlength="500" class="input-field"></textarea>
+                <textarea x-model="editingDossier.civilStatusNotes" rows="2" maxlength="500" class="input-field" :class="editDossierErrors.civilstatusnotes && 'input-field-error'"></textarea>
+                <p x-show="editDossierErrors.civilstatusnotes" x-cloak x-text="editDossierErrors.civilstatusnotes" class="field-error"></p>
             </div>
             <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeEditDossier()" class="btn-modal-secondary group">Annuler</button>

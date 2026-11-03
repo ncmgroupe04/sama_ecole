@@ -284,6 +284,7 @@
                         <label class="form-label-inverse">Limite d'utilisations</label>
                         <input type="number" min="1" x-model.number="newCode.maxUses" placeholder="Illimité"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                        <p x-show="createErrors.maxuses" x-text="createErrors.maxuses" class="mt-1 text-xs text-rose-400"></p>
                     </div>
                 </div>
 

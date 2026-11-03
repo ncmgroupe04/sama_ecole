@@ -768,12 +768,14 @@
       <div>
        <label for="edit-subject-col1" class="form-label">Entête 1re colonne</label>
        <input id="edit-subject-col1" type="text" maxlength="40" x-model="editing.column1Header"
-        placeholder="Domaines" class="input-field">
+        placeholder="Domaines" class="input-field" :class="editErrors.column1header && 'input-field-error'">
+       <p x-show="editErrors.column1header" x-cloak x-text="editErrors.column1header" class="field-error"></p>
       </div>
       <div>
        <label for="edit-subject-col2" class="form-label">Entête 2e colonne</label>
        <input id="edit-subject-col2" type="text" maxlength="40" x-model="editing.column2Header"
-        placeholder="Activités" class="input-field">
+        placeholder="Activités" class="input-field" :class="editErrors.column2header && 'input-field-error'">
+       <p x-show="editErrors.column2header" x-cloak x-text="editErrors.column2header" class="field-error"></p>
       </div>
      </div>
     </template>

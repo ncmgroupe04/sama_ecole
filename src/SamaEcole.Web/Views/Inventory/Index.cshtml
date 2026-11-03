@@ -421,7 +421,8 @@
                 </div>
                 <div>
                     <label class="form-label">Emplacement (texte libre)</label>
-                    <input type="text" x-model="newItem.locationLabel" maxlength="100" placeholder="ex : Réserve A" class="input-field">
+                    <input type="text" x-model="newItem.locationLabel" maxlength="100" placeholder="ex : Réserve A" class="input-field" :class="createItemErrors.locationlabel && 'input-field-error'">
+                    <p x-show="createItemErrors.locationlabel" x-cloak x-text="createItemErrors.locationlabel" class="field-error"></p>
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -441,7 +442,8 @@
             </div>
             <div>
                 <label class="form-label">Notes</label>
-                <textarea x-model="newItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
+                <textarea x-model="newItem.notes" rows="2" maxlength="500" class="input-field" :class="createItemErrors.notes && 'input-field-error'"></textarea>
+                <p x-show="createItemErrors.notes" x-cloak x-text="createItemErrors.notes" class="field-error"></p>
             </div>
             <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeCreateItem()" class="btn-modal-secondary group">Annuler</button>
@@ -495,7 +497,8 @@
                 </div>
                 <div>
                     <label class="form-label">Emplacement (texte libre)</label>
-                    <input type="text" x-model="editingItem.locationLabel" maxlength="100" class="input-field">
+                    <input type="text" x-model="editingItem.locationLabel" maxlength="100" class="input-field" :class="editItemErrors.locationlabel && 'input-field-error'">
+                    <p x-show="editItemErrors.locationlabel" x-cloak x-text="editItemErrors.locationlabel" class="field-error"></p>
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -514,7 +517,8 @@
             </div>
             <div>
                 <label class="form-label">Notes</label>
-                <textarea x-model="editingItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
+                <textarea x-model="editingItem.notes" rows="2" maxlength="500" class="input-field" :class="editItemErrors.notes && 'input-field-error'"></textarea>
+                <p x-show="editItemErrors.notes" x-cloak x-text="editItemErrors.notes" class="field-error"></p>
             </div>
             <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeEditItem()" class="btn-modal-secondary group">Annuler</button>
