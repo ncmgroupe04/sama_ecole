@@ -3086,7 +3086,7 @@
                     href: '/tableau-de-bord',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "Une rangée de raccourcis vers les modules les plus fréquentés — Élèves, Classes, Enseignants, " +
+                        "Une rangée de raccourcis vers les modules les plus fréquentés — Élèves, Inscription, Classes, Enseignants, " +
                         "Notes, Caisse, Internat — affichée sous la barre supérieure de CHAQUE écran, pas seulement " +
                         "depuis la barre latérale. Sous une largeur d'écran réduite, elle se replie en un bouton unique " +
                         "« Saut rapide ».",

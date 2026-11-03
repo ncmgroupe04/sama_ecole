@@ -627,6 +627,23 @@ test('navigation : la navigation rapide conditionne /internat par internatEnable
     assert.doesNotMatch(line, /coranEnabled/);
 });
 
+test('navigation : la navigation rapide propose Inscription au Directeur et au Secrétariat seulement, comme la barre latérale', () => {
+    const line = viewSource('_QuickNav.cshtml').split('\n').find((l) => l.includes('("/inscriptions"'));
+    assert.ok(line, 'l\'entrée /inscriptions doit exister dans la navigation rapide');
+    assert.match(line, /"Inscription"/);
+    assert.match(line, /"Directeur"/);
+    assert.match(line, /"Secretariat"/);
+    for (const role of ['Finance', 'Enseignant', 'Surveillant', 'SuperAdmin']) {
+        assert.doesNotMatch(line, new RegExp(`"${role}"`), `${role} n'a pas accès à /inscriptions (voir _Layout.cshtml)`);
+    }
+
+    // Même restriction de rôles que le lien de la barre latérale : un module masqué là doit l'être ici aussi.
+    const layout = readFileSync(path.join(WEB_ROOT, 'Views', 'Shared', '_Layout.cshtml'), 'utf8');
+    const sidebar = layout.split('\n').find((l) => l.includes('<a href="/inscriptions"'));
+    assert.ok(sidebar, 'le lien /inscriptions doit exister dans la barre latérale');
+    assert.match(sidebar, /canView\(\['Directeur', 'Secretariat'\]\)/);
+});
+
 test('navigation : aucune vue ne conditionne un écran par coranEnabled tant qu\'aucun écran ne consomme /api/v1/quran', () => {
     const viewsDir = path.join(WEB_ROOT, 'Views');
     const offenders = [];
