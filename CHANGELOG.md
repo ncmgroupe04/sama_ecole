@@ -15,6 +15,9 @@ distingue les changements **visibles pour les écoles** des changements **intern
   affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,
   fenêtre « Encaisser les frais dus », bouton « Régler les échéances dues ») inclut désormais toute mensualité dont la date
   est atteinte ; les mois à venir n'y figurent toujours pas. Vaut pour tous les profils, internat compris.
+- **Relance d'impayés par SMS : seules les familles en retard sont relancées.** Auparavant, tout élève dont le total payé était inférieur au
+  total dû recevait un SMS annonçant le reliquat de l'année entière, même s'il était à jour de ses mensualités ou si l'année n'avait pas
+  commencé. Le SMS ne part désormais que pour un élève ayant une échéance en retard, et annonce le montant en retard.
 - **Contre-passation d'un paiement** (fiche élève, historique des paiements) : passé le délai d'annulation de 48 heures, le
   Directeur peut « contre-passer » un versement. Le reçu est conservé et marqué annulé ; l'écriture inverse est datée
   d'aujourd'hui, donc les journées et périodes déjà arrêtées ne changent pas. Réservée au Directeur.
