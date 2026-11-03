@@ -12,6 +12,8 @@ using SamaEcole.Application.Boarding.Beds.DeleteBed;
 using SamaEcole.Application.Boarding.Beds.GetDeletedBeds;
 using SamaEcole.Application.Boarding.Beds.RestoreBed;
 using SamaEcole.Application.Boarding.Boarders.AssignBed;
+using SamaEcole.Application.Boarding.Deletion;
+using SamaEcole.Application.Boarding.Boarders.DeleteBoarder;
 using SamaEcole.Application.Boarding.Boarders.EndBoarding;
 using SamaEcole.Application.Boarding.Boarders.FindBoardableStudents;
 using SamaEcole.Application.Boarding.Boarders.GetBoarder;
@@ -30,6 +32,7 @@ using SamaEcole.Application.Boarding.Documents.MonthlyAttendanceSummary;
 using SamaEcole.Application.Boarding.Dormitories.UpdateDormitory;
 using SamaEcole.Application.Boarding.Leaves;
 using SamaEcole.Application.Boarding.Leaves.DeclareLeave;
+using SamaEcole.Application.Boarding.Leaves.DeleteLeave;
 using SamaEcole.Application.Boarding.Leaves.ListLeaves;
 using SamaEcole.Application.Boarding.Leaves.RecordReturn;
 using SamaEcole.Application.Boarding.Rooms.CreateDormitoryRoom;
@@ -80,6 +83,8 @@ public class BoardingController(ISender mediator) : ControllerBase
     public record ChangeBedStatusRequest(BedStatus Status, uint RowVersion);
 
     public record AssignBedRequest(Guid EnrollmentId, BoardingRegime Regime, Guid? BedId, bool IncludeBoardingFee, uint? RowVersion);
+
+    public record BreakLinksAndDeleteRequest(BoardingDeletionKind Kind, Guid Id, uint RowVersion);
 
     public record UpdateBoarderProfileRequest(
         string? MedicalNotes, string? EmergencyContactName, string? EmergencyContactPhone,
@@ -317,6 +322,38 @@ public class BoardingController(ISender mediator) : ControllerBase
         return NoContent();
     }
 
+    // ------------------------------------------------------------------ Suppression avec rupture des liens
+
+    /// <summary>
+    /// Analyse avant suppression d'un pavillon, d'une chambre ou d'un lit : chambres et lits rattachés, élèves qui y dorment et lits
+    /// libres ailleurs pour les réaffecter d'abord. Lecture seule.
+    /// </summary>
+    [HttpGet("deletion-impact")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType<BoardingDeletionImpactDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDeletionImpact(
+        [FromQuery] BoardingDeletionKind kind, [FromQuery] Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetBoardingDeletionImpactQuery(kind, id), cancellationToken));
+
+    /// <summary>
+    /// « Rompre les liens et supprimer » : l'élément, ses chambres et ses lits sont archivés (restaurables) ; les élèves qui y dormaient
+    /// gardent leur séjour sans lit (« en attente de lit »). Rien n'est effacé. 409 si <c>rowVersion</c> est périmé.
+    /// </summary>
+    [HttpPost("deletions")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> BreakLinksAndDelete(
+        [FromBody] BreakLinksAndDeleteRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new BreakLinksAndDeleteCommand(request.Kind, request.Id, request.RowVersion), cancellationToken);
+        return NoContent();
+    }
+
     // ------------------------------------------------------------------ Pensionnaires
 
     /// <summary>
@@ -346,6 +383,23 @@ public class BoardingController(ISender mediator) : ControllerBase
         Guid boarderId, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
     {
         await mediator.Send(new EndBoardingCommand(boarderId, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Supprime un séjour saisi par erreur : archivé (lit libéré) avec ses sorties et pointages, comme s'il n'avait jamais eu lieu.
+    /// Rien n'est effacé ; la pension déjà facturée reste due. Distinct de <c>unassign-bed</c>, qui garde l'historique.
+    /// </summary>
+    [HttpDelete("boarders/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteBoarder(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteBoarderCommand(id, rowVersion), cancellationToken);
         return NoContent();
     }
 
@@ -450,6 +504,20 @@ public class BoardingController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RecordReturn(
         Guid id, [FromBody] ReturnLeaveRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new RecordReturnCommand(id, request.RowVersion, request.ActualReturnDate), cancellationToken));
+
+    /// <summary>Annule une sortie déclarée par erreur : archivée, elle disparaît du registre (rien n'est effacé).</summary>
+    [HttpDelete("leaves/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteLeave(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteLeaveCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
 
     /// <summary>Registre des sorties, plus récentes d'abord. <c>status</c> : Pending, Active, Overdue ou Returned.</summary>
     [HttpGet("leaves")]

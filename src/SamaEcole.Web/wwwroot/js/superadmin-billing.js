@@ -22,7 +22,7 @@ document.addEventListener('alpine:init', () => {
         remindError: null,
 
         grantAccessTarget: null,
-        grantAccessForm: { plan: 'Standard', durationMonths: 1 },
+        grantAccessForm: { plan: 'Standard', amount: 1, unit: 'months' },
         grantAccessError: null,
         isGranting: false,
 
@@ -280,7 +280,7 @@ document.addEventListener('alpine:init', () => {
 
         openGrantAccess(sub) {
             this.grantAccessTarget = sub;
-            this.grantAccessForm = { plan: sub.plan || 'Standard', durationMonths: 1 };
+            this.grantAccessForm = { plan: sub.plan || 'Standard', amount: 1, unit: 'months' };
             this.grantAccessError = null;
         },
 
@@ -294,7 +294,9 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.post(
                     `/admin/platform/schools/${this.grantAccessTarget.schoolId}/complimentary-access`,
-                    { plan: this.grantAccessForm.plan, durationMonths: this.grantAccessForm.durationMonths });
+                    this.grantAccessForm.unit === 'days'
+                        ? { plan: this.grantAccessForm.plan, durationDays: this.grantAccessForm.amount }
+                        : { plan: this.grantAccessForm.plan, durationMonths: this.grantAccessForm.amount });
 
                 this.grantAccessTarget = null;
                 await this.load();

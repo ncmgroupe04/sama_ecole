@@ -628,7 +628,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - Chaque message est **historisé** avec son statut (envoyé, échec, solde insuffisant) et son coût en segments. L'historique est consultable par le Directeur et le rôle Finance.
 - Le message ne contient jamais de note ni de donnée médicale : il signale un fait (absence, retard, paiement, échéance) et invite à contacter l'établissement.
 - **La relance d'impayés en masse est déclenchée à la main** par le Directeur ou la Finance — jamais automatiquement : écrire à toutes les familles d'un coup est une décision, pas un effet de bord. Elle est cadrable à une seule classe.
-- La relance ne vise que les inscriptions **confirmées** présentant un reliquat : une inscription annulée ou transférée n'est jamais relancée.
+- La relance ne vise que les inscriptions **confirmées** ayant au moins une **échéance en retard** (date dépassée et solde impayé) : une inscription annulée ou transférée n'est jamais relancée, ni une famille à jour ou dont l'année n'a pas commencé. Le SMS annonce le **montant en retard**.
 - Un envoi en masse **n'échoue pas en bloc** si un message ne part pas : le résultat rapporte le nombre d'envois réussis, le nombre d'écartés et le premier motif d'écart, à charge pour l'utilisateur de décider de la suite.
 
 ---

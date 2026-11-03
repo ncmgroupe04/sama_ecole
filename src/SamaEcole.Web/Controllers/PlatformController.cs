@@ -108,7 +108,8 @@ public class PlatformController(ISender mediator) : ControllerBase
     public async Task<IActionResult> ImpersonateSchool(Guid schoolId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new ImpersonateSchoolCommand(schoolId), cancellationToken));
 
-    public record GrantComplimentaryAccessRequest(SubscriptionPlan Plan, int DurationMonths);
+    /// <summary>Durée en mois OU en jours (exactement l'une des deux).</summary>
+    public record GrantComplimentaryAccessRequest(SubscriptionPlan Plan, int? DurationMonths = null, int? DurationDays = null);
 
     /// <summary>
     /// Bouton « Offrir un accès » de l'écran Abonnements &amp; Facturation — module Tarification &amp;
@@ -127,7 +128,8 @@ public class PlatformController(ISender mediator) : ControllerBase
             {
                 SchoolId = schoolId,
                 Plan = request.Plan,
-                DurationMonths = request.DurationMonths
+                DurationMonths = request.DurationMonths,
+                DurationDays = request.DurationDays
             },
             cancellationToken);
 

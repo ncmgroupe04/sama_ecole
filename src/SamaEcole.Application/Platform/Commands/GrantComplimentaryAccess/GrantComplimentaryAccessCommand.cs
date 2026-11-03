@@ -15,12 +15,28 @@ namespace SamaEcole.Application.Platform.Commands.GrantComplimentaryAccess;
 /// RLS (WITH CHECK sur SchoolId, migration AddSubscriptionProvisioning), la modification passe par la
 /// fonction SECURITY DEFINER grant_complimentary_subscription (ISubscriptionAdminStore) plutôt que
 /// par un UPDATE EF direct, qu'un Super Admin sans SchoolId ne pourrait pas satisfaire.
+///
+/// <c>IRequest&lt;Unit&gt;</c> et non le marqueur non générique <c>IRequest</c> : ValidationBehavior exige
+/// <c>TRequest : IRequest&lt;TResponse&gt;</c> et le conteneur DI l'omet SILENCIEUSEMENT pour un <c>IRequest</c> simple
+/// (voir RejectRegistrationRequestCommand). Avec <c>IRequest</c>, ce validateur ne s'exécutait pas du tout.
 /// </summary>
-public record GrantComplimentaryAccessCommand : IRequest
+public record GrantComplimentaryAccessCommand : IRequest<Unit>
 {
     public required Guid SchoolId { get; init; }
     public required SubscriptionPlan Plan { get; init; }
-    public required int DurationMonths { get; init; }
+
+    /// <summary>Durée en mois. Exactement l'une de <see cref="DurationMonths"/> / <see cref="DurationDays"/> est renseignée.</summary>
+    public int? DurationMonths { get; init; }
+
+    /// <summary>Durée en jours, pour un geste commercial plus fin qu'un mois entier.</summary>
+    public int? DurationDays { get; init; }
+
+    /// <summary>
+    /// Échéance de l'accès offert, comptée depuis <paramref name="today"/> : elle REMPLACE l'échéance actuelle de
+    /// l'abonnement (elle ne s'y ajoute pas), comme avant l'ajout de la durée en jours.
+    /// </summary>
+    public DateOnly ExpiresAtFrom(DateOnly today)
+        => DurationDays is { } days ? today.AddDays(days) : today.AddMonths(DurationMonths!.Value);
 }
 
 public class GrantComplimentaryAccessCommandHandler(
@@ -29,15 +45,15 @@ public class GrantComplimentaryAccessCommandHandler(
     ICurrentUserService currentUser,
     TimeProvider timeProvider,
     ILogger<GrantComplimentaryAccessCommandHandler> logger)
-    : IRequestHandler<GrantComplimentaryAccessCommand>
+    : IRequestHandler<GrantComplimentaryAccessCommand, Unit>
 {
-    public async Task Handle(GrantComplimentaryAccessCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(GrantComplimentaryAccessCommand request, CancellationToken cancellationToken)
     {
         var superAdminId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Aucun utilisateur authentifié.");
 
         var now = timeProvider.GetUtcNow();
-        var expiresAt = DateOnly.FromDateTime(now.UtcDateTime).AddMonths(request.DurationMonths);
+        var expiresAt = request.ExpiresAtFrom(DateOnly.FromDateTime(now.UtcDateTime));
 
         var granted = await subscriptionAdminStore.GrantComplimentaryAccessAsync(
             request.SchoolId, request.Plan, expiresAt, promoCodeId: null, cancellationToken);
@@ -58,5 +74,7 @@ public class GrantComplimentaryAccessCommandHandler(
         logger.LogInformation(
             "Super Admin {SuperAdminId} a offert un accès {Plan} jusqu'au {ExpiresAt} à l'établissement {SchoolId}.",
             superAdminId, request.Plan, expiresAt, request.SchoolId);
+
+        return Unit.Value;
     }
 }

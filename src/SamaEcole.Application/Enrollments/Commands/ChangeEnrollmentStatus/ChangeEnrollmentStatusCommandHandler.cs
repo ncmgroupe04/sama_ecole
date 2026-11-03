@@ -1,3 +1,4 @@
+using SamaEcole.Application.Boarding.Assignments;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
@@ -6,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Enrollments.Commands.ChangeEnrollmentStatus;
 
-public class ChangeEnrollmentStatusCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
+public class ChangeEnrollmentStatusCommandHandler(
+    IApplicationDbContext dbContext, IKpiCacheService kpiCache, IBoardingAssignmentService boardingAssignments)
     : IRequestHandler<ChangeEnrollmentStatusCommand, Unit>
 {
     public async Task<Unit> Handle(ChangeEnrollmentStatusCommand request, CancellationToken cancellationToken)
@@ -29,6 +31,11 @@ public class ChangeEnrollmentStatusCommandHandler(IApplicationDbContext dbContex
         dbContext.SetOriginalConcurrencyToken(enrollment, request.RowVersion);
 
         enrollment.Status = request.NewStatus;
+
+        // Abandon ou transfert : la scolarité s'arrête réellement, l'élève ne dort plus à l'internat. Le séjour est CLOS (lit
+        // libéré, historique conservé — contrairement à une annulation, rien n'est archivé). Refusé en 409 LEAVE_IN_PROGRESS tant
+        // qu'une sortie est ouverte. Sans cela le lit restait occupé par un élève parti (lit « fantôme »).
+        await boardingAssignments.EndAsync(enrollment.Id, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
