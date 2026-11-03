@@ -8,6 +8,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('subscriptionPaymentForm', () => ({
+        // Arrivée par le bouton « Renouveler mon abonnement » (Facturation & historique) : même paiement, textes adaptés.
+        isRenewal: new URLSearchParams(window.location.search).get('renouvellement') === '1',
         method: 'WaveMerchant',
         // Annuel par défaut : c'est le forfait publié sur la grille de la vitrine. Le mensuel (forfait ÷ 12, arrondi)
         // reste au choix du Directeur (SubscriptionAmountResolver).

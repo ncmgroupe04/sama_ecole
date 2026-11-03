@@ -28,16 +28,26 @@
  <svg aria-hidden="true" class="w-7 h-7 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
  </div>
 
- <h1 class="page-title">Abonnement en attente de paiement</h1>
+ <h1 class="page-title" x-text="isRenewal ? 'Renouveler mon abonnement' : 'Abonnement en attente de paiement'">Abonnement en attente de paiement</h1>
 
- <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed">
+ <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed" x-show="!isRenewal">
  Votre inscription a bien été validée. Il ne reste qu'une étape avant d'accéder pleinement à
  votre espace Unikol : la régularisation de votre abonnement par un premier paiement.
  </p>
 
- <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed">
+ <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed" x-show="!isRenewal">
  En attendant, l'accès aux élèves, classes, notes et autres modules reste indisponible. Seules
  votre session et le paiement le restent.
+ </p>
+
+ @* Renouvellement (bouton de l'onglet « Facturation & historique », ?renouvellement=1) : ce n'est pas un premier paiement. *@
+ <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed" x-show="isRenewal" x-cloak>
+ Choisissez votre moyen de paiement et la période à renouveler. Si votre abonnement est encore en cours, la période
+ payée s'ajoute au temps restant : vous ne perdez aucun jour.
+ </p>
+
+ <p class="text-jgk-body text-slate-500 mt-3 leading-relaxed" x-show="isRenewal" x-cloak>
+ Si votre abonnement a expiré, l'accès complet revient dès que le paiement est confirmé.
  </p>
 
  <!-- Message d'erreur. aria-live : lu par un lecteur d'écran sans déplacer le focus. -->
@@ -143,11 +153,14 @@
  </p>
  </form>
 
+ <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+ <a href="/" x-show="isRenewal" x-cloak class="btn-modal-secondary group">Retour à mon espace</a>
  <button type="button"
  x-on:click="window.auth.logout()"
- class="mt-6 btn-modal-secondary group">
+ class="btn-modal-secondary group">
  Se déconnecter
  </button>
+ </div>
  </div>
 </div>
 

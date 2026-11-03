@@ -11,7 +11,8 @@ namespace SamaEcole.Web.Middleware;
 /// automatique en LECTURE SEULE à expiration (<c>Status = ReadOnly</c>, voir
 /// SubscriptionLifecycleHostedService) : contrairement à AwaitingPayment, ReadOnly ne bloque QUE les
 /// requêtes mutantes (POST/PUT/PATCH/DELETE) — l'établissement garde un accès en lecture à ses
-/// données pendant qu'il régularise son abonnement.
+/// données pendant qu'il régularise son abonnement. Un abonnement encore Active dont l'échéance est
+/// dépassée est traité comme ReadOnly sans attendre ce contrôle quotidien (voir le calcul plus bas).
 ///
 /// Vérifiée à CHAQUE requête, jamais seulement à la connexion : « un token JWT émis avant paiement
 /// reste valide après paiement » et réciproquement — c'est le statut de l'abonnement EN BASE, pas le
@@ -50,7 +51,7 @@ public class SubscriptionAwaitingPaymentMiddleware(RequestDelegate next)
         "/api/v1/onboarding/"
     ];
 
-    public async Task InvokeAsync(HttpContext context, IApplicationDbContext dbContext)
+    public async Task InvokeAsync(HttpContext context, IApplicationDbContext dbContext, TimeProvider timeProvider)
     {
         var path = context.Request.Path.Value ?? string.Empty;
 
@@ -75,11 +76,25 @@ public class SubscriptionAwaitingPaymentMiddleware(RequestDelegate next)
         // Subscription EST une ITenantEntity : Global Query Filter + policy RLS bornent déjà la lecture
         // à l'école du JWT (AGENTS.md règle #2). Le Where explicite est conservé — il porte sur le MÊME
         // claim que TenantProvider, et rend lisible ici la ligne qu'on interroge.
-        var status = await dbContext.Subscriptions
+        var subscription = await dbContext.Subscriptions
             .AsNoTracking()
             .Where(s => s.SchoolId == schoolId)
-            .Select(s => (SubscriptionStatus?)s.Status)
+            .Select(s => new { s.Status, s.ExpiresAt })
             .SingleOrDefaultAsync(context.RequestAborted);
+
+        SubscriptionStatus? status = subscription?.Status;
+
+        // Échéance dépassée alors que le statut est encore Active : le contrôle quotidien
+        // (SubscriptionLifecycleHostedService) n'a pas encore basculé l'abonnement en ReadOnly — typiquement
+        // parce que le serveur dormait (Cloud Run à zéro instance) et que son minuteur n'a pas tourné. La
+        // restriction ne doit pas dépendre de ce minuteur : on l'applique ici, à la requête, avec la MÊME règle
+        // que expire_overdue_subscriptions (« ExpiresAt < aujourd'hui » : le jour de l'échéance reste couvert).
+        if (status is SubscriptionStatus.Active
+            && subscription!.ExpiresAt is { } expiresAt
+            && expiresAt < DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime))
+        {
+            status = SubscriptionStatus.ReadOnly;
+        }
 
         // Aucun abonnement pour cette école : établissement créé hors du parcours self-service
         // (JGK-B01, ou données de démonstration/tests) — rien à restreindre. Un abonnement Active ne

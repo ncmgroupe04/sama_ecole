@@ -29,6 +29,15 @@
  </stat-card>
  </div>
 
+ @* Renouvellement : ne fait que mener à l'écran de paiement existant (/abonnement/paiement). Rien ne se paie ni ne
+ s'active ici (AGENTS.md règle #11). Mis en avant (rouge/orange) quand l'abonnement est échu ou proche de l'être. *@
+ <div x-show="canRenew" x-cloak
+ class="mt-4 flex flex-col gap-3 rounded-2xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+ :class="isExpired ? 'border-danger/30 bg-danger/10' : (isExpiringSoon ? 'border-warning/30 bg-warning-bg' : 'border-slate-200 bg-slate-50')">
+ <p class="text-sm text-slate-700" x-text="renewalMessage"></p>
+ <a :href="renewUrl" class="btn-modal-primary whitespace-nowrap group">Renouveler mon abonnement</a>
+ </div>
+
  <div class="card mt-6 relative">
  <div class="overflow-x-auto">
  <table class="w-full text-left border-collapse">

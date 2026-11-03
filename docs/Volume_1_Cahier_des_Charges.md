@@ -467,6 +467,8 @@ Notifications automatiques à 30, 15 et 7 jours avant expiration, envoyées au D
 
 À expiration, passage automatique en **mode restreint** (lecture seule, export des données toujours possible) plutôt qu'un blocage total — pour ne jamais empêcher un établissement de récupérer ses données. Le blocage total reste une option configurable par le Super Admin pour les cas de non-paiement prolongé. **Ce même mode restreint s'applique aussi tant que le premier paiement d'un établissement nouvellement approuvé n'a pas été confirmé** (voir §11.6) — un établissement en attente de paiement n'a accès qu'à l'écran de paiement, à l'exclusion de tout autre module.
 
+**Mise en œuvre.** L'échéance est vérifiée **à chaque requête** (middleware `SubscriptionAwaitingPaymentMiddleware`) : un abonnement encore `Active` dont `ExpiresAt` est strictement antérieure à aujourd'hui est traité comme `ReadOnly`, sans attendre le contrôle quotidien (`SubscriptionLifecycleHostedService`), qui reste responsable des alertes 30/15/7 jours et de la bascule du statut en base. Le jour même de l'échéance reste couvert. Le Directeur renouvelle depuis Paramètres › Facturation & historique (bouton « Renouveler mon abonnement » → `/abonnement/paiement?renouvellement=1`).
+
 ### 11.4 Isolation des données entre écoles
 
 Chaque établissement n'accède qu'à ses propres données. Le mécanisme technique (Row-Level Security PostgreSQL) est décrit au Volume 3. Une école ne peut en aucun cas consulter les données d'une autre école, y compris par une faille de filtrage côté application — l'isolation est garantie au niveau de la base de données elle-même, pas seulement dans le code métier.
