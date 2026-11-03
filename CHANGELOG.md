@@ -7,8 +7,6 @@ distingue les changements **visibles pour les écoles** des changements **intern
 
 ### Visible pour les écoles
 
-- **Accès rapide : un bouton « Inscription ».** La barre de navigation rapide (et le menu « Saut rapide » sur petit écran) propose désormais l'écran Inscriptions, juste après Élèves, pour le Directeur et le Secrétariat — les mêmes rôles que dans le menu latéral.
-
 - **Internat : « Rompre les liens et supprimer » (pavillon, chambre, lit).** Si l'élément contient des chambres, des lits ou des élèves, la fenêtre de suppression propose d'abord de réaffecter chaque élève dans un lit libre ailleurs ; « Rompre les liens et supprimer » archive ensuite l'élément avec ses chambres et ses lits (restaurables) et remet les élèves restants « en attente de lit ».
 - **Internat : annuler une sortie et supprimer un séjour saisis par erreur.** Onglet Sorties : « Annuler la sortie » (archivée, elle disparaît du registre). Onglet Pensionnaires : « Supprimer le séjour » (lit libéré, séjour archivé avec ses sorties et pointages ; la pension déjà facturée reste due). « Enregistrer le retour » est maintenant un vrai bouton.
 - **Annuler une inscription libère maintenant tout ce qui y était rattaché.** Le lit d'internat de l'élève est libéré (il restait « occupé » par une inscription annulée), et son séjour, ses sorties, ses lignes de frais, ses échéanciers et ses relances sont archivés : comme s'il n'avait jamais été inscrit. L'inscription reste visible au statut « Annulée » (numéro de reçu sans trou). Un abandon ou un transfert libère aussi le lit, en gardant l'historique. Vaut pour tous les profils d'école. Dans l'onglet Sorties de l'internat, « Enregistrer le retour » est maintenant un vrai bouton.
@@ -17,6 +15,7 @@ distingue les changements **visibles pour les écoles** des changements **intern
   affichait « Frais du jour réglés » même si des mois déjà échus restaient impayés. Le « montant échu » (badge de recherche,
   fenêtre « Encaisser les frais dus », bouton « Régler les échéances dues ») inclut désormais toute mensualité dont la date
   est atteinte ; les mois à venir n'y figurent toujours pas. Vaut pour tous les profils, internat compris.
+- **Accès rapide : un bouton « Inscription ».** La barre de navigation rapide (et le menu « Saut rapide » sur petit écran) propose désormais l'écran Inscriptions, juste après Élèves, pour le Directeur et le Secrétariat — les mêmes rôles que dans le menu latéral.
 - **Relance d'impayés par SMS : seules les familles en retard sont relancées.** Auparavant, tout élève dont le total payé était inférieur au
   total dû recevait un SMS annonçant le reliquat de l'année entière, même s'il était à jour de ses mensualités ou si l'année n'avait pas
   commencé. Le SMS ne part désormais que pour un élève ayant une échéance en retard, et annonce le montant en retard.
