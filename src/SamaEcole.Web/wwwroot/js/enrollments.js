@@ -16,6 +16,20 @@
  * n'inscrivent pas, mais l'API répond 403 de toute façon (le service Finance ne compose jamais un
  * montant dû, AGENTS.md règle #4).
  */
+// Étape du formulaire qui affiche l'erreur de chaque champ (clés en minuscules, comme toFieldErrors).
+// Toute clé absente d'ici n'a pas d'emplacement d'affichage : api.surfaceUnmappedErrors() la reverse dans le bandeau global.
+const STEP_OF_FIELD = {
+    fullname: 1, birthdate: 1, gender: 1, birthplace: 1, studentid: 1,
+    classroomid: 2, roomid: 2, boardingstatus: 2, subjectoptionids: 2, previousschoolname: 2,
+    guardianname: 3, guardianphone: 3,
+    global: 4, schoolyear: 4
+};
+
+// Clés serveur qui désignent un champ que cet écran présente sous un autre nom : le lit est choisi par le serveur
+// (BoardingAssignmentService rejette sous `BedId` : pavillon du mauvais genre, lit en maintenance), l'utilisateur ne
+// voit que la chambre. Passé à api.toFieldErrors, qui reverse en plus dans le bandeau global toute clé sans emplacement.
+const FIELD_ALIASES = { bedid: 'roomid' };
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('enrollmentsView', () => ({
         // Seuls le Directeur et le Secrétariat inscrivent (règle #4). Confort d'affichage : l'API garde.
@@ -546,7 +560,7 @@ document.addEventListener('alpine:init', () => {
                 if (window.formDraft) window.formDraft.clear('enrollment_form');
                 this.hasDraft = false;
             } catch (err) {
-                this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
+                this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.", FIELD_ALIASES);
                 this.jumpToFirstErrorStep();
             } finally {
                 this.isSubmitting = false;
@@ -561,15 +575,9 @@ document.addEventListener('alpine:init', () => {
          * invisible sous un x-show="currentStep === n" fermé.
          */
         jumpToFirstErrorStep() {
-            const stepOfField = {
-                fullname: 1, birthdate: 1, gender: 1, birthplace: 1, studentid: 1,
-                classroomid: 2, roomid: 2, boardingstatus: 2, subjectoptionids: 2, previousschoolname: 2,
-                guardianname: 3, guardianphone: 3,
-                global: 4, schoolyear: 4
-            };
             const erroredKeys = Object.keys(this.formErrors);
             if (erroredKeys.length === 0) return;
-            const steps = erroredKeys.map((k) => stepOfField[k]).filter(Boolean);
+            const steps = erroredKeys.map((k) => STEP_OF_FIELD[k]).filter(Boolean);
             if (steps.length > 0) this.goToStep(Math.min(...steps));
         },
 

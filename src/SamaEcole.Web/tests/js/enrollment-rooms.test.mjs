@@ -89,6 +89,32 @@ test("boardingPayload d'un interne : boardingStatus + roomId + pension (le serve
     assert.deepEqual(plain(view.boardingPayload()), { boardingStatus: 'Interne', roomId: 'r1', includeBoardingFee: true });
 });
 
+test("un refus d'hébergement (BedId) ramène à l'étape 2, sous le champ Chambre", () => {
+    const { view } = enrollments();
+    view.formErrors = { roomid: 'Ce pavillon accueille uniquement des filles.' };
+    view.goToStep(4);
+    view.jumpToFirstErrorStep();
+
+    assert.equal(view.currentStep, 2);
+});
+
+test("un téléphone de tuteur refusé (422 GuardianPhone) ramène à l'étape 3, où le message est affiché", () => {
+    const { view } = enrollments();
+    view.formErrors = { guardianphone: 'Le numéro de téléphone doit être un numéro sénégalais valide (ex: 77 123 45 67).' };
+    view.goToStep(4);
+    view.jumpToFirstErrorStep();
+
+    assert.equal(view.currentStep, 3);
+});
+
+test("la vue affiche bien l'erreur sous le téléphone et le nom du tuteur (sinon le 422 reste muet)", async () => {
+    const { readFile } = await import('node:fs/promises');
+    const html = await readFile(new URL('../../Views/Enrollments/Index.cshtml', import.meta.url), 'utf8');
+
+    assert.match(html, /x-text="formErrors\.guardianphone"/);
+    assert.match(html, /x-text="formErrors\.guardianname"/);
+});
+
 test("boardingPayload d'un externe : jamais de chambre résiduelle ni de pension", () => {
     const { view } = enrollments();
     view.form.boardingStatus = 'Externe';
