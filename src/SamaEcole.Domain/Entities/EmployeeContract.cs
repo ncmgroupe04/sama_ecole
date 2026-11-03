@@ -25,6 +25,14 @@ public class EmployeeContract : AuditableEntity, ITenantEntity
     public decimal HourlyRate { get; set; }
     public decimal TransportAllowance { get; set; }
 
+    /// <summary>
+    /// Retenues et charges légales (IPRES, CSS, VRS/CFCE, BRS) appliquées à la paie de cette personne. Vrai par
+    /// défaut : c'est le calcul historique. Faux pour une structure qui ne cotise pas (ex. un Daara) : le net payé
+    /// est alors le salaire brut plus la prime de transport, sans aucune retenue. Se règle par contrat, donc une
+    /// même école peut avoir du personnel avec retenues et du personnel sans.
+    /// </summary>
+    public bool ApplyStatutoryDeductions { get; set; } = true;
+
     /// <summary>Moyen de règlement du salaire (ticket JGK-K02). Cash par défaut — c'est l'existant avant ce ticket.</summary>
     public PayoutMethod PayoutMethod { get; set; } = PayoutMethod.Cash;
 

@@ -27,7 +27,8 @@ public record FichePaieListItemDto(
     string? PaidWith,
     DateTimeOffset? CancelledAt,
     string? CancellationReason,
-    uint RowVersion);
+    uint RowVersion,
+    bool DeductionsApplied = true);
 
 public class GetFichePaiesQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetFichePaiesQuery, List<FichePaieListItemDto>>
@@ -74,7 +75,8 @@ public class GetFichePaiesQueryHandler(IApplicationDbContext dbContext)
                 f.PaidWith != null ? f.PaidWith.ToString() : null,
                 f.CancelledAt,
                 f.CancellationReason,
-                EF.Property<uint>(f, "xmin")))
+                EF.Property<uint>(f, "xmin"),
+                f.DeductionsApplied))
             .ToListAsync(cancellationToken);
     }
 }

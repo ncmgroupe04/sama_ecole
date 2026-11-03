@@ -33,13 +33,14 @@ document.addEventListener('alpine:init', () => {
             type: 'Permanent',
             baseSalary: '',
             hourlyRate: '',
-            transportAllowance: ''
+            transportAllowance: '',
+            applyStatutoryDeductions: true
         },
 
         // Modification (Volume 1 §14.1) : augmentation de salaire ou révision du taux horaire sur un contrat ACTIF.
         isEditContractModalOpen: false,
         isSavingEditContract: false,
-        editContractForm: { id: '', type: '', baseSalary: '', hourlyRate: '', transportAllowance: '', reason: '', rowVersion: 0 },
+        editContractForm: { id: '', type: '', baseSalary: '', hourlyRate: '', transportAllowance: '', applyStatutoryDeductions: true, reason: '', rowVersion: 0 },
 
         // Clôture (Volume 1 §14.1) : jamais une suppression — le contrat reste consultable, mais ne génère plus de fiche de paie.
         isCloseContractModalOpen: false,
@@ -174,6 +175,8 @@ document.addEventListener('alpine:init', () => {
                 employeeKind: 'teacher', teacherId: '', userId: '',
                 externalFullName: '', externalJobTitle: '', externalPhone: '',
                 type: 'Permanent', baseSalary: '', hourlyRate: '', transportAllowance: '',
+                // Avec retenues par défaut : le calcul historique. Le Directeur d'un Daara décoche pour payer le brut sans rien déduire.
+                applyStatutoryDeductions: true,
                 payoutMethod: 'Cash', payoutAccountReference: ''
             };
             this.isContractModalOpen = true;
@@ -201,6 +204,7 @@ document.addEventListener('alpine:init', () => {
                     baseSalary: Number(this.contractForm.baseSalary) || 0,
                     hourlyRate: Number(this.contractForm.hourlyRate) || 0,
                     transportAllowance: Number(this.contractForm.transportAllowance) || 0,
+                    applyStatutoryDeductions: this.contractForm.applyStatutoryDeductions !== false,
                     payoutMethod: this.contractForm.payoutMethod,
                     payoutAccountReference: this.contractForm.payoutAccountReference || null
                 });
@@ -222,6 +226,8 @@ document.addEventListener('alpine:init', () => {
                 baseSalary: contract.baseSalary,
                 hourlyRate: contract.hourlyRate,
                 transportAllowance: contract.transportAllowance,
+                // Un contrat renvoyé sans le champ (ancienne réponse) reste « avec retenues », jamais l'inverse.
+                applyStatutoryDeductions: contract.applyStatutoryDeductions !== false,
                 payoutMethod: contract.payoutMethod || 'Cash',
                 payoutAccountReference: contract.payoutAccountReference || '',
                 reason: '',
@@ -242,6 +248,7 @@ document.addEventListener('alpine:init', () => {
                     baseSalary: Number(this.editContractForm.baseSalary) || 0,
                     hourlyRate: Number(this.editContractForm.hourlyRate) || 0,
                     transportAllowance: Number(this.editContractForm.transportAllowance) || 0,
+                    applyStatutoryDeductions: this.editContractForm.applyStatutoryDeductions !== false,
                     payoutMethod: this.editContractForm.payoutMethod,
                     payoutAccountReference: this.editContractForm.payoutAccountReference || null,
                     reason: this.editContractForm.reason.trim(),

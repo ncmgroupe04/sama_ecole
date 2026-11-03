@@ -138,10 +138,22 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
 
             Row("Salaire brut", payslip.GrossSalary, null);
             Row("Prime de transport", payslip.TransportAllowance, null);
-            Row("IPRES (retraite)", -payslip.IpresEmployee, payslip.IpresEmployer);
-            Row("CSS (prestations familiales)", null, payslip.CssEmployer);
-            Row("VRS / CFCE", null, payslip.Vrs);
-            Row("BRS (retenue à la source)", -payslip.Brs, null);
+
+            if (payslip.DeductionsApplied)
+            {
+                Row("IPRES (retraite)", -payslip.IpresEmployee, payslip.IpresEmployer);
+                Row("CSS (prestations familiales)", null, payslip.CssEmployer);
+                Row("VRS / CFCE", null, payslip.Vrs);
+                Row("BRS (retenue à la source)", -payslip.Brs, null);
+            }
+            else
+            {
+                // Paie « sans retenues » (structure qui ne cotise pas, ex. un Daara) : aucune ligne de cotisation à
+                // montrer, mais une mention explicite pour que le net égal au brut ne passe pas pour un oubli.
+                table.Cell().ColumnSpan(3).Element(BodyCell).Text(
+                    "Paie sans retenues : aucune cotisation ni retenue légale (IPRES, CSS, VRS/CFCE, BRS) n'est appliquée.")
+                    .Italic().FontColor(Colors.Grey.Darken2);
+            }
 
             void Row(string label, decimal? employee, decimal? employer)
             {

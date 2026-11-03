@@ -69,7 +69,12 @@
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3 px-4 font-medium text-slate-900" x-text="contract.employeeFullName"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="contract.employeeRole"></td>
-                                <td class="py-3 px-4 text-slate-600" x-text="contractTypeLabel(contract.type)"></td>
+                                <td class="py-3 px-4 text-slate-600">
+                                    <span x-text="contractTypeLabel(contract.type)"></span>
+                                    <span x-show="contract.applyStatutoryDeductions === false" x-cloak
+                                          class="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"
+                                          title="Aucune retenue ni cotisation : le salaire brut est payé tel quel.">Sans retenues</span>
+                                </td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.baseSalary)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.hourlyRate)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.transportAllowance)"></td>
@@ -166,7 +171,12 @@
                         </tr>
                         <template x-for="payslip in payslips" :key="payslip.id">
                             <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="py-3 px-4 font-medium text-slate-900" x-text="payslip.employeeFullName"></td>
+                                <td class="py-3 px-4 font-medium text-slate-900">
+                                    <span x-text="payslip.employeeFullName"></span>
+                                    <span x-show="payslip.deductionsApplied === false" x-cloak
+                                          class="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"
+                                          title="Aucune retenue ni cotisation : net = brut + prime de transport.">Sans retenues</span>
+                                </td>
                                 <td class="py-3 px-4 text-slate-600" x-text="monthLabel(payslip.month) + ' ' + payslip.year"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(payslip.grossSalary)"></td>
                                 <td class="py-3 px-4 text-right font-semibold text-slate-900 amount" x-text="formatAmount(payslip.netSalary)"></td>
@@ -324,6 +334,22 @@
                 </div>
             </div>
 
+            @* Deux régimes dans une même école : avec retenues (IPRES, CSS, VRS/CFCE, BRS — le calcul historique) ou sans
+               retenues (ex. Daara : le salaire brut est payé tel quel). Se règle par personne, donc par contrat. *@
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" x-model="contractForm.applyStatutoryDeductions"
+                           class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                    <span>
+                        <span class="block text-sm font-medium text-slate-900">Appliquer les retenues légales (IPRES, CSS, VRS/CFCE, BRS)</span>
+                        <span class="block text-xs text-slate-500 mt-0.5"
+                              x-text="contractForm.applyStatutoryDeductions
+                                  ? 'Les cotisations et retenues sont calculées sur la fiche de paie.'
+                                  : 'Paie sans retenues : la personne reçoit son salaire brut plus sa prime de transport, sans aucune déduction.'"></span>
+                    </span>
+                </label>
+            </div>
+
             <div class="form-grid">
                 <div>
                     <label class="form-label">Moyen de paiement</label>
@@ -361,6 +387,19 @@
                     <label class="form-label">Prime de transport (FCFA)</label>
                     <input type="number" min="0" x-model="editContractForm.transportAllowance" class="input-field mt-1" />
                 </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" x-model="editContractForm.applyStatutoryDeductions"
+                           class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                    <span>
+                        <span class="block text-sm font-medium text-slate-900">Appliquer les retenues légales (IPRES, CSS, VRS/CFCE, BRS)</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">
+                            Concerne les prochaines fiches de paie. Les fiches déjà générées ne changent pas.
+                        </span>
+                    </span>
+                </label>
             </div>
 
             <div class="form-grid">

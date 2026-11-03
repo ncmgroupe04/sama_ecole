@@ -22,13 +22,39 @@ public static class PayrollCalculator
         int year, 
         decimal baseSalary, 
         decimal hourlyRate, 
-        decimal hoursWorked, 
-        decimal transportAllowance)
+        decimal hoursWorked,
+        decimal transportAllowance,
+        bool applyDeductions = true)
     {
         // Calcul du Brut
-        decimal grossSalary = hourlyRate > 0 
-            ? hoursWorked * hourlyRate 
+        decimal grossSalary = hourlyRate > 0
+            ? hoursWorked * hourlyRate
             : baseSalary;
+
+        // Paie « sans retenues » (structure qui ne cotise pas, ex. un Daara) : aucune cotisation, aucune charge, aucune
+        // retenue — la personne reçoit exactement son salaire brut plus sa prime de transport. Les deux régimes
+        // coexistent dans une même école : c'est le contrat de la personne qui choisit (EmployeeContract.ApplyStatutoryDeductions).
+        if (!applyDeductions)
+        {
+            return new FichePaie
+            {
+                Id = Guid.NewGuid(),
+                SchoolId = schoolId,
+                EmployeeContractId = contractId,
+                Month = month,
+                Year = year,
+                HoursWorked = hoursWorked,
+                GrossSalary = grossSalary,
+                TransportAllowance = transportAllowance,
+                IpresEmployee = 0m,
+                IpresEmployer = 0m,
+                CssEmployer = 0m,
+                Vrs = 0m,
+                Brs = 0m,
+                NetSalary = grossSalary + transportAllowance,
+                DeductionsApplied = false
+            };
+        }
 
         // Base IPRES plafonnée
         decimal ipresBase = Math.Min(grossSalary, IpresCeiling);

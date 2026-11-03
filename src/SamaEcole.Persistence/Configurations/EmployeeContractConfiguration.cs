@@ -25,6 +25,9 @@ public class EmployeeContractConfiguration : IEntityTypeConfiguration<EmployeeCo
 
         builder.Property(e => e.PayoutAccountReference).HasMaxLength(50);
 
+        // Défaut vrai : les contrats existants gardent le calcul historique (avec retenues).
+        builder.Property(e => e.ApplyStatutoryDeductions).IsRequired().HasDefaultValue(true);
+
         builder.Property(e => e.ExternalFullName).HasMaxLength(150);
         builder.Property(e => e.ExternalJobTitle).HasMaxLength(100);
         builder.Property(e => e.ExternalPhone).HasMaxLength(30);

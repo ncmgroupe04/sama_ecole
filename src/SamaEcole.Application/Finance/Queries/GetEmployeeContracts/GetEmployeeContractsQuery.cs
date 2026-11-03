@@ -20,7 +20,8 @@ public record EmployeeContractDto(
     string? PayoutAccountReference,
     DateOnly? EndDate,
     uint RowVersion,
-    string? ExternalPhone = null);
+    string? ExternalPhone = null,
+    bool ApplyStatutoryDeductions = true);
 
 public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEmployeeContractsQuery, List<EmployeeContractDto>>
@@ -45,7 +46,8 @@ public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
                 c.PayoutAccountReference,
                 c.EndDate,
                 EF.Property<uint>(c, "xmin"),
-                c.ExternalPhone))
+                c.ExternalPhone,
+                c.ApplyStatutoryDeductions))
             .ToListAsync(cancellationToken);
     }
 }

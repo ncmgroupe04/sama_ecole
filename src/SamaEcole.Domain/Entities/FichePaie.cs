@@ -28,6 +28,13 @@ public class FichePaie : AuditableEntity, ITenantEntity
     
     public decimal NetSalary { get; set; }
 
+    /// <summary>
+    /// Instantané du régime de la paie à la génération : faux = fiche « sans retenues » (net = brut + transport, aucune
+    /// cotisation ni retenue). Conservé sur la fiche et non relu sur le contrat : changer le régime d'un contrat ne
+    /// réécrit jamais une fiche déjà éditée, et le bulletin PDF reste fidèle à ce qui a été payé.
+    /// </summary>
+    public bool DeductionsApplied { get; set; } = true;
+
     // ----- Annulation (Volume 1 §14.5) -----
     // Une fiche ne se supprime ni ne se réécrit : elle s'ANNULE (la ligne reste, avec auteur, date et motif)
     // puis, au besoin, une nouvelle fiche est régénérée pour la même période. Seules les fiches non annulées

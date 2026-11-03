@@ -32,7 +32,8 @@ public record PayslipDto(
     DateTimeOffset? PaidAt = null,
     string? PaidWith = null,
     DateTimeOffset? CancelledAt = null,
-    string? CancellationReason = null);
+    string? CancellationReason = null,
+    bool DeductionsApplied = true);
 
 public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetPayslipQuery, PayslipDto>
@@ -99,6 +100,7 @@ public class GetPayslipQueryHandler(IApplicationDbContext dbContext)
             f2.PaidAt,
             f2.PaidWith?.ToString(),
             f2.CancelledAt,
-            f2.CancellationReason);
+            f2.CancellationReason,
+            f2.DeductionsApplied);
     }
 }

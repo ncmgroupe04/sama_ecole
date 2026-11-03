@@ -60,6 +60,23 @@ public class PayslipPdfGeneratorTests
     }
 
     [Fact]
+    public void Generate_Produces_A_Valid_Pdf_For_A_Payslip_Without_Deductions()
+    {
+        // Paie « sans retenues » (ex. Daara) : aucune ligne de cotisation, une mention explicite à la place. Le net égale le brut.
+        var payslip = Payslip() with
+        {
+            GrossSalary = 40_000m, TransportAllowance = 0m,
+            IpresEmployee = 0m, IpresEmployer = 0m, CssEmployer = 0m, Vrs = 0m, Brs = 0m,
+            NetSalary = 40_000m, DeductionsApplied = false
+        };
+
+        var pdf = new PayslipPdfGenerator().Generate(payslip, logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        pdf.Length.Should().BeGreaterThan(500);
+    }
+
+    [Fact]
     public void Generate_Is_Robust_To_A_Vacataire_Contract_Without_Hours()
     {
         var pdf = new PayslipPdfGenerator().Generate(Payslip(contractType: "Vacataire", hoursWorked: 0m), logo: null);
