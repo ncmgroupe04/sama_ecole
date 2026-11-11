@@ -660,7 +660,7 @@
 
  <!-- Frais échus, une case à cocher par ligne (toutes cochées par défaut) -->
  <div>
- <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">Frais échus à ce jour</h3>
+ <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2" x-text="askMonth ? 'Cochez le ou les mois réglés' : 'Frais échus à ce jour'">Frais échus à ce jour</h3>
  <div class="rounded-xl border border-slate-100 shadow-sm overflow-x-auto">
  <table class="w-full min-w-[380px] text-sm text-left">
  <thead>
@@ -678,7 +678,10 @@
  :aria-label="'Régler ' + row.designation"
  class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer" />
  </td>
- <td class="py-2 px-3 font-medium" :class="quickPay.checked[idx] ? 'text-slate-800' : 'text-slate-400 line-through'" x-text="row.designation"></td>
+ <td class="py-2 px-3 font-medium" :class="quickPay.checked[idx] ? 'text-slate-800' : 'text-slate-400 line-through'">
+ <span x-text="row.designation"></span>
+ <span x-show="quickPayMonthName(row)" x-cloak class="ml-1 text-xs font-semibold text-primary" x-text="'— ' + quickPayMonthName(row)"></span>
+ </td>
  <td class="py-2 px-3 text-right font-semibold amount" :class="quickPay.checked[idx] ? 'text-slate-900' : 'text-slate-400 line-through'" x-text="formatMoney(row.remainingDue)"></td>
  </tr>
  </template>

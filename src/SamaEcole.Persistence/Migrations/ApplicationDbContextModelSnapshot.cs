@@ -3585,6 +3585,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
+                    b.Property<int?>("Month")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("PaymentId")
                         .HasColumnType("uuid");
 
@@ -3603,7 +3606,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("PaymentId");
 
-                    b.ToTable("payment_breakdowns", (string)null);
+                    b.ToTable("payment_breakdowns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_payment_breakdowns_month_range", "\"Month\" IS NULL OR (\"Month\" BETWEEN 1 AND 12)");
+                        });
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.PlatformDashboardStats", b =>
@@ -4672,8 +4678,18 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<bool>("AllowFinanceToModifyFees")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("AllowFinanceToViewMonthlyStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("AllowSecretaryToManageGrading")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("AskPaymentMonthAtCashier")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("AutoLogoutMinutes")
                         .HasColumnType("integer");
@@ -4755,6 +4771,11 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Trimester");
+
+                    b.Property<bool>("FirstMonthlyPaymentCoversLastMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("GradeEditWindowDays")
                         .ValueGeneratedOnAdd()

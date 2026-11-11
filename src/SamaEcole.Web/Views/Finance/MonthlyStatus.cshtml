@@ -1,0 +1,158 @@
+@{
+    ViewData["Title"] = "Situation des mensualités";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/monthly-status.js" asp-append-version="true"></script>
+}
+
+<div x-data="monthlyStatusView()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Situation des mensualités</h1>
+            <p class="page-subtitle">Qui a payé, partiellement payé ou rien payé pour un mois donné.</p>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="card mt-6">
+        <div class="filter-bar lg:items-end lg:justify-between">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="form-label-sm">Année scolaire <span class="text-rose-500">*</span></label>
+                    <select-field model="schoolYearId" aria-label="Année scolaire" class="mt-0" placeholder="Choisir l'année"
+                        options-expr="schoolYears.map(y => ({value: y.id, label: y.label}))" />
+                </div>
+                <div>
+                    <label class="form-label-sm">Mois <span class="text-rose-500">*</span></label>
+                    <select-field model="month" aria-label="Mois concerné" class="mt-0" placeholder="Choisir le mois"
+                        options-expr="monthOptions" />
+                </div>
+                <div>
+                    <label class="form-label-sm">Classe</label>
+                    <select-field model="classroomId" aria-label="Filtrer par classe" class="mt-0" placeholder="Toutes les classes"
+                        options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
+                </div>
+                <button type="button" x-on:click="load()" :disabled="isLoading" class="btn-modal-primary group">
+                    <icon name="chart-multiple" class="w-4 h-4" />
+                    <span x-text="isLoading ? 'Calcul…' : 'Afficher la situation'"></span>
+                </button>
+            </div>
+            <div>
+                <button type="button" x-on:click="exportExcel()" :disabled="exporting || !data" class="btn-modal-secondary group">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="exporting ? 'Export…' : 'Exporter en Excel'"></span>
+                </button>
+            </div>
+        </div>
+        <p x-show="formError" x-cloak x-text="formError" class="field-error px-6 pb-3"></p>
+    </div>
+
+    <template x-if="!data && !isLoading">
+        <div class="card mt-6">
+            <empty-state icon="wallet" title="Aucune situation affichée."
+                hint="Choisissez l'année scolaire et le mois, puis cliquez sur « Afficher la situation »." />
+        </div>
+    </template>
+
+    <template x-if="data">
+        <div>
+            <!-- Résumé : calculé sur les mêmes lignes que les trois listes ci-dessous -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <stat-card label="Élèves concernés" icon="users" accent="primary"><span x-text="data.summary.totalStudents"></span></stat-card>
+                <stat-card label="Ont intégralement payé" icon="checkmark-circle" accent="success"><span x-text="data.summary.paidCount"></span></stat-card>
+                <stat-card label="Ont partiellement payé" icon="clock" accent="warning"><span x-text="data.summary.partialCount"></span></stat-card>
+                <stat-card label="N'ont rien payé" icon="alert-circle" accent="danger"><span x-text="data.summary.unpaidCount"></span></stat-card>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                <stat-card label="Montant total attendu" icon="wallet" accent="primary"><span class="amount" x-text="formatAmount(data.summary.totalExpected)"></span></stat-card>
+                <stat-card label="Montant total encaissé" icon="payment" accent="success"><span class="amount" x-text="formatAmount(data.summary.totalCollected)"></span></stat-card>
+                <stat-card label="Reste à recouvrer" icon="alert-circle" accent="danger"><span class="amount" x-text="formatAmount(data.summary.totalRemaining)"></span></stat-card>
+            </div>
+
+            <!-- A. Payé -->
+            <div class="card mt-6 border-l-4 border-emerald-500">
+                <div class="p-4 flex items-center justify-between">
+                    <h2 class="section-title text-emerald-700">Ont payé <span class="text-slate-400 font-normal" x-text="'(' + data.paid.length + ')'"></span></h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="table-head">
+                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
+                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Payé</th>
+                            <th class="py-3 px-4">Dernier paiement</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr x-show="data.paid.length === 0" x-cloak><td colspan="5" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
+                            <template x-for="r in data.paid" :key="r.enrollmentId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
+                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
+                                    <td class="py-3 px-4 text-right amount font-semibold text-emerald-700" x-text="formatAmount(r.paidAmount)"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="formatDate(r.lastPaymentAt)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- B. Partiel -->
+            <div class="card mt-6 border-l-4 border-amber-500">
+                <div class="p-4 flex items-center justify-between">
+                    <h2 class="section-title text-amber-700">Ont partiellement payé <span class="text-slate-400 font-normal" x-text="'(' + data.partial.length + ')'"></span></h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="table-head">
+                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
+                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Déjà payé</th>
+                            <th class="py-3 px-4 text-right">Reste à payer</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr x-show="data.partial.length === 0" x-cloak><td colspan="5" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
+                            <template x-for="r in data.partial" :key="r.enrollmentId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
+                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
+                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.paidAmount)"></td>
+                                    <td class="py-3 px-4 text-right amount font-semibold text-amber-700" x-text="formatAmount(r.remainingAmount)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- C. Non payé -->
+            <div class="card mt-6 border-l-4 border-rose-500">
+                <div class="p-4 flex items-center justify-between">
+                    <h2 class="section-title text-rose-700">N'ont pas payé <span class="text-slate-400 font-normal" x-text="'(' + data.unpaid.length + ')'"></span></h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="table-head">
+                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
+                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Restant dû</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr x-show="data.unpaid.length === 0" x-cloak><td colspan="4" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
+                            <template x-for="r in data.unpaid" :key="r.enrollmentId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
+                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
+                                    <td class="py-3 px-4 text-right amount font-semibold text-rose-700" x-text="formatAmount(r.remainingAmount)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>

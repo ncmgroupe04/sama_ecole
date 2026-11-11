@@ -60,7 +60,10 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         int CustomPeriodCount = 3,
         IReadOnlyList<string>? WorkingDays = null,
         bool? AllowFinanceToCancelPayments = null,
-        bool? AllowFinanceToCancelPayslips = null);
+        bool? AllowFinanceToCancelPayslips = null,
+        bool? AllowFinanceToViewMonthlyStatus = null,
+        bool? FirstMonthlyPaymentCoversLastMonth = null,
+        bool? AskPaymentMonthAtCashier = null);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -123,7 +126,10 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.CustomPeriodCount,
                 request.WorkingDays,
                 request.AllowFinanceToCancelPayments,
-                request.AllowFinanceToCancelPayslips),
+                request.AllowFinanceToCancelPayslips,
+                request.AllowFinanceToViewMonthlyStatus,
+                request.FirstMonthlyPaymentCoversLastMonth,
+                request.AskPaymentMonthAtCashier),
             cancellationToken);
 
         return Ok(result);

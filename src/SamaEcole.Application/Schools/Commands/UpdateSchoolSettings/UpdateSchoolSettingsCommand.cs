@@ -66,5 +66,14 @@ public record UpdateSchoolSettingsCommand(
     bool? AllowFinanceToCancelPayments = null,
 
     /// <summary>Droit de la Finance d'annuler / corriger une fiche de paie. Absent ou null = inchangé (même raison que ci-dessus).</summary>
-    bool? AllowFinanceToCancelPayslips = null) : IRequest<SchoolSettingsDto>;
+    bool? AllowFinanceToCancelPayslips = null,
+
+    /// <summary>Droit de la Finance de consulter la Situation des mensualités. Absent ou null = inchangé (même raison que ci-dessus).</summary>
+    bool? AllowFinanceToViewMonthlyStatus = null,
+
+    /// <summary>Le premier mois versé à l'inscription compte pour le dernier mois. Absent ou null = inchangé.</summary>
+    bool? FirstMonthlyPaymentCoversLastMonth = null,
+
+    /// <summary>La caisse demande le mois réglé à l'encaissement. Absent ou null = inchangé.</summary>
+    bool? AskPaymentMonthAtCashier = null) : IRequest<SchoolSettingsDto>;
 

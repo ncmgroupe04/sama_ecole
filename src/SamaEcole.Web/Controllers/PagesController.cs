@@ -157,6 +157,11 @@ public class PagesController : Controller
     [HttpGet("/caisse")]
     public IActionResult Caisse() => View("~/Views/Caisse/Index.cshtml");
 
+    // Situation des mensualités : gabarit anonyme comme le reste — c'est FinanceController (policy
+    // CanViewMonthlyStatus, relue à chaque requête) qui garde les données.
+    [HttpGet("/mensualites")]
+    public IActionResult MonthlyStatus() => View("~/Views/Finance/MonthlyStatus.cshtml");
+
     [HttpGet("/parametres")]
     public IActionResult Settings() => View("~/Views/Settings/Index.cshtml");
 

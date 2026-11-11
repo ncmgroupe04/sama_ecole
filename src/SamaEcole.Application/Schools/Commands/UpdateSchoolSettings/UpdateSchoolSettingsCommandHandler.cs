@@ -72,6 +72,18 @@ public class UpdateSchoolSettingsCommandHandler(
         {
             settings.AllowFinanceToCancelPayslips = allowCancelPayslips;
         }
+        if (request.AllowFinanceToViewMonthlyStatus is { } allowMonthlyStatus)
+        {
+            settings.AllowFinanceToViewMonthlyStatus = allowMonthlyStatus;
+        }
+        if (request.FirstMonthlyPaymentCoversLastMonth is { } firstCoversLast)
+        {
+            settings.FirstMonthlyPaymentCoversLastMonth = firstCoversLast;
+        }
+        if (request.AskPaymentMonthAtCashier is { } askMonth)
+        {
+            settings.AskPaymentMonthAtCashier = askMonth;
+        }
         settings.DirectorSignatureUrl = string.IsNullOrWhiteSpace(request.DirectorSignatureUrl) ? null : request.DirectorSignatureUrl.Trim();
         settings.SecretarySignatureUrl = string.IsNullOrWhiteSpace(request.SecretarySignatureUrl) ? null : request.SecretarySignatureUrl.Trim();
         settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();

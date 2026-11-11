@@ -393,6 +393,46 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         }
     }
 
+    // ------------------------------------------------------------------ Situation des mensualités
+
+    /// <summary>
+    /// Qui a payé, payé partiellement ou rien payé pour un mois d'une année scolaire (classe facultative).
+    /// Directeur toujours ; Finance UNIQUEMENT si le Directeur a activé « Autoriser la comptabilité à consulter la
+    /// situation des mensualités » (CanViewMonthlyStatusHandler, relu à chaque requête). Lecture seule.
+    /// </summary>
+    [HttpGet("monthly-status")]
+    [Authorize(Policy = FinancePolicies.CanViewMonthlyStatus)]
+    [ProducesResponseType<SamaEcole.Application.Finance.Queries.GetMonthlyStatus.MonthlyStatusDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> MonthlyStatus(
+        [FromQuery] Guid schoolYearId, [FromQuery] int month, [FromQuery] Guid? classroomId,
+        CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new SamaEcole.Application.Finance.Queries.GetMonthlyStatus.GetMonthlyStatusQuery(schoolYearId, month, classroomId),
+            cancellationToken));
+
+    /// <summary>Même situation, au format Excel (.xlsx) : mêmes filtres, mêmes chiffres que l'écran.</summary>
+    [HttpGet("monthly-status/excel")]
+    [Authorize(Policy = FinancePolicies.CanViewMonthlyStatus)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> MonthlyStatusExcel(
+        [FromQuery] Guid schoolYearId, [FromQuery] int month, [FromQuery] Guid? classroomId,
+        CancellationToken cancellationToken)
+    {
+        var file = await mediator.Send(
+            new SamaEcole.Application.Finance.Queries.GetMonthlyStatusExport.GetMonthlyStatusExportQuery(
+                schoolYearId, month, classroomId),
+            cancellationToken);
+
+        return File(
+            file.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file.FileName);
+    }
+
     // ------------------------------------------------------------------ Tableau de bord (JGK-F04)
 
     /// <summary>

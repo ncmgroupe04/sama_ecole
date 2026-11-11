@@ -153,7 +153,8 @@ public class RecordPaymentCommandHandler(
                         AmountAllocated = breakdown.AmountAllocated,
                         // Vide normalisé à null : une chaîne blanche ferait échouer le repli sur
                         // ReferencePeriod côté reçu et imprimerait une cellule vide sans raison.
-                        Label = string.IsNullOrWhiteSpace(breakdown.Label) ? null : breakdown.Label.Trim()
+                        Label = string.IsNullOrWhiteSpace(breakdown.Label) ? null : breakdown.Label.Trim(),
+                        Month = breakdown.Month
                     });
                 }
             }

@@ -127,6 +127,25 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
         var calculated = InstallmentScheduleCalculator.Calculate(
             row.Enrollment.AmountPaid, todayDateOnly, lines, row.SchoolYear.StartDate, customInstallments);
 
+        // Mois CHOISIS par le caissier (option « demander le mois à l'encaissement ») : seulement s'il en existe pour cette
+        // inscription, l'argent désigné va sur son mois. Sinon on garde le calcul historique, strictement inchangé.
+        var taggedByMonth = (await dbContext.PaymentBreakdowns.AsNoTracking()
+                .Where(b => b.Month != null
+                    && dbContext.Payments.Any(p => p.Id == b.PaymentId
+                        && p.EnrollmentId == row.Enrollment.Id && p.Status != PaymentStatus.Cancelled))
+                .Select(b => new { Month = b.Month!.Value, b.AmountAllocated })
+                .ToListAsync(cancellationToken))
+            .GroupBy(b => b.Month)
+            .ToDictionary(g => g.Key, g => g.Sum(b => b.AmountAllocated));
+
+        if (taggedByMonth.Count > 0)
+        {
+            calculated = TaggedInstallmentAllocator
+                .Allocate(calculated, row.Enrollment.AmountPaid, taggedByMonth, todayDateOnly, firstMonthCoversLast: false)
+                .Select(a => a.Installment)
+                .ToList();
+        }
+
         var installments = calculated
             .Select(c => new InstallmentDto(
                 c.Id,

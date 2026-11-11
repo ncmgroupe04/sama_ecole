@@ -1150,6 +1150,42 @@
  class="input-field disabled:bg-slate-50 disabled:text-slate-500">
  <p x-show="configErrors.tuitionmonthsperyear" x-cloak x-text="configErrors.tuitionmonthsperyear" class="field-error"></p>
  </div>
+ @* Pratique d'école lue UNIQUEMENT par la Situation des mensualités : la caisse, le solde élève et les débiteurs ne changent pas. *@
+ <div x-show="isDirecteur" x-cloak class="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 p-4">
+ <span id="first-monthly-covers-last-label" class="text-sm font-medium text-slate-700 flex-1">
+ La mensualité versée avec l'inscription compte pour le dernier mois (juin)
+ <span class="block text-xs font-normal text-slate-500 mt-0.5">
+ À activer si votre école demande le dernier mois d'avance à l'inscription. Les versements suivants couvrent alors octobre, novembre… dans l'ordre. N'agit que sur la page « Situation des mensualités ».
+ </span>
+ </span>
+ <button type="button" role="switch" aria-labelledby="first-monthly-covers-last-label"
+ :aria-checked="config.firstMonthlyPaymentCoversLastMonth.toString()"
+ x-on:click="config.firstMonthlyPaymentCoversLastMonth = !config.firstMonthlyPaymentCoversLastMonth; saveConfig(false)"
+ :disabled="configSaving"
+ :class="config.firstMonthlyPaymentCoversLastMonth ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50">
+ <span aria-hidden="true" :class="config.firstMonthlyPaymentCoversLastMonth ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+ @* Choix du mois à la caisse : le mois coché prime sur la pratique ci-dessus ; sans mois coché, la pratique s'applique. *@
+ <div x-show="isDirecteur" x-cloak class="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 p-4">
+ <span id="ask-payment-month-label" class="text-sm font-medium text-slate-700 flex-1">
+ Demander le mois réglé à chaque encaissement
+ <span class="block text-xs font-normal text-slate-500 mt-0.5">
+ Le caissier coche le ou les mois que le versement règle (y compris un mois à venir, comme juin d'avance). Le mois coché prime ; sans mois coché, la règle ci-dessus s'applique. Désactivé, l'écran de caisse reste inchangé.
+ </span>
+ </span>
+ <button type="button" role="switch" aria-labelledby="ask-payment-month-label"
+ :aria-checked="config.askPaymentMonthAtCashier.toString()"
+ x-on:click="config.askPaymentMonthAtCashier = !config.askPaymentMonthAtCashier; saveConfig(false)"
+ :disabled="configSaving"
+ :class="config.askPaymentMonthAtCashier ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50">
+ <span aria-hidden="true" :class="config.askPaymentMonthAtCashier ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
  </div>
 
  @* Matrice d'autorisation "Photoshop" (JGK-F01) : visibles du Directeur SEUL, comme la
@@ -1218,6 +1254,23 @@
  :class="config.allowFinanceToCancelPayslips ? 'bg-primary' : 'bg-slate-300'"
  class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50">
  <span aria-hidden="true" :class="config.allowFinanceToCancelPayslips ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+ <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-4 sm:col-span-2">
+ <span id="delegation-switch-finance-monthly-status-label" class="text-sm font-medium text-slate-700 flex-1">
+ Autoriser la comptabilité à consulter la situation des mensualités
+ <span class="block text-xs font-normal text-slate-500 mt-0.5">
+ Désactivé (par défaut), seul le Directeur voit qui a payé, partiellement payé ou rien payé chaque mois. Activé, le personnel Comptabilité y accède aussi, en lecture seule ; le désactiver retire l'accès aussitôt.
+ </span>
+ </span>
+ <button type="button" role="switch" aria-labelledby="delegation-switch-finance-monthly-status-label"
+ :aria-checked="config.allowFinanceToViewMonthlyStatus.toString()"
+ x-on:click="config.allowFinanceToViewMonthlyStatus = !config.allowFinanceToViewMonthlyStatus; saveConfig(false)"
+ :disabled="configSaving"
+ :class="config.allowFinanceToViewMonthlyStatus ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50">
+ <span aria-hidden="true" :class="config.allowFinanceToViewMonthlyStatus ? 'translate-x-6' : 'translate-x-1'"
  class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
  </button>
  </div>

@@ -576,6 +576,18 @@ document.addEventListener('alpine:init', () => {
         financeEnabled: true,
 
         /**
+         * Le Directeur a-t-il ouvert la Situation des mensualités à la Finance ? CONFORT d'affichage (entrée de menu) :
+         * le vrai verrou est la policy CanViewMonthlyStatus côté serveur. Faux par défaut, comme le réglage.
+         */
+        financeMayViewMonthlyStatus: false,
+
+        /**
+         * La caisse propose-t-elle de cocher le(s) mois réglé(s) ? CONFORT d'affichage (écran de caisse) : le serveur
+         * accepte un mois facultatif sur chaque ligne de règlement quel que soit ce réglage. Faux par défaut.
+         */
+        askPaymentMonthAtCashier: false,
+
+        /**
          * Module Internat (Paramètres › Modules) — INVERSE de pedagogyEnabled/financeEnabled :
          * désactivé par défaut (SchoolSettingsDefaults.IsInternatEnabled = false), donc masqué tant
          * que la réponse n'est pas arrivée ou en cas d'erreur réseau (sûr par défaut = caché, pas
@@ -678,6 +690,8 @@ document.addEventListener('alpine:init', () => {
                 this.isPublicSchool = (s && s.typeEtablissement === 'Public');
                 this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
+                this.financeMayViewMonthlyStatus = !!s && s.allowFinanceToViewMonthlyStatus === true;
+                this.askPaymentMonthAtCashier = !!s && s.askPaymentMonthAtCashier === true;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
                 this.coranEnabled = !!s && s.isCoranModuleEnabled === true;
                 this.workingDays = window.dayIndexes(s && s.workingDays);
@@ -697,6 +711,8 @@ document.addEventListener('alpine:init', () => {
                 this.isPublicSchool = false;
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
+                this.financeMayViewMonthlyStatus = false;
+                this.askPaymentMonthAtCashier = false;
                 this.internatEnabled = false;
                 this.coranEnabled = false;
                 this.loadFailed = true;
@@ -732,6 +748,11 @@ document.addEventListener('alpine:init', () => {
         get isPublicSchool() { return Alpine.store('schoolConfig').isPublicSchool; },
         get pedagogyEnabled() { return Alpine.store('schoolConfig').pedagogyEnabled; },
         get financeEnabled() { return Alpine.store('schoolConfig').financeEnabled; },
+        // Entrée « Situation des mensualités » : Directeur toujours, Finance seulement si le Directeur l'a ouverte.
+        get canViewMonthlyStatus() {
+            return this.role === 'Directeur'
+                || (this.role === 'Finance' && Alpine.store('schoolConfig').financeMayViewMonthlyStatus);
+        },
         get internatEnabled() { return Alpine.store('schoolConfig').internatEnabled; },
 
         // Profil d'Onboarding (Ticket 3, voir ApplyEstablishmentProfileCommand) — même délégation au

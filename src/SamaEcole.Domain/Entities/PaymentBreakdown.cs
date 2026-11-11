@@ -23,6 +23,14 @@ public class PaymentBreakdown : AuditableEntity, ITenantEntity
     /// </summary>
     public string? Label { get; set; }
 
+    /// <summary>
+    /// MOIS CIVIL (1-12) que cette ligne règle, choisi par le caissier quand l'école a activé « demander le mois à
+    /// l'encaissement » (SchoolSettings.AskPaymentMonthAtCashier). Contrairement à <see cref="Label"/>, il ENTRE dans le
+    /// calcul : l'argent de cette ligne va sur ce mois (TaggedInstallmentAllocator). Null pour tout paiement ancien
+    /// ou toute ligne sans choix de mois : l'imputation « dans l'ordre » s'applique alors, inchangée.
+    /// </summary>
+    public int? Month { get; set; }
+
     public Payment Payment { get; set; } = null!;
 
     public FeeCategory FeeCategory { get; set; } = null!;

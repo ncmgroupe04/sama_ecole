@@ -119,6 +119,12 @@ document.addEventListener('alpine:init', () => {
             allowFinanceToCancelPayments: true,
             // Droit de la Finance d'annuler / corriger une fiche de paie (Volume 1 §14.5) : OUVERT par défaut, retirable par le Directeur.
             allowFinanceToCancelPayslips: true,
+            // Droit de la Finance de consulter la Situation des mensualités : FERMÉ par défaut, ouvert par le Directeur seul.
+            allowFinanceToViewMonthlyStatus: false,
+            // Pratique d'école : la mensualité versée à l'inscription compte pour le dernier mois (juin). Faux par défaut.
+            firstMonthlyPaymentCoversLastMonth: false,
+            // La caisse propose de cocher le(s) mois réglé(s) à chaque encaissement : fermé par défaut.
+            askPaymentMonthAtCashier: false,
             // Modules activés/désactivés par le Directeur (Paramètres ⬺ Modules & fonctionnalités) —
             // second axe, indépendant de la formule d'abonnement (featureGate/window.features).
             isPedagogyEnabled: true,
@@ -363,6 +369,9 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToDeleteFees: config.allowFinanceToDeleteFees,
                     allowFinanceToCancelPayments: config.allowFinanceToCancelPayments,
                     allowFinanceToCancelPayslips: config.allowFinanceToCancelPayslips,
+                    allowFinanceToViewMonthlyStatus: config.allowFinanceToViewMonthlyStatus === true,
+                    firstMonthlyPaymentCoversLastMonth: config.firstMonthlyPaymentCoversLastMonth === true,
+                    askPaymentMonthAtCashier: config.askPaymentMonthAtCashier === true,
                     isPedagogyEnabled: config.isPedagogyEnabled,
                     isFinanceEnabled: config.isFinanceEnabled,
                     isInternatEnabled: config.isInternatEnabled,
@@ -832,6 +841,9 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees,
                     allowFinanceToCancelPayments: this.config.allowFinanceToCancelPayments,
                     allowFinanceToCancelPayslips: this.config.allowFinanceToCancelPayslips,
+                    allowFinanceToViewMonthlyStatus: this.config.allowFinanceToViewMonthlyStatus === true,
+                    firstMonthlyPaymentCoversLastMonth: this.config.firstMonthlyPaymentCoversLastMonth === true,
+                    askPaymentMonthAtCashier: this.config.askPaymentMonthAtCashier === true,
                     isPedagogyEnabled: this.config.isPedagogyEnabled,
                     isFinanceEnabled: this.config.isFinanceEnabled,
                     isInternatEnabled: this.config.isInternatEnabled,
@@ -859,6 +871,9 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees,
                     allowFinanceToCancelPayments: saved.allowFinanceToCancelPayments,
                     allowFinanceToCancelPayslips: saved.allowFinanceToCancelPayslips,
+                    allowFinanceToViewMonthlyStatus: saved.allowFinanceToViewMonthlyStatus === true,
+                    firstMonthlyPaymentCoversLastMonth: saved.firstMonthlyPaymentCoversLastMonth === true,
+                    askPaymentMonthAtCashier: saved.askPaymentMonthAtCashier === true,
                     isPedagogyEnabled: saved.isPedagogyEnabled,
                     isFinanceEnabled: saved.isFinanceEnabled,
                     isInternatEnabled: saved.isInternatEnabled,

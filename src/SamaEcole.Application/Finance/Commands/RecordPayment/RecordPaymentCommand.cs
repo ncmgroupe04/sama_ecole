@@ -40,7 +40,13 @@ public record RecordPaymentCommand(
 /// « Période / Note » du reçu (« Unique », « 2 jeux ») : laissé null, le reçu retombe sur la
 /// <c>ReferencePeriod</c> du versement. Descriptif uniquement, il n'entre dans aucun calcul.
 /// </summary>
-public record PaymentBreakdownDto(Guid FeeCategoryId, decimal AmountAllocated, string? Label = null);
+public record PaymentBreakdownDto(
+    Guid FeeCategoryId,
+    decimal AmountAllocated,
+    string? Label = null,
+
+    /// <summary>Mois civil (1-12) que la ligne règle, choisi par le caissier — facultatif. Contrairement au libellé, il entre dans le calcul de la Situation des mensualités.</summary>
+    int? Month = null);
 
 
 /// <summary>
