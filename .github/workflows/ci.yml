@@ -76,7 +76,7 @@ jobs:
         env:
           ConnectionStrings__Migrations: "Host=localhost;Port=5432;Database=sama_ecole_test;Username=sama_ecole_test;Password=test_password"
         run: |
-          dotnet tool install --global dotnet-ef
+          dotnet tool install --global dotnet-ef --version "9.*"
           dotnet ef database update -p src/SamaEcole.Persistence -s src/SamaEcole.Web --configuration Release --no-build
 
       # Prouve que le rôle applicatif ne peut PAS contourner la RLS. Si quelqu'un lui redonne
