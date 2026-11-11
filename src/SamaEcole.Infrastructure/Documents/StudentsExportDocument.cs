@@ -89,35 +89,31 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
     {
         container.Table(table =>
         {
-            // Les colonnes à contenu de LARGEUR FIXE (matricule, date, genre, téléphone) sont en
-            // ConstantColumn, sur les largeurs partagées de PdfColumnWidths : leur gabarit ne varie
-            // pas d'un élève à l'autre, une largeur relative les faisait déborder dès que le tableau
-            // se resserrait. L'espace nécessaire est repris sur Classe (« CM2 A », très court).
+            // Colonnes : Matricule, Nom complet, Naissance, Genre, Classe (les colonnes tuteur et
+            // téléphone du tuteur ont été retirées). Matricule, date et genre sont en ConstantColumn
+            // (largeurs partagées de PdfColumnWidths : gabarit identique d'un élève à l'autre) ; le nom
+            // complet et la classe se partagent le reste.
             table.ColumnsDefinition(columns =>
             {
                 columns.ConstantColumn(PdfColumnWidths.Identifier); // Matricule
                 columns.RelativeColumn(2.2f);                       // Nom complet
-                columns.RelativeColumn(0.75f);                      // Classe — codes courts (« CM2 A »)
                 columns.ConstantColumn(PdfColumnWidths.Date);       // Naissance
                 columns.ConstantColumn(PdfColumnWidths.Initial);    // Genre — « M »/« F »
-                columns.RelativeColumn(1.8f);                       // Tuteur
-                columns.ConstantColumn(PdfColumnWidths.Phone);      // Tél. tuteur
+                columns.RelativeColumn(0.9f);                       // Classe — codes courts (« CM2 A »)
             });
 
             table.Header(header =>
             {
                 header.Cell().Element(HeaderCell).Text("Matricule").Bold().FontSize(8);
                 header.Cell().Element(HeaderCell).Text("Nom complet").Bold().FontSize(8);
-                header.Cell().Element(HeaderCell).Text("Classe").Bold().FontSize(8);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Naissance").Bold().FontSize(8);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Genre").Bold().FontSize(8);
-                header.Cell().Element(HeaderCell).Text("Tuteur").Bold().FontSize(8);
-                header.Cell().Element(HeaderCell).Text("Tél. tuteur").Bold().FontSize(8);
+                header.Cell().Element(HeaderCell).Text("Classe").Bold().FontSize(8);
             });
 
             if (students.Count == 0)
             {
-                table.Cell().ColumnSpan(7).Element(BodyCell).AlignCenter().PaddingVertical(8)
+                table.Cell().ColumnSpan(5).Element(BodyCell).AlignCenter().PaddingVertical(8)
                     .Text("Aucun élève pour ce périmètre.").FontColor(Colors.Grey.Darken1);
                 return;
             }
@@ -126,11 +122,9 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
             {
                 table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(s.Matricule)).FontSize(8);
                 table.Cell().Element(BodyCell).Text(s.FullName);
-                table.Cell().Element(BodyCell).Text(s.ClassroomName);
                 table.Cell().Element(BodyCell).AlignCenter().Text(Format(s.BirthDate));
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.Gender);
-                table.Cell().Element(BodyCell).Text(s.GuardianName ?? "—");
-                table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(PhoneFormatter.FormatSenegalOr(s.GuardianPhone)));
+                table.Cell().Element(BodyCell).Text(s.ClassroomName);
             }
 
             static IContainer HeaderCell(IContainer c) =>
