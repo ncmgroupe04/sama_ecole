@@ -490,9 +490,9 @@
  elles ressortent déjà naturellement sur le bleu, inutile de les repeindre. Seuls les éléments posés
  directement sur le bleu (titre, boutons icône sans pastille) passent en blanc. *@
  <div class="bg-primary-600 h-16 flex items-center justify-between gap-4 px-4 lg:px-8">
- <div class="flex items-center gap-4 shrink-0">
+ <div class="flex items-center gap-4 min-w-0">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
- <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
+ <button x-on:click="sidebarOpen = true" class="lg:hidden shrink-0 p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
  <icon name="menu" class="w-6 h-6" />
  </button>
 
@@ -506,7 +506,7 @@
  :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
  @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
  clavier (Tab) en a besoin pour rester accessible. *@
- class="hidden lg:inline-flex p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all duration-200 active:scale-95">
+ class="hidden lg:inline-flex shrink-0 p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all duration-200 active:scale-95">
  <icon name="menu" class="w-6 h-6" />
  </button>
 
@@ -518,13 +518,15 @@
  c'est la seule chose qui répond à « où suis-je ? ». Ramené au gabarit du reste de la
  barre (text-sm), en slate-700 : le bleu marque l'entrée ACTIVE du menu latéral, une
  deuxième zone bleue dans le bandeau diluait ce repère. *@
- @* shrink-0 + whitespace-nowrap : le titre gardait sa largeur de contenu mais la colonne de gauche
+ @* Titre tronqué (min-w-0 + truncate, texte complet en infobulle) : un titre long ne doit plus
+ pousser les pastilles hors de la barre. La colonne de droite est shrink-0, c'est donc le titre
+ qui cède la place, jamais les pastilles. Historique : shrink-0 + whitespace-nowrap : le titre gardait sa largeur de contenu mais la colonne de gauche
  se comprimait sous la pression des pastilles de droite, si bien que le texte débordait sur
  l'horloge voisine. Le titre ne rétrécit plus ; c'est la colonne de droite qui absorbe. *@
- <h2 class="hidden sm:block shrink-0 whitespace-nowrap text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
+ <h2 title="@ViewData["Title"]" class="hidden sm:block min-w-0 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
  </div>
 
- <div class="flex items-center gap-3 min-w-0">
+ <div class="flex items-center gap-3 shrink-0">
  @* Sélecteur d'établissement (groupe scolaire) — INVISIBLE pour un compte mono-école :
  hasMultipleSchools reste faux tant que GET /auth/my-schools renvoie moins de deux
  entrées, ce qui est le cas de l'immense majorité des comptes. *@
