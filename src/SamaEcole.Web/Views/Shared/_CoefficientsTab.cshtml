@@ -32,6 +32,11 @@
      class="tab-btn" :class="!isSeriesScope ? 'tab-btn-active' : ''">Classe</button>
    </div>
   </div>
+  <button type="button" x-on:click="openGuide()"
+   class="inline-flex items-center gap-1.5 self-end rounded-xl px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors">
+   <icon name="alert-circle" class="w-4 h-4" />
+   Comment sont appliqués les coefficients ?
+  </button>
 
   <div x-show="isSeriesScope" class="w-full sm:w-64">
    <label class="form-label">Série</label>
@@ -81,6 +86,36 @@
    Matières non couvertes par le modèle (coefficient inchangé) : <span x-text="templateReport && templateReport.uncovered.join(', ')"></span>.
   </p>
  </div>
+
+ @* Qui est concerné par la série affichée : un coefficient de série qui ne touche aucune classe est une erreur
+    silencieuse, on la rend visible AVANT la saisie. *@
+ <div x-show="isSeriesScope && series" x-cloak class="text-sm">
+  <p x-show="concernedClasses.length > 0" x-cloak
+   class="flex items-start gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2.5 text-primary-800">
+   <icon name="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+   <span>Série <span class="font-semibold" x-text="series"></span> : ces coefficients s'appliquent aux classes
+    <span class="font-semibold" x-text="namesOf(concernedClasses)"></span>.</span>
+  </p>
+  <p x-show="concernedClasses.length === 0" x-cloak role="note"
+   class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-amber-800">
+   <icon name="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+   <span>Aucune classe de lycée ne porte la série <span class="font-semibold" x-text="series"></span> :
+    un coefficient posé ici n'aurait aucun effet. Renseignez la série de la classe (Classes › Modifier), ou passez en mode « Classe ».</span>
+  </p>
+  <p x-show="lyceeWithoutSeries.length > 0" x-cloak class="mt-2 text-xs text-slate-500">
+   Classes de lycée sans série (non concernées par ce réglage) :
+   <span class="font-medium text-slate-600" x-text="namesOf(lyceeWithoutSeries)"></span>.
+  </p>
+  <p x-show="collegeClasses.length > 0" x-cloak class="mt-1 text-xs text-slate-500">
+   Les classes de collège ne sont jamais concernées par une série : réglez-les en mode « Classe ».
+  </p>
+ </div>
+
+ <p x-show="!isSeriesScope && selectedClassroom && selectedClassroom.series" x-cloak
+  class="text-xs text-slate-500">
+  Cette classe est en série <span class="font-medium text-slate-600" x-text="selectedClassroom && selectedClassroom.series"></span> :
+  une valeur posée ici prime sur celle de la série, pour cette classe seulement.
+ </p>
 
  <p class="text-xs text-slate-400">
   Année scolaire <span class="font-medium text-slate-600" x-text="yearLabel || '—'"></span>.
@@ -141,4 +176,47 @@
   <p x-show="!isLoading && rows.length === 0" x-cloak class="px-4 py-10 text-center text-sm text-slate-400"
    x-text="isSeriesScope || classroomId ? 'Aucune matière à afficher.' : 'Choisissez une classe pour voir ses coefficients.'"></p>
  </div>
+
+ @* ── Fenêtre d'explication : comment un coefficient est choisi pour une classe ───────────────── *@
+ <modal-shell open="guideOpen" size="lg" on-close="closeGuide()" title="Comment sont appliqués les coefficients ?">
+  <div class="space-y-4 text-sm text-slate-700">
+   <div>
+    <p class="font-semibold text-slate-900">1. L'ordre de priorité</p>
+    <p class="mt-1">Pour chaque matière d'une classe, l'application retient la première valeur trouvée dans cet ordre :</p>
+    <ol class="mt-2 list-decimal space-y-1 pl-5">
+     <li><span class="font-medium">Le coefficient de la classe</span> (mode « Classe ») — il l'emporte sur tout le reste.</li>
+     <li><span class="font-medium">Le coefficient de la série</span> (mode « Série ») — pour les classes de lycée qui portent cette série.</li>
+     <li><span class="font-medium">Le coefficient de la matière</span> — celui de l'écran « Matières », utilisé quand rien n'est surchargé.</li>
+    </ol>
+   </div>
+   <div>
+    <p class="font-semibold text-slate-900">2. Qui est concerné</p>
+    <ul class="mt-1 list-disc space-y-1 pl-5">
+     <li><span class="font-medium">Mode « Série »</span> : seulement les classes de <span class="font-medium">lycée</span> dont la série est renseignée.
+      Il n'agit <span class="font-medium">ni sur le collège</span>, ni sur une classe de lycée <span class="font-medium">sans série</span>.</li>
+     <li><span class="font-medium">Mode « Classe »</span> : une classe précise de collège ou de lycée. C'est le seul réglage possible pour le collège.</li>
+     <li><span class="font-medium">Primaire et maternelle</span> : pas de coefficient (toujours égal à 1).</li>
+    </ul>
+   </div>
+   <div>
+    <p class="font-semibold text-slate-900">3. Les effets</p>
+    <ul class="mt-1 list-disc space-y-1 pl-5">
+     <li>La modification vaut pour l'<span class="font-medium">année scolaire active</span> et recalcule les moyennes et les bulletins de cette année.</li>
+     <li>« Rétablir » supprime la surcharge : la valeur de niveau inférieur reprend la main.</li>
+     <li>Si vous ne voyez aucun changement, vérifiez la colonne « Origine » : elle indique d'où vient la valeur utilisée (Classe, Série ou Matière).</li>
+    </ul>
+   </div>
+   <div class="flex justify-end pt-2">
+    <button type="button" x-on:click="closeGuide()" class="btn-modal-primary">Compris</button>
+   </div>
+  </div>
+ </modal-shell>
+
+ @* ── Fenêtre d'avertissement : ce qui ne va pas, et comment le corriger ───────────────────────── *@
+ <modal-shell open="warning.open" size="md" on-close="closeWarning()" title="À savoir">
+  <confirm-dialog-body variant="warning" close-action="closeWarning()" title-expr="warning.title">
+   <span x-text="warning.message"></span>
+   <span x-show="warning.hint" x-cloak class="mt-2 block text-slate-600" x-text="warning.hint"></span>
+  </confirm-dialog-body>
+ </modal-shell>
 </div>

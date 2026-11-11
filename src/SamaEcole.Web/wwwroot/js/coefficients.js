@@ -50,6 +50,12 @@ document.addEventListener('alpine:init', () => {
         isApplyingTemplate: false,
         isCarryingOver: false,
 
+        // Fenêtres contextuelles d'explication (guide de la priorité) et d'avertissement (erreur de
+        // manipulation : on dit à l'utilisateur ce qui ne va pas et comment le corriger).
+        guideOpen: false,
+        seriesIntroShown: false, // l'avertissement d'entrée en mode Série n'apparaît qu'une fois par chargement
+        warning: { open: false, title: '', message: '', hint: '' },
+
         get canEdit() {
             return window.auth.role === 'Directeur';
         },
@@ -68,6 +74,47 @@ document.addEventListener('alpine:init', () => {
         get isSeriesScope() {
             return this.scope === 'series';
         },
+
+        // ------------------------------------------------------------ Classes concernées par une série
+
+        /** Une série ne s'applique qu'aux classes de LYCÉE qui portent cette série : jamais au collège. */
+        classesOfSeries(code) {
+            const wanted = String(code || '').toUpperCase();
+            return this.classrooms.filter((c) => c.cycle === 'Lycee' && wanted !== '' && String(c.series || '').toUpperCase() === wanted);
+        },
+
+        /** Classes de lycée dont la série n'est pas renseignée : aucun coefficient de série ne les atteint. */
+        get lyceeWithoutSeries() {
+            return this.classrooms.filter((c) => c.cycle === 'Lycee' && !c.series);
+        },
+
+        get collegeClasses() {
+            return this.classrooms.filter((c) => c.cycle === 'College');
+        },
+
+        /** Classes touchées par la série affichée. */
+        get concernedClasses() {
+            return this.classesOfSeries(this.series);
+        },
+
+        namesOf(list) {
+            return list.map((c) => c.name).join(', ');
+        },
+
+        /** La classe choisie (mode Classe) ; sa série, si elle en a une, est celle que sa surcharge supplante. */
+        get selectedClassroom() {
+            return this.classrooms.find((c) => c.id === this.classroomId) || null;
+        },
+
+        // ------------------------------------------------------------ Fenêtres contextuelles
+
+        openGuide() { this.guideOpen = true; },
+        closeGuide() { this.guideOpen = false; },
+
+        showWarning(title, message, hint = '') {
+            this.warning = { open: true, title, message, hint };
+        },
+        closeWarning() { this.warning.open = false; },
 
         /** « Appliquer le modèle » n'existe que pour une série (un modèle national décrit une série). */
         get canApplyTemplate() {
@@ -115,6 +162,15 @@ document.addEventListener('alpine:init', () => {
             this.templateReport = null;
             this.rows = [];
             this.load();
+
+            if (scope === 'series' && !this.seriesIntroShown) {
+                this.seriesIntroShown = true;
+                this.showWarning(
+                    'Les coefficients de série ne concernent que le lycée',
+                    "Un coefficient posé par série ne s'applique qu'aux classes de lycée dont la série est renseignée (par exemple S2). "
+                    + "Il n'agit ni sur les classes de collège, ni sur une classe de lycée sans série.",
+                    "Pour une classe de collège, ou pour une classe sans série, passez en mode « Classe » : c'est le seul réglage qui s'y applique.");
+            }
         },
 
         async load() {
@@ -205,6 +261,14 @@ document.addEventListener('alpine:init', () => {
                 row.error = 'Saisissez un coefficient (nombre).';
                 return;
             }
+            if (coefficient <= 0 || coefficient > 20) {
+                row.error = 'Le coefficient doit être supérieur à 0 et au plus 20.';
+                this.showWarning(
+                    'Coefficient non valide',
+                    `La valeur « ${formatCoefficient(coefficient)} » pour « ${row.name} » n'est pas acceptée : un coefficient doit être supérieur à 0 et ne pas dépasser 20.`,
+                    'Corrigez la valeur dans le champ, puis cliquez sur « Enregistrer ».');
+                return;
+            }
 
             const payload = { subjectId: row.subjectId, coefficient };
             if (this.isSeriesScope) payload.series = this.series;
@@ -219,14 +283,40 @@ document.addEventListener('alpine:init', () => {
                 await window.api.put('/coefficients', payload);
                 await this.load();
                 this.notice = `Coefficient de « ${row.name} » enregistré.`;
+                this.explainSaveScope(row);
             } catch (err) {
                 if (this.isConflict(err)) {
                     await this.handleConflict();
                 } else {
                     row.error = window.api.toMessage(err, "Erreur lors de l'enregistrement.");
+                    this.showWarning('Enregistrement impossible', row.error,
+                        'Vérifiez la valeur et la portée choisies (série ou classe), puis réessayez.');
                 }
             } finally {
                 row.isSaving = false;
+            }
+        },
+
+        /**
+         * Après un enregistrement réussi : dit sur QUI il agit. Un coefficient de série qui ne touche aucune
+         * classe est une erreur silencieuse — on l'annonce, avec la marche à suivre.
+         */
+        explainSaveScope(row) {
+            if (this.isSeriesScope) {
+                const concerned = this.concernedClasses;
+                if (concerned.length === 0) {
+                    const orphans = this.lyceeWithoutSeries;
+                    this.showWarning(
+                        `Aucune classe n'utilise la série ${this.series}`,
+                        `Le coefficient de « ${row.name} » est enregistré pour la série ${this.series}, mais aucune classe de lycée ne porte cette série : il n'a donc aucun effet pour l'instant.`,
+                        orphans.length > 0
+                            ? `Classes de lycée sans série : ${this.namesOf(orphans)}. Renseignez leur série (Classes › Modifier), ou passez en mode « Classe » pour les régler directement.`
+                            : 'Renseignez la série de la classe concernée (Classes › Modifier), ou passez en mode « Classe » pour la régler directement.');
+                } else {
+                    this.notice = `Coefficient de « ${row.name} » enregistré pour la série ${this.series} — classes concernées : ${this.namesOf(concerned)}.`;
+                }
+            } else if (this.selectedClassroom && this.selectedClassroom.series) {
+                this.notice = `Coefficient de « ${row.name} » enregistré pour la classe ${this.selectedClassroom.name}. Il prime sur celui de la série ${this.selectedClassroom.series}.`;
             }
         },
 
