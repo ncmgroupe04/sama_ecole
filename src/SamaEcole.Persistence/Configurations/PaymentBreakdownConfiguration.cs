@@ -8,7 +8,9 @@ public class PaymentBreakdownConfiguration : IEntityTypeConfiguration<PaymentBre
 {
     public void Configure(EntityTypeBuilder<PaymentBreakdown> builder)
     {
-        builder.ToTable("payment_breakdowns");
+        // Mois choisi à l'encaissement : un mois civil, ou rien (anciens paiements, caissiers qui ne choisissent pas).
+        builder.ToTable("payment_breakdowns", t =>
+            t.HasCheckConstraint("CK_payment_breakdowns_month_range", "\"Month\" IS NULL OR (\"Month\" BETWEEN 1 AND 12)"));
 
         builder.HasKey(b => b.Id);
 

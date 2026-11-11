@@ -184,7 +184,15 @@ document.addEventListener('alpine:init', () => {
             return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         },
 
+        /** Option du Directeur « demander le mois réglé » : lue dans le store partagé des réglages (faux tant qu'il n'est pas chargé). */
+        get askMonth() {
+            const store = typeof Alpine !== 'undefined' && Alpine.store ? Alpine.store('schoolConfig') : null;
+            return !!(store && store.askPaymentMonthAtCashier === true);
+        },
+
         init() {
+            const configStore = typeof Alpine !== 'undefined' && Alpine.store ? Alpine.store('schoolConfig') : null;
+            if (configStore && typeof configStore.init === 'function') configStore.init();
             this.idempotencyKey = window.networkGuard.newIdempotencyKey();
             this.initPaymentCancel();
             if (this.canRecordPayment) this.loadCurrentSession();
@@ -282,7 +290,24 @@ document.addEventListener('alpine:init', () => {
          *  lignes proposées dans la pop-up. `isDueNow` est servi par le serveur ; le repli sur
          *  `isInitialScope` ne sert qu'à un payload antérieur. */
         quickPayRows() {
-            return (this.balance?.installments ?? []).filter((i) => (i.isDueNow ?? i.isInitialScope) && i.remainingDue > 0);
+            const all = this.balance?.installments ?? [];
+            // Avec « demander le mois réglé » : TOUTES les échéances encore dues (un mois à venir, comme juin payé
+            // d'avance, doit pouvoir être coché). Sinon : seulement ce qui est à régler maintenant, comme avant.
+            if (this.askMonth) return all.filter((i) => i.remainingDue > 0);
+            return all.filter((i) => (i.isDueNow ?? i.isInitialScope) && i.remainingDue > 0);
+        },
+
+        /** Mois civil (1-12) d'une échéance mensuelle dérivée du barème (« MONTH-… ») ; null pour tout autre poste. */
+        quickPayMonth(row) {
+            if (!row || !String(row.id || '').startsWith('MONTH-') || !row.dueDate) return null;
+            return new Date(row.dueDate).getUTCMonth() + 1;
+        },
+
+        /** « Octobre », « Juin »… pour l'affichage à côté d'une mensualité (option « demander le mois réglé »). */
+        quickPayMonthName(row) {
+            const month = this.quickPayMonth(row);
+            if (!this.askMonth || !month) return '';
+            return ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][month - 1];
         },
 
         /** Total des lignes actuellement COCHÉES — pilote le « Total à encaisser » et le bouton. */
@@ -294,7 +319,9 @@ document.addEventListener('alpine:init', () => {
         openQuickPay() {
             const rows = this.quickPayRows();
             if (rows.length === 0) return;
-            this.quickPay.checked = rows.map(() => true); // tout coché par défaut
+            // Tout coché par défaut ; avec « demander le mois réglé », seulement ce qui est à régler maintenant
+            // (le caissier coche lui-même un mois à venir) : un caissier qui ne touche à rien obtient le même résultat qu'avant.
+            this.quickPay.checked = rows.map((r) => (this.askMonth ? (r.isDueNow ?? r.isInitialScope) === true : true));
             this.quickPay.method = 'Cash';
             this.quickPay.amount = this.quickPayTotal();
             this.formErrors = {};
@@ -313,6 +340,12 @@ document.addEventListener('alpine:init', () => {
          * que l'imputation oldest-first de InstallmentScheduleCalculator sait refléter en « Réglé ».
          */
         onQuickRowToggle(i) {
+            // Choix du mois : sélection LIBRE (on peut régler juin sans octobre) — le mois est transmis au serveur, qui
+            // range l'argent sur ce mois ; la contrainte « préfixe » ne sert plus.
+            if (this.askMonth) {
+                this.quickPay.amount = this.quickPayTotal();
+                return;
+            }
             if (this.quickPay.checked[i]) {
                 for (let j = 0; j < i; j++) this.quickPay.checked[j] = true;
             } else {
@@ -342,11 +375,18 @@ document.addEventListener('alpine:init', () => {
             // comptable, cf. PaymentReceiptDto.HasBalancedLines.
             let breakdowns = null;
             if (amount === checkedTotal && chosen.every((r) => r.feeCategoryId)) {
-                breakdowns = chosen.map((r) => ({
-                    feeCategoryId: r.feeCategoryId,
-                    amountAllocated: r.remainingDue,
-                    label: this.quickPayNote(r.designation)
-                }));
+                breakdowns = chosen.map((r) => {
+                    const line = {
+                        feeCategoryId: r.feeCategoryId,
+                        amountAllocated: r.remainingDue,
+                        label: this.quickPayNote(r.designation)
+                    };
+                    // Mois choisi : envoyé seulement si l'option est active ET pour une mensualité — sinon le serveur
+                    // retombe sur l'imputation « dans l'ordre » (comportement historique).
+                    const month = this.askMonth ? this.quickPayMonth(r) : null;
+                    if (month) line.month = month;
+                    return line;
+                });
             }
 
             const ok = await this.recordPayment({ amount, method: this.quickPay.method, breakdowns });

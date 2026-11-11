@@ -42,5 +42,8 @@ public static class SchoolSettingsDtoMapper
         settings.ProfileEtablissement?.ToString(),
         ManagedCycles: ManagedCycleSet.ToNames(ManagedCycleSet.FromStored(settings.ManagedCycles)),
         AllowFinanceToCancelPayments: settings.AllowFinanceToCancelPayments,
-        AllowFinanceToCancelPayslips: settings.AllowFinanceToCancelPayslips);
+        AllowFinanceToCancelPayslips: settings.AllowFinanceToCancelPayslips,
+        AllowFinanceToViewMonthlyStatus: settings.AllowFinanceToViewMonthlyStatus,
+        FirstMonthlyPaymentCoversLastMonth: settings.FirstMonthlyPaymentCoversLastMonth,
+        AskPaymentMonthAtCashier: settings.AskPaymentMonthAtCashier);
 }

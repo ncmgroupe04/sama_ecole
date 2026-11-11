@@ -78,6 +78,32 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// </summary>
     public bool AllowFinanceToCancelPayslips { get; set; } = SchoolSettingsDefaults.AllowFinanceToCancelPayslips;
 
+    /// <summary>
+    /// Au choix du Directeur de CHAQUE école : autorise la Finance (le comptable) à CONSULTER la Situation des
+    /// mensualités (GET /finance/monthly-status : qui a payé, partiellement payé ou rien payé pour un mois donné, toutes
+    /// classes confondues). FAUX par défaut — contrairement aux annulations, c'est une vue d'ensemble de la santé
+    /// financière élève par élève, que le Directeur ouvre explicitement. Le Directeur y accède toujours. Lu par
+    /// CanViewMonthlyStatusHandler (SamaEcole.Web.Authorization), vérifié à CHAQUE requête : couper l'interrupteur
+    /// retire l'accès immédiatement, sans attendre une reconnexion.
+    /// </summary>
+    public bool AllowFinanceToViewMonthlyStatus { get; set; } = SchoolSettingsDefaults.AllowFinanceToViewMonthlyStatus;
+
+    /// <summary>
+    /// Pratique de l'école : la mensualité versée AVEC l'inscription est celle du DERNIER mois (juin), demandée d'avance
+    /// parce que la direction ne pourra plus la recouvrer à la fermeture. Les versements suivants couvrent alors octobre,
+    /// novembre… dans l'ordre. Lu UNIQUEMENT par la Situation des mensualités (MonthlyStatusCalculator) : la caisse, le
+    /// solde élève et la liste des débiteurs gardent l'imputation historique. Faux par défaut : aucune école existante ne
+    /// voit son calcul changer sans que le Directeur l'ait choisi.
+    /// </summary>
+    public bool FirstMonthlyPaymentCoversLastMonth { get; set; } = SchoolSettingsDefaults.FirstMonthlyPaymentCoversLastMonth;
+
+    /// <summary>
+    /// Au choix du Directeur : la caisse propose de COCHER LE OU LES MOIS que le versement règle (<c>PaymentBreakdown.Month</c>),
+    /// y compris un mois à venir (juin payé d'avance). Faux par défaut : l'écran de caisse reste exactement celui d'aujourd'hui.
+    /// Un versement sans mois choisi retombe toujours sur l'imputation « dans l'ordre ».
+    /// </summary>
+    public bool AskPaymentMonthAtCashier { get; set; } = SchoolSettingsDefaults.AskPaymentMonthAtCashier;
+
     /// <summary>URL de l'image de la signature du directeur, injectée sur les reçus et bulletins.</summary>
     public string? DirectorSignatureUrl { get; set; }
 
@@ -255,6 +281,15 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Corriger sa propre erreur de paie est un geste courant de la Finance : ouvert par défaut, retirable par le Directeur.</summary>
     public const bool AllowFinanceToCancelPayslips = true;
+
+    /// <summary>Consulter la Situation des mensualités : fermé à la Finance tant que le Directeur ne l'a pas explicitement ouvert.</summary>
+    public const bool AllowFinanceToViewMonthlyStatus = false;
+
+    /// <summary>Le premier mois versé à l'inscription compte pour le dernier mois : pratique d'école, à choisir par le Directeur.</summary>
+    public const bool FirstMonthlyPaymentCoversLastMonth = false;
+
+    /// <summary>La caisse demande le mois réglé : fermé tant que le Directeur ne l'a pas activé.</summary>
+    public const bool AskPaymentMonthAtCashier = false;
 
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];

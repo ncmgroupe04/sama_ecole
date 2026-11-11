@@ -20,4 +20,11 @@ public static class FinancePolicies
 
     /// <summary>Annuler / corriger une fiche de paie : Directeur toujours, Finance sauf retrait du droit par le Directeur (CanCancelPayslipsHandler).</summary>
     public const string CanCancelPayslips = "CanCancelPayslips";
+
+    /// <summary>
+    /// Consulter la Situation des mensualités (GET /finance/monthly-status et son export) : Directeur toujours, Finance
+    /// seulement si le Directeur l'a ouvert (SchoolSettings.AllowFinanceToViewMonthlyStatus, faux par défaut) —
+    /// voir CanViewMonthlyStatusHandler.
+    /// </summary>
+    public const string CanViewMonthlyStatus = "CanViewMonthlyStatus";
 }

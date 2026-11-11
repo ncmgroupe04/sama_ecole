@@ -212,6 +212,7 @@ réinscription, annulation) reste réservée à Directeur et Secrétariat (`Enro
 | Voir statistiques / Export | ✔ | ✔ |
 | **Configurer le barème** (créer une catégorie, appliquer un montant standard, ajuster une ligne) | ✔ | ✔ (si `AllowFinanceToModifyFees` délégué) |
 | **Supprimer une catégorie ou une ligne de barème** | ✔ | ✔ (si `AllowFinanceToDeleteFees` délégué) |
+| **Consulter la Situation des mensualités** (`GET /finance/monthly-status` et `/excel`) | ✔ | ✔ (si `AllowFinanceToViewMonthlyStatus` activé ; fermé par défaut ; relu à chaque requête) |
 | **Modifier un montant dû issu d'une inscription** | ✔ | **✖** (Volume 1 §7.2) |
 
 Feature D (autonomie Finance) : créer une catégorie et appliquer un montant standard partagent la

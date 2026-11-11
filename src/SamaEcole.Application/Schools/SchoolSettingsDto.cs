@@ -76,4 +76,13 @@ public record SchoolSettingsDto(
     bool AllowFinanceToCancelPayments = true,
 
     /// <summary>La Finance peut-elle annuler / corriger une fiche de paie ? Réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
-    bool AllowFinanceToCancelPayslips = true);
+    bool AllowFinanceToCancelPayslips = true,
+
+    /// <summary>La Finance peut-elle consulter la Situation des mensualités ? Faux par défaut, réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
+    bool AllowFinanceToViewMonthlyStatus = false,
+
+    /// <summary>La mensualité versée à l'inscription compte-t-elle pour le dernier mois (juin) ? Lu par la Situation des mensualités. Ajouté en DERNIÈRE position.</summary>
+    bool FirstMonthlyPaymentCoversLastMonth = false,
+
+    /// <summary>La caisse demande-t-elle le mois réglé à chaque encaissement ? Réglable par le Directeur. Ajouté en DERNIÈRE position.</summary>
+    bool AskPaymentMonthAtCashier = false);

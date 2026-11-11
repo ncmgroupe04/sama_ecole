@@ -33,6 +33,16 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         // Défaut en base = vrai : les écoles déjà en production gardent le droit actuel de la Finance d'annuler un versement.
         builder.Property(s => s.AllowFinanceToCancelPayments).IsRequired().HasDefaultValue(true);
         builder.Property(s => s.AllowFinanceToCancelPayslips).IsRequired().HasDefaultValue(true);
+        // Défaut en base = faux : la Situation des mensualités reste réservée au Directeur tant qu'il ne l'ouvre pas à la Finance.
+        builder.Property(s => s.AllowFinanceToViewMonthlyStatus)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.AllowFinanceToViewMonthlyStatus);
+        builder.Property(s => s.FirstMonthlyPaymentCoversLastMonth)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.FirstMonthlyPaymentCoversLastMonth);
+        builder.Property(s => s.AskPaymentMonthAtCashier)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.AskPaymentMonthAtCashier);
 
         // Défaut en base = 7 (SchoolSettingsDefaults.DebtorReminderThresholdDays) : les écoles déjà
         // existantes reçoivent la même valeur par défaut qu'une école neuve, jamais 0 (qui relancerait

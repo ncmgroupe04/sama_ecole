@@ -478,6 +478,54 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         monthTwo.RemainingDue.Should().Be(Mensualite);
     }
 
+    [Fact]
+    public async Task A_Month_Chosen_In_A_Breakdown_Line_Settles_That_Month_On_The_Balance_And_An_Invalid_Month_Is_Refused()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+        var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
+
+        var before = (await (await SendAsync(HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+        var inscription = before.Installments.Single(i => i.Designation == "Inscription");
+        var lastMonth = before.Installments.Single(i => i.Designation == "Mensualité (Mois 9)");
+        var firstMonth = before.Installments.Single(i => i.Designation == "Mensualité (Mois 1)");
+        var lastMonthNumber = lastMonth.DueDate.UtcDateTime.Month;
+
+        // Un mois hors 1-12 est refusé.
+        var bad = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance, new
+        {
+            enrollmentId = enrollment.EnrollmentId, amount = 25_000m, method = "Cash",
+            breakdowns = new[]
+            {
+                new { feeCategoryId = inscription.FeeCategoryId, amountAllocated = 10_000m, label = (string?)null, month = (int?)null },
+                new { feeCategoryId = lastMonth.FeeCategoryId, amountAllocated = 15_000m, label = (string?)null, month = (int?)13 }
+            }
+        });
+        bad.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        // Inscription + le DERNIER mois (juin payé d'avance), pas le premier.
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance, new
+        {
+            enrollmentId = enrollment.EnrollmentId, amount = 25_000m, method = "Cash",
+            breakdowns = new[]
+            {
+                new { feeCategoryId = inscription.FeeCategoryId, amountAllocated = 10_000m, label = (string?)null, month = (int?)null },
+                new { feeCategoryId = lastMonth.FeeCategoryId, amountAllocated = 15_000m, label = (string?)"Mois 9", month = (int?)lastMonthNumber }
+            }
+        });
+        pay.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var after = (await (await SendAsync(HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+        after.Installments.Single(i => i.Designation == "Mensualité (Mois 9)").Status.Should().Be("Paid");
+        after.Installments.Single(i => i.Designation == "Inscription").Status.Should().Be("Paid");
+        after.Installments.Single(i => i.Designation == "Mensualité (Mois 1)").RemainingDue
+            .Should().Be(firstMonth.RemainingDue, "le premier mois reste dû : l'argent est allé sur le mois choisi");
+        after.AmountPaid.Should().Be(25_000m, "le total encaissé ne change pas");
+    }
+
     private record CancelResult(
         Guid PaymentId, string ReceiptNumber, decimal CancelledAmount, decimal TotalDue,
         decimal AmountPaid, decimal RemainingBalance, bool IsReversal = false);

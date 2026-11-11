@@ -31,5 +31,12 @@ public class RecordPaymentCommandValidator : AbstractValidator<RecordPaymentComm
                 .MaximumLength(60)
                 .WithMessage("Le libellé d'une ligne de règlement ne peut pas dépasser 60 caractères."))
             .When(c => c.Breakdowns != null);
+
+        RuleForEach(c => c.Breakdowns)
+            .ChildRules(breakdown => breakdown.RuleFor(b => b.Month)
+                .InclusiveBetween(1, 12)
+                .When(b => b.Month.HasValue)
+                .WithMessage("Le mois d'une ligne de règlement doit être compris entre 1 et 12."))
+            .When(c => c.Breakdowns != null);
     }
 }
