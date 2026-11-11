@@ -179,11 +179,11 @@
                              <div class="bg-primary-50 px-4 py-3 rounded-xl border border-primary-100 flex items-center justify-between gap-3 transition-shadow duration-200 hover:shadow-md">
                                  <div>
                                      <span class="text-[10px] font-bold text-primary-700 uppercase tracking-wide block">Salles Occupées</span>
-                                     <span class="text-base font-black text-primary-800" x-text="formatPercent(analyticsData.todayOccupancyRate)"</span>
+                                     <span class="text-base font-black text-primary-800" x-text="formatPercent(analyticsData.todayOccupancyRate)"></span>
                                  </div>
                                  <div class="relative w-10 h-10 shrink-0">
                                      <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#DBE1FF" stroke-width="4"</circle>
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#DBE1FF" stroke-width="4"></circle>
                                          <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#004AC6" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(analyticsData.todayOccupancyRate, 1) + ' 100'"></circle>
                                      </svg>
                                  </div>
@@ -200,7 +200,7 @@
                             <ul class="space-y-2.5">
                                 <template x-for="(cls, idx) in analyticsData.nextClasses" :key="idx">
                                     <li class="flex items-center gap-3 text-xs bg-slate-50/80 p-2.5 rounded-lg border border-slate-100">
-                                        <span class="font-mono font-semibold text-primary-700 bg-primary-100/50 px-2 py-1 rounded border border-primary-100 shrink-0" x-text="cls.startTime"</span>
+                                        <span class="font-mono font-semibold text-primary-700 bg-primary-100/50 px-2 py-1 rounded border border-primary-100 shrink-0" x-text="cls.startTime"></span>
                                         <div class="min-w-0 flex-1">
                                             <p class="font-bold text-slate-800 truncate" x-text="cls.subjectName"></p>
                                             <p class="text-[10px] text-slate-500 truncate mt-0.5" x-text="cls.teacherName"></p>
@@ -261,7 +261,7 @@
                                     </div>
                                     <div>
                                         <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide block">Recouvrement</span>
-                                        <span class="text-xl font-bold text-primary-600 block" x-text="formatPercent(financeData.recoveryRate || financeData.yearlyRecoveryRate)"</span>
+                                        <span class="text-xl font-bold text-primary-600 block" x-text="formatPercent(financeData.recoveryRate || financeData.yearlyRecoveryRate)"></span>
                                     </div>
                                 </div>
                             </div>

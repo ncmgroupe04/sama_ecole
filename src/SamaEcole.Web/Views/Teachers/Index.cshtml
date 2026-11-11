@@ -109,7 +109,7 @@
  <div class="flex items-center gap-3">
  <img x-show="teacher.photoDisplayUrl" :src="teacher.photoDisplayUrl" alt=""
  class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
- <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"</div>
+ <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
  <div>
  <p class="font-medium text-slate-900" x-text="teacher.fullName"></p>
  <p class="text-xs text-slate-500" x-text="teacher.email"></p>
@@ -155,11 +155,11 @@
  <div class="flex items-center gap-5 pb-6 border-b border-slate-100">
  <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
  class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md object-cover flex-shrink-0" x-cloak>
- <div x-show="!detail.photoDisplayUrl" class="w-16 h-16 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md ring-4 ring-primary-50" x-text="initials(detail.fullName)"</div>
+ <div x-show="!detail.photoDisplayUrl" class="w-16 h-16 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md ring-4 ring-primary-50" x-text="initials(detail.fullName)"></div>
  <div>
  <p class="text-2xl font-bold text-slate-900" x-text="detail.fullName"></p>
  <div class="flex items-center gap-2 mt-1.5">
- <span class="bg-primary-50 text-primary-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"</span>
+ <span class="bg-primary-50 text-primary-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"></span>
  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
  @* Correction du matricule — Directeur seul. Voir teachers.js. *@
  <button type="button" x-show="isDirecteur && !matriculeEdit.open" x-cloak
@@ -185,11 +185,11 @@
  </div>
 
  <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6">
- <div>
+ <div class="min-w-0">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">E-mail</dt>
- <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.email"></dd>
+ <dd class="mt-1 text-base font-medium text-slate-900 break-all" x-text="detail.email"></dd>
  </div>
- <div>
+ <div class="min-w-0">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</dt>
  <dd class="mt-1 flex items-center gap-2">
  <span class="text-base font-bold text-slate-900 font-mono" x-text="$phone(detail.phone)"></span>
@@ -198,17 +198,17 @@
  </a>
  </dd>
  </div>
- <div>
+ <div class="min-w-0">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="formatDate(detail.birthDate)"></dd>
  </div>
- <div>
+ <div class="min-w-0">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lieu de naissance</dt>
- <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.birthPlace || '—'"></dd>
+ <dd class="mt-1 text-base font-medium text-slate-900 break-words" x-text="detail.birthPlace || '—'"></dd>
  </div>
  <div class="sm:col-span-2 lg:col-span-4">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
- <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.address || '—'"></dd>
+ <dd class="mt-1 text-base font-medium text-slate-900 break-words" x-text="detail.address || '—'"></dd>
  </div>
 
  @* Compte de connexion rattaché (ticket JGK-D06bis) : lecture pour tous les rôles autorisés sur la
@@ -818,10 +818,10 @@
                                                 <a :href="`/matieres?q=${encodeURIComponent(slot.subjectName)}`" :title="'Voir la matière : ' + slot.subjectName"
                                                    class="font-semibold text-xs leading-tight rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.subjectName"></a>
                                                 <a x-show="scheduleViewMode === 'teacher'" :href="`/classes?q=${encodeURIComponent(slot.classroomName)}`" :title="'Voir la classe : ' + slot.classroomName"
-                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.classroomName"</a>
+                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.classroomName"></a>
                                                 <a x-show="scheduleViewMode === 'classroom'" :href="`/enseignants?teacherId=${slot.teacherId}`" x-on:click.prevent="openDetail({ id: slot.teacherId })" :title="'Ouvrir la fiche de ' + slot.teacherName"
-                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.teacherName"</a>
-                                                <div class="text-[10px] mt-auto pt-1 text-primary-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"</div>
+                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.teacherName"></a>
+                                                <div class="text-[10px] mt-auto pt-1 text-primary-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"></div>
                                                 
                                                 <!-- Actions rapides -->
                                                 <div class="absolute top-1 right-1 opacity-0 group-hover/slot:opacity-100 transition-opacity flex gap-1 bg-white/90 rounded shadow-sm p-0.5" x-show="canManageSchedule">

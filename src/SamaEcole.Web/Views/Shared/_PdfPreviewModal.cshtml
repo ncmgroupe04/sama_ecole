@@ -81,7 +81,7 @@
                 </p>
                 <div class="flex items-center gap-1 ml-auto">
                     <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Réduire">−</button>
-                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-primary-600" x-text="pdfZoomLabel()"</button>
+                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-primary-600" x-text="pdfZoomLabel()"></button>
                     <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Agrandir">+</button>
                 </div>
             </div>
