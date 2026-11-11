@@ -1,8 +1,8 @@
 # Guide fonctionnel des modules — Sama Ecole (Unikol)
 
-**Version :** 1.2.0
+**Version :** 1.3.0
 **Date de rédaction :** 20/09/2026
-**Dernière mise à jour :** 26/09/2026 — facturation hybride (annuel / mensuel), barre supérieure, volumes horaires et cahier de texte
+**Dernière mise à jour :** 11/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.
 
 Ce guide documente **chaque écran de la navigation principale**, un par un — pas de regroupement
@@ -63,6 +63,7 @@ utilisateurs cibles, fonctionnalités clés & règles métier, flux d'utilisatio
 26. [Paramètres](#26-paramètres)
 27. [Console Super Admin](#27-console-super-admin)
 28. [Aide & Documentation](#28-aide--documentation)
+29. [Évolutions depuis le 26/09/2026](#29-évolutions-depuis-le-26092026)
 
 ---
 
@@ -1134,6 +1135,71 @@ Tous les rôles connectés.
 1. Un utilisateur bloqué sur un écran ouvre l'Aide.
 2. Il retrouve la section correspondant au module où il se trouvait.
 3. Il applique la procédure décrite, ou comprend qu'une fonctionnalité attendue est hors périmètre V1.
+
+---
+
+## 29. Évolutions depuis le 26/09/2026
+
+Cette section recense, **par module**, ce qui a été ajouté ou modifié depuis la dernière mise à jour de fond
+du guide (26/09/2026). Chaque point renvoie à l'article correspondant du Centre d'aide (`/aide`), qui détaille
+la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de divergence, cette section prévaut.
+
+### Classes et Matières (sections 4 et 8)
+- **Coefficients par série et par classe** : ordre de priorité *classe › série › matière*. Une série ne
+  concerne que les classes de **lycée** dont la série est renseignée ; le **collège** et les classes de lycée
+  **sans série** se règlent uniquement en mode « Classe ». L'écran affiche les classes concernées, explique la
+  priorité dans une fenêtre (« Comment sont appliqués les coefficients ? ») et avertit lorsqu'un réglage n'a
+  aucun effet ou qu'une valeur est invalide (hors de 0 à 20).
+- **Pôle pédagogique** des matières (Français, Arabe, Sciences islamiques, Commun) et nom arabe ; saisie des
+  notes en écriture de droite à gauche pour les matières arabes (Franco-Arabe).
+- **Liste des élèves d'une classe en PDF** : bouton « Imprimer la liste des élèves » ; colonnes Matricule,
+  Nom complet, Naissance, Genre, Classe (les colonnes tuteur ont été retirées).
+- **Suppression guidée** des classes, matières, enseignants, années, frais et inventaire : un paiement non
+  annulé bloque ; les autres liens sont énumérés puis archivés explicitement, jamais effacés.
+
+### Élèves et Inscriptions (sections 2 et 3)
+- **Import CSV** : récapitulatif des erreurs (ligne, champ, valeur, message), filtre et export CSV, pour les
+  élèves et les enseignants.
+- **Annulation d'une inscription** : libère le séjour d'internat (lit), les sorties, pointages, frais,
+  échéanciers et relances (archivés) ; refusée tant qu'un paiement non annulé existe.
+- **Messages d'erreur sous les champs** validés par le serveur (inventaire, matières, examens, tarifs…).
+
+### Internat et Daara (section 7)
+- **Daara** : Oustaz, Halqa, affectation des élèves (`/oustaz`, Directeur), tablette de l'Oustaz (`/halqa`).
+- **Suivi de mémorisation par Hizb** (1 à 60, quarts 0 à 4, note 1 à 5), **journal** des évaluations en ajout
+  seul, courbe d'évolution, **bulletin coranique PDF** bilingue, tableau de bord de suivi (`/suivi-coranique`).
+- **Pointage par sessions configurables** (appel de nuit, du matin, repas, appel de la Halqa, sessions
+  personnalisées) ; configuration réservée au Directeur.
+- **Profil « Daara — Mémorisation »** : le lien « Classes » est masqué (confort d'affichage ; l'API reste
+  ouverte car inscriptions, frais et paie en dépendent).
+- Le lit actuel d'un élève est proposé dans « Affecter / Changer / Libérer ».
+
+### Comptabilité : Caisse, Frais, Paie (sections 21 et 22)
+- **Annulation d'un paiement** (Directeur et Finance, 48 h, motif obligatoire, destination de l'argent) et
+  **contre-passation** au-delà (Directeur seul) ; droit d'annulation de la Finance réglable ; export d'année
+  avec paiements annulés.
+- **Situation des mensualités** (`/mensualites`) : Payé / Partiel / Non payé par mois et par classe, export
+  Excel ; accès de la comptabilité réglable (désactivé par défaut) ; deux réglages d'école (dernier mois payé
+  à l'inscription, mois réglé demandé à chaque encaissement). Le montant échu de la caisse couvre toutes les
+  mensualités échues.
+- **Relance SMS** limitée aux échéances en retard, avec le montant en retard.
+- **Paie sans retenues légales**, choisie par contrat ; **fiches de paie** annulables, régénérables et
+  payables (décaissement « Salaires ») ; personnel sans compte.
+
+### Abonnement et Console Super Admin (sections 26 et 27)
+- **Profil, tranches d'effectif** (100 / 150 / 250 / 400, au-delà sur devis), **quota d'élèves** avec tolérance,
+  **grille de prix éditable** par le Super Admin, **verrouillage** du profil, des cycles et des modules non
+  souscrits (changements par demande validée).
+- **Cycles gérés** déclarés par l'établissement (Paramètres) ; retrait refusé tant qu'une classe active existe.
+- **Paiement par le compte marchand Wave** validé à la main par le Super Admin ; bouton « Renouveler mon
+  abonnement » ; échéance vérifiée à chaque requête (lecture seule passé le dernier jour couvert).
+- **Offrir un accès** en mois (1 à 60) ou en jours (1 à 1825), décompté depuis aujourd'hui et **remplaçant**
+  l'échéance actuelle.
+
+### Interface transverse (section 0)
+- **Apparence** clair / sombre / système (menu du profil), fenêtres en verre dépoli, police arabe Cairo.
+- Titre de page tronqué dans la barre supérieure (infobulle) pour ne plus la faire déborder ; fiche
+  enseignant corrigée (balises mal fermées) et champs longs repliés.
 
 ---
 
