@@ -430,6 +430,130 @@
                         "N'activez Internat que si l'établissement héberge réellement des élèves : le module ajoute un vocabulaire (dortoir, pension, régime) qui n'a pas sa place ailleurs.",
                         "Si un module reste invisible après activation, faites d'abord contrôler votre propre rôle : la garde par module se combine avec la garde par rôle, les deux doivent être satisfaites."
                     ]
+                },
+                {
+                    id: 'cycles-geres',
+                    title: "Cycles gérés — déclarer les cycles de l'établissement",
+                    location: "Paramètres › Cycles gérés",
+                    href: '/parametres',
+                    roles: ['Directeur'],
+                    definition: "L'établissement déclare lui-même les cycles qu'il gère : Maternelle / Crèche, Primaire, Collège, Lycée. Les écrans de création de classe, d'inscription et d'examens s'adaptent à cette liste au lieu de la deviner à partir du profil. À l'inscription d'un établissement privé, ce même choix est demandé (rubrique « Cycles gérés »).",
+                    objectif: "Ne proposer que ce qui a un sens pour l'école : un groupe scolaire qui n'a que le primaire ne voit ni classes de lycée ni examens du second cycle.",
+                    probleme: "Auparavant, l'adaptation des écrans reposait sur le profil seul : une école hors du cas prévu voyait des choix inutiles ou, à l'inverse, ne pouvait pas ouvrir un cycle qu'elle gérait réellement.",
+                    procedure: [
+                        "Ouvrez Paramètres et repérez le réglage « Cycles gérés ».",
+                        "Cochez les cycles que l'établissement gère réellement, puis enregistrez.",
+                        "Retournez dans Classes, Inscriptions ou Examens : seuls les cycles déclarés sont proposés.",
+                        "Pour retirer un cycle, il faut d'abord qu'il ne contienne plus aucune classe active : sinon l'enregistrement est refusé et la liste des classes concernées est affichée."
+                    ],
+                    impacts: [
+                        "Les écoles déjà en profil Élémentaire ont été reprises avec Maternelle et Primaire ; toutes les autres avec tous les cycles : rien n'a changé à la mise en service.",
+                        "Retirer un cycle ne supprime aucune classe : le refus protège les classes existantes.",
+                        "Réglage réservé au Directeur ; chaque modification est journalisée."
+                    ],
+                    recommandations: [
+                        "Déclarez vos cycles dès le premier paramétrage, avant de créer les classes.",
+                        "Si un retrait est refusé, archivez d'abord les classes du cycle (suppression guidée) puis réessayez."
+                    ]
+                },
+                {
+                    id: 'profil-onboarding-quota',
+                    title: "Choix du profil, tranche d'effectif et quota d'élèves",
+                    location: "Écran d'onboarding (/onboarding/select-profile) puis Paramètres",
+                    href: '/parametres',
+                    roles: ['Directeur'],
+                    definition: "À son premier accès, le Directeur choisit le PROFIL de l'établissement (par exemple Élémentaire, Franco-Arabe, Internat, Daara — Mémorisation) et la TRANCHE d'effectif qui correspond à son nombre d'élèves. Le profil détermine les modules proposés ; la tranche fixe le quota d'élèves, avec une tolérance au-delà du plafond avant blocage des nouvelles inscriptions.",
+                    objectif: "Adapter l'application au type d'école dès le départ, et rendre visible le volume d'élèves couvert par l'abonnement.",
+                    probleme: "Une même application pour des écoles très différentes (école élémentaire, daara, lycée…) finissait par montrer à chacune des menus qui ne la concernent pas.",
+                    procedure: [
+                        "À la première connexion, l'écran de sélection du profil s'affiche : choisissez le profil, puis la tranche d'effectif.",
+                        "Validez : le menu se limite aux modules du profil. Par exemple, le profil « Daara — Mémorisation » masque le lien « Classes » dans la barre latérale et la navigation rapide.",
+                        "Suivez le quota d'élèves dans la zone abonnement : un avertissement apparaît à l'approche du plafond.",
+                        "Au-delà du plafond et de sa tolérance, l'abonnement doit passer à la tranche supérieure (voir « Tranches d'effectif, grille de prix et verrouillage »)."
+                    ],
+                    impacts: [
+                        "Un module qui n'appartient pas au profil est refusé côté serveur, pas seulement masqué.",
+                        "Le lien « Classes » masqué en Daara — Mémorisation est un confort d'affichage : les inscriptions, les frais par classe et la paie continuent d'utiliser les classes.",
+                        "Les écoles existantes avant cette fonction ont été reprises sans changement."
+                    ],
+                    recommandations: [
+                        "Choisissez la tranche d'après l'effectif réel de la rentrée, pas celui de l'an passé.",
+                        "En cas d'erreur de profil, ne contournez pas : faites une demande de changement (voir l'article sur le verrouillage)."
+                    ]
+                },
+                {
+                    id: 'tranches-prix-verrouillage',
+                    title: "Tranches d'effectif, grille de prix et verrouillage de l'abonnement",
+                    location: "Inscription de l'établissement ; console Super Admin › Tarification (/admin/tarification)",
+                    href: '/parametres',
+                    roles: ['Directeur', 'Super Admin'],
+                    definition: "L'abonnement dépend de l'effectif : tranches de 100, 150, 250 et 400 élèves, au-delà « Grand Groupe » sur devis. La grille de prix est tenue en base et modifiable par le Super Admin. À l'inscription d'un établissement privé, on renseigne le profil, l'internat éventuel, les cycles, l'effectif exact et la tranche (la tranche minimale pour cet effectif est imposée). Une fois l'abonnement en place, le profil, les cycles et les modules non souscrits sont VERROUILLÉS : tout changement passe par une demande validée par le Super Admin (principe « verrouiller puis monter en gamme »).",
+                    objectif: "Facturer au plus juste de l'effectif, éviter qu'une école s'inscrive dans une tranche trop basse, et empêcher l'activation silencieuse d'un module non payé.",
+                    probleme: "Sans verrouillage, un module non souscrit pouvait être activé par simple réglage, et la grille de prix était figée dans le code.",
+                    procedure: [
+                        "Directeur — à l'inscription : indiquez l'effectif exact ; la tranche proposée est la plus basse qui le couvre.",
+                        "Directeur — pour changer de profil, de cycle ou ajouter un module : envoyez une demande de changement depuis la zone abonnement.",
+                        "Super Admin — Tarification : ajustez la grille de prix des tranches (prix mensuel ; l'annuel est calculé sur dix mois).",
+                        "Super Admin — Demandes de changement : validez ou rejetez ; la décision déverrouille ou non l'élément demandé."
+                    ],
+                    impacts: [
+                        "Le quota d'élèves suit la tranche, avec une tolérance au-delà du plafond.",
+                        "La grille de prix éditable s'applique aux nouvelles souscriptions et aux changements de tranche.",
+                        "Le Directeur ne peut plus modifier seul le profil, les cycles et les modules souscrits."
+                    ],
+                    recommandations: [
+                        "Super Admin : vérifiez la grille de /admin/tarification avant toute mise en production d'une évolution tarifaire.",
+                        "Directeur : anticipez la demande de changement avant la rentrée, la validation n'est pas instantanée."
+                    ]
+                },
+                {
+                    id: 'paiement-wave-renouvellement-acces',
+                    title: "Paiement Wave, renouvellement de l'abonnement et accès offerts",
+                    location: "Zone abonnement (/abonnement/paiement) ; console Super Admin › Abonnements & Facturation",
+                    href: '/parametres',
+                    roles: ['Directeur', 'Super Admin'],
+                    definition: "Le Directeur peut régler l'abonnement par le compte marchand Wave : il est envoyé vers le lien public Wave (ou scanne le QR), et son paiement reste « en attente » jusqu'à ce que le Super Admin le confirme ou le rejette à la main. Un bouton « Renouveler mon abonnement » est proposé à l'échéance. L'échéance est vérifiée à CHAQUE requête : passé le dernier jour couvert, l'établissement passe en lecture seule même si le contrôle quotidien n'a pas tourné. Le Super Admin peut aussi OFFRIR un accès, en mois (1 à 60) ou en jours (1 à 1825).",
+                    objectif: "Rendre le paiement et le renouvellement simples pour le Directeur, tout en gardant une validation humaine du paiement Wave et une coupure fiable à l'échéance.",
+                    probleme: "Aucun bouton évident ne permettait de renouveler, et un établissement pouvait garder un accès complet au-delà de sa date si le contrôle quotidien n'avait pas été exécuté.",
+                    procedure: [
+                        "Directeur — à l'échéance (ou avant), cliquez sur « Renouveler mon abonnement », choisissez le paiement Wave, payez via le lien ou le QR.",
+                        "Le paiement apparaît « en attente » : le Super Admin le rapproche (montant, date, Directeur) puis le confirme ou le rejette depuis « Abonnements & Facturation ».",
+                        "Super Admin — « Offrir un accès » : saisissez un nombre puis choisissez « Mois » ou « Jours » ; la durée est comptée depuis aujourd'hui."
+                    ],
+                    impacts: [
+                        "Lecture seule à l'échéance : les consultations restent possibles, les écritures sont refusées ; l'écran de renouvellement reste accessible.",
+                        "Un accès offert REMPLACE l'échéance actuelle, il ne s'y ajoute pas (client échu le 11/01/2027 recevant 10 jours le 02/11/2026 : fin le 12/11/2026).",
+                        "Un paiement Wave ne porte pas de référence : le rapprochement repose sur le montant, la date et le Directeur."
+                    ],
+                    recommandations: [
+                        "Directeur — payez quelques jours avant l'échéance : la confirmation Wave est manuelle.",
+                        "Super Admin — avant d'offrir des jours à un client encore actif, vérifiez sa date d'échéance : l'offre peut la raccourcir."
+                    ]
+                },
+                {
+                    id: 'suppression-guidee',
+                    title: "Suppression guidée — élèves, classes, matières, enseignants, années, frais, inventaire",
+                    location: "Boutons « Supprimer » des écrans concernés",
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition: "Supprimer un élément n'est jamais silencieux. L'application analyse d'abord ce qui lui est rattaché et l'affiche. Deux cas : (1) une donnée financière active (paiement non annulé) BLOQUE la suppression, sans option de contournement ; (2) les autres liens (inscriptions, notes, présences, affectations, dispenses…) sont énumérés précisément et doivent être ROMPUS explicitement : ils sont archivés, jamais effacés.",
+                    objectif: "Permettre de nettoyer les erreurs de saisie sans casser l'historique ni la comptabilité, et sans jamais perdre une donnée sans que l'utilisateur l'ait vue.",
+                    probleme: "Supprimer un élève ou une classe pouvait laisser des orphelins (notes, échéanciers, lits) ou, à l'inverse, être refusé par un message d'erreur technique incompréhensible.",
+                    procedure: [
+                        "Cliquez sur « Supprimer » : une fenêtre liste les éléments rattachés et leur nombre.",
+                        "Si un paiement non annulé existe, annulez-le d'abord (voir « Annulation d'un paiement et contre-passation »), puis recommencez.",
+                        "Sinon, confirmez la rupture des liens : ils sont archivés dans la même opération, puis l'élément est supprimé.",
+                        "Les classes archivées restent consultables et restaurables depuis la liste des éléments supprimés."
+                    ],
+                    impacts: [
+                        "Rien n'est effacé de la base : tout est archivé, avec son historique.",
+                        "Un paiement annulé ne bloque plus la suppression de l'élève.",
+                        "Les messages de refus sont rédigés en clair, avec l'étape à faire."
+                    ],
+                    recommandations: [
+                        "Préférez la suppression guidée à tout contournement : elle garde la cohérence entre élèves, finances et notes.",
+                        "Avant de supprimer une classe, vérifiez qu'aucun élève n'y est encore inscrit pour l'année active."
+                    ]
                 }
             ]
         },
@@ -564,7 +688,8 @@
                         "Ouvrez Gestion Scolaire › Matières › Coefficients et choisissez la portée « Série ».",
                         "Cliquez sur « Appliquer le modèle » pour préremplir la série avec les coefficients nationaux : les valeurs apparaissent dans la grille et restent modifiables. Les matières que le modèle ne reconnaît pas sont listées dans le rapport.",
                         "Corrigez une valeur en saisissant le coefficient dans la colonne « Surcharge » puis « Enregistrer ». La colonne « Origine » indique si la valeur effective vient de la Matière, de la Série ou de la Classe.",
-                        "Pour un cas particulier, choisissez la portée « Classe » : la valeur posée ne concerne alors que cette classe.",
+                        "Pour un cas particulier, ou pour une classe de COLLÈGE ou de lycée sans série, choisissez la portée « Classe » : la valeur posée ne concerne alors que cette classe.",
+                        "En cas de doute, cliquez sur « Comment sont appliqués les coefficients ? » : une fenêtre rappelle l'ordre de priorité, qui est concerné et les effets. À la première entrée en mode « Série », un avertissement précise que la série ne concerne que le lycée.",
                         "« Rétablir » supprime la surcharge : la valeur héritée (série, puis matière) reprend la main.",
                         "À la rentrée suivante, la nouvelle année démarre sans surcharge : utilisez « Reprendre l'année précédente » pour recopier les coefficients sans écraser ceux déjà posés."
                     ],
@@ -572,6 +697,8 @@
                         "Moyennes et bulletins : modifier un coefficient recalcule les moyennes, les rangs et les bulletins de cette année pour les classes concernées — y compris ceux déjà imprimés si vous les réimprimez.",
                         "Coefficient de la matière : jamais modifié par une surcharge ni par « Appliquer le modèle ». Sans surcharge, le calcul est exactement celui d'avant.",
                         "Primaire et Maternelle : aucun coefficient (toujours 1), leurs classes ne sont pas proposées.",
+                        "Un coefficient de SÉRIE n'agit ni sur les classes de collège ni sur une classe de lycée dont la série n'est pas renseignée : l'écran affiche les classes concernées par la série choisie et avertit quand il n'y en a aucune (fenêtre « Aucune classe n'utilise la série… »).",
+                        "Une valeur hors de 0 à 20, ou refusée par le serveur, ouvre une fenêtre expliquant ce qu'il faut corriger.",
                         "Écriture réservée au Directeur ; le Secrétariat consulte la grille sans pouvoir la modifier. Chaque changement est journalisé."
                     ],
                     recommandations: [
@@ -1198,6 +1325,74 @@
                         "Contrôlez les barèmes en début d'exercice : ils sont figés sur chaque inscription au moment de sa validation.",
                         "Les échéanciers personnalisés demeurent l'exception : leur multiplication rend le recouvrement illisible."
                     ]
+                },
+                {
+                    id: 'liste-eleves-par-classe-pdf',
+                    title: "Liste des élèves d'une classe en PDF",
+                    location: "Gestion Scolaire › Classes › « Imprimer la liste des élèves » ; Élèves › Exporter en PDF",
+                    href: '/classes',
+                    roles: ['Directeur', 'Secrétariat', 'Finance'],
+                    definition: "Chaque classe propose « Imprimer la liste des élèves » : un PDF avec l'en-tête (école, classe, année scolaire, effectif) et cinq colonnes — Matricule, Nom complet, Naissance, Genre, Classe. L'export de l'écran Élèves sans filtre de classe produit une page par classe.",
+                    objectif: "Disposer en un clic d'une liste prête à afficher ou à signer, sans passer par un tableur.",
+                    probleme: "Les listes de classe se refaisaient à la main à chaque rentrée.",
+                    procedure: [
+                        "Ouvrez Classes et cliquez sur « Imprimer la liste des élèves » de la classe voulue.",
+                        "L'aperçu PDF s'ouvre : imprimez ou enregistrez.",
+                        "Depuis Élèves, « Exporter en PDF » sans filtre produit toutes les classes, une page chacune."
+                    ],
+                    impacts: [
+                        "Le bouton est grisé pour une classe vide.",
+                        "Les colonnes tuteur et téléphone du tuteur ne figurent plus sur ce document.",
+                        "Réservé à la Direction, au Secrétariat et à la Finance, jamais à l'Enseignant."
+                    ],
+                    recommandations: [
+                        "Imprimez après la clôture des inscriptions pour une liste stable."
+                    ]
+                },
+                {
+                    id: 'import-csv-recapitulatif-erreurs',
+                    title: "Import CSV — récapitulatif des erreurs, filtre et export",
+                    location: "Élèves et Enseignants › Importer",
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition: "La fenêtre d'import montre un aperçu avant écriture. Elle ajoute un RÉCAPITULATIF des erreurs (ligne, champ, valeur saisie, message), un filtre pour n'afficher que les lignes en erreur et un export CSV de ces erreurs.",
+                    objectif: "Retrouver et corriger rapidement chaque erreur d'un fichier de plusieurs centaines de lignes.",
+                    probleme: "Il fallait faire défiler le fichier et survoler chaque cellule pour lire les messages.",
+                    procedure: [
+                        "Importez le fichier ; l'aperçu s'affiche.",
+                        "Ouvrez le récapitulatif, filtrez les lignes en erreur, exportez-les en CSV si besoin.",
+                        "Corrigez le fichier d'origine puis réimportez."
+                    ],
+                    impacts: [
+                        "Rien n'est écrit tant que l'import n'est pas validé.",
+                        "Le même mécanisme existe pour les élèves et pour les enseignants."
+                    ],
+                    recommandations: [
+                        "Corrigez dans le fichier source plutôt que ligne par ligne dans l'application."
+                    ]
+                },
+                {
+                    id: 'annuler-inscription-liberer-lit',
+                    title: "Annuler une inscription — liens libérés, lit d'internat et séjours",
+                    location: "Inscriptions ; Internat",
+                    href: '/inscriptions',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition: "Annuler une inscription libère maintenant tout ce qui lui était rattaché, dans une seule opération : séjour d'internat (le lit est libéré d'abord), sorties, pointages, lignes de frais, échéanciers et échéances, engagements et relances. Tout est archivé, rien n'est effacé. L'inscription reste « Annulée », ce qui laisse le numéro de reçu sans trou.",
+                    objectif: "Éviter les lits « fantômes » et les échéanciers orphelins après une annulation.",
+                    probleme: "Un élève annulé puis réinscrit pouvait occuper deux lits, car le séjour d'internat restait actif.",
+                    procedure: [
+                        "Annulez l'inscription depuis la liste des inscriptions.",
+                        "S'il existe un paiement, annulez-le d'abord : l'annulation est refusée tant qu'un paiement non annulé existe.",
+                        "À l'internat, vous pouvez aussi annuler une sortie ou supprimer un séjour saisi par erreur.",
+                        "Dans « Affecter un élève » ou « Changer / Libérer », le lit actuel de l'élève est proposé en tête (« lit actuel ») : le re-valider ajoute les frais d'internat manquants sans déplacer l'élève."
+                    ],
+                    impacts: [
+                        "Le lit redevient libre immédiatement.",
+                        "Les frais d'internat manquants sont ajoutés sans doublon."
+                    ],
+                    recommandations: [
+                        "Vérifiez le tableau des chambres après une annulation pour confirmer la libération du lit."
+                    ]
                 }
             ]
         },
@@ -1390,6 +1585,31 @@
                         "Ne saisissez jamais une moyenne à la main : elle est nécessairement dérivée des notes.",
                         "Rédigez des appréciations circonstanciées et bienveillantes : elles constituent souvent le seul message écrit que la famille conserve."
                     ]
+                },
+                {
+                    id: 'franco-arabe-pole-rtl-alternance',
+                    title: "Franco-Arabe — pôle pédagogique, saisie des notes en arabe et emplois du temps alternés",
+                    location: "Matières ; Notes et bulletins ; Emploi du temps ; Examens",
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition: "Chaque matière porte un PÔLE pédagogique : Français, Arabe, Sciences islamiques ou Commun (sélecteur FR/AR dans l'écran Matières). Ce pôle pilote l'affichage : pour une matière arabe ou de sciences islamiques, la grille de saisie des notes passe en écriture de droite à gauche (police Cairo, en-têtes arabes), alors que les filtres et boutons restent en français. L'emploi du temps analyse l'alternance entre les deux sections, et les procès-verbaux et fiches d'examen existent en version bilingue.",
+                    objectif: "Servir les établissements franco-arabes sans double saisie : un seul référentiel, deux sections, des documents lisibles dans les deux langues.",
+                    probleme: "Les matières arabes se saisissaient dans une grille pensée de gauche à droite, sans séparation entre pôles ni vue d'ensemble de l'alternance des sections.",
+                    procedure: [
+                        "Matières : choisissez le « Pôle pédagogique » de chaque matière ; renseignez son nom arabe.",
+                        "Notes : sélectionnez une matière arabe — la grille bascule en RTL ; utilisez le filtre « Pôle » pour séparer les sections.",
+                        "Emploi du temps : consultez le constat par classe ou par enseignant (heures par section, motif d'alternance, demi-journées partagées).",
+                        "Examens : tirez les procès-verbaux et fiches bilingues pour l'inspection."
+                    ],
+                    impacts: [
+                        "Le sens de lecture suit la MATIÈRE, pas une préférence de la page.",
+                        "Les cellules de saisie restent en chiffres de gauche à droite.",
+                        "Le constat d'alternance est en lecture seule : il ne modifie pas l'emploi du temps."
+                    ],
+                    recommandations: [
+                        "Classez toutes les matières dans un pôle avant d'ouvrir la saisie : une matière sans pôle est traitée comme française.",
+                        "Relisez les libellés arabes avec un locuteur avant le premier tirage officiel."
+                    ]
                 }
             ]
         },
@@ -1541,6 +1761,7 @@
                         "Suivez le taux de recouvrement dans Comptabilité › Rapports financiers, et exportez le rapport au format Excel pour le conseil d'administration."
                     ],
                     impacts: [
+                        "La relance SMS ne vise que les élèves ayant au moins une échéance réellement en retard, et le message annonce le montant EN RETARD (pas le reliquat de l'année entière).",
                         "Échéanciers : c'est la date d'exigibilité de chaque échéance qui déclenche l'entrée en liste des débiteurs.",
                         "Encaissement : tout versement retire aussitôt l'élève de la liste dès lors que son solde est apuré.",
                         "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS.",
@@ -1553,6 +1774,58 @@
                         "N'exposez jamais publiquement la situation financière d'un élève, et ne l'écartez d'une activité pédagogique qu'après décision formelle de la direction.",
                         "Consignez tout arrangement dans un échéancier personnalisé : un accord verbal non enregistré n'engage personne et ne protège pas la famille.",
                         "Vérifiez la qualité des numéros de téléphone : un fichier de contacts défaillant réduit à néant l'efficacité du dispositif."
+                    ]
+                },
+                {
+                    id: 'annulation-paiement-contrepassation',
+                    title: "Annulation d'un paiement et contre-passation",
+                    location: "Fiche élève › Paiements ; Caisse",
+                    href: '/caisse',
+                    roles: ['Directeur', 'Finance'],
+                    definition: "Un paiement saisi par erreur peut être ANNULÉ sans jamais être effacé : il passe au statut « Annulé » avec son motif, sa date, son auteur et la destination de l'argent. Le Directeur et la Finance (jamais le Secrétariat) peuvent annuler dans les 48 heures suivant l'encaissement, même si la caisse du jour est clôturée. Au-delà, seul le Directeur peut passer une CONTRE-PASSATION : une écriture négative datée du jour.",
+                    objectif: "Corriger une erreur d'encaissement tout en préservant la traçabilité comptable et sans réécrire une journée déjà arrêtée.",
+                    probleme: "Un paiement erroné ne pouvait ni être supprimé (trace comptable) ni corrigé, et bloquait la suppression de l'élève ou de la classe.",
+                    procedure: [
+                        "Ouvrez la fiche de l'élève, repérez le paiement et cliquez sur « Annuler ».",
+                        "Choisissez le motif dans la liste (ou « Autre motif » avec saisie obligatoire) et la destination : simple correction (par défaut), réutilisé pour l'inscription de l'enfant, ou remboursé au parent.",
+                        "Passé 48 heures, le Directeur utilise « Contre-passer » et lit l'avertissement avant de confirmer.",
+                        "L'export d'année scolaire inclut les paiements annulés."
+                    ],
+                    impacts: [
+                        "Le paiement annulé n'est plus compté dans les soldes ; il reste visible dans le registre daté des encaissements.",
+                        "Un paiement annulé ne bloque plus la suppression de l'élève.",
+                        "Le Directeur peut retirer ou accorder le droit d'annulation à la Finance dans Paramètres (ouvert par défaut).",
+                        "La Caisse du secrétaire reste toujours visible."
+                    ],
+                    recommandations: [
+                        "Annulez le jour même quand c'est possible : c'est le plus simple et le plus lisible en comptabilité.",
+                        "Renseignez un motif précis : il est repris dans les contrôles et l'audit."
+                    ]
+                },
+                {
+                    id: 'situation-mensualites',
+                    title: "Situation des mensualités — qui a payé, qui doit encore",
+                    location: "Comptabilité › Situation des mensualités (/mensualites)",
+                    href: '/mensualites',
+                    roles: ['Directeur', 'Finance'],
+                    definition: "Une page qui répond à une question de direction : pour un mois donné, qui est à jour ? Trois listes — Payé, Partiel, Non payé — avec une synthèse calculée à partir de ces listes et un export Excel identique à l'affichage. Filtres : année scolaire et mois obligatoires, classe facultative.",
+                    objectif: "Donner au Directeur une vue mensuelle fiable des encaissements, sans tableur parallèle, et préparer les relances.",
+                    probleme: "Il fallait croiser la caisse, les échéanciers et les inscriptions à la main pour savoir qui n'avait pas réglé le mois.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Situation des mensualités.",
+                        "Choisissez l'année scolaire et le mois ; ajoutez une classe si besoin, puis « Afficher la situation ».",
+                        "Lisez les trois listes et la synthèse ; exportez en Excel au besoin.",
+                        "Directeur — Paramètres : « Autoriser la comptabilité à consulter la situation des mensualités » (désactivé par défaut) ouvre la page à la Finance, en lecture seule ; le désactiver retire l'accès aussitôt.",
+                        "Deux réglages d'école adaptent le calcul : « La mensualité versée avec l'inscription compte pour le dernier mois (juin) » et « Demander le mois réglé à chaque encaissement ». Ils n'agissent que sur cette page."
+                    ],
+                    impacts: [
+                        "Désactivés, les deux réglages laissent le calcul habituel inchangé.",
+                        "À la caisse, le montant échu signale désormais toutes les mensualités échues, pas seulement l'inscription et le premier mois.",
+                        "L'accès de la Finance est contrôlé côté serveur à chaque requête."
+                    ],
+                    recommandations: [
+                        "Activez « Demander le mois réglé » si vos familles paient des mois en avance : la situation sera exacte.",
+                        "Contrôlez la synthèse en début de mois, avant de lancer les relances SMS."
                     ]
                 }
             ]
@@ -1995,6 +2268,52 @@
                         "Générez la déclaration en tout dernier, une fois certain qu'aucune fiche de paie du mois ne reste à éditer.",
                         "Conservez une déclaration par mois, même après transmission à l'administration : c'est la pièce justificative de ce qui a été réellement versé.",
                         "En cas de fiche de paie ajoutée après coup, régénérez la déclaration plutôt que de corriger le total à la main."
+                    ]
+                },
+                {
+                    id: 'paie-sans-retenues',
+                    title: "Paie sans retenues légales — par contrat (Daara et structures non cotisantes)",
+                    location: "Comptabilité › Paie › Contrats",
+                    href: '/paie',
+                    roles: ['Directeur', 'Finance'],
+                    definition: "Chaque contrat porte la case « Appliquer les retenues légales » (cochée par défaut). Décochée, la fiche de paie ne retient ni IPRES, ni CSS, ni VRS/CFCE, ni BRS : le net est le brut plus la prime de transport. Une même école peut donc avoir du personnel avec retenues et du personnel sans.",
+                    objectif: "Permettre à un Daara, ou à toute structure qui ne cotise pas, de payer exactement le montant convenu (un Oustaz à 40 000 FCFA reçoit 40 000 FCFA).",
+                    probleme: "Le calcul légal s'appliquait à tous les contrats, ce qui ne convient pas aux structures qui ne cotisent pas.",
+                    procedure: [
+                        "Créez ou modifiez un contrat et réglez la case « Appliquer les retenues légales ».",
+                        "Générez la fiche de paie du mois : le calcul suit le régime du contrat.",
+                        "Pour changer de régime, modifiez le contrat puis régénérez la fiche concernée."
+                    ],
+                    impacts: [
+                        "Le régime est figé sur chaque fiche à sa génération : changer le contrat ne réécrit jamais une fiche déjà éditée.",
+                        "Les écoles existantes ne sont pas modifiées (case cochée par défaut)."
+                    ],
+                    recommandations: [
+                        "Ne décochez que si la structure est réellement hors cotisation : le choix a des conséquences légales."
+                    ]
+                },
+                {
+                    id: 'fiche-paie-annuler-regenerer-payer',
+                    title: "Fiches de paie — annuler, régénérer, payer et personnel sans compte",
+                    location: "Comptabilité › Paie › Fiches de paie",
+                    href: '/paie',
+                    roles: ['Directeur', 'Finance'],
+                    definition: "Une fiche de paie générée peut être ANNULÉE (conservée, marquée annulée, motif obligatoire) puis RÉGÉNÉRÉE sur les termes actuels du contrat, en une seule opération. Une fiche peut être PAYÉE : l'action crée un décaissement « Salaires » en trésorerie et le bulletin vaut reçu de paiement. Un contrat peut viser une personne sans compte (gardien…) avec nom, fonction et téléphone.",
+                    objectif: "Corriger une fiche erronée sans perdre l'historique, et relier la paie à la trésorerie.",
+                    probleme: "Après correction d'un contrat, la fiche, instantané définitif, restait fausse : ni modifiable, ni supprimable, ni régénérable. La paie ne laissait aucune trace de trésorerie.",
+                    procedure: [
+                        "Ouvrez la fiche, cliquez sur « Annuler » et saisissez le motif ; ou utilisez « Régénérer ».",
+                        "Pour payer, utilisez l'action de paiement : le décaissement « Salaires » est créé.",
+                        "Pour un agent sans compte, créez le contrat en saisissant nom, fonction et téléphone."
+                    ],
+                    impacts: [
+                        "Annuler une fiche payée contre-passe le décaissement.",
+                        "L'annulation est refusée si la période est déjà déclarée au fisc ; les fiches annulées sont ignorées par la déclaration.",
+                        "Le Directeur peut ouvrir ou retirer le droit d'annulation des fiches à la Finance (Paramètres)."
+                    ],
+                    recommandations: [
+                        "Annulez avant de déclarer la période : après, l'annulation n'est plus possible.",
+                        "Gardez un motif clair : il fait partie de l'historique de paie."
                     ]
                 }
             ]
@@ -2886,6 +3205,81 @@
                         "Un dortoir affiché complet qui ne devrait pas l'être signale presque toujours une libération oubliée plutôt qu'une erreur de capacité — vérifiez les occupants avant de revoir la capacité déclarée à la hausse.",
                         "En cas de refus lors d'une modification concurrente, ne réessayez pas mécaniquement : rouvrez la fiche de l'élève pour voir qui a modifié l'affectation entretemps."
                     ]
+                },
+                {
+                    id: 'daara-oustaz-halqa',
+                    title: "Daara — Oustaz, Halqa et affectation des élèves",
+                    location: "Gestion Scolaire › Oustaz (/oustaz) ; tablette de l'Oustaz (/halqa)",
+                    href: '/oustaz',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant', 'Enseignant'],
+                    definition: "Le module Daara rattache les élèves à la HALQA (cercle d'étude) d'un OUSTAZ. La Direction gère les Oustaz et leur affecte des élèves ; l'Oustaz retrouve ses élèves sur sa tablette (/halqa). Un Oustaz suspendu est en lecture seule.",
+                    objectif: "Organiser l'enseignement coranique par cercle, avec un responsable identifié par élève.",
+                    probleme: "L'affectation d'un élève à un Oustaz n'existait qu'en API, la Direction ne pouvait pas rattacher un élève à une Halqa depuis l'application.",
+                    procedure: [
+                        "Directeur : ouvrez Oustaz, créez ou modifiez un Oustaz.",
+                        "Cliquez sur « Élèves » : la fenêtre à deux colonnes montre la Halqa actuelle et la liste « Ajouter des élèves ».",
+                        "Recherchez par nom, nom arabe ou matricule, avec le périmètre « Sans Oustaz » (défaut) ou « Tous les élèves » ; cochez ; envoyez (200 élèves au plus par envoi).",
+                        "« Retirer » détache l'élève de la Halqa après confirmation, sans le supprimer."
+                    ],
+                    impacts: [
+                        "Un élève d'une autre Halqa peut être affecté avec l'avertissement « sera déplacé ».",
+                        "Retirer un élève conserve son suivi Hizb.",
+                        "L'affectation est réservée au Directeur."
+                    ],
+                    recommandations: [
+                        "Affectez tous les élèves avant d'ouvrir le suivi Hizb.",
+                        "Suspendez un Oustaz plutôt que de le supprimer si son absence est temporaire."
+                    ]
+                },
+                {
+                    id: 'suivi-hizb-bulletin-coranique',
+                    title: "Suivi de mémorisation par Hizb, journal des évaluations et bulletin coranique",
+                    location: "Gestion Scolaire › Suivi coranique (/suivi-coranique) ; tablette de l'Oustaz (/halqa)",
+                    href: '/suivi-coranique',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant', 'Enseignant'],
+                    definition: "L'Oustaz suit la mémorisation de chaque élève Hizb par Hizb (Hizb de 1 à 60, quarts de 0 à 4, note de 1 à 5). Un JOURNAL conserve chaque évaluation qui change quelque chose et alimente une COURBE d'évolution. Un bulletin coranique PDF bilingue français/arabe se tire pour chaque élève ; le tableau de bord de la Direction synthétise les Halqa et signale les élèves à relancer.",
+                    objectif: "Mesurer et montrer la progression de mémorisation de façon objective et historisée.",
+                    probleme: "Le suivi n'était qu'un état courant : aucun historique, donc aucune courbe possible, et le bulletin n'était atteignable que depuis la liste « Élèves à relancer ».",
+                    procedure: [
+                        "Oustaz : sur /halqa, ouvrez la fiche d'un élève et saisissez les quarts et la note du Hizb évalué.",
+                        "Direction : /suivi-coranique — dépliez une Halqa (« Voir les élèves ») pour voir la progression, la dernière évaluation et le bouton PDF de chaque élève.",
+                        "Ouvrez la courbe d'évolution d'un élève pour voir son historique.",
+                        "Tirez le bulletin coranique : « كشف الحفظ (PDF) » sur la tablette de l'Oustaz."
+                    ],
+                    impacts: [
+                        "Le journal est en ajout seul : l'application ne peut ni modifier ni supprimer une évaluation passée.",
+                        "Une saisie identique à l'état actuel n'écrit rien dans le journal.",
+                        "Le journal affiche « Journal démarré le… » : l'historique antérieur à la mise en service n'est pas inventé.",
+                        "Un Oustaz ne tire que le bulletin de ses propres élèves."
+                    ],
+                    recommandations: [
+                        "Saisissez les évaluations le jour même : la courbe n'a de valeur que si les dates sont justes.",
+                        "Surveillez la liste « Élèves à relancer » chaque semaine."
+                    ]
+                },
+                {
+                    id: 'pointage-sessions-configurables',
+                    title: "Pointage par sessions configurables — appel de nuit, repas, appel de la Halqa",
+                    location: "Gestion Scolaire › Internat › onglet Pointage",
+                    href: '/internat',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant'],
+                    definition: "Le pointage ne se limite plus à l'appel de nuit : la Direction définit des SESSIONS (Appel de nuit, Appel du matin, Petit-déjeuner, Déjeuner, Dîner, Appel de la Halqa, ou des sessions personnalisées). Chaque session précise son public (internes par pavillon, demi-pensionnaires par classe, tous les pensionnaires par classe, élèves d'une Halqa), ses jours et un repère horaire informatif. Six modèles sont proposés en un clic ; rien n'est imposé.",
+                    objectif: "Adapter le pointage à la vraie vie de l'internat ou du Daara : repas, appels et cercles.",
+                    probleme: "Le pointage ne couvrait que l'appel de nuit d'un interne.",
+                    procedure: [
+                        "Directeur : créez les sessions utiles (ou appliquez les modèles proposés), réglez public, jours et ordre.",
+                        "Surveillant ou Secrétariat : choisissez la session du moment et pointez les élèves présents.",
+                        "Désactivez une session sans la supprimer quand elle n'est plus utilisée."
+                    ],
+                    impacts: [
+                        "Le nom d'une session est unique par école (sans tenir compte des majuscules).",
+                        "La configuration est réservée au Directeur ; le Secrétariat et le Surveillant la consultent.",
+                        "Les pointages passent par session : un pointage sans session n'existe plus."
+                    ],
+                    recommandations: [
+                        "Commencez par les modèles, puis ajustez : c'est plus rapide que tout créer à la main.",
+                        "Gardez un nombre raisonnable de sessions actives pour ne pas alourdir le pointage quotidien."
+                    ]
                 }
             ]
         },
@@ -3111,6 +3505,48 @@
                     recommandations: [
                         "Sur un poste dédié à une seule tâche (un poste de caisse, par exemple), cette barre n'apporte rien de plus que la barre latérale — ignorez-la sans hésiter.",
                         "Sur un poste partagé entre plusieurs tâches dans la même journée, c'est le raccourci le plus rapide d'un module à l'autre : préférez-le à la barre latérale une fois l'habitude prise."
+                    ]
+                },
+                {
+                    id: 'apparence-theme-sombre',
+                    title: "Apparence — mode clair, sombre ou système",
+                    location: "Menu du profil (bas de la barre latérale) › Apparence",
+                    href: '/parametres',
+                    roles: ['Tous les rôles'],
+                    definition: "Chaque utilisateur choisit son apparence : clair, sombre, ou celle de son système. Le choix est mémorisé dans le navigateur. Les fenêtres utilisent un fond en verre dépoli, et l'arabe s'affiche avec la police Cairo.",
+                    objectif: "Travailler confortablement, de jour comme de nuit, sans changer de réglage système.",
+                    probleme: "Une seule apparence claire était disponible.",
+                    procedure: [
+                        "Ouvrez le menu de votre profil en bas de la barre latérale.",
+                        "Dans « Apparence », choisissez Clair, Sombre ou Système."
+                    ],
+                    impacts: [
+                        "Le choix ne concerne que votre navigateur : il n'affecte pas les autres utilisateurs.",
+                        "Par défaut, l'apparence est claire."
+                    ],
+                    recommandations: [
+                        "Si un écran vous paraît mal contrasté en mode sombre, repassez en clair et signalez-le."
+                    ]
+                },
+                {
+                    id: 'erreurs-de-saisie-sous-les-champs',
+                    title: "Messages d'erreur sous les champs et titres longs",
+                    location: "Tous les formulaires",
+                    href: '/aide',
+                    roles: ['Tous les rôles'],
+                    definition: "Quand le serveur refuse une valeur (téléphone, notes, coefficient…), le message s'affiche sous le champ concerné, avec ce qu'il faut corriger. Les titres de page très longs sont tronqués dans la barre supérieure pour ne pas déborder, le titre complet apparaissant au survol.",
+                    objectif: "Savoir immédiatement quel champ corriger, sans chercher l'erreur.",
+                    probleme: "Certains refus du serveur n'avaient aucun emplacement d'affichage : le formulaire semblait ne rien faire.",
+                    procedure: [
+                        "Enregistrez le formulaire.",
+                        "Lisez le message rouge sous le champ, corrigez, puis enregistrez de nouveau."
+                    ],
+                    impacts: [
+                        "Les formulaires de l'inventaire, des matières, des examens et des tarifs affichent désormais leurs erreurs.",
+                        "La fiche enseignant s'affiche correctement même avec un e-mail ou un lieu de naissance très long."
+                    ],
+                    recommandations: [
+                        "Si rien ne se passe à l'enregistrement, remontez en haut du formulaire : un message général peut s'y trouver."
                     ]
                 }
             ]
