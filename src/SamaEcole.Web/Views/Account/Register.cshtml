@@ -148,7 +148,7 @@
  x-bind:aria-invalid="errors.schoolname ? 'true' : 'false'" aria-describedby="schoolNameError"
  x-bind:class="errors.schoolname && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="schoolNameError" x-cloak x-show="errors.schoolname" x-text="errors.schoolname" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="schoolNameError" x-cloak x-show="errors.schoolname" x-text="errors.schoolname" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
 
  <div class="form-grid">
@@ -159,7 +159,7 @@
  x-bind:aria-invalid="errors.city ? 'true' : 'false'" aria-describedby="cityError"
  x-bind:class="errors.city && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="cityError" x-cloak x-show="errors.city" x-text="errors.city" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="cityError" x-cloak x-show="errors.city" x-text="errors.city" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
  <div>
  <label for="region" class="form-label">Région <span class="text-slate-400 font-normal">(facultatif)</span></label>
@@ -168,7 +168,7 @@
  x-bind:aria-invalid="errors.region ? 'true' : 'false'" aria-describedby="regionError"
  x-bind:class="errors.region && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="regionError" x-cloak x-show="errors.region" x-text="errors.region" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="regionError" x-cloak x-show="errors.region" x-text="errors.region" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
  </div>
 
@@ -179,7 +179,7 @@
  x-bind:aria-invalid="errors.schooladdress ? 'true' : 'false'" aria-describedby="schoolAddressError"
  x-bind:class="errors.schooladdress && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="schoolAddressError" x-cloak x-show="errors.schooladdress" x-text="errors.schooladdress" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="schoolAddressError" x-cloak x-show="errors.schooladdress" x-text="errors.schooladdress" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
 
  @* Effectif : OBLIGATOIRE pour un établissement privé (c'est lui qui borne la tranche, et le serveur le vérifie), facultatif
@@ -304,7 +304,7 @@
  x-bind:aria-invalid="errors.directorfullname ? 'true' : 'false'" aria-describedby="directorFullNameError"
  x-bind:class="errors.directorfullname && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="directorFullNameError" x-cloak x-show="errors.directorfullname" x-text="errors.directorfullname" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="directorFullNameError" x-cloak x-show="errors.directorfullname" x-text="errors.directorfullname" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
 
  <div class="form-grid">
@@ -316,7 +316,7 @@
  x-bind:aria-invalid="errors.directoremail ? 'true' : 'false'" aria-describedby="directorEmailError"
  x-bind:class="errors.directoremail && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="directorEmailError" x-cloak x-show="errors.directoremail" x-text="errors.directoremail" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="directorEmailError" x-cloak x-show="errors.directoremail" x-text="errors.directoremail" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
  <div>
  <label for="directorPhone" class="form-label">Téléphone</label>
@@ -326,7 +326,7 @@
  x-bind:aria-invalid="errors.directorphone ? 'true' : 'false'" aria-describedby="directorPhoneError"
  x-bind:class="errors.directorphone && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
- <p id="directorPhoneError" x-cloak x-show="errors.directorphone" x-text="errors.directorphone" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="directorPhoneError" x-cloak x-show="errors.directorphone" x-text="errors.directorphone" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
  </div>
 
@@ -350,7 +350,7 @@
  <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
  </button>
  </div>
- <p id="directorPasswordError" x-cloak x-show="errors.directorpassword" x-text="errors.directorpassword" class="text-red-500 text-xs mt-1" role="alert"</p>
+ <p id="directorPasswordError" x-cloak x-show="errors.directorpassword" x-text="errors.directorpassword" class="text-red-500 text-xs mt-1" role="alert"></p>
  <p x-show="!errors.directorpassword" class="mt-1.5 text-jgk-table text-slate-500">Au moins 8 caractères, avec majuscule, minuscule, chiffre et caractère spécial — sans suite évidente ni votre nom. C'est ce mot de passe qui vous connectera une fois la demande validée.</p>
  </div>
  </fieldset>
