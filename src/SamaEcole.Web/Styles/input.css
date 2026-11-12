@@ -910,6 +910,39 @@
     @apply flex h-full items-center justify-between gap-3 rounded-3xl border border-slate-200/60 bg-white p-5 shadow-fluid;
   }
 
+  /* Ruban de cartes du tableau de bord : une seule ligne ; la carte survolée / ouverte au clic s'élargit (flex-grow),
+     les autres se resserrent — même geste que le ruban de la Situation des mensualités. Sous lg : grille d'origine. */
+  .kpi-ribbon > * {
+    cursor: pointer;
+  }
+
+  @media (min-width: 1024px) {
+    .kpi-ribbon {
+      display: flex;
+    }
+
+    .kpi-ribbon > * {
+      flex: 1 1 0;
+      min-width: 0;
+      transition: flex-grow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .kpi-ribbon > *:hover,
+    .kpi-ribbon > .is-open {
+      flex-grow: 1.6;
+    }
+  }
+
+  .kpi-ribbon > .is-open .kpi-card {
+    box-shadow: 0 0 0 2px #00174B, 0 14px 32px -22px rgb(21 52 140 / 0.35);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kpi-ribbon > * {
+      transition: none;
+    }
+  }
+
   .kpi-label {
     @apply text-[13px] font-medium text-slate-500;
   }
@@ -1201,40 +1234,21 @@
   }
 
   .quick-nav-link {
-    @apply relative inline-flex h-16 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    @apply relative inline-flex h-16 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 text-[1.0587rem] font-medium text-[#1B2852] transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
   }
 
-  /* Barre du haut en marine de marque (.app-topbar) : onglets de navigation clairs, trait actif blanc. */
-  .app-topbar .quick-nav-link {
-    color: #B4C5FF;
-  }
-
-  .app-topbar .quick-nav-link:hover,
-  .app-topbar .quick-nav-link-active {
-    color: #fff;
-  }
-
-  .app-topbar .quick-nav-link:hover::after {
-    background: rgb(255 255 255 / 0.35);
-  }
-
-  .app-topbar .quick-nav-link-active::after,
-  .app-topbar .quick-nav-link-active:hover::after {
-    background: #fff;
-  }
-
-  /* Rangée unique : la navigation partage la ligne avec les pastilles. Sous 1750 px la salutation s'efface et les onglets
-     perdent leur icône ; sous 1300 px le bouton d'aide ne garde que son icône. Les sept modules tiennent sans défilement. */
+  /* Rangée unique : la navigation partage la ligne avec les pastilles (Mode réel, salutation avec son texte, aide avec son
+     texte). Texte des onglets : marine, 16,9 px (+10 % sur 15,4 px, lui-même +10 % sur 14 px). Compactage progressif pour que
+     les sept modules tiennent sans défilement :
+       sous 1750 px : onglets sans icône, texte 15,7 px, espacement resserré ;
+       sous 1500 px : texte 14,4 px, pastilles resserrées ;
+       sous 1320 px : texte 13,5 px. */
   @media (max-width: 1750px) {
-    .header-optional {
-      display: none !important;
-    }
-
     .quick-nav-link {
       gap: 0;
-      padding-left: 0.625rem;
-      padding-right: 0.625rem;
-      font-size: 0.8125rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      font-size: 0.98rem;
     }
 
     .quick-nav-link svg {
@@ -1242,17 +1256,27 @@
     }
   }
 
-  @media (max-width: 1300px) {
-    .btn-help-label {
-      display: none;
+  @media (max-width: 1500px) {
+    .quick-nav-link {
+      padding-left: 0.45rem;
+      padding-right: 0.45rem;
+      font-size: 0.9rem;
+    }
+
+    header [x-data="sandboxModeBadge()"] > a,
+    header [x-data="sandboxModeBadge()"] > span,
+    header [x-data="greeting()"],
+    header .btn-help {
+      padding-left: 0.65rem !important;
+      padding-right: 0.65rem !important;
     }
   }
 
-  @media (max-width: 1200px) {
+  @media (max-width: 1320px) {
     .quick-nav-link {
-      padding-left: 0.4rem;
-      padding-right: 0.4rem;
-      font-size: 0.75rem;
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+      font-size: 0.84rem;
     }
   }
 

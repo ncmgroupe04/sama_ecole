@@ -33,10 +33,14 @@
          propre balise au rendu (`output.TagName = null`), donc tout attribut posé dessus serait perdu
          sans le moindre avertissement. `class="contents"` retire l'enveloppe de la grille pour que la
          carte reste l'élément de grille direct. -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    @* Ruban de cartes : sur grand écran les cartes se partagent la ligne et celle que l'on survole ou sur laquelle on clique
+       s'élargit (même geste que les segments de la Situation des mensualités). Voir .kpi-ribbon (Styles/input.css) et
+       dashboard.js. Sous lg : la grille d'origine. *@
+    <div class="mb-6 space-y-4">
 
         <!-- Pédagogie (4 cartes) -->
-        <div class="contents" x-show="analyticsRole">
+        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+<div class="min-w-0" x-show="analyticsRole">
             <stat-card label="Élèves inscrits" icon="users" accent="primary">
                 <span x-text="analyticsData?.enrollments?.total || 0">0</span>
                 <stat-hint>
@@ -47,28 +51,30 @@
             </stat-card>
         </div>
 
-        <div class="contents" x-show="analyticsRole">
+        <div class="min-w-0" x-show="analyticsRole">
             <stat-card label="Enseignants actifs" icon="book" accent="blue">
                 <span x-text="analyticsData?.activeTeachers || 0">0</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="analyticsRole && $store.schoolConfig.pedagogyEnabled">
+        <div class="min-w-0" x-show="analyticsRole && $store.schoolConfig.pedagogyEnabled">
             <stat-card label="Taux de présence (Mois)" icon="checkmark-circle" accent="success">
                 <span x-text="formatPercent(analyticsData?.attendanceRate)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="analyticsRole">
+        <div class="min-w-0" x-show="analyticsRole">
             <stat-card label="Salles occupées" icon="building" accent="primary">
                 <span x-text="formatPercent(analyticsData?.todayOccupancyRate)">—</span>
             </stat-card>
         </div>
+    </div>
 
         <!-- Finance (4 cartes majeures)
              `emphasis` pose le liseré d'accent à gauche et l'ombre plus marquée : même grille, même
              ordre, même palette que les cartes secondaires ci-dessous — seule l'emphase change. -->
-        <div class="contents" x-show="financeRole">
+        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+<div class="min-w-0" x-show="financeRole">
             @* Le solde net est la seule valeur du tableau de bord qui change de SENS avec son signe :
                sa couleur suit donc la donnée (vert au-dessus de zéro, rose en dessous) au lieu d'être
                figée en vert, ce qui affichait un découvert en couleur de réussite. *@
@@ -78,48 +84,51 @@
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Encaissement (Année)" icon="wallet" accent="primary" emphasis>
                 <span x-text="formatMoney(financeData?.collectedThisYear)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Décaissements" icon="arrow-down" accent="danger" emphasis>
                 <span x-text="formatMoney(financeData?.totalDisbursements)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Reste à recouvrer" icon="alert-circle" accent="warning" emphasis>
                 <span x-text="formatMoney(financeData?.outstandingBalance)">—</span>
             </stat-card>
         </div>
+    </div>
 
         <!-- Finance (4 cartes secondaires) -->
-        <div class="contents" x-show="financeRole">
+        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+<div class="min-w-0" x-show="financeRole">
             <stat-card label="Encaissement (Aujourd'hui)" icon="wallet" accent="primary">
                 <span x-text="formatMoney(financeData?.collectedToday)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Encaissement (Mois)" icon="wallet" accent="primary">
                 <span x-text="formatMoney(financeData?.collectedThisMonth)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Attendu (Mois)" icon="calendar" accent="slate">
                 <span x-text="formatMoney(financeData?.expectedThisMonth)">—</span>
             </stat-card>
         </div>
 
-        <div class="contents" x-show="financeRole">
+        <div class="min-w-0" x-show="financeRole">
             <stat-card label="Taux Recouvrement" icon="percent" accent="success">
                 <span x-text="formatPercent(financeData?.recoveryRate)">—</span>
             </stat-card>
         </div>
+    </div>
 
     </div>
 

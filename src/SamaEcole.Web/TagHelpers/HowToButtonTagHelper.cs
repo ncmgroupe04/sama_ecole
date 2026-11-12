@@ -36,7 +36,7 @@ public class HowToButtonTagHelper : TagHelper
         output.Attributes.SetAttribute("class", string.IsNullOrWhiteSpace(existing) ? "btn-help" : $"btn-help {existing}");
 
         output.Content.SetHtmlContent(
-            """<svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><use href="#icon-alert-circle"></use></svg>"""
+            """<svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><use href="#icon-help-circle"></use></svg>"""
             + $"<span>{WebUtility.HtmlEncode(Label)}</span>");
     }
 }

@@ -451,7 +451,6 @@ document.addEventListener('alpine:init', () => {
         init() {
             // Référence STABLE : voir le commentaire équivalent de dateField.init().
             this.boundClose = () => this.close();
-            this.boundReposition = () => this.reposition();
         },
 
         /**
@@ -462,7 +461,7 @@ document.addEventListener('alpine:init', () => {
             return Math.min(300, 76 + this.options.length * 42);
         },
 
-        /** Replace le menu selon la place disponible à l'instant (ouverture, redimensionnement de la fenêtre). */
+        /** Replace le menu selon la place disponible à l'instant ; appelé au redimensionnement (x-on:resize.window du Tag Helper). */
         reposition() {
             if (!this.open) return;
             const pos = window.computeFloatingPosition(this.$root, this.estimatedMenuHeight());
@@ -485,8 +484,6 @@ document.addEventListener('alpine:init', () => {
             this.floatingStyle = window.floatingStyleFrom(pos);
             this.open = true;
             this.search = '';
-            // Fenêtre redimensionnée / appareil pivoté pendant que le menu est ouvert : il se replace au lieu de déborder.
-            window.addEventListener('resize', this.boundReposition);
             // Le champ de recherche, lui, n'existe dans le DOM qu'une fois `open` vrai (x-show) :
             // il lui faut bien le prochain tick avant de pouvoir recevoir le focus.
             this.$nextTick(() => this.$refs.search?.focus());
@@ -498,7 +495,6 @@ document.addEventListener('alpine:init', () => {
         close() {
             this.open = false;
             window.removeEventListener('scroll', this.boundClose, true);
-            window.removeEventListener('resize', this.boundReposition);
         },
 
         labelFor(value) {
