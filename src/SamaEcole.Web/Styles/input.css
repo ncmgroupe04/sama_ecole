@@ -800,6 +800,18 @@
 
      .card-header — l'en-tête de panneau `p-6 border-b`, recopié dans une vingtaine
      de vues. */
+  /* ---------------------------------------------------------------- Fenêtres (modal-shell)
+     Largeur unique (voir ModalShellTagHelper.MaxWidthClass) : sur 896 px, un champ qui ne reçoit que
+     3 ou 4 caractères (quantité, année, heure, capacité) ne doit pas courir d'un bord à l'autre.
+     Les champs de TEXTE gardent toute la largeur (noms, adresses, motifs). */
+  .modal-panel input[type="number"].input-field,
+  .modal-panel input[type="time"].input-field,
+  .modal-panel input[type="date"].input-field,
+  .modal-panel input[type="tel"].input-field,
+  .modal-panel input[type="color"].input-field {
+    max-width: 16rem;
+  }
+
   .card-hover {
     @apply cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/70 hover:shadow-md;
   }

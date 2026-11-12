@@ -203,7 +203,7 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-3xl"{panelStyleAttr}>
+                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} modal-panel sm:rounded-none"{panelStyleAttr}>
                     {cornerClose}
                     {(hasHeader ? $"""
                     <div class="flex-shrink-0 border-b {headerBorderClass} p-6">
@@ -232,23 +232,15 @@ public class ModalShellTagHelper : TagHelper
     }
 
     /// <summary>Classes littérales (jamais interpolées) pour que Tailwind les voie au scan du CSS.</summary>
-    private static string MaxWidthClass(string size) => size.ToLowerInvariant() switch
-    {
-        "md" => "sm:max-w-md",
-        "lg" => "sm:max-w-lg",
-        "xl" => "sm:max-w-xl",
-        "2xl" => "sm:max-w-2xl",
-        // Fiches de détail (élève, enseignant) : un cran sous `wide` — assez large pour une grille à
-        // 4 colonnes, sans occuper presque tout l'écran.
-        "5xl" => "sm:max-w-5xl",
-        // Aperçu PDF : plafond 4xl (56rem / 896px). La visionneuse native centre la page sur un fond
-        // sombre — au-delà de cette largeur, ce ne sont plus que deux larges bandes vides de part et
-        // d'autre du document. Combiné à `tall` (≈ 92 vh), la page respire sans que la modale s'étale.
-        "pdf" => "sm:max-w-4xl",
-        "60" => "sm:w-[60%] sm:max-w-4xl",
-        "wide" => "sm:w-[85%] sm:max-w-6xl",
-        _ => "sm:max-w-3xl"
-    };
+    /// <summary>
+    /// UNE SEULE largeur pour toutes les fenêtres de la plateforme (demande produit) : 4xl = 56 rem / 896 px.
+    /// Assez large pour une page A4 en aperçu, une fiche à deux ou trois colonnes ou un tableau, sans occuper
+    /// l'écran. L'attribut <see cref="Size"/> est conservé pour ne pas modifier ~170 vues, mais il est IGNORÉ :
+    /// seule la hauteur varie, selon le contenu (plafonnée à 90 vh). Les champs courts (nombre, date, heure)
+    /// sont plafonnés par la règle <c>.modal-panel</c> de Styles/input.css, pour ne pas s'étirer sur 896 px.
+    /// Classe littérale (jamais interpolée) pour que Tailwind la voie au scan du CSS.
+    /// </summary>
+    private static string MaxWidthClass(string size) => "sm:max-w-4xl";
 }
 
 /// <summary>
