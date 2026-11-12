@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -36,11 +38,22 @@ public class BoardingReconciliationTests : IAsyncLifetime
     private static readonly Guid Salle1 = Guid.Parse("d7111111-0000-0000-0000-00000000a901");
     private static readonly Guid ChB = Guid.Parse("d7222222-0000-0000-0000-00000000a101");
 
+    /// <summary>Dernière migration d'avant le lot F2 : les colonnes héritées <c>enrollments.BoardingStatus/RoomId</c> que la réconciliation lit existent.</summary>
+    private const string BeforeDrop = "20261007090741_ReconcileBoardingWithLegacyModel";
+
     private readonly Dictionary<string, Guid> _enrollments = new();
     private readonly Dictionary<string, Guid> _students = new();
+    private readonly List<(Guid Id, string Status, Guid? Room)> _legacy = new();
     private int _day;
 
-    public Task InitializeAsync() => _db.InitializeAsync();
+    public async Task InitializeAsync()
+    {
+        await _db.InitializeAsync();
+
+        // Le schéma courant n'a plus les colonnes héritées (lot F2) : on recule d'une migration, là où la réconciliation les lisait.
+        await using var owner = _db.NewOwnerContext();
+        await owner.GetService<IMigrator>().MigrateAsync(BeforeDrop);
+    }
 
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
@@ -106,6 +119,7 @@ public class BoardingReconciliationTests : IAsyncLifetime
             AddBoarder(owner, "n2", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Interne, ch103);
             AddBoarder(owner, "n3", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Interne, ch301);
             await owner.SaveChangesAsync();
+            await ApplyLegacyAsync();
         }
 
         await RunReconciliationAsync();
@@ -200,6 +214,7 @@ public class BoardingReconciliationTests : IAsyncLifetime
         {
             AddBoarder(owner, "n1", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Interne, Ch101);
             await owner.SaveChangesAsync();
+            await ApplyLegacyAsync();
         }
 
         await RunReconciliationAsync();
@@ -231,10 +246,10 @@ public class BoardingReconciliationTests : IAsyncLifetime
                 EnrolledAt = new DateTimeOffset(2027, 9, 2, 8, 0, 0, TimeSpan.Zero)
             };
             owner.Enrollments.Add(reEnrollment);
-            // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la réconciliation lit.
-            owner.Entry(reEnrollment).Property("BoardingStatus").CurrentValue = nameof(BoardingStatus.Interne);
-            owner.Entry(reEnrollment).Property("RoomId").CurrentValue = Ch101;
+            // Ancien modèle (colonnes héritées) : c'est ce que la réconciliation lit ; posé par SQL après l'enregistrement.
+            _legacy.Add((reEnrollment.Id, nameof(BoardingStatus.Interne), Ch101));
             await owner.SaveChangesAsync();
+            await ApplyLegacyAsync();
         }
 
         await RunReconciliationAsync();
@@ -285,6 +300,7 @@ public class BoardingReconciliationTests : IAsyncLifetime
         AddBoarder(owner, "x2", EcoleA, AnneeActive, ClasseA, "M", BoardingStatus.Externe, null);
         AddBoarder(owner, "b1", EcoleB, AnneeB, ClasseB, "M", BoardingStatus.Interne, ChB);
         await owner.SaveChangesAsync();
+        await ApplyLegacyAsync();
     }
 
     private void AddBoarder(
@@ -306,9 +322,20 @@ public class BoardingReconciliationTests : IAsyncLifetime
         _enrollments[key] = enrollment.Id;
         owner.Students.Add(student);
         owner.Enrollments.Add(enrollment);
-        // Ancien modèle (colonnes héritées, propriétés fantômes depuis le lot F1) : c'est ce que la réconciliation lit.
-        owner.Entry(enrollment).Property("BoardingStatus").CurrentValue = status.ToString();
-        owner.Entry(enrollment).Property("RoomId").CurrentValue = room;
+        // Ancien modèle (colonnes héritées) : c'est ce que la réconciliation lit ; posé par SQL après l'enregistrement.
+        _legacy.Add((enrollment.Id, status.ToString(), room));
+    }
+
+    /// <summary>Pose les colonnes héritées des inscriptions semées (le modèle EF courant ne les connaît plus).</summary>
+    private async Task ApplyLegacyAsync()
+    {
+        foreach (var (id, status, room) in _legacy)
+        {
+            await ExecAsync(
+                """UPDATE enrollments SET "BoardingStatus" = @s, "RoomId" = @r WHERE "Id" = @id""", ("s", status), ("r", room), ("id", id));
+        }
+
+        _legacy.Clear();
     }
 
     // ------------------------------------------------------------------ Exécution et lectures (rôle propriétaire)

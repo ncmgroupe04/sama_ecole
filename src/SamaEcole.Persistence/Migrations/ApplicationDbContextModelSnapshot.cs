@@ -1720,13 +1720,6 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasDefaultValue(0m);
 
-                    b.Property<string>("BoardingStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Externe");
-
                     b.Property<Guid>("ClassroomId")
                         .HasColumnType("uuid");
 
@@ -1766,9 +1759,6 @@ namespace SamaEcole.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
-
-                    b.Property<Guid?>("RoomId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -1812,8 +1802,6 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("SchoolId", "ReceiptNumber")
                         .IsUnique()
                         .HasDatabaseName("UX_enrollments_receipt_number");
-
-                    b.HasIndex("SchoolId", "RoomId");
 
                     b.HasIndex("SchoolId", "SchoolYearId");
 
@@ -4229,6 +4217,8 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasAlternateKey("SchoolId", "Id");
 
                     b.HasIndex("BuildingId");
 
@@ -7542,12 +7532,6 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("SamaEcole.Domain.Entities.Room", null)
-                        .WithMany()
-                        .HasForeignKey("SchoolId", "RoomId")
-                        .HasPrincipalKey("SchoolId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SamaEcole.Domain.Entities.SchoolYear", null)
                         .WithMany()
