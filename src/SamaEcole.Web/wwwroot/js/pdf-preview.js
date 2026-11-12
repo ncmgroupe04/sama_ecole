@@ -370,7 +370,7 @@
                         // sa taille logique en CSS : sans cela il s'afficherait deux fois trop grand.
                         canvas.style.width = `${Math.floor(viewport.width)}px`;
                         canvas.style.height = `${Math.floor(viewport.height)}px`;
-                        canvas.className = 'mx-auto mb-4 max-w-full rounded-none bg-white shadow-sm ring-1 ring-slate-200';
+                        canvas.className = 'mx-auto mb-4 max-w-full rounded-md bg-white shadow-sm ring-1 ring-slate-200';
                         canvas.setAttribute('role', 'img');
                         canvas.setAttribute('aria-label', `Page ${pageNumber} sur ${doc.numPages}`);
 

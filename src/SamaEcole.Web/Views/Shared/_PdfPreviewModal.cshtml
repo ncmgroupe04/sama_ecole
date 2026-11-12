@@ -39,14 +39,14 @@
         </div>
 
         <!-- Bandeau d'astuce -->
-        <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+        <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
             <icon name="document" class="w-4 h-4 text-primary-600 shrink-0" />
             <span>Astuce : si l'aperçu ne s'affiche pas correctement, ouvrez le document dans un nouvel onglet ou téléchargez-le depuis les boutons ci-dessus.</span>
         </div>
 
         <!-- Chargement : récupération du document, ou moteur d'aperçu (PDF.js) encore en cours de chargement. -->
         <template x-if="pdfStatus === 'loading'">
-            <div class="w-full bg-slate-50 rounded-none border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3" style="min-height: 400px;">
+            <div class="w-full bg-slate-50 rounded-md border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3" style="min-height: 400px;">
                 <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 <p class="text-sm text-slate-500">Génération de l'aperçu…</p>
             </div>
@@ -54,7 +54,7 @@
 
         <!-- Erreur : cause précise + bouton Réessayer, jamais un cul-de-sac. -->
         <template x-if="pdfStatus === 'error'">
-            <div class="w-full bg-slate-50 rounded-none border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 text-center px-6 py-10" style="min-height: 400px;">
+            <div class="w-full bg-slate-50 rounded-md border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 text-center px-6 py-10" style="min-height: 400px;">
                 <icon name="document" class="w-10 h-10 text-slate-400 mb-1" />
                 <p class="text-sm font-medium text-slate-700">Impossible d'afficher l'aperçu.</p>
                 <p class="text-xs text-slate-500 max-w-md" x-text="pdfErrorMessage"></p>
@@ -85,7 +85,7 @@
                     <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Agrandir">+</button>
                 </div>
             </div>
-            <div class="w-full bg-slate-100 rounded-none border border-slate-200 overflow-auto p-3" style="max-height: 600px;">
+            <div class="w-full bg-slate-100 rounded-md border border-slate-200 overflow-auto p-3" style="max-height: 600px;">
                 <div x-ref="pdfPages"></div>
             </div>
         </div>

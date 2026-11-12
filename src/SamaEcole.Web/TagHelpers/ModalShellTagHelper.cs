@@ -203,7 +203,7 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} modal-panel sm:rounded-none"{panelStyleAttr}>
+                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} modal-panel sm:rounded-xl"{panelStyleAttr}>
                     {cornerClose}
                     {(hasHeader ? $"""
                     <div class="flex-shrink-0 border-b {headerBorderClass} p-6">

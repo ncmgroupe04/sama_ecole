@@ -12,12 +12,30 @@
 }
 
 <div x-data="teachersView()">
- <div class="flex items-start justify-between gap-4">
- <div>
- <h1 class="page-title">Enseignants</h1>
- <p class="page-subtitle">Fiches du personnel enseignant, matières qualifiées et affectations.</p>
- </div>
- </div>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+  <div class="min-w-0">
+  <h1 class="page-title">Enseignants</h1>
+  <p class="page-subtitle">Fiches du personnel enseignant, matières qualifiées et affectations.</p>
+  </div>
+
+  @* Actions de la page, à l'opposé du titre : l'action principale en bleu plein, les autres en secondaire.
+     Elles ne concernent que la liste : masquées sur l'onglet « Emploi du Temps ». *@
+  <div x-show="activeTab === 'teachers'" x-cloak class="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap sm:justify-end">
+  <!-- Export PDF (docs/Volume_7_Security.md « Enseignants ») : Super Admin, Directeur, Secrétariat. -->
+  <button type="button" x-show="canExportTeachers" x-cloak x-on:click="exportTeachersPdf()" class="btn-modal-secondary group">
+  <icon name="document-text" class="w-4 h-4" />
+  Exporter en PDF
+  </button>
+  <button type="button" x-show="canManage" x-cloak x-on:click="openImport()" class="btn-modal-secondary group">
+  <icon name="upload" class="w-4 h-4" />
+  Importer des enseignants
+  </button>
+  <button type="button" x-show="canManage" x-cloak x-on:click="openCreate()" class="btn-modal-primary group">
+  <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+  Ajouter un enseignant
+  </button>
+  </div>
+  </div>
 
  <!-- Navigation principale : Liste vs Emploi du Temps -->
  <div class="mt-6 tab-nav" role="tablist" aria-label="Vue Enseignants">
@@ -37,48 +55,29 @@
 
  <!-- ONGLET 1: Liste des Enseignants -->
  <div x-show="activeTab === 'teachers'" x-cloak>
-     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-     <stat-card label="Total enseignants" icon="users" accent="primary">
-     <span x-text="totalCount">0</span>
-     </stat-card>
-     </div>
-
-     <div class="card mt-6 relative">
- <div class="filter-bar lg:items-center lg:justify-between">
- <div class="flex flex-wrap items-center gap-3">
- <div class="relative">
+     <div class="card mt-6 relative overflow-hidden">
+ <div class="flex flex-wrap items-center gap-3 border-b border-slate-200/70 px-5 py-4 lg:px-6">
+ <div class="relative w-full sm:w-80">
  <span class="absolute inset-y-0 left-0 flex items-center pl-3">
  <icon name="search" class="w-4 h-4 text-slate-400" />
  </span>
  <input type="text" x-model="search" x-on:input.debounce.400ms="applyFilters()"
  placeholder="Nom, matricule ou e-mail..." aria-label="Rechercher un enseignant"
- class="input-field mt-0 pl-9 pr-3 w-full sm:w-72" />
+ class="input-field mt-0 pl-9 pr-3 w-full" />
  </div>
- <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+ <button type="button" x-show="search.trim()" x-cloak x-on:click="resetFilters()"
+ class="-mx-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
  Réinitialiser
  </button>
- </div>
-
- <div class="flex items-center gap-3">
- <!-- Export PDF (docs/Volume_7_Security.md « Enseignants ») : Super Admin, Directeur, Secrétariat. -->
- <button type="button" x-show="canExportTeachers" x-cloak x-on:click="exportTeachersPdf()" class="btn-modal-secondary group">
- <icon name="document-text" class="w-4 h-4" />
- Exporter en PDF
- </button>
- <button type="button" x-show="canManage" x-cloak x-on:click="openImport()" class="btn-modal-secondary group">
- <icon name="upload" class="w-4 h-4" />
- Importer des enseignants
- </button>
- <button type="button" x-show="canManage" x-cloak x-on:click="openCreate()" class="btn-modal-primary group">
- <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
- Ajouter un enseignant
- </button>
- </div>
+ <p class="ml-auto text-sm text-slate-500" aria-live="polite">
+ <span class="font-semibold text-slate-700" x-text="totalCount">0</span>
+ <span x-text="totalCount > 1 ? 'enseignants' : 'enseignant'">enseignant</span>
+ </p>
  </div>
 
  <div class="overflow-x-auto">
  <table class="w-full text-left border-collapse">
- <thead>
+ <thead x-show="isLoading || teachers.length > 0">
  <tr class="table-head">
  <th class="py-3 px-4">Matricule</th>
  <th class="py-3 px-4">Enseignant</th>
@@ -95,10 +94,34 @@
  </template>
  </template>
 
- <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="!isLoading && teachers.length === 0" x-cloak>
+  <tr x-show="!isLoading && teachers.length === 0" x-cloak>
  <td colspan="6">
- <empty-state icon="users" title="Aucun enseignant trouvé."
- hint="Ajustez la recherche, ou ajoutez une fiche enseignant." />
+ <div class="flex flex-col items-center gap-3 px-6 py-14 text-center">
+ <span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-600"><icon name="users" class="w-6 h-6" /></span>
+ <template x-if="search.trim()">
+ <div>
+ <p class="font-semibold text-slate-900">Aucun enseignant ne correspond à cette recherche.</p>
+ <p class="mt-1 text-sm text-slate-500">Vérifiez l'orthographe ou essayez le matricule.</p>
+ <button type="button" x-on:click="resetFilters()" class="btn-modal-secondary group mt-4">Réinitialiser la recherche</button>
+ </div>
+ </template>
+ <template x-if="!search.trim()">
+ <div>
+ <p class="font-semibold text-slate-900">Aucun enseignant pour l'instant.</p>
+ <p class="mt-1 text-sm text-slate-500">Ajoutez une première fiche, ou importez toute une liste d'un coup.</p>
+ <div x-show="canManage" x-cloak class="mt-4 flex flex-wrap items-center justify-center gap-2">
+ <button type="button" x-on:click="openCreate()" class="btn-modal-primary group">
+ <icon name="plus" class="w-4 h-4" />
+ Ajouter un enseignant
+ </button>
+ <button type="button" x-on:click="openImport()" class="btn-modal-secondary group">
+ <icon name="upload" class="w-4 h-4" />
+ Importer des enseignants
+ </button>
+ </div>
+ </div>
+ </template>
+ </div>
  </td>
  </tr>
 

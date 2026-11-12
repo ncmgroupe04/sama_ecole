@@ -57,6 +57,18 @@ module.exports = {
       // conservé tel quel, seule couleur de ce groupe qui reste une teinte Tailwind ad hoc.
       // Design fluide 2026 : ombres teintées de bleu marine (jamais un gris neutre), une pour les
       // panneaux, une pour les aplats bleus (bouton principal, élément actif).
+      // Arrondis très fins, uniformes sur toute la plateforme (demande produit : « presque
+      // imperceptibles »). Redéfinir l'échelle ici change d'un coup les ~1000 usages de rounded-lg/xl/2xl/3xl
+      // des vues, des composants et des Tag Helpers. `rounded-full` (avatars, pastilles, jauges) est conservé.
+      borderRadius: {
+        sm: "2px",
+        DEFAULT: "3px",
+        md: "4px",
+        lg: "4px",
+        xl: "5px",
+        "2xl": "6px",
+        "3xl": "6px"
+      },
       boxShadow: {
         fluid: "0 1px 2px rgb(10 26 68 / 0.04), 0 14px 32px -22px rgb(21 52 140 / 0.16)",
         "fluid-blue": "0 8px 18px -8px rgb(37 99 235 / 0.75)"

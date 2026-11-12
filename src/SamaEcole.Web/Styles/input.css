@@ -809,6 +809,24 @@
     max-width: 16rem;
   }
 
+  /* Cadre des fenêtres : UNE ligne fine et continue, bleue, posée à 6 px du bord (un filet de 1 px,
+     visible sans être sombre) — l'allure d'un cadre de diplôme, sobre. Posée UNE fois sur le panneau
+     commun (.modal-panel, ModalShellTagHelper) : toutes les fenêtres de la plateforme la reprennent.
+     Pseudo-élément décoratif : ni focus ni clic (pointer-events: none), au-dessus du contenu qui défile. */
+  .modal-panel::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    z-index: 29;
+    pointer-events: none;
+    border: 1px solid rgb(37 99 235 / 0.38);
+    border-radius: 2px;
+  }
+
+  .dark .modal-panel::after {
+    border-color: rgb(109 148 245 / 0.42);
+  }
+
   .card-hover {
     @apply cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/70 hover:shadow-md;
   }
