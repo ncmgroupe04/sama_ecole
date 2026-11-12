@@ -761,7 +761,10 @@
  <!-- ONGLET 2: Emploi du Temps -->
  <div x-show="activeTab === 'schedule'" x-cloak>
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6">
-        <h2 class="text-lg font-bold text-slate-900">Emploi du Temps</h2>
+        <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-lg font-bold text-slate-900">Emploi du Temps</h2>
+            <how-to-button article="emploi-du-temps" label="Comment construire l'emploi du temps ?" />
+        </div>
         <div class="flex flex-wrap items-center gap-4">
             <!-- Toggle Vue Enseignant / Vue Classe -->
             <div class="tab-nav shrink-0" role="tablist" aria-label="Mode d'affichage de l'emploi du temps">

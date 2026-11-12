@@ -6,6 +6,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { loadScripts, plain } from './harness.mjs';
 
 const sections = [
@@ -50,4 +52,24 @@ test("les écrans de configuration importants ont un guide dans le Centre d'aide
             assert.ok(Array.isArray(article.procedure) && article.procedure.length > 0, `guide sans étapes : ${article.id}`);
         }
     }
+});
+
+/** Tous les .cshtml sous Views/. */
+function cshtmlFiles(dir) {
+    return readdirSync(dir).flatMap((name) => {
+        const full = join(dir, name);
+        return statSync(full).isDirectory() ? cshtmlFiles(full) : full.endsWith('.cshtml') ? [full] : [];
+    });
+}
+
+test("chaque <how-to-button article=\"…\"> des vues pointe vers un article qui existe dans le Centre d'aide", () => {
+    const ctx = loadScripts(['help.js', 'how-to.js']);
+    const real = ctx.window.HELP_SECTIONS;
+    const ids = new Set(real.flatMap((section) => section.articles.map((a) => a.id)));
+    const used = [];
+    for (const file of cshtmlFiles(new URL('../../Views', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {
+        for (const m of readFileSync(file, 'utf8').matchAll(/<how-to-button\s+article="([^"]+)"/g)) used.push({ file, id: m[1] });
+    }
+    assert.ok(used.length >= 10, `bouton d'aide spécifique attendu sur au moins 10 écrans (trouvé ${used.length})`);
+    for (const { file, id } of used) assert.ok(ids.has(id), `article inconnu « ${id} » dans ${file}`);
 });

@@ -52,7 +52,18 @@
         return found.map((f) => f.article);
     }
 
+    /** Article d'identifiant donné, ou null. */
+    function findArticle(sections, id) {
+        for (const section of sections || []) {
+            for (const article of section.articles || []) {
+                if (article.id === id) return article;
+            }
+        }
+        return null;
+    }
+
     window.howToMatch = matchArticles;
+    window.howToFind = findArticle;
 
     let loading = null;
     function loadHelpData() {
@@ -89,6 +100,24 @@
             get pick() { return String(this.index); },
             set pick(value) { this.index = Number(value) || 0; },
             dismiss() { this.visible = false; },
+
+            /** Ouvre UN article précis du Centre d'aide (bouton spécifique d'une fonctionnalité, voir HowToButtonTagHelper). */
+            async showArticle(id) {
+                this.visible = true;
+                this.failed = false;
+                this.index = 0;
+                this.loading = true;
+                try {
+                    const sections = await loadHelpData();
+                    const found = findArticle(sections, id);
+                    this.articles = found ? [found] : matchArticles(sections, window.location.pathname, window.location.search);
+                } catch (err) {
+                    this.failed = true;
+                    this.articles = [];
+                } finally {
+                    this.loading = false;
+                }
+            },
 
             async show() {
                 this.visible = true;

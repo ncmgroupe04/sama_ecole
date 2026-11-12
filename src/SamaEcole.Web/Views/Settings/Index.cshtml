@@ -319,6 +319,7 @@
  un Secrétariat/Enseignant qui ne voit plus certaines entrées de menu doit pouvoir comprendre
  pourquoi ici, en lecture seule — les interrupteurs restent simplement désactivés pour lui. *@
  <div x-show="!isLoading && !loadError && tab === 'modules'" x-cloak>
+ <div class="mb-4 flex justify-end"><how-to-button article="activer-desactiver-module" label="Comment activer un module ?" /></div>
  <div class="card p-6 w-full space-y-6">
  <div class="icon-heading">
  <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="layers" class="w-5 h-5" /></span>
@@ -636,6 +637,7 @@
 
  <!-- ============================= SPOKE : FORMATS & SIGNATURES OFFICIELLES ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'formats-signatures'" x-cloak>
+ <div class="mb-4 flex justify-end"><how-to-button article="matricules-format-numero" label="Comment fonctionnent les matricules ?" /></div>
  <div class="card p-6 w-full">
  <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-5">
 
@@ -924,6 +926,7 @@
 
  <!-- ============================= SPOKE : ANNÉES SCOLAIRES ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'annees-scolaires'" x-cloak>
+ <div class="mb-4 flex justify-end"><how-to-button article="annee-scolaire" label="Comment ouvrir et clôturer une année ?" /></div>
  @await Html.PartialAsync("_SchoolYearsPanel")
  @await Html.PartialAsync("_SchoolClosuresPanel")
  </div>

@@ -135,6 +135,9 @@
       aria-label="Rechercher une matière"
       class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
+    @* Aides spécifiques à la vue ouverte (les coefficients ont déjà leur bouton, dans leur onglet). *@
+    <how-to-button article="apc-matieres" label="Comment construire la grille d'évaluation ?" x-show="viewMode === 'structure'" x-cloak />
+    <how-to-button article="matieres-par-classe-options" label="Comment fonctionnent les matières optionnelles ?" x-show="viewMode === 'class-subjects'" x-cloak />
     @* Action principale : au bout de la ligne des onglets de vue et de la recherche (une seule ligne de commandes),
        poussée à droite par ml-auto. *@
     <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
