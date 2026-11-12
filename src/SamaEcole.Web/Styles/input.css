@@ -100,6 +100,19 @@
     background-image: none;
   }
 
+  /* Cases à cocher et boutons radio : la coche prend la couleur de marque (marine) sur TOUTE la plateforme.
+     Sans cela, le navigateur dessine son bleu par défaut, étranger à la charte. En mode sombre, le marine
+     disparaîtrait sur le fond : bleu clair. Les cartes de choix sélectionnées (.choice-selected) gardent leur coche blanche. */
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #00174B;
+  }
+
+  .dark input[type="checkbox"],
+  .dark input[type="radio"] {
+    accent-color: #6D94F5;
+  }
+
   /* Montants, matricules, dates : chiffres alignés partout, sans classe à poser. */
   body {
     font-variant-numeric: tabular-nums;
