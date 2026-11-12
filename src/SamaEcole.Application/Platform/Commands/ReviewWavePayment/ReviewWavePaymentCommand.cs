@@ -25,7 +25,9 @@ namespace SamaEcole.Application.Platform.Commands.ReviewWavePayment;
 /// Identifiant de la transaction Wave retrouvée sur le relevé — OBLIGATOIRE pour valider, inutile pour rejeter. Il est
 /// unique : un même règlement ne peut pas activer deux abonnements (le lien marchand ne porte aucune référence).
 /// </param>
-public record ReviewWavePaymentCommand(Guid PaymentId, bool Approve, string? TransactionRef = null) : IRequest;
+// IRequest<Unit> et non IRequest : avec MediatR 12, une commande « void » (IRequest) ne traverse PAS les pipeline behaviors
+// (ValidationBehavior, AuditLoggingBehavior) — son validateur ne serait jamais exécuté. Convention du dépôt : IRequest<Unit>.
+public record ReviewWavePaymentCommand(Guid PaymentId, bool Approve, string? TransactionRef = null) : IRequest<Unit>;
 
 public class ReviewWavePaymentCommandValidator : AbstractValidator<ReviewWavePaymentCommand>
 {
@@ -34,11 +36,13 @@ public class ReviewWavePaymentCommandValidator : AbstractValidator<ReviewWavePay
         RuleFor(c => c.PaymentId).NotEmpty();
 
         // Lettres, chiffres, « _ » et « - » seulement (ex. T_XXXXXXXXXX) : aucune ponctuation libre dans une clé unique.
-        RuleFor(c => c.TransactionRef)
+        // Validé APRÈS rognage : le handler rogne et normalise (« ␣t_ab12␣ » = « T_AB12 »), la règle voit donc la même valeur que lui.
+        RuleFor(c => (c.TransactionRef ?? string.Empty).Trim())
             .NotEmpty().WithMessage("Saisissez l'identifiant de la transaction Wave (visible sur le relevé du compte marchand).")
             .MinimumLength(6).WithMessage("L'identifiant de transaction Wave est trop court.")
             .MaximumLength(64)
             .Matches("^[A-Za-z0-9_-]+$").WithMessage("L'identifiant de transaction ne contient que des lettres, chiffres, « _ » et « - ».")
+            .OverridePropertyName(nameof(ReviewWavePaymentCommand.TransactionRef))
             .When(c => c.Approve);
     }
 }
@@ -50,9 +54,9 @@ public class ReviewWavePaymentCommandHandler(
     IEmailSender emailSender,
     TimeProvider timeProvider,
     ILogger<ReviewWavePaymentCommandHandler> logger)
-    : IRequestHandler<ReviewWavePaymentCommand>
+    : IRequestHandler<ReviewWavePaymentCommand, Unit>
 {
-    public async Task Handle(ReviewWavePaymentCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(ReviewWavePaymentCommand request, CancellationToken cancellationToken)
     {
         var superAdminId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Aucun utilisateur authentifié.");
@@ -111,5 +115,7 @@ public class ReviewWavePaymentCommandHandler(
         logger.LogInformation(
             "Paiement Wave {PaymentId} -> {Status} par le Super Admin {SuperAdminId} pour l'école {SchoolId}.",
             request.PaymentId, finalStatus, superAdminId, result.SchoolId);
+
+        return Unit.Value;
     }
 }
