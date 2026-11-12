@@ -765,7 +765,17 @@ document.addEventListener('alpine:init', () => {
         get classesNavVisible() { return Alpine.store('schoolConfig').classesNavVisible; },
 
         init() {
-            return Alpine.store('schoolConfig').init();
+            // Le menu reste invisible (voir .sidebar-nav dans Styles/input.css) jusqu'à ce que la configuration de
+            // l'établissement soit résolue : les pôles masqués par x-cloak (Gestion Scolaire, Surveillance,
+            // Comptabilité) n'apparaissent plus un à un après le chargement, la barre ne « sursaute » plus.
+            const loading = Alpine.store('schoolConfig').init();
+            const mark = () => { if (this.$el && typeof this.$el.setAttribute === 'function') this.$el.setAttribute('data-ready', ''); };
+            const reveal = () => {
+                if (typeof this.$nextTick !== 'function' || typeof requestAnimationFrame !== 'function') { mark(); return; }
+                this.$nextTick(() => requestAnimationFrame(mark));
+            };
+            Promise.resolve(loading).then(reveal, reveal);
+            return loading;
         },
 
         canView(roles) { return roles.includes(this.role); }

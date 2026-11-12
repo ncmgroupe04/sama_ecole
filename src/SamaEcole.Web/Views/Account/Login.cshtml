@@ -19,13 +19,22 @@
       demande de réduire les animations). -->
  <div class="auth-hero hidden lg:flex flex-col bg-primary-900 text-white px-14 py-12 overflow-hidden">
  <div class="flex items-center gap-3">
- <div aria-hidden="true" class="w-11 h-11 rounded-xl bg-primary-500 text-white flex items-center justify-center font-bold text-xl">U</div>
+ <div aria-hidden="true" class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] flex items-center justify-center"><icon name="logo-mark" class="w-9 h-9" /></div>
  <span class="font-bold text-2xl tracking-tight">Unikol</span>
  </div>
 
+ @* La note : « 20/20 » cerclé au stylo rouge, tamponné une fois les trois bénéfices cochés (voir .auth-grade dans
+    Styles/input.css). Purement décoratif : aria-hidden. *@
+ <div aria-hidden="true" class="auth-grade absolute right-14 top-28 select-none">
+ <svg viewBox="0 0 150 86" class="w-[9.5rem]" fill="none" stroke-linecap="round" stroke-linejoin="round">
+ <path class="auth-grade-ring" pathLength="1" d="M20 44 C16 18 56 6 92 9 C128 12 148 28 141 52 C134 74 94 82 58 77 C28 73 8 62 16 40" stroke="#F87171" stroke-width="3.2" />
+ <text x="75" y="55" text-anchor="middle" font-size="35" font-weight="800" fill="#FCA5A5" font-style="italic" letter-spacing="-1">20/20</text>
+ </svg>
+ </div>
+
  <div class="mt-auto max-w-lg">
- <h2 class="text-[2.75rem] font-bold leading-[1.05] tracking-tight max-w-[14ch]">La gestion de votre école, réunie en un seul endroit.</h2>
- <p class="mt-5 text-primary-200 text-lg leading-relaxed max-w-[46ch]">
+ <h2 class="auth-title text-[2.75rem] font-bold leading-[1.05] tracking-tight max-w-[14ch]">La gestion de votre école, réunie en un seul endroit.</h2>
+ <p class="auth-lead mt-5 text-primary-200 text-lg leading-relaxed max-w-[46ch]">
  Inscriptions, notes, bulletins et finances, accessibles partout et à jour en permanence.
  </p>
 
@@ -62,7 +71,7 @@
 
  <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
  <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
- <div aria-hidden="true" class="w-9 h-9 rounded-xl bg-primary-500 text-white flex items-center justify-center font-bold">U</div>
+ <div aria-hidden="true" class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] flex items-center justify-center"><icon name="logo-mark" class="w-7 h-7" /></div>
  <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
@@ -153,7 +162,7 @@
  <button type="submit"
  x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
- class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none">
+ class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:brightness-110 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none">
  <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

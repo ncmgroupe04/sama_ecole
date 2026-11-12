@@ -967,6 +967,29 @@
      (la bordure basse du <header>). */
   /* Menu latéral : barre de défilement FINE et discrète (clair sur marine) — sur Windows, la barre classique
      de ~15 px mangeait la largeur utile et faisait passer « Gestion Scolaire » à la ligne. */
+  /* Le menu n'est affiché qu'une fois ses groupes résolus (auth.js : sidebarNav.init pose data-ready) : sans cela,
+     les pôles masqués par x-cloak (Gestion Scolaire, Surveillance, Comptabilité) apparaissaient un à un après le
+     chargement et la barre « sursautait ». Filet de sécurité : visible au bout de 2 s si le script n'a pas répondu,
+     et toujours visible sans JavaScript. */
+  .sidebar-nav {
+    opacity: 0;
+    animation: sidebar-nav-fallback 0s linear 2s forwards;
+  }
+
+  .sidebar-nav[data-ready] {
+    opacity: 1;
+    animation: none;
+    transition: opacity 0.18s ease-out;
+  }
+
+  @keyframes sidebar-nav-fallback {
+    to { opacity: 1; }
+  }
+
+  @media (scripting: none) {
+    .sidebar-nav { opacity: 1; animation: none; }
+  }
+
   .sidebar-nav {
     scrollbar-width: thin;
     scrollbar-color: rgb(180 197 255 / 0.35) transparent;
@@ -995,6 +1018,7 @@
     background-size: 8px 8px, 8px 8px, 32px 32px;
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+    animation: auth-grid 1.4s ease-out both;
   }
 
   .auth-hero::after {
@@ -1012,6 +1036,25 @@
   .auth-hero > * {
     position: relative;
     z-index: 1;
+  }
+
+  .auth-title {
+    animation: auth-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+  }
+
+  .auth-lead {
+    animation: auth-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both;
+  }
+
+  /* La note : tamponnée après la dernière coche (2,6 s), le cercle se trace au stylo (0,7 s). */
+  .auth-grade {
+    transform: rotate(-8deg);
+    animation: auth-stamp 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) 2.95s both;
+  }
+
+  .auth-grade-ring {
+    stroke-dasharray: 1;
+    animation: auth-draw 0.7s ease-out 3.05s both;
   }
 
   .auth-point {
@@ -1034,6 +1077,21 @@
   .auth-point:nth-child(2) .auth-tick { animation-delay: 1.8s; }
   .auth-point:nth-child(3) .auth-tick { animation-delay: 2.3s; }
 
+  @keyframes auth-grid {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes auth-rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes auth-stamp {
+    from { opacity: 0; transform: rotate(-8deg) scale(1.7); }
+    to { opacity: 1; transform: rotate(-8deg) scale(1); }
+  }
+
   @keyframes auth-margin {
     from { transform: scaleY(0); }
     to { transform: scaleY(1); }
@@ -1050,7 +1108,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .auth-hero::before,
     .auth-hero::after,
+    .auth-title,
+    .auth-lead,
+    .auth-grade,
+    .auth-grade-ring,
     .auth-point,
     .auth-ring,
     .auth-tick {
