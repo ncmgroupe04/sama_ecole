@@ -440,6 +440,11 @@
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                         </a>
                     </template>
+ <a x-show="detailStudent && waLink(detailStudent.guardianPhone)" x-cloak :href="detailStudent ? waLink(detailStudent.guardianPhone) : '#'" target="_blank" rel="noopener noreferrer" title="Écrire sur WhatsApp"
+ class="bg-emerald-600 text-white hover:bg-emerald-700 p-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500">
+ <icon name="whatsapp" class="w-3.5 h-3.5" />
+ <span class="sr-only">WhatsApp</span>
+ </a>
                 </div>
             </div>
             <div>
@@ -754,37 +759,37 @@
  <template x-if="studentDetail && studentDetail.payments">
  <div>
  <!-- Synthèse financière : reflète les inscriptions, pertinente même sans versement. -->
- <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
- <div class="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="grid grid-cols-1 sm:grid-cols-3 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-fluid divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
+ <div class="p-5">
  <div class="flex items-start gap-4">
- <div class="bg-slate-100 text-slate-700 p-2.5 rounded-xl shrink-0">
+ <div class="bg-slate-100 text-slate-700 p-2 rounded-md shrink-0">
  <icon name="document-text" class="w-5 h-5" />
  </div>
  <div>
  <p class="text-sm font-semibold text-slate-800">Total dû</p>
- <p class="text-2xl font-extrabold text-slate-900 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
+ <p class="text-xl font-bold text-slate-900 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
  </div>
  </div>
  </div>
- <div class="bg-emerald-50/60 border border-emerald-200/60 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="bg-emerald-50/50 p-5">
  <div class="flex items-start gap-4">
- <div class="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl shrink-0">
+ <div class="bg-emerald-100 text-emerald-700 p-2 rounded-md shrink-0">
  <icon name="check-circle" class="w-5 h-5" />
  </div>
  <div>
- <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total versé</p>
- <p class="text-2xl font-extrabold text-emerald-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
+ <p class="text-sm font-semibold text-emerald-700">Total versé</p>
+ <p class="text-xl font-bold text-emerald-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
  </div>
  </div>
  </div>
- <div class="bg-amber-50/60 border border-amber-200/60 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="bg-amber-50/50 p-5">
  <div class="flex items-start gap-4">
- <div class="bg-amber-100 text-amber-700 p-2.5 rounded-xl shrink-0">
+ <div class="bg-amber-100 text-amber-700 p-2 rounded-md shrink-0">
  <icon name="clock" class="w-5 h-5" />
  </div>
  <div>
- <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Solde restant</p>
- <p class="text-2xl font-extrabold text-amber-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
+ <p class="text-sm font-semibold text-amber-700">Solde restant</p>
+ <p class="text-xl font-bold text-amber-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
  </div>
  </div>
  </div>
@@ -923,9 +928,20 @@
  <div class="px-6 pb-6 pt-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-100 mt-4">
  <div>
  <template x-if="canManageStudent && studentDetail">
- <button type="button" @@click="openDeleteStudent()" class="text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-semibold rounded-lg transition-colors">
- Supprimer
+ <div class="relative" x-data="{ moreOpen: false }" x-on:keydown.escape.window="moreOpen = false" x-on:click.outside="moreOpen = false">
+ <button type="button" x-on:click="moreOpen = !moreOpen" :aria-expanded="moreOpen" aria-haspopup="menu"
+ class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+ <icon name="more-vertical" class="w-4 h-4" />
+ Plus d'actions
  </button>
+ <div x-show="moreOpen" x-cloak role="menu" class="absolute bottom-full left-0 z-10 mb-2 w-48 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+ <button type="button" role="menuitem" x-on:click="moreOpen = false; openDeleteStudent()"
+ class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">
+ <icon name="trash-2" class="w-4 h-4" />
+ Supprimer la fiche
+ </button>
+ </div>
+ </div>
  </template>
  </div>
  <div class="flex gap-2 sm:ml-auto">

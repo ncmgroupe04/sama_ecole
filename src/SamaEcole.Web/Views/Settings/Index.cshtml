@@ -54,16 +54,6 @@
  <icon name="eye" class="w-4 h-4 text-primary" />
  Aperçu des reçus
  </button>
- <button type="button" x-show="isDirecteur && currentTabHasQuickSave()" x-cloak
- x-on:click="cancelCurrentTabChanges()" :disabled="isSavingCurrentTab()" class="btn-modal-secondary text-xs">
- Annuler les modifications
- </button>
- <button type="button" x-show="isDirecteur && currentTabHasQuickSave()" x-cloak
- x-on:click="saveCurrentTab()" :disabled="isSavingCurrentTab()" class="btn-modal-primary text-xs group">
- <icon name="checkmark-circle" class="w-4 h-4" />
- <span x-text="isSavingCurrentTab() ? 'Enregistrement…' : 'Enregistrer'"></span>
- <kbd class="hidden sm:inline-block ml-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">Ctrl+S</kbd>
- </button>
  </div>
  </div>
 
@@ -1961,5 +1951,20 @@
  </div>
  </div>
  </modal-shell>
+
+ @* Barre d'enregistrement : fixe en bas, visible seulement quand l'onglet a des modifications à enregistrer (Ctrl+S inchangé). *@
+ <div x-show="isDirecteur && currentTabHasQuickSave()" x-cloak role="region" aria-label="Enregistrement des modifications"
+ class="fixed bottom-6 left-4 right-4 z-30 flex items-center gap-3 rounded-lg bg-primary-900 px-5 py-3 text-white shadow-2xl lg:left-[calc(17rem+1.5rem)] lg:right-6">
+ <span class="h-2 w-2 shrink-0 rounded-full bg-amber-400" aria-hidden="true"></span>
+ <p class="min-w-0 flex-1 text-sm font-medium">Modifications non enregistrées</p>
+ <button type="button" x-on:click="cancelCurrentTabChanges()" :disabled="isSavingCurrentTab()"
+ class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10 disabled:opacity-50">Annuler</button>
+ <button type="button" x-on:click="saveCurrentTab()" :disabled="isSavingCurrentTab()"
+ class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary-900 transition-colors hover:bg-slate-100 disabled:opacity-50">
+ <icon name="checkmark-circle" class="w-4 h-4" />
+ <span x-text="isSavingCurrentTab() ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <kbd class="hidden sm:inline-block rounded bg-primary-900/10 px-1.5 py-0.5 text-[10px] font-mono">Ctrl+S</kbd>
+ </button>
+ </div>
 
 </div>
