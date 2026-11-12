@@ -45,14 +45,14 @@
    Paie… (Styles/input.css) ; tab-nav-scroll.js l'auto-améliore (défilement/fondu) sans
    enregistrement JS supplémentaire, ce nouvel élément étant détecté par son MutationObserver.
    ═══════════════════════════════════════════════════════════════════════════ *@
-<nav class="hidden lg:flex tab-nav-scroll" role="tablist" aria-label="Navigation rapide entre modules"
+<nav class="hidden lg:flex quick-nav" role="tablist" aria-label="Navigation rapide entre modules"
  x-show="@visibleCountExpr > 1" x-cloak>
  @foreach (var item in items)
  {
   var active = path.StartsWith(item.Href, StringComparison.OrdinalIgnoreCase);
   <a href="@item.Href" role="tab" aria-selected="@active.ToString().ToLowerInvariant()"
    x-show="@ShowExpr(item)" x-cloak
-   class="tab-btn @(active ? "tab-btn-active" : "")">
+   class="quick-nav-link @(active ? "quick-nav-link-active" : "")">
    <icon name="@item.Icon" class="w-4 h-4" />
    <span>@item.Label</span>
   </a>

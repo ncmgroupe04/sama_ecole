@@ -812,7 +812,9 @@
   /* Cadre des fenêtres : UNE ligne fine et continue, bleue, posée à 6 px du bord (un filet de 1 px,
      visible sans être sombre) — l'allure d'un cadre de diplôme, sobre. Posée UNE fois sur le panneau
      commun (.modal-panel, ModalShellTagHelper) : toutes les fenêtres de la plateforme la reprennent.
-     Pseudo-élément décoratif : ni focus ni clic (pointer-events: none), au-dessus du contenu qui défile. */
+     Pseudo-élément décoratif : ni focus ni clic (pointer-events: none). Le panneau porte une marge
+     intérieure de 7 px (p-[7px], ModalShellTagHelper) : en-tête, corps défilant et pied restent À
+     L'INTÉRIEUR du cadre, le texte ne passe donc jamais sous la ligne ni contre le bord. */
   .modal-panel::after {
     content: "";
     position: absolute;
@@ -957,6 +959,43 @@
   .tab-nav-scroll-wrap[data-overflow-left] .tab-nav-scroll-arrow-left,
   .tab-nav-scroll-wrap[data-overflow-right] .tab-nav-scroll-arrow-right {
     @apply pointer-events-auto opacity-100;
+  }
+
+  /* Navigation rapide entre modules (barre sous l'en-tête, _QuickNav.cshtml) : onglets SOULIGNÉS posés
+     directement sur la page — pas de cadre, pas de pastille pleine. L'onglet actif : texte marine et
+     trait bleu de 2 px ; au survol : trait bleu pâle. Un seul filet sépare la rangée du contenu
+     (la bordure basse du <header>). */
+  .quick-nav {
+    @apply flex items-center gap-1 overflow-x-auto scrollbar-hide;
+  }
+
+  .quick-nav-link {
+    @apply relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-3.5 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .quick-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background-color 0.2s;
+  }
+
+  .quick-nav-link:hover::after {
+    background: rgb(37 99 235 / 0.28);
+  }
+
+  .quick-nav-link-active {
+    @apply font-semibold text-primary-900;
+  }
+
+  .quick-nav-link-active::after,
+  .quick-nav-link-active:hover::after {
+    background: #2563EB;
   }
 
   .tab-btn {
