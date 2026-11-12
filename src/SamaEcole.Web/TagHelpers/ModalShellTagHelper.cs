@@ -139,14 +139,14 @@ public class ModalShellTagHelper : TagHelper
         var overlayClass = dark ? "bg-black/60" : "bg-slate-900/50";
         var surfaceClass = dark
             ? "border border-white/10 bg-zinc-900/85 text-zinc-100 shadow-2xl shadow-black/40 backdrop-blur-xl"
-            : "border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl";
-        var headerBorderClass = dark ? "border-white/10" : "border-slate-200/60";
+            : "border border-slate-200 bg-white shadow-2xl shadow-slate-900/15";
+        var headerBorderClass = dark ? "border-white/10" : "border-slate-200";
         var titleClass = dark ? "text-white" : "text-slate-900";
         var subtitleClass = dark ? "text-zinc-300" : "text-slate-700";
         var closeClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-900/5 hover:text-slate-600";
         var cornerCloseClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-600";
-        var bodyTintClass = dark ? "" : " bg-slate-50/30";
-        var footerClass = dark ? "border-white/10 bg-black/20" : "border-slate-200/60 bg-white/60";
+        var bodyTintClass = ""; // une seule surface : ni teinte ni translucidité dans la fenêtre
+        var footerClass = dark ? "border-white/10 bg-black/20" : "border-slate-200 bg-white";
 
         var hasHeader = !HideHeader && (!string.IsNullOrWhiteSpace(titleHtml) || subtitle is not null);
         var headerlessDialog = !HideHeader && !hasHeader;
