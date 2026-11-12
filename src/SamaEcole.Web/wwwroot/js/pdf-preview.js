@@ -63,16 +63,6 @@
     /** Largeur de repli quand le conteneur n'est pas encore mesurable (modale en cours d'ouverture). */
     const FALLBACK_WIDTH = 640;
 
-    /**
-     * Largeur maximale de la modale d'aperçu, en pixels — le gabarit `5xl` de modal-shell
-     * (64 rem / 1024 px, celui des fiches élève et enseignant) MOINS 10 %, pour un cadre un peu
-     * plus resserré autour du document sans casser l'homogénéité d'un écran à l'autre.
-     */
-    const PANEL_MAX_WIDTH = 922;
-
-    /** Gouttières horizontales de modal-shell (`sm:p-4`, 2 × 1 rem) : la modale ne les dépasse jamais. */
-    const PANEL_GUTTERS = 32;
-
     let pdfjsPromise = null;
 
     /**
@@ -380,7 +370,7 @@
                         // sa taille logique en CSS : sans cela il s'afficherait deux fois trop grand.
                         canvas.style.width = `${Math.floor(viewport.width)}px`;
                         canvas.style.height = `${Math.floor(viewport.height)}px`;
-                        canvas.className = 'mx-auto mb-4 max-w-full rounded-lg bg-white shadow-sm ring-1 ring-slate-200';
+                        canvas.className = 'mx-auto mb-4 max-w-full rounded-md bg-white shadow-sm ring-1 ring-slate-200';
                         canvas.setAttribute('role', 'img');
                         canvas.setAttribute('aria-label', `Page ${pageNumber} sur ${doc.numPages}`);
 
@@ -435,17 +425,12 @@
                 canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
 
                 /**
-                 * Largeur de la modale d'aperçu : le gabarit `size="5xl"` de modal-shell
-                 * (64 rem / 1024 px, celui des fiches élève et enseignant) moins 10 %
-                 * (PANEL_MAX_WIDTH), plutôt qu'un gabarit calé au format du document.
-                 * Bornée à la largeur de la fenêtre moins les gouttières de la modale. Chaîne vide
-                 * tant que la 1re page n'est pas mesurée : le gabarit `size` de modal-shell s'applique
-                 * alors (transitoire, < 1 s).
+                 * Largeur de la modale d'aperçu : AUCUNE surcharge. Toutes les fenêtres de la plateforme
+                 * partagent la même largeur (ModalShellTagHelper.MaxWidthClass, 4xl = 896 px) : l'aperçu
+                 * n'a plus sa propre taille. Méthode conservée (la vue la lie) et renvoie une chaîne vide.
                  */
                 pdfPanelStyle() {
-                    if (!this.pdfDocRatio) return '';
-                    const maxWidth = Math.min(PANEL_MAX_WIDTH, (window.innerWidth || 1024) - PANEL_GUTTERS);
-                    return `max-width: ${Math.round(Math.max(maxWidth, 320))}px`;
+                    return '';
                 },
 
                 // ---------------------------------------------------------------------- actions

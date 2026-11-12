@@ -27,7 +27,7 @@
      prise sur la hauteur des cartes de matières, seul contenu qu'on vient réellement lire ici :
        1. ce que contient l'écran (tuiles) et l'action principale, à l'opposé ;
        2. tout ce qui RESTREINT l'affichage — mode de lecture, recherche, cycle — côte à côte. *@
-  <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+  <div class="flex flex-col gap-4">
    <div class="flex flex-wrap items-center gap-4">
     <div class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-xl border border-slate-200/80 shadow-sm">
      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600">
@@ -92,13 +92,6 @@
      </nav>
     </div>
 
-    @* Action principale alignée à droite, sur la même ligne que les tuiles : elle occupe une
-       hauteur déjà payée par les tuiles, au lieu d'en réclamer une à elle. *@
-    <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
-     class="btn-modal-primary group h-10 px-4 ml-auto">
-     <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
-     Nouvelle matière
-    </button>
    </div>
 
    <div class="flex flex-wrap items-center gap-3">
@@ -134,14 +127,25 @@
      </button>
     </div>
 
-    <div x-show="viewMode === 'categories'" class="relative w-full sm:w-64 flex items-center">
+    <div x-show="viewMode === 'categories'" class="relative w-full sm:w-48 flex items-center">
      <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
       <icon name="search" class="w-4 h-4 text-slate-400" />
      </span>
-     <input type="search" x-model="search" placeholder="Rechercher une matière ou un niveau…"
+     <input type="search" x-model="search" placeholder="Rechercher une matière…"
       aria-label="Rechercher une matière"
       class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
+    <how-to-button article="franco-arabe-pole-rtl-alternance" label="Comment fonctionne le Franco-Arabe ?" x-show="$store.schoolConfig.isFrancoArabeProfile" x-cloak />
+    @* Aides spécifiques à la vue ouverte (les coefficients ont déjà leur bouton, dans leur onglet). *@
+    <how-to-button article="apc-matieres" label="Comment construire la grille d'évaluation ?" x-show="viewMode === 'structure'" x-cloak />
+    <how-to-button article="matieres-par-classe-options" label="Comment fonctionnent les matières optionnelles ?" x-show="viewMode === 'class-subjects'" x-cloak />
+    @* Action principale : au bout de la ligne des onglets de vue et de la recherche (une seule ligne de commandes),
+       poussée à droite par ml-auto. *@
+    <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
+     class="btn-modal-primary group h-10 px-4 sm:ml-auto">
+     <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
+     Nouvelle matière
+    </button>
    </div>
   </div>
  </div>

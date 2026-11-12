@@ -87,7 +87,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedRecordStudentName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadRecords(); // Rafraîchit le tableau
-                this.showAddedDialog = true;
+                window.toast?.success('Dossier enregistré.');
             } catch (error) {
                 console.error("Discipline create error:", error);
                 this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");

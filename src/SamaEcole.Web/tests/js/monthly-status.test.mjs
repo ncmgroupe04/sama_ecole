@@ -26,25 +26,27 @@ async function boot() {
     return { view, calls };
 }
 
-test("l'année active est présélectionnée et aucune requête de situation ne part au chargement", async () => {
+test("l'année active est présélectionnée et sa situation du mois courant se charge dès l'arrivée", async () => {
     const { view, calls } = await boot();
     assert.equal(view.schoolYearId, 'y1');
-    assert.equal(calls.some((c) => c.startsWith('/finance/monthly-status')), false);
+    assert.equal(calls.some((c) => c.startsWith('/finance/monthly-status?') && c.includes('schoolYearId=y1')), true);
 });
 
 test('sans année ou sans mois, rien n\'est demandé et un message est affiché', async () => {
     const { view, calls } = await boot();
+    const isStatusCall = (c) => c.startsWith('/finance/monthly-status');
+    const before = calls.filter(isStatusCall).length; // chargement initial (année active, mois courant)
     view.month = '';
     await view.load();
     assert.ok(view.formError);
-    assert.equal(calls.some((c) => c.startsWith('/finance/monthly-status')), false);
+    assert.equal(calls.filter(isStatusCall).length, before, 'aucune requête de plus sans mois');
 });
 
 test("sans classe choisie, aucun classroomId n'est envoyé ; avec une classe, il l'est", async () => {
     const { view, calls } = await boot();
     view.month = '10';
     await view.load();
-    const first = calls.find((c) => c.startsWith('/finance/monthly-status'));
+    const first = calls.filter((c) => c.startsWith('/finance/monthly-status')).pop();
     assert.ok(first.includes('schoolYearId=y1') && first.includes('month=10'));
     assert.equal(first.includes('classroomId'), false);
 

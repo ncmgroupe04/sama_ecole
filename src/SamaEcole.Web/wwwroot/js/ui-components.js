@@ -453,6 +453,21 @@ document.addEventListener('alpine:init', () => {
             this.boundClose = () => this.close();
         },
 
+        /**
+         * Hauteur RÉELLE attendue du menu : champ de recherche + une ligne par option, plafonnée à 300 px. Une liste
+         * courte (3 options ≈ 200 px) ne doit pas basculer vers le haut sous prétexte qu'il reste moins de 300 px en bas.
+         */
+        estimatedMenuHeight() {
+            return Math.min(300, 76 + this.options.length * 42);
+        },
+
+        /** Replace le menu selon la place disponible à l'instant ; appelé au redimensionnement (x-on:resize.window du Tag Helper). */
+        reposition() {
+            if (!this.open) return;
+            const pos = window.computeFloatingPosition(this.$root, this.estimatedMenuHeight());
+            this.floatingStyle = window.floatingStyleFrom(pos);
+        },
+
         get filteredOptions() {
             const query = this.search.trim().toLowerCase();
             if (!query) return this.options;
@@ -465,7 +480,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             // AVANT d'afficher (pas de $nextTick) : voir le commentaire équivalent de dateField.toggle().
-            const pos = window.computeFloatingPosition(this.$root, 300);
+            const pos = window.computeFloatingPosition(this.$root, this.estimatedMenuHeight());
             this.floatingStyle = window.floatingStyleFrom(pos);
             this.open = true;
             this.search = '';

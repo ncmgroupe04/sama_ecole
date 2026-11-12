@@ -134,6 +134,62 @@ public class ReferenceEntitiesRestoreTests : IAsyncLifetime
         (await ListDeletedIdsAsync(kind, EcoleA)).Should().NotContain(Tombstones[kind]);
     }
 
+    /// <summary>Vieillit un tombstone : DeletedAt est en écriture privée, EF l'atteint par l'API de propriétés.</summary>
+    private async Task AgeAsync(string kind, Guid id, TimeSpan age)
+    {
+        await using var owner = _db.NewOwnerContext();
+        AuditableEntity entity = kind switch
+        {
+            "Classroom" => await owner.Classrooms.IgnoreQueryFilters().SingleAsync(x => x.Id == id),
+            "Room" => await owner.Rooms.IgnoreQueryFilters().SingleAsync(x => x.Id == id),
+            "FeeCategory" => await owner.FeeCategories.IgnoreQueryFilters().SingleAsync(x => x.Id == id),
+            "Mention" => await owner.Mentions.IgnoreQueryFilters().SingleAsync(x => x.Id == id),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+        owner.Entry(entity).Property(nameof(AuditableEntity.DeletedAt)).CurrentValue = DateTimeOffset.UtcNow - age;
+        await owner.SaveChangesAsync(CancellationToken.None);
+    }
+
+    [Theory]
+    [MemberData(nameof(Kinds))]
+    public async Task Entity_Deleted_Less_Than_Seven_Days_Ago_Is_Still_In_The_Trash_And_Restorable(string kind)
+    {
+        await AgeAsync(kind, Tombstones[kind], TimeSpan.FromDays(6));
+
+        (await ListDeletedIdsAsync(kind, EcoleA)).Should().Contain(Tombstones[kind]);
+
+        await RestoreAsync(kind, EcoleA, Tombstones[kind]);
+        (await IsDeletedAsync(kind, Tombstones[kind])).Should().BeFalse();
+    }
+
+    [Theory]
+    [MemberData(nameof(Kinds))]
+    public async Task Entity_Deleted_More_Than_Seven_Days_Ago_Leaves_The_Trash_Is_Not_Restorable_But_Stays_In_Database(string kind)
+    {
+        await AgeAsync(kind, Tombstones[kind], TimeSpan.FromDays(8));
+
+        (await ListDeletedIdsAsync(kind, EcoleA)).Should().NotContain(Tombstones[kind]);
+
+        var act = async () => await RestoreAsync(kind, EcoleA, Tombstones[kind]);
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+
+        // Règle #6 : jamais de suppression physique — la ligne reste en base, marquée supprimée.
+        (await IsDeletedAsync(kind, Tombstones[kind])).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task An_Expired_Tombstone_No_Longer_Blocks_Recreating_The_Same_Identity()
+    {
+        await AgeAsync("FeeCategory", Tombstones["FeeCategory"], TimeSpan.FromDays(8));
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var tenant = new FixedTenantProvider(EcoleA);
+
+        var act = async () => await new CreateFeeCategoryCommandHandler(ctx, tenant)
+            .Handle(new CreateFeeCategoryCommand { Name = "Cantine" }, default);
+
+        await act.Should().NotThrowAsync();
+    }
+
     [Theory]
     [MemberData(nameof(Kinds))]
     public async Task Restoring_When_An_Active_Row_Took_The_Identity_Returns_Active_Conflict_Without_Mutation(string kind)

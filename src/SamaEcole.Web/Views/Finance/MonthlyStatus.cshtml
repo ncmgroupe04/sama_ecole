@@ -7,152 +7,153 @@
     <script src="~/js/monthly-status.js" asp-append-version="true"></script>
 }
 
+@* Design fluide 2026 (voir monthly-status.js) : bande de mois + ruban cliquable + liste unique.
+   La situation se charge à l'arrivée et à chaque changement de mois, d'année ou de classe. *@
 <div x-data="monthlyStatusView()">
     <div class="page-header">
         <div>
             <h1 class="page-title">Situation des mensualités</h1>
-            <p class="page-subtitle">Qui a payé, partiellement payé ou rien payé pour un mois donné.</p>
+            <p class="page-subtitle">Qui a payé, qui a payé en partie et qui n'a rien versé pour le mois choisi. Cliquez sur un segment du ruban pour ne voir que ces élèves.</p>
         </div>
     </div>
 
     @await Html.PartialAsync("_ErrorBanner")
 
-    <div class="card mt-6">
-        <div class="filter-bar lg:items-end lg:justify-between">
-            <div class="flex flex-wrap items-end gap-3">
-                <div>
-                    <label class="form-label-sm">Année scolaire <span class="text-rose-500">*</span></label>
-                    <select-field model="schoolYearId" aria-label="Année scolaire" class="mt-0 w-48" placeholder="Choisir l'année"
-                        options-expr="schoolYears.map(y => ({value: y.id, label: y.label}))" />
-                </div>
-                <div>
-                    <label class="form-label-sm">Mois <span class="text-rose-500">*</span></label>
-                    <select-field model="month" aria-label="Mois concerné" class="mt-0 w-48" placeholder="Choisir le mois"
-                        options-expr="monthOptions" />
-                </div>
-                <div>
-                    <label class="form-label-sm">Classe</label>
-                    <select-field model="classroomId" aria-label="Filtrer par classe" class="mt-0" placeholder="Toutes les classes"
-                        options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
-                </div>
-                <button type="button" x-on:click="load()" :disabled="isLoading" class="btn-modal-primary group">
-                    <icon name="chart-multiple" class="w-4 h-4" />
-                    <span x-text="isLoading ? 'Calcul…' : 'Afficher la situation'"></span>
-                </button>
-            </div>
-            <div>
-                <button type="button" x-on:click="exportExcel()" :disabled="exporting || !data" class="btn-modal-secondary group">
-                    <icon name="download" class="w-4 h-4" />
-                    <span x-text="exporting ? 'Export…' : 'Exporter en Excel'"></span>
-                </button>
-            </div>
+    <!-- Filtres : année, classe, puis la bande de mois (un clic = le mois est chargé) -->
+    <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+        <select-field model="schoolYearId" aria-label="Année scolaire" class="mt-0 w-40" placeholder="Année scolaire" on-change="load()"
+            options-expr="schoolYears.map(y => ({value: y.id, label: y.label}))" />
+        <select-field model="classroomId" aria-label="Filtrer par classe" class="mt-0 w-56" placeholder="Toutes les classes" on-change="load()"
+            options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
+
+        <div role="group" aria-label="Mois" class="flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white p-1 scrollbar-hide">
+            <template x-for="m in schoolMonths" :key="m.value">
+                <button type="button" x-on:click="selectMonth(m.value)" :aria-pressed="(String(month) === m.value).toString()" :title="m.full"
+                        class="h-9 shrink-0 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        :class="String(month) === m.value ? 'bg-primary-500 text-white shadow-fluid-blue' : 'text-slate-600 hover:bg-primary-50 hover:text-primary-700'"
+                        x-text="m.label"></button>
+            </template>
         </div>
-        <p x-show="formError" x-cloak x-text="formError" class="field-error px-6 pb-3"></p>
     </div>
+    <p x-show="formError" x-cloak x-text="formError" class="field-error mt-2"></p>
+
+    <template x-if="!data && isLoading">
+        <div class="card mt-6 p-8 text-sm text-slate-500">Calcul de la situation…</div>
+    </template>
 
     <template x-if="!data && !isLoading">
         <div class="card mt-6">
             <empty-state icon="wallet" title="Aucune situation affichée."
-                hint="Choisissez l'année scolaire et le mois, puis cliquez sur « Afficher la situation »." />
+                hint="Choisissez une année scolaire, puis un mois dans la bande ci-dessus." />
         </div>
     </template>
 
     <template x-if="data">
-        <div>
-            <!-- Résumé : calculé sur les mêmes lignes que les trois listes ci-dessous -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                <stat-card label="Élèves concernés" icon="users" accent="primary"><span x-text="data.summary.totalStudents"></span></stat-card>
-                <stat-card label="Ont intégralement payé" icon="checkmark-circle" accent="success"><span x-text="data.summary.paidCount"></span></stat-card>
-                <stat-card label="Ont partiellement payé" icon="clock" accent="warning"><span x-text="data.summary.partialCount"></span></stat-card>
-                <stat-card label="N'ont rien payé" icon="alert-circle" accent="danger"><span x-text="data.summary.unpaidCount"></span></stat-card>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                <stat-card label="Montant total attendu" icon="wallet" accent="primary"><span class="amount" x-text="formatAmount(data.summary.totalExpected)"></span></stat-card>
-                <stat-card label="Montant total encaissé" icon="payment" accent="success"><span class="amount" x-text="formatAmount(data.summary.totalCollected)"></span></stat-card>
-                <stat-card label="Reste à recouvrer" icon="alert-circle" accent="danger"><span class="amount" x-text="formatAmount(data.summary.totalRemaining)"></span></stat-card>
-            </div>
+        <div class="transition-opacity duration-200" :class="isLoading ? 'opacity-60' : ''">
+            <!-- Le ruban : synthèse du mois ET filtre par catégorie -->
+            <section class="card mt-6 p-6 lg:p-7" aria-labelledby="ms-ribbon-title">
+                <div class="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+                    <div>
+                        <h2 id="ms-ribbon-title" class="text-xl font-semibold tracking-tight text-slate-900">
+                            <span x-text="monthLabel()"></span> :
+                            <span x-text="data.summary.totalStudents"></span>
+                            <span x-text="data.summary.totalStudents > 1 ? 'élèves attendus' : 'élève attendu'"></span>
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500">
+                            <span x-show="data.summary.totalRemaining > 0">Il reste <span class="font-semibold text-slate-700" x-text="formatAmount(data.summary.totalRemaining)"></span> à recouvrer.</span>
+                            <span x-show="data.summary.totalRemaining <= 0 && data.summary.totalStudents > 0" x-cloak>Tout est encaissé pour ce mois.</span>
+                            <span x-show="data.summary.totalStudents === 0" x-cloak>Aucune mensualité n'est attendue pour ce mois.</span>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold tracking-tight text-slate-900 lg:text-[1.75rem]" x-text="formatAmount(data.summary.totalCollected)"></p>
+                        <p class="mt-0.5 text-sm text-slate-500">encaissés sur <span x-text="formatAmount(data.summary.totalExpected)"></span> attendus</p>
+                    </div>
+                </div>
 
-            <!-- A. Payé -->
-            <div class="card mt-6 border-l-4 border-emerald-500">
-                <div class="p-4 flex items-center justify-between">
-                    <h2 class="section-title text-emerald-700">Ont payé <span class="text-slate-400 font-normal" x-text="'(' + data.paid.length + ')'"></span></h2>
+                <div role="group" aria-label="Répartition des paiements : cliquez pour filtrer" class="mt-5 flex h-16 gap-1.5">
+                    <template x-for="seg in segments" :key="seg.key">
+                        <button type="button" x-on:click="toggleStatus(seg.key)" :aria-pressed="(statusFilter === seg.key).toString()" :style="segmentStyle(seg)"
+                                class="flex min-w-[5rem] basis-0 flex-col justify-center overflow-hidden rounded-2xl px-4 text-left transition-[flex-grow,opacity,transform] duration-500 ease-out hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                :class="[
+                                    seg.key === 'paid' ? 'bg-emerald-100 text-emerald-900' : (seg.key === 'partial' ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-900'),
+                                    statusFilter === seg.key ? 'ring-2 ring-inset ring-current' : '',
+                                    statusFilter && statusFilter !== seg.key ? 'opacity-50' : ''
+                                ]">
+                            <span class="text-xl font-bold leading-none" x-text="seg.count"></span>
+                            <span class="mt-1 truncate text-[13px] font-medium" x-text="seg.label"></span>
+                        </button>
+                    </template>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="table-head">
-                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
-                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Payé</th>
-                            <th class="py-3 px-4">Dernier paiement</th>
-                        </tr></thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr x-show="data.paid.length === 0" x-cloak><td colspan="5" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
-                            <template x-for="r in data.paid" :key="r.enrollmentId">
-                                <tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
-                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
-                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
-                                    <td class="py-3 px-4 text-right amount font-semibold text-emerald-700" x-text="formatAmount(r.paidAmount)"></td>
-                                    <td class="py-3 px-4 text-slate-600" x-text="formatDate(r.lastPaymentAt)"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <!-- B. Partiel -->
-            <div class="card mt-6 border-l-4 border-amber-500">
-                <div class="p-4 flex items-center justify-between">
-                    <h2 class="section-title text-amber-700">Ont partiellement payé <span class="text-slate-400 font-normal" x-text="'(' + data.partial.length + ')'"></span></h2>
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+                    <span x-show="recoveryRate() !== null">Taux de recouvrement : <span class="font-semibold text-slate-700" x-text="recoveryRate() + ' %'"></span></span>
+                    <button type="button" x-show="statusFilter" x-cloak x-on:click="statusFilter = ''"
+                            class="-mx-2 -my-1 rounded-lg px-2 py-1 font-semibold text-primary-600 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">Voir tous les élèves</button>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="table-head">
-                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
-                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Déjà payé</th>
-                            <th class="py-3 px-4 text-right">Reste à payer</th>
-                        </tr></thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr x-show="data.partial.length === 0" x-cloak><td colspan="5" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
-                            <template x-for="r in data.partial" :key="r.enrollmentId">
-                                <tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
-                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
-                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
-                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.paidAmount)"></td>
-                                    <td class="py-3 px-4 text-right amount font-semibold text-amber-700" x-text="formatAmount(r.remainingAmount)"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </section>
 
-            <!-- C. Non payé -->
-            <div class="card mt-6 border-l-4 border-rose-500">
-                <div class="p-4 flex items-center justify-between">
-                    <h2 class="section-title text-rose-700">N'ont pas payé <span class="text-slate-400 font-normal" x-text="'(' + data.unpaid.length + ')'"></span></h2>
+            <!-- La liste : une seule, les impayés d'abord -->
+            <section class="card mt-6 overflow-hidden" aria-labelledby="ms-list-title">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-4 lg:px-6">
+                    <h2 id="ms-list-title" class="text-lg font-semibold tracking-tight text-slate-900">
+                        <span x-text="listTitle()"></span>
+                        <span class="ml-1 text-base font-medium text-slate-400" x-text="rows.length"></span>
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" x-on:click="exportPdf(true)" :disabled="pdfBusy" class="btn-modal-primary group">
+                            <icon name="print" class="w-4 h-4" />
+                            <span>Imprimer</span>
+                        </button>
+                        <button type="button" x-on:click="exportPdf(false)" :disabled="pdfBusy" class="btn-modal-secondary group">
+                            <icon name="download" class="w-4 h-4" />
+                            <span x-text="pdfBusy ? 'PDF…' : 'Télécharger en PDF'"></span>
+                        </button>
+                        <button type="button" x-on:click="exportExcel()" :disabled="exporting" class="btn-modal-secondary group">
+                            <icon name="download" class="w-4 h-4" />
+                            <span x-text="exporting ? 'Export…' : 'Exporter en Excel'"></span>
+                        </button>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="table-head">
-                            <th class="py-3 px-4">Élève</th><th class="py-3 px-4">Classe</th>
-                            <th class="py-3 px-4 text-right">Attendu</th><th class="py-3 px-4 text-right">Restant dû</th>
-                        </tr></thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr x-show="data.unpaid.length === 0" x-cloak><td colspan="4" class="py-6 px-4 text-sm text-slate-400">Aucun élève.</td></tr>
-                            <template x-for="r in data.unpaid" :key="r.enrollmentId">
-                                <tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="r.studentFullName"></td>
-                                    <td class="py-3 px-4 text-slate-600" x-text="r.classroomName"></td>
-                                    <td class="py-3 px-4 text-right amount" x-text="formatAmount(r.expectedAmount)"></td>
-                                    <td class="py-3 px-4 text-right amount font-semibold text-rose-700" x-text="formatAmount(r.remainingAmount)"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
+
+                <div role="table" aria-labelledby="ms-list-title">
+                    <div role="row" class="table-head grid grid-cols-[2.5rem_minmax(0,1fr)_7.5rem] items-center gap-4 px-5 py-3 lg:grid-cols-[2.5rem_minmax(13rem,2.4fr)_minmax(6rem,1fr)_minmax(10rem,1.5fr)_minmax(8rem,1fr)_minmax(7rem,0.9fr)] lg:px-6">
+                        <span role="columnheader"><span class="sr-only">Initiales</span></span>
+                        <span role="columnheader">Élève</span>
+                        <span role="columnheader" class="hidden lg:block">Classe</span>
+                        <span role="columnheader" class="hidden lg:block">Avancement du mois</span>
+                        <span role="columnheader" class="text-right">Reste à payer</span>
+                        <span role="columnheader" class="hidden text-right lg:block">Dernier paiement</span>
+                    </div>
+
+                    <p x-show="rows.length === 0" x-cloak class="px-6 py-8 text-sm text-slate-400">Aucun élève dans cette catégorie.</p>
+
+                    <template x-for="r in rows" :key="r.enrollmentId">
+                        <div role="row" class="grid grid-cols-[2.5rem_minmax(0,1fr)_7.5rem] items-center gap-4 border-t border-slate-100 px-5 py-3 transition-colors hover:bg-primary-50/40 lg:grid-cols-[2.5rem_minmax(13rem,2.4fr)_minmax(6rem,1fr)_minmax(10rem,1.5fr)_minmax(8rem,1fr)_minmax(7rem,0.9fr)] lg:px-6">
+                            <span role="cell" aria-hidden="true" class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 text-[13px] font-semibold text-primary-700" x-text="initials(r.studentFullName)"></span>
+                            <span role="cell" class="min-w-0">
+                                <span class="block truncate font-semibold text-slate-900" x-text="r.studentFullName"></span>
+                                <span class="block truncate text-[13px] text-slate-400"><span x-text="r.matricule"></span><span class="lg:hidden"> · <span x-text="r.classroomName"></span></span></span>
+                            </span>
+                            <span role="cell" class="hidden lg:block">
+                                <span class="inline-block max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 text-[13px] font-medium text-slate-600" x-text="r.classroomName"></span>
+                            </span>
+                            <span role="cell" class="hidden items-center gap-3 lg:flex">
+                                <span class="progress-track flex-1">
+                                    <span class="progress-fill block h-full" :class="r.kind === 'paid' ? 'progress-fill-success' : (r.kind === 'partial' ? 'progress-fill-warning' : 'progress-fill-danger')" :style="{ width: paidPercent(r) + '%' }"></span>
+                                </span>
+                                <span class="w-11 text-right text-[13px] font-semibold text-slate-700" x-text="paidPercent(r) + ' %'"></span>
+                            </span>
+                            <span role="cell" class="text-right">
+                                <span class="block font-semibold" :class="r.kind === 'paid' ? 'text-emerald-700' : (r.kind === 'partial' ? 'text-amber-700' : 'text-rose-700')"
+                                      x-text="r.remainingAmount > 0 ? formatAmount(r.remainingAmount) : 'Soldé'"></span>
+                                <span x-show="r.remainingAmount > 0" class="block text-xs text-slate-400">sur <span x-text="formatAmount(r.expectedAmount)"></span></span>
+                            </span>
+                            <span role="cell" class="hidden text-right text-sm text-slate-500 lg:block" x-text="formatDate(r.lastPaymentAt)"></span>
+                        </div>
+                    </template>
                 </div>
-            </div>
+            </section>
         </div>
     </template>
 </div>

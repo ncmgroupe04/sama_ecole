@@ -13,6 +13,22 @@
    immédiatement dans le repli puis bascule — jamais de texte invisible au chargement.
    -------------------------------------------------------------------------------------------------- */
 @font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
@@ -68,7 +84,55 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @layer base {
+  /* Design fluide 2026 — fond de la zone de contenu. Transparent en mode sombre, où le fond remappé
+     du <body> reprend la main. */
+  .app-canvas {
+    /* Fond = INK[50] (voir tailwind.dark-theme.js) : un blanc froid très peu saturé, SANS dégradé ni
+       lueur. Les surfaces (cartes, barre du haut) sont blanches et se détachent par leur liseré et
+       leur ombre, pas par une teinte concurrente : une seule famille de couleurs, du fond à la carte. */
+    background-color: #F7F9FC;
+  }
+
+  .dark .app-canvas {
+    background-color: transparent;
+    background-image: none;
+  }
+
+  /* Cases à cocher et boutons radio : la coche prend la couleur de marque (marine) sur TOUTE la plateforme.
+     Sans cela, le navigateur dessine son bleu par défaut, étranger à la charte. En mode sombre, le marine
+     disparaîtrait sur le fond : bleu clair. Les cartes de choix sélectionnées (.choice-selected) gardent leur coche blanche. */
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #00174B;
+  }
+
+  .dark input[type="checkbox"],
+  .dark input[type="radio"] {
+    accent-color: #6D94F5;
+  }
+
+  /* Montants, matricules, dates : chiffres alignés partout, sans classe à poser. */
+  body {
+    font-variant-numeric: tabular-nums;
+  }
   /*
     Alpine ne retire l'attribut x-cloak qu'une fois initialisé. Sans cette règle, tout élément
     x-show apparaît en clair pendant le chargement du script (bandeau d'erreur vide, indicateur de
@@ -103,26 +167,55 @@
      4.5:1 pour le texte courant (Volume 5 §8). primary-600 (6.29:1) le respecte sans dévier de la
      teinte de marque (#6366F1 reste la référence pour logo/avatar/accents, voir tailwind.config.js). */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white shadow-fluid-blue transition-all hover:bg-primary-600 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-danger px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-danger px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
   }
 
   /* Boutons standardisés pour les modales (SaaS 2026). `py-3 sm:py-2` : ~44px de haut sur mobile
      (plancher tactile — ce sont les actions principales d'une modale, souvent plein écran sur
      téléphone), retour au gabarit dense `py-2` dès `sm:` pour ne rien changer au rendu desktop. */
+  /* Bouton d'AIDE (« Comment faire ? », « Comment sont appliqués les coefficients ? ») : couleur d'appel à
+     l'action, ambre vif, réservée à ce seul usage — ni le marine de la marque, ni le rouge du danger, ni
+     l'orange sombre du mode test. L'habitude doit se prendre : là où c'est compliqué, on clique sur le
+     bouton jaune. Texte marron très foncé pour le contraste. */
+  .btn-help {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-3.5 py-2 text-sm font-bold text-amber-950 shadow-sm ring-1 ring-amber-500/40 transition-all hover:bg-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 active:scale-[0.97];
+  }
+
+  /* Carte de CHOIX sélectionnée (type d'établissement, profil, cycles, tranche — page d'inscription) : fond marine de
+     marque, texte blanc. Les textes de la carte portent des couleurs propres (titre sombre, description grise) : les
+     règles ci-dessous les ramènent au blanc sans toucher au balisage (spécificité supérieure aux utilitaires). */
+  .choice-selected {
+    @apply border-primary-500 bg-primary-500 text-white shadow-fluid-blue;
+  }
+
+  .choice-selected span,
+  .choice-selected p {
+    color: #fff;
+  }
+
+  .choice-selected .text-xs {
+    color: rgb(255 255 255 / 0.82);
+  }
+
+  .choice-selected input[type="checkbox"] {
+    accent-color: #fff;
+    border-color: #fff;
+  }
+
   .btn-modal-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-primary-600 text-white hover:bg-primary-700 px-5 py-3 sm:py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-primary-500 text-white hover:bg-primary-600 px-5 py-3 sm:py-2 rounded-xl font-semibold text-sm shadow-fluid-blue transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-3 sm:py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-primary-50 text-primary-700 hover:bg-primary-100 px-4 py-3 sm:py-2 rounded-xl font-semibold text-sm transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-danger {
@@ -134,8 +227,9 @@
      et seule l'ombre portée les séparait du fond. Le ton 200 à 60 % d'opacité pose un contour lu
      comme une limite sans jamais devenir un trait. C'est la même valeur que .kpi-card, pour que la
      rangée de cartes de synthèse et le panneau qu'elle surmonte aient exactement le même contour. */
+  /* Design fluide 2026 : grand rayon et ombre teintée de marine (jeton shadow-fluid). */
   .card {
-    @apply rounded-2xl border border-slate-200/60 bg-white shadow-sm;
+    @apply rounded-3xl border border-slate-200/60 bg-white shadow-fluid;
   }
 
   /* ---------------------------------------------------------------- Champs de formulaire
@@ -157,7 +251,7 @@
      mis côte à côte — le défaut le plus visible des barres de filtres. Les deux dérogations légitimes
      (textarea, select natif) sont traitées juste en dessous, PAS par une classe concurrente. */
   .input-field {
-    @apply mt-1 block h-11 sm:h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
+    @apply mt-1 block h-11 sm:h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
   }
 
   /* Un <textarea> à hauteur fixe de 40px n'affiche qu'une ligne et demie : la hauteur devient un
@@ -256,7 +350,17 @@
      des tableaux garde 13px (jeton jgk-table, .table-cell) : seul l'en-tête rétrécit, ce qui
      accentue la hiérarchie en-tête/données. */
   .table-head {
-    @apply border-b border-slate-100 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-100 bg-slate-50/80 text-[13px] font-medium text-slate-500;
+  }
+
+  /* Lignes de tableau (design des mensualités, propagé) : survol teinté de la marque, transition douce. Spécificité
+     supérieure aux `hover:bg-slate-50` posés dans les vues : un seul comportement pour tous les tableaux des cartes. */
+  .card table tbody tr {
+    transition: background-color 0.15s;
+  }
+
+  .card table tbody tr:hover {
+    background-color: rgb(238 244 255 / 0.55);
   }
 
   .table-cell {
@@ -512,13 +616,16 @@
     display: none !important;
     position: absolute;
     left: 100%;
-    top: 0;
+    /* --flyout-top : posé par sidebar-nav.js au survol pour que le tiroir reste ENTIER dans la fenêtre
+       (il remonte quand la liste dépasse le bas de l'écran). Aucune transition : il réagit à l'instant. */
+    top: var(--flyout-top, 0px);
     width: 14rem;
-    max-height: none !important;
+    max-height: calc(100vh - 1.5rem) !important;
+    overflow-y: auto;
     padding: 0.5rem;
     border-radius: 1rem;
-    background: white;
-    border: 1px solid rgb(241 245 249);
+    background: #00174B; /* marine du rail (primary-900) : les liens y sont clairs */
+    border: 1px solid rgb(255 255 255 / 0.08);
     box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15), 0 4px 6px -2px rgb(0 0 0 / 0.05);
     z-index: 40;
   }
@@ -612,11 +719,11 @@
   }
 
   .page-title {
-    @apply text-jgk-title font-bold tracking-tight text-slate-900;
+    @apply text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 lg:text-[2.125rem];
   }
 
   .page-subtitle {
-    @apply mt-1 text-jgk-subtitle text-slate-500;
+    @apply mt-1.5 max-w-[60ch] text-base text-slate-500;
   }
 
   /* Titre d'un bloc INTERNE (« Encaissements par mode de paiement »), sous le titre
@@ -657,7 +764,7 @@
   }
 
   .icon-chip-indigo {
-    @apply bg-indigo-50 text-indigo-600;
+    @apply bg-primary-100 text-primary-700;
   }
 
   .icon-chip-emerald {
@@ -673,7 +780,7 @@
   }
 
   .icon-chip-blue {
-    @apply bg-blue-50 text-blue-600;
+    @apply bg-primary-50 text-primary-600;
   }
 
   .icon-chip-pink {
@@ -761,6 +868,38 @@
 
      .card-header — l'en-tête de panneau `p-6 border-b`, recopié dans une vingtaine
      de vues. */
+  /* ---------------------------------------------------------------- Fenêtres (modal-shell)
+     Largeur unique (voir ModalShellTagHelper.MaxWidthClass) : sur 896 px, un champ qui ne reçoit que
+     3 ou 4 caractères (quantité, année, heure, capacité) ne doit pas courir d'un bord à l'autre.
+     Les champs de TEXTE gardent toute la largeur (noms, adresses, motifs). */
+  .modal-panel input[type="number"].input-field,
+  .modal-panel input[type="time"].input-field,
+  .modal-panel input[type="date"].input-field,
+  .modal-panel input[type="tel"].input-field,
+  .modal-panel input[type="color"].input-field {
+    max-width: 16rem;
+  }
+
+  /* Cadre des fenêtres : UNE ligne fine et continue, bleue, posée à 6 px du bord (un filet de 1 px,
+     visible sans être sombre) — l'allure d'un cadre de diplôme, sobre. Posée UNE fois sur le panneau
+     commun (.modal-panel, ModalShellTagHelper) : toutes les fenêtres de la plateforme la reprennent.
+     Pseudo-élément décoratif : ni focus ni clic (pointer-events: none). Le panneau porte une marge
+     intérieure de 7 px (p-[7px], ModalShellTagHelper) : en-tête, corps défilant et pied restent À
+     L'INTÉRIEUR du cadre, le texte ne passe donc jamais sous la ligne ni contre le bord. */
+  .modal-panel::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    z-index: 29;
+    pointer-events: none;
+    border: 1px solid rgb(0 23 75 / 0.30);
+    border-radius: 2px;
+  }
+
+  .dark .modal-panel::after {
+    border-color: rgb(109 148 245 / 0.42);
+  }
+
   .card-hover {
     @apply cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/70 hover:shadow-md;
   }
@@ -784,19 +923,36 @@
      quand l'une porte une indication secondaire (.kpi-hint) et l'autre non — sans quoi la ligne
      se met à onduler dès qu'un seul indicateur gagne une précision. */
   .kpi-card {
-    @apply flex h-full items-center justify-between gap-3 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm;
+    @apply flex h-full items-start justify-between gap-3 rounded-3xl border border-slate-200/60 bg-white px-5 pb-6 pt-3 shadow-fluid;
+  }
+
+  /* Pastille d'icône des grandes cartes : réduite (28 px, glyphe 14 px), alignée en haut avec le libellé. */
+  .kpi-card .icon-chip-md {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 4px;
+  }
+
+  .kpi-card .icon-chip-md svg {
+    width: 0.875rem;
+    height: 0.875rem;
   }
 
   .kpi-label {
-    @apply text-[11px] font-bold uppercase tracking-wider text-slate-500;
+    @apply text-[12px] font-medium text-slate-500;
   }
 
   .kpi-value {
-    @apply mt-1 text-2xl font-bold tabular-nums;
+    font-family: "Plus Jakarta Sans", "Figtree", "Segoe UI", system-ui, sans-serif;
+    font-size: 21px;
+    letter-spacing: 0;
+    word-spacing: 0.12em;
+    overflow-wrap: anywhere;
+    @apply mt-1 font-bold tabular-nums leading-tight;
   }
 
   .kpi-hint {
-    @apply mt-1 text-[11px] text-slate-500;
+    @apply mt-1 text-[10.5px] text-slate-500;
   }
 
   .kpi-accent-primary {
@@ -832,7 +988,7 @@
      (vert = inscrits, rouge = non inscrits, bleu = tous). La vitrine publique a son propre jeu
      (`mkt-tab`), elle ne s'aligne pas ici non plus. */
   .tab-nav {
-    @apply inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1;
+    @apply inline-flex max-w-full items-center gap-1 border-b border-slate-200;
   }
 
   /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible
@@ -846,7 +1002,7 @@
      (.tab-btn-active) au chargement et à chaque changement, et l'enveloppe .tab-nav-scroll-wrap
      ci-dessous (dégradés d'estompement + flèches [<] [>], révélés du seul côté encore masqué). */
   .tab-nav-scroll {
-    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x rounded-xl bg-slate-100 p-1 scrollbar-hide;
+    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x border-b border-slate-200 scrollbar-hide;
   }
 
   .tab-nav-scroll.is-dragging {
@@ -893,12 +1049,305 @@
     @apply pointer-events-auto opacity-100;
   }
 
+  /* Navigation rapide entre modules (barre sous l'en-tête, _QuickNav.cshtml) : onglets SOULIGNÉS posés
+     directement sur la page — pas de cadre, pas de pastille pleine. L'onglet actif : texte marine et
+     trait bleu de 2 px ; au survol : trait bleu pâle. Un seul filet sépare la rangée du contenu
+     (la bordure basse du <header>). */
+  /* Menu latéral : barre de défilement FINE et discrète (clair sur marine) — sur Windows, la barre classique
+     de ~15 px mangeait la largeur utile et faisait passer « Gestion Scolaire » à la ligne. */
+  /* Le menu n'est affiché qu'une fois ses groupes résolus (auth.js : sidebarNav.init pose data-ready) : sans cela,
+     les pôles masqués par x-cloak (Gestion Scolaire, Surveillance, Comptabilité) apparaissaient un à un après le
+     chargement et la barre « sursautait ». Filet de sécurité : visible au bout de 2 s si le script n'a pas répondu,
+     et toujours visible sans JavaScript. */
+  /* Flèche plier / déplier (en-tête du menu). Menu replié (5rem) : plus de place dans l'en-tête, la flèche
+     devient une petite pastille blanche posée sur le bord droit du menu. */
+  .sidebar-collapsed .sidebar-toggle {
+    position: absolute;
+    top: 1.25rem;
+    right: -0.875rem;
+    z-index: 40;
+    height: 1.75rem;
+    width: 1.75rem;
+    background: #fff;
+    color: #00174B;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgb(0 23 75 / 0.35);
+  }
+
+  .sidebar-collapsed .sidebar-toggle:hover {
+    background: #EEF4FF;
+    color: #00174B;
+  }
+
+  .sidebar-nav {
+    opacity: 0;
+    animation: sidebar-nav-fallback 0s linear 2s forwards;
+  }
+
+  .sidebar-nav[data-ready] {
+    opacity: 1;
+    animation: none;
+    transition: opacity 0.18s ease-out;
+  }
+
+  @keyframes sidebar-nav-fallback {
+    to { opacity: 1; }
+  }
+
+  @media (scripting: none) {
+    .sidebar-nav { opacity: 1; animation: none; }
+  }
+
+  .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(180 197 255 / 0.35) transparent;
+  }
+
+  /* ---------------------------------------------------------------- Page de connexion (Login.cshtml)
+     Panneau de marque : fond marine + grille SEYÈS du cahier d'écolier (petits carreaux de 8 px, lignes
+     principales tous les 32 px) et sa MARGE rouge. Au chargement, UNE séquence : la marge se trace de
+     haut en bas, puis les trois bénéfices apparaissent et sont « corrigés » (cercle puis coche tracés)
+     l'un après l'autre, comme un enseignant coche un devoir. Rien ne bouge ensuite. Les états finaux
+     sont les états par défaut : si le système demande de réduire les animations, tout est simplement
+     affiché. */
+  .auth-hero {
+    position: relative;
+  }
+
+  .auth-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(180 197 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(180 197 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(180 197 255 / 0.13) 1px, transparent 1px);
+    background-size: 8px 8px, 8px 8px, 32px 32px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
+    animation: auth-grid 1.4s ease-out both;
+  }
+
+  .auth-hero::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2.25rem;
+    width: 1px;
+    background: rgb(239 68 68 / 0.5);
+    transform-origin: top;
+    animation: auth-margin 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  }
+
+  .auth-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-title {
+    animation: auth-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+  }
+
+  .auth-lead {
+    animation: auth-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both;
+  }
+
+  /* La note : tamponnée après la dernière coche (2,6 s), le cercle se trace au stylo (0,7 s). */
+  .auth-grade {
+    transform: rotate(-8deg);
+    animation: auth-stamp 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) 2.95s both;
+  }
+
+  .auth-grade-ring {
+    stroke-dasharray: 1;
+    animation: auth-draw 0.7s ease-out 3.05s both;
+  }
+
+  .auth-point {
+    animation: auth-appear 0.5s ease-out both;
+  }
+
+  .auth-ring,
+  .auth-tick {
+    stroke-dasharray: 1;
+    animation: auth-draw 0.5s ease-out both;
+  }
+
+  .auth-point:nth-child(1) { animation-delay: 1.1s; }
+  .auth-point:nth-child(2) { animation-delay: 1.6s; }
+  .auth-point:nth-child(3) { animation-delay: 2.1s; }
+  .auth-point:nth-child(1) .auth-ring { animation-delay: 1.1s; }
+  .auth-point:nth-child(2) .auth-ring { animation-delay: 1.6s; }
+  .auth-point:nth-child(3) .auth-ring { animation-delay: 2.1s; }
+  .auth-point:nth-child(1) .auth-tick { animation-delay: 1.3s; }
+  .auth-point:nth-child(2) .auth-tick { animation-delay: 1.8s; }
+  .auth-point:nth-child(3) .auth-tick { animation-delay: 2.3s; }
+
+  @keyframes auth-grid {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes auth-rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes auth-stamp {
+    from { opacity: 0; transform: rotate(-8deg) scale(1.7); }
+    to { opacity: 1; transform: rotate(-8deg) scale(1); }
+  }
+
+  @keyframes auth-margin {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+
+  @keyframes auth-appear {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes auth-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-hero::before,
+    .auth-hero::after,
+    .auth-title,
+    .auth-lead,
+    .auth-grade,
+    .auth-grade-ring,
+    .auth-point,
+    .auth-ring,
+    .auth-tick {
+      animation: none !important;
+    }
+  }
+
+  .quick-nav {
+    @apply flex items-center gap-1 overflow-x-auto scrollbar-hide;
+  }
+
+  .quick-nav-link {
+    @apply relative inline-flex h-16 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 text-[1.0587rem] font-medium text-[#1B2852] transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  /* Rangée unique : la navigation partage la ligne avec les pastilles (Mode réel, salutation avec son texte, aide avec son
+     texte). Texte des onglets : marine, 16,9 px (+10 % sur 15,4 px, lui-même +10 % sur 14 px). Compactage progressif pour que
+     les sept modules tiennent sans défilement :
+       sous 1750 px : onglets sans icône, texte 15,7 px, espacement resserré ;
+       sous 1500 px : texte 14,4 px, pastilles resserrées ;
+       sous 1320 px : texte 13,5 px. */
+  @media (max-width: 1750px) {
+    .quick-nav-link {
+      gap: 0;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      font-size: 0.98rem;
+    }
+
+    .quick-nav-link svg {
+      display: none;
+    }
+  }
+
+  @media (max-width: 1500px) {
+    .quick-nav-link {
+      padding-left: 0.45rem;
+      padding-right: 0.45rem;
+      font-size: 0.9rem;
+    }
+
+    header [x-data="sandboxModeBadge()"] > a,
+    header [x-data="sandboxModeBadge()"] > span,
+    header [x-data="greeting()"],
+    header .btn-help {
+      padding-left: 0.65rem !important;
+      padding-right: 0.65rem !important;
+    }
+  }
+
+  @media (max-width: 1320px) {
+    .quick-nav-link {
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+      font-size: 0.84rem;
+    }
+  }
+
+  /* Navigation latérale des Paramètres : sections regroupées par sujet. Sous lg : rangée défilable, sans titres de groupe. */
+  .settings-nav { display: flex; gap: 0.25rem; overflow-x: auto; }
+  .settings-nav-group { display: none; }
+  .settings-nav-link { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 0.5rem; border-radius: 6px; padding: 0.55rem 0.75rem; text-align: left; font-size: 0.9rem; font-weight: 500; color: #44527c; transition: background-color 0.15s, color 0.15s; }
+  .settings-nav-link:hover { background-color: #eef2f9; color: #00174b; }
+  .settings-nav-link.tab-btn-active { background-color: #fff; color: #00174b; font-weight: 600; box-shadow: 0 0 0 1px #e2e8f3, 0 6px 16px -10px rgb(0 23 75 / 0.35); }
+  .settings-nav-link.tab-btn-active::after { display: none; } .settings-nav-link.tab-btn-active svg { color: #00174b; }
+  @media (min-width: 1024px) {
+    /* Deux zones qui défilent chacune de leur côté : seule celle sous le curseur bouge (menu à gauche, contenu à droite). */
+    .settings-shell { height: calc(100vh - 17rem); min-height: 26rem; }
+    .settings-nav { height: 100%; flex-direction: column; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding-right: 0.25rem; }
+    .settings-content { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0.25rem 0.5rem 2rem 0.25rem; }
+    .settings-nav-group { display: block; margin: 1rem 0.75rem 0.25rem; font-size: 0.75rem; font-weight: 600; color: #7a86a6; }
+    .settings-nav-group:first-child { margin-top: 0; }
+  }
+
+  .quick-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background-color 0.2s;
+  }
+
+  .quick-nav-link:hover::after {
+    background: rgb(0 23 75 / 0.22);
+  }
+
+  .quick-nav-link-active {
+    @apply font-semibold text-primary-900;
+  }
+
+  .quick-nav-link-active::after,
+  .quick-nav-link-active:hover::after {
+    background: #00174B;
+  }
+
   .tab-btn {
-    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-transparent px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-200/50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 disabled:opacity-50;
+    @apply relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-transparent px-3.5 py-3 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50;
+  }
+
+  .tab-btn::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background-color 0.2s;
+  }
+
+  .tab-btn:hover::after {
+    background: rgb(0 23 75 / 0.22);
   }
 
   .tab-btn-active {
-    @apply bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:text-white;
+    @apply font-semibold text-primary-900;
+  }
+
+  .tab-btn-active::after,
+  .tab-btn-active:hover::after {
+    background: #00174B;
   }
 
   /* ---------------------------------------------------------------- Tuile de synthèse
@@ -909,7 +1358,7 @@
   }
 
   .stat-tile-label {
-    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply text-xs font-medium text-slate-500;
   }
 
   .stat-tile-value {

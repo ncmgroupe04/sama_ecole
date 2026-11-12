@@ -302,7 +302,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedLateArrivalName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadLateArrivals();
-                this.showAddedDialog = true;
+                window.toast?.success('Retard enregistré.');
             } catch (error) {
                 console.error('Late arrival create error:', error);
                 this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
@@ -388,7 +388,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedEarlyDepartureName = student ? student.fullName : '';
                 this.resetExitForm();
                 await this.loadEarlyDepartures();
-                this.showAddedExitDialog = true;
+                window.toast?.success('Sortie anticipée enregistrée.');
             } catch (error) {
                 console.error('Early departure create error:', error);
                 this.createExitErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");

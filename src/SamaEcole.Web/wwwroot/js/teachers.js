@@ -63,6 +63,8 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         error: null,
         search: '',
+        statusFilter: '',
+        subjectFilter: '',
 
         // Ouverture PDF partagée (openPdfPreview → nouvel onglet, visionneuse native) —
         // même mixin que la liste des élèves, voir wwwroot/js/pdf-preview.js.
@@ -273,6 +275,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 const params = new URLSearchParams({ page: this.page, pageSize: this.pageSize });
                 if (this.search.trim()) params.set('search', this.search.trim());
+                if (this.statusFilter) params.set('status', this.statusFilter);
+                if (this.subjectFilter) params.set('subjectId', this.subjectFilter);
 
                 const data = await window.api.get(`/teachers?${params.toString()}`);
                 this.teachers = data.items || [];
@@ -291,6 +295,8 @@ document.addEventListener('alpine:init', () => {
 
         resetFilters() {
             this.search = '';
+            this.statusFilter = '';
+            this.subjectFilter = '';
             this.applyFilters();
         },
 
@@ -467,7 +473,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedTeacherName = this.newTeacher.fullName;
                 this.page = 1;
                 await this.loadTeachers();
-                this.showAddedDialog = true; // confirmation « Enseignant ajouté »
+                window.toast?.success('Enseignant « ' + this.addedTeacherName + ' » ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Une erreur est survenue lors de la création.');
             } finally {
@@ -663,7 +669,6 @@ document.addEventListener('alpine:init', () => {
                 this.closeEditTeacher();
                 await this.refreshTeacherDetail();
                 await this.loadTeachers();
-                this.showTeacherEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     this.teacherEditErrors = { global: 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — vérifiez les valeurs puis réessayez.' };

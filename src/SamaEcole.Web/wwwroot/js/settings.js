@@ -1062,7 +1062,7 @@ document.addEventListener('alpine:init', () => {
                 this.isMentionCreateOpen = false;
                 this.addedMentionLabel = this.newMention.label;
                 this.mentions = await window.api.get('/grades/mentions');
-                this.showMentionAddedDialog = true;
+                window.toast?.success('Mention « ' + this.addedMentionLabel + ' » ajoutée.');
             } catch (err) {
                 this.mentionCreateErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la mention.');
             } finally {

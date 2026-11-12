@@ -117,7 +117,7 @@ document.addEventListener('alpine:init', () => {
                     password: this.newUser.password
                 };
                 await this.load();
-                this.showAddedDialog = true; // confirmation « Utilisateur ajouté »
+                window.toast?.success('Utilisateur ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création du compte.');
             } finally {
@@ -151,7 +151,6 @@ document.addEventListener('alpine:init', () => {
                 this.statusChangedSummary = { fullName: this.statusTarget.fullName, newStatus: this.statusTarget.newStatus };
                 this.closeStatusChange();
                 await this.load();
-                this.showStatusChangedDialog = true;
             } catch (err) {
                 this.statusErrors = window.api.toFieldErrors(err, 'Erreur lors du changement de statut.');
             } finally {
@@ -180,7 +179,6 @@ document.addEventListener('alpine:init', () => {
                 await window.api.patch(`/users/${this.editProfileTarget.id}/profile`, this.editProfileForm);
                 this.closeEditProfile();
                 await this.load();
-                this.showProfileEditedDialog = true;
             } catch (err) {
                 this.editProfileErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification du profil.');
             } finally {

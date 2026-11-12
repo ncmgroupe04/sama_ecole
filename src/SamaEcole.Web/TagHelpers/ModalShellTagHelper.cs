@@ -139,14 +139,14 @@ public class ModalShellTagHelper : TagHelper
         var overlayClass = dark ? "bg-black/60" : "bg-slate-900/50";
         var surfaceClass = dark
             ? "border border-white/10 bg-zinc-900/85 text-zinc-100 shadow-2xl shadow-black/40 backdrop-blur-xl"
-            : "border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl";
-        var headerBorderClass = dark ? "border-white/10" : "border-slate-200/60";
+            : "border border-slate-200 bg-white shadow-2xl shadow-slate-900/15";
+        var headerBorderClass = dark ? "border-white/10" : "border-slate-200";
         var titleClass = dark ? "text-white" : "text-slate-900";
         var subtitleClass = dark ? "text-zinc-300" : "text-slate-700";
         var closeClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-900/5 hover:text-slate-600";
         var cornerCloseClass = dark ? "text-zinc-400 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-600";
-        var bodyTintClass = dark ? "" : " bg-slate-50/30";
-        var footerClass = dark ? "border-white/10 bg-black/20" : "border-slate-200/60 bg-white/60";
+        var bodyTintClass = ""; // une seule surface : ni teinte ni translucidité dans la fenêtre
+        var footerClass = dark ? "border-white/10 bg-black/20" : "border-slate-200 bg-white";
 
         var hasHeader = !HideHeader && (!string.IsNullOrWhiteSpace(titleHtml) || subtitle is not null);
         var headerlessDialog = !HideHeader && !hasHeader;
@@ -203,7 +203,7 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-3xl"{panelStyleAttr}>
+                     class="relative flex w-full flex-col overflow-hidden {surfaceClass} {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} modal-panel p-[7px] sm:rounded-xl"{panelStyleAttr}>
                     {cornerClose}
                     {(hasHeader ? $"""
                     <div class="flex-shrink-0 border-b {headerBorderClass} p-6">
@@ -232,23 +232,15 @@ public class ModalShellTagHelper : TagHelper
     }
 
     /// <summary>Classes littérales (jamais interpolées) pour que Tailwind les voie au scan du CSS.</summary>
-    private static string MaxWidthClass(string size) => size.ToLowerInvariant() switch
-    {
-        "md" => "sm:max-w-md",
-        "lg" => "sm:max-w-lg",
-        "xl" => "sm:max-w-xl",
-        "2xl" => "sm:max-w-2xl",
-        // Fiches de détail (élève, enseignant) : un cran sous `wide` — assez large pour une grille à
-        // 4 colonnes, sans occuper presque tout l'écran.
-        "5xl" => "sm:max-w-5xl",
-        // Aperçu PDF : plafond 4xl (56rem / 896px). La visionneuse native centre la page sur un fond
-        // sombre — au-delà de cette largeur, ce ne sont plus que deux larges bandes vides de part et
-        // d'autre du document. Combiné à `tall` (≈ 92 vh), la page respire sans que la modale s'étale.
-        "pdf" => "sm:max-w-4xl",
-        "60" => "sm:w-[60%] sm:max-w-4xl",
-        "wide" => "sm:w-[85%] sm:max-w-6xl",
-        _ => "sm:max-w-3xl"
-    };
+    /// <summary>
+    /// UNE SEULE largeur pour toutes les fenêtres de la plateforme (demande produit) : 4xl = 56 rem / 896 px.
+    /// Assez large pour une page A4 en aperçu, une fiche à deux ou trois colonnes ou un tableau, sans occuper
+    /// l'écran. L'attribut <see cref="Size"/> est conservé pour ne pas modifier ~170 vues, mais il est IGNORÉ :
+    /// seule la hauteur varie, selon le contenu (plafonnée à 90 vh). Les champs courts (nombre, date, heure)
+    /// sont plafonnés par la règle <c>.modal-panel</c> de Styles/input.css, pour ne pas s'étirer sur 896 px.
+    /// Classe littérale (jamais interpolée) pour que Tailwind la voie au scan du CSS.
+    /// </summary>
+    private static string MaxWidthClass(string size) => "sm:max-w-4xl";
 }
 
 /// <summary>

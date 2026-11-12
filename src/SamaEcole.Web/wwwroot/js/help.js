@@ -3565,6 +3565,9 @@
     // douleur qu'on supprime, violet pour le mode opératoire, cyan pour les ondes de propagation,
     // ambre pour la mise en garde. La traduction en classes vit dans la vue, seul endroit qui
     // connaisse le vocabulaire Tailwind (Views/Help/Index.cshtml).
+    // Publié pour le bouton « Comment faire ? » (how-to.js), qui lit les mêmes articles sans les dupliquer.
+    window.HELP_SECTIONS = HELP_SECTIONS;
+
     const RUBRICS = [
         { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'blue', kind: 'text' },
         { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'emerald', kind: 'text' },

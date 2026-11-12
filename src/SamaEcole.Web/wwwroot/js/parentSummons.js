@@ -118,7 +118,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedRecordStudentName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadRecords();
-                this.showAddedDialog = true;
+                window.toast?.success('Convocation enregistrée.');
             } catch (error) {
                 console.error('Parent summons create error:', error);
                 this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");

@@ -871,7 +871,6 @@ document.addEventListener('alpine:init', () => {
                 this.closeEditStudent();
                 await this.refreshStudentDetail();
                 await this.loadStudents();
-                this.showStudentEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     // Verrou optimiste (AGENTS.md règle #5) : on recharge la fiche pour montrer l'état
@@ -1014,7 +1013,7 @@ document.addEventListener('alpine:init', () => {
                 // Rafraîchir la liste
                 this.page = 1;
                 await this.loadStudents();
-                this.showAddedDialog = true; // confirmation « Élève ajouté »
+                window.toast?.success('Élève ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(
                     err, "Une erreur est survenue lors de la création.");

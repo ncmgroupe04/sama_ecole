@@ -1,7 +1,7 @@
 // Reproduit l'état « menu réduit » sur <html> AVANT le rendu du <body>.
 //
 // Sans ce script, au chargement d'une page en mode réduit, l'<aside> s'affichait d'abord à sa
-// largeur dépliée (w-72, avec les libellés) le temps qu'Alpine hydrate son :class, puis se
+// largeur dépliée (17rem, avec les libellés) le temps qu'Alpine hydrate son :class, puis se
 // repliait d'un coup : le « flash » signalé. Script CLASSIQUE et SYNCHRONE, placé tout en haut du
 // <head> (avant auth.js) : il s'exécute avant que le navigateur ne peigne la barre latérale.
 //

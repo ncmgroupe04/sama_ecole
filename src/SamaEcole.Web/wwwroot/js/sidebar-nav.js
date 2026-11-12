@@ -76,3 +76,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/*
+ * Menu REPLIÉ : le tiroir d'un groupe (Gestion Scolaire, Surveillance, Comptabilité) s'ouvre à droite du rail, au
+ * survol. Ancré en haut de son groupe, il débordait du bas de l'écran dès que la liste était longue (le dernier
+ * élément, « Rapports institutionnels », devenait illisible). Au survol, on mesure et on décale le tiroir vers le
+ * haut juste ce qu'il faut pour qu'il tienne dans la fenêtre — jamais au-dessus du bord supérieur — et c'est
+ * immédiat : la mesure se fait sur l'évènement de survol, sans délai ni animation.
+ */
+(function () {
+  var MARGIN = 12;
+
+  function isCollapsed() {
+    return document.documentElement.classList.contains('sidebar-collapsed') || !!document.querySelector('aside.sidebar-collapsed');
+  }
+
+  function place(pole) {
+    var menu = pole.querySelector('[data-submenu]');
+    if (!menu || !isCollapsed()) return;
+    menu.style.setProperty('--flyout-top', '0px');
+    var poleTop = pole.getBoundingClientRect().top;
+    var height = menu.getBoundingClientRect().height;
+    if (!height) return;
+    var top = 0;
+    if (poleTop + height > window.innerHeight - MARGIN) top = window.innerHeight - MARGIN - (poleTop + height);
+    if (poleTop + top < MARGIN) top = MARGIN - poleTop;
+    menu.style.setProperty('--flyout-top', Math.round(top) + 'px');
+  }
+
+  document.addEventListener('mouseover', function (event) {
+    var pole = event.target && event.target.closest ? event.target.closest('.sidebar-pole') : null;
+    if (!pole) return;
+    place(pole);
+    requestAnimationFrame(function () { place(pole); });
+  });
+})();

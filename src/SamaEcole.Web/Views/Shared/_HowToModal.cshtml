@@ -1,0 +1,71 @@
+@*
+    Fenêtre « Comment faire ? » — montée une seule fois par _Layout, pilotée par le store Alpine `howTo`
+    (wwwroot/js/how-to.js). Elle affiche, pour la page courante, la procédure et les recommandations de
+    l'article correspondant du Centre d'aide (help.js) : un seul contenu à maintenir. Plusieurs articles
+    pour une même page (ex. Paramètres) : un sélecteur d'articles en tête. Aucun article : renvoi vers
+    le Centre d'aide. Les étapes sont numérotées parce qu'elles forment bien une SÉQUENCE.
+*@
+<modal-shell open="$store.howTo.visible" on-close="$store.howTo.dismiss()" size="lg" title="Comment faire ?">
+    <div class="space-y-5 text-sm text-slate-700">
+
+        <p x-show="$store.howTo.loading" x-cloak class="text-slate-500">Chargement de l'aide…</p>
+
+        <div x-show="$store.howTo.failed" x-cloak class="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-danger">
+            L'aide n'a pas pu être chargée. Vérifiez votre connexion, puis réessayez.
+        </div>
+
+        <template x-if="!$store.howTo.loading && !$store.howTo.failed && !$store.howTo.hasArticle">
+            <div>
+                <p class="font-semibold text-slate-900">Aucun guide n'existe encore pour cet écran.</p>
+                <p class="mt-1">Le Centre d'aide regroupe tous les guides de la plateforme, avec une recherche.</p>
+            </div>
+        </template>
+
+        <template x-if="$store.howTo.hasArticle">
+            <div class="space-y-5">
+                @* Jusqu'à 4 guides : des boutons. Au-delà (Paramètres en compte une vingtaine) : une liste déroulante. *@
+                <div x-show="$store.howTo.articles.length > 1 && $store.howTo.articles.length <= 4" x-cloak class="flex flex-wrap gap-2" role="tablist" aria-label="Guides de cet écran">
+                    <template x-for="(a, i) in $store.howTo.articles" :key="a.id">
+                        <button type="button" role="tab" x-on:click="$store.howTo.select(i)" :aria-selected="(i === $store.howTo.index).toString()"
+                                class="rounded-lg px-3 py-1.5 text-left text-[13px] font-semibold transition-colors"
+                                :class="i === $store.howTo.index ? 'bg-primary-500 text-white' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
+                                x-text="a.title"></button>
+                    </template>
+                </div>
+                <div x-show="$store.howTo.articles.length > 4" x-cloak>
+                    <label class="form-label">Sujet <span class="font-normal text-slate-500" x-text="'(' + $store.howTo.articles.length + ' guides pour cet écran)'"></span></label>
+                    <select-field model="$store.howTo.pick" aria-label="Choisir un guide" class="mt-1" placeholder="Choisir un guide"
+                        options-expr="$store.howTo.articles.map((a, i) => ({ value: String(i), label: a.title }))" />
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900" x-text="$store.howTo.article.title"></h3>
+                    <p class="mt-1 text-slate-500" x-show="$store.howTo.article.location" x-text="$store.howTo.article.location"></p>
+                </div>
+
+                <div>
+                    <p class="font-semibold text-slate-900">Les étapes</p>
+                    <ol class="mt-2 list-decimal space-y-2 pl-5">
+                        <template x-for="(step, i) in $store.howTo.steps" :key="i">
+                            <li x-text="step"></li>
+                        </template>
+                    </ol>
+                </div>
+
+                <div x-show="$store.howTo.tips.length > 0" x-cloak>
+                    <p class="font-semibold text-slate-900">À retenir</p>
+                    <ul class="mt-2 list-disc space-y-1.5 pl-5">
+                        <template x-for="(tip, i) in $store.howTo.tips" :key="i">
+                            <li x-text="tip"></li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </template>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <a href="/aide" class="font-semibold text-primary-600 hover:underline">Ouvrir le Centre d'aide complet</a>
+            <button type="button" x-on:click="$store.howTo.dismiss()" class="btn-modal-primary">Compris</button>
+        </div>
+    </div>
+</modal-shell>

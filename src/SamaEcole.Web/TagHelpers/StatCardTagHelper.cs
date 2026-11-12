@@ -148,7 +148,7 @@ public class StatCardTagHelper : TagHelper
         "warning" => ("icon-chip-amber", "text-amber-700"),
         "danger" => ("icon-chip-rose", "text-rose-700"),
         "pink" => ("icon-chip-pink", "text-pink-700"),
-        "blue" => ("icon-chip-blue", "text-blue-700"),
+        "blue" => ("icon-chip-primary", "text-primary-900"), // marque unique : le « bleu » est désormais le marine
         "purple" => ("icon-chip-purple", "text-purple-700"),
         "slate" => ("icon-chip-slate", "text-slate-900"),
         "primary" => ("icon-chip-primary", "text-primary-700"),

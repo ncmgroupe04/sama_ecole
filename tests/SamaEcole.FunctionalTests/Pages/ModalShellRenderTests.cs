@@ -70,7 +70,9 @@ public class ModalShellRenderTests(AuthApiFactory factory) : IClassFixture<AuthA
     {
         var html = await HtmlAsync("/infrastructures");
 
-        html.Should().Contain("bg-white/85").And.Contain("border-white/60");
+        // Une seule surface blanche pleine (plus de verre dépoli translucide) : voir ModalShellTagHelper.
+        html.Should().Contain("border-slate-200 bg-white shadow-2xl").And.Contain("modal-panel");
+        html.Should().NotContain("bg-white/85", "plus de blanc translucide dans la fenêtre claire");
         html.Should().NotContain("bg-zinc-900/85", "la palette sombre ne doit pas fuiter dans l'application claire");
     }
 }

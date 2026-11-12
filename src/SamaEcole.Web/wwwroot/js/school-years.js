@@ -263,7 +263,7 @@ document.addEventListener('alpine:init', () => {
                 this.isCreateOpen = false;
                 this.addedYearLabel = this.newYear.label;
                 await this.loadYears();
-                this.showAddedDialog = true; // confirmation « Année scolaire ajoutée »
+                window.toast?.success('Année scolaire « ' + this.addedYearLabel + ' » ajoutée.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création de l'année scolaire.");
             } finally {
@@ -320,7 +320,6 @@ document.addEventListener('alpine:init', () => {
                 // Rechargement complet : le serveur a pu recaler les trimestres, et c'est l'état RÉEL
                 // de l'année qu'il faut afficher — pas ce que le navigateur croit avoir envoyé.
                 await this.loadYears();
-                this.showEditedDialog = true;
             } catch (err) {
                 this.editErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
             } finally {

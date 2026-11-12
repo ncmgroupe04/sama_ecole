@@ -83,6 +83,8 @@
  les données ne viennent que de l'API, qui exige le JWT (voir PagesController).
  Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
  <script src="~/js/require-session.js" asp-append-version="true"></script>
+ @* Bouton « Comment faire ? » : store Alpine enregistré sur alpine:init, donc AVANT Alpine (qui est differé). *@
+ <script src="~/js/how-to.js" asp-append-version="true"></script>
 
  @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
  Voir _AuthLayout.cshtml pour le raisonnement complet. *@
@@ -121,24 +123,42 @@
       class="fixed inset-0 z-20 bg-slate-900/60 backdrop-blur-sm transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
 
  <!-- Barre latérale -->
- @* w-72 et non w-64 : à 16rem, l'espace restant pour un libellé principal (icône w-6, gap-3,
- px-3 du lien, px-4 de la nav) tombe à ~164px, soit tout juste la largeur de « Aide &
- Documentation » ou de « Console Super Admin » en text-base — les deux passaient à la ligne,
- et un libellé de menu sur deux lignes casse l'alignement de toute la colonne. 18rem laisse
- ~196px, avec la marge nécessaire pour un libellé un peu plus long. La barre est en flux
- (lg:static) : aucun décalage codé en dur ailleurs ne dépend de cette largeur — vérifié. *@
+ @* Largeur dépliée : 17rem (lg:w-[17rem]). Un titre de groupe (« Gestion Scolaire ») ne doit JAMAIS passer à la
+    ligne, y compris quand un sous-menu ouvert fait défiler le menu et qu'une barre de défilement (~11 px,
+    fine, voir .sidebar-nav dans Styles/input.css) réduit la largeur utile : d'où 17rem et non 15rem, des
+    marges latérales px-3 et whitespace-nowrap sur les boutons de groupe. Libellé le plus long mesuré :
+    « Rapports institutionnels », marge ≥ 12 px sans barre de défilement. Si un libellé plus long arrive,
+    c'est cette largeur qu'il faut revoir. Tiroir mobile : w-72. La barre est en flux (lg:static) : aucun
+    décalage codé en dur ailleurs n'en dépend.
+    La largeur lg:w-[17rem] est dans le balisage STATIQUE (pas dans le :class Alpine) : avant l'hydratation d'Alpine
+    la barre prenait sa largeur de base (w-72) puis passait à 17rem, et la transition de 300 ms animait cet
+    étirement à chaque changement de page. Le mode replié (5rem) est posé par .sidebar-collapsed (Styles/input.css,
+    sélecteurs plus spécifiques qu'une classe utilitaire), donc par sidebar-boot.js dès le premier rendu. *@
  <aside
- :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20 sidebar-collapsed' : 'lg:w-72']"
- class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 bg-slate-50 border-r border-slate-200 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
+ :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'sidebar-collapsed' : '']"
+ class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 lg:w-[17rem] bg-primary-900 border-r border-primary-900 transition-all duration-300 lg:translate-x-0 lg:relative lg:inset-auto flex flex-col h-full shadow-sm">
 
  <!-- En-tête Sidebar / Logo -->
- <div class="sidebar-header flex items-center justify-start h-16 border-b border-slate-100 pl-7 pr-4">
- <div class="flex items-center gap-3">
- <div class="sidebar-logo w-12 h-12 rounded-none bg-primary-600 text-white flex items-center justify-center shrink-0" aria-hidden="true">
- <svg class="w-[1.875rem] h-[1.875rem]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
+ <div class="sidebar-header flex items-center justify-between h-16 border-b border-white/10 pl-7 pr-3">
+ @* Logo + nom cliquables : retour à l'écran d'accueil du rôle (auth.defaultLandingForRole, comme après la connexion) ;
+    /tableau-de-bord en repli le temps que le script s'exécute. *@
+ <a href="/tableau-de-bord" x-data :href="window.auth.defaultLandingForRole()" title="Accueil" aria-label="Unikol, retour à l'accueil"
+ class="flex items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+ <div class="sidebar-logo w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 text-white flex items-center justify-center shrink-0 transition-colors hover:bg-white/20" aria-hidden="true">
+ <icon name="logo-mark" class="w-9 h-9" />
  </div>
- <span class="sidebar-label font-bold text-[1.6875rem] text-slate-900 tracking-tight">Unikol</span>
- </div>
+ <span class="sidebar-label font-bold text-[1.6875rem] text-white tracking-tight">Unikol</span>
+ </a>
+ @* Plier / déplier le menu : petite flèche dans l'en-tête du menu, à côté du logo. L'état est mémorisé et posé sur <html>
+    (sidebar-boot.js) pour qu'il survive au changement de page. En mode replié, la flèche se pose sur le bord du menu. *@
+ <button type="button"
+ x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed); document.documentElement.classList.toggle('sidebar-collapsed', sidebarCollapsed)"
+ :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ :aria-expanded="(!sidebarCollapsed).toString()"
+ class="sidebar-toggle hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-primary-200 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+ <icon name="chevron-left" class="h-5 w-5 transition-transform duration-200" x-bind:class="sidebarCollapsed ? 'rotate-180' : ''" />
+ </button>
  </div>
 
  @*
@@ -158,9 +178,9 @@
  pas la ligne qu'il faut casser, ce qui désaligne toute la colonne et fait sauter la hauteur
  des lignes voisines. *@
  const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95";
- const string LinkIdle = $"{LinkBase} text-slate-500 hover:bg-slate-100 hover:text-primary-600";
- const string LinkActive = $"{LinkBase} text-primary-600 bg-primary-50 font-medium";
- const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
+ const string LinkIdle = $"{LinkBase} text-primary-200 hover:bg-white/10 hover:text-white";
+ const string LinkActive = $"{LinkBase} text-white bg-white/15 font-medium";
+ const string LinkSoon = $"{LinkBase} text-primary-300/60 cursor-not-allowed select-none";
 
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
  // courante. L'ouverture/fermeture au clic est ensuite gérée par wwwroot/js/sidebar-nav.js
@@ -171,7 +191,7 @@
  }
 
  <!-- Navigation -->
- <nav class="sidebar-nav flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
+ <nav class="sidebar-nav flex-1 px-3 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
 
  <a href="/tableau-de-bord" title="Tableau de bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
  <icon name="dashboard" class="w-6 h-6 shrink-0" />
@@ -196,7 +216,7 @@
  matériel) : il n'a accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous
  gagne ou perd un rôle, cette liste doit être mise à jour en écho. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
- <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
+ <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Gestion Scolaire</span>
@@ -249,7 +269,7 @@
  @* Mise en valeur du profil Franco-Arabe (Ticket 3) : la répartition Français/Arabe et les
  disciplines islamiques se paramètrent DANS cet écran (Subject.SectionType) — aucune page
  Bilinguisme dédiée n'existe encore, donc pas de nouvelle entrée de menu, juste ce repère. *@
- <span x-show="isFrancoArabeProfile" x-cloak class="sidebar-label ml-auto shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Bilingue</span>
+ <span x-show="isFrancoArabeProfile" x-cloak class="sidebar-label ml-auto shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white">Bilingue</span>
  </a>
  @* Masqué en profil Simplifié (Onboarding, Ticket 3) : absent de la liste des rubriques conservées. *@
  <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat']) && !isSimplifieProfile" class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
@@ -304,7 +324,7 @@
  Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
  pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant']) && pedagogyEnabled" x-cloak>
- <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(surveillanceOpen ? "true" : "false")">
+ <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Surveillance</span>
@@ -345,7 +365,7 @@
  aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
  flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
  <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool && financeEnabled" x-cloak class="sidebar-pole relative space-y-1">
- <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
+ <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Comptabilité</span>
@@ -413,13 +433,13 @@
  directement : « Se déconnecter » y reste la première entrée (gabarit de mise en évidence hérité de
  l'ancien bouton conservé pour elle), « Changer mon mot de passe » s'y ajoute — seul point d'entrée
  de _ChangePasswordModal.cshtml, accessible depuis n'importe quelle page. *@
- <div class="sidebar-profile relative p-3 border-t border-slate-100" x-data="sessionMenu()">
+ <div class="sidebar-profile relative p-3 border-t border-white/10" x-data="sessionMenu()">
  <button type="button" x-on:click="isOpen = !isOpen" aria-haspopup="true" :aria-expanded="isOpen.toString()"
- class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-none bg-primary-600 text-white hover:bg-primary-700 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
+ class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-2xl bg-white/10 text-white hover:bg-white/15 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-300"
  :title="name || role">
  @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
  (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
- <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-none bg-white/20 text-white flex items-center justify-center font-medium uppercase"
+ <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-full bg-white/15 ring-1 ring-white/25 text-white flex items-center justify-center font-medium uppercase"
  x-text="(name || role) ? (name || role)[0] : '?'"></div>
 
  <div class="sidebar-label flex-1 min-w-0 text-left">
@@ -431,43 +451,56 @@
  </button>
 
  @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
- qui s'ouvrirait vers le bas sortirait de l'écran. Largeur FIXE (w-64, comme schoolSwitcher()) et
- non "left-3 right-3" : cette dernière étire le menu à la largeur du panneau parent, qui tombe à
- 5rem (w-20) quand la barre est réduite (.sidebar-collapsed) — le menu se retrouvait alors comprimé
- à ~56px, un mot par ligne. Ancré à gauche (left-3), il déborde du rail réduit sans être découpé :
- <aside> n'a pas d'overflow-hidden. *@
+ qui s'ouvrirait vers le bas sortirait de l'écran. Rail déplié : left-3 right-3, donc EXACTEMENT la
+ largeur de la carte du profil, alignée sur la barre latérale. Rail replié (5rem) : left-3 right-3 le
+ comprimerait à ~56px avec du texte ; le menu y prend une largeur fixe (w-14) et n'affiche que des
+ icônes. Ancré à gauche (left-3), il n'est pas découpé : <aside> n'a pas d'overflow-hidden. *@
  <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
- class="absolute bottom-full left-3 w-64 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
+ :class="sidebarCollapsed ? 'w-14' : 'right-3'"
+ class="absolute bottom-full left-3 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
  @* Deux actions PLEINES et contrastées (demande produit) : « Changer mon mot de passe » sur fond
     noir, « Se déconnecter » sur fond rouge (jeton danger, comme .btn-danger) — texte et icône
     blancs dans les deux cas. `mt-1.5` sépare les deux pavés pleins. *@
 @* Apparence : clair / sombre / système, mémorisée dans le navigateur (store « theme », theme.js). *@
- <div class="px-1 pb-2">
- <p class="px-2 pb-1 text-xs font-semibold text-slate-500">Apparence</p>
- <div role="group" aria-label="Apparence" class="grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">
+ @* Rail replié (sidebarCollapsed) : le menu fait 3,5 rem de large et n'affiche que des ICÔNES (infobulle +
+    aria-label portent le libellé) — plus de texte qui déborde du rail. Rail déplié : libellés complets. *@
+ <div class="px-1 pb-2" :class="sidebarCollapsed ? 'px-0' : ''">
+ <p x-show="!sidebarCollapsed" class="px-2 pb-1 text-xs font-semibold text-slate-500">Apparence</p>
+ <div role="group" aria-label="Apparence" class="gap-1 rounded-lg bg-slate-100 p-1" :class="sidebarCollapsed ? 'flex flex-col' : 'grid grid-cols-3'">
  <template x-for="option in $store.theme.modes" :key="option.value">
  <button type="button" x-on:click="$store.theme.set(option.value)" :aria-pressed="($store.theme.mode === option.value).toString()"
- class="rounded-md px-2 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
- :class="$store.theme.mode === option.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
- x-text="option.label"></button>
+ :title="option.label" :aria-label="option.label"
+ class="flex items-center justify-center rounded-md px-2 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+ :class="$store.theme.mode === option.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'">
+ <span x-show="sidebarCollapsed" x-cloak class="flex h-6 w-6 items-center justify-center">
+ <svg class="h-5 w-5" aria-hidden="true"><use :href="'#icon-' + (option.value === 'light' ? 'sun' : option.value === 'dark' ? 'moon' : 'monitor')"></use></svg>
+ </span>
+ <span x-show="!sidebarCollapsed" x-text="option.label"></span>
+ </button>
  </template>
  </div>
  </div>
   <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
- class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+ title="Changer mon mot de passe" aria-label="Changer mon mot de passe"
+ :class="sidebarCollapsed ? 'justify-center px-0' : 'px-3 text-left'"
+ class="w-full flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
- Changer mon mot de passe
+ <span x-show="!sidebarCollapsed">Mot de passe</span>
  </button>
  @* Directeur/Super Admin seulement — voir sessionMenu() (auth.js) et AuthController.ChangeEmail. *@
  <button type="button" x-show="canChangeEmail" x-cloak x-on:click="isOpen = false; $store.changeEmailModal.open()"
- class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+ title="Changer mon e-mail" aria-label="Changer mon e-mail"
+ :class="sidebarCollapsed ? 'justify-center px-0' : 'px-3 text-left'"
+ class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="envelope" class="w-4 h-4 shrink-0 text-white/70" />
- Changer mon e-mail
+ <span x-show="!sidebarCollapsed">Adresse e-mail</span>
  </button>
  <button type="button" x-on:click="isOpen = false; logout()"
- class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-danger text-white hover:opacity-90 transition-opacity">
+ title="Se déconnecter" aria-label="Se déconnecter"
+ :class="sidebarCollapsed ? 'justify-center px-0' : 'px-3 text-left'"
+ class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium bg-danger text-white hover:opacity-90 transition-opacity">
  <icon name="sign-out" class="w-4 h-4 shrink-0" />
- Se déconnecter
+ <span x-show="!sidebarCollapsed">Se déconnecter</span>
  </button>
  </div>
  </div>
@@ -483,16 +516,16 @@
     conteneur flex-colonne — un simple frère flex de <main> dans la colonne (voir plus bas),
     agrandir sa hauteur ne perturbe donc pas le calcul de .sticky-sub-header (qui dépend du
     padding de <main>, pas de la hauteur de <header>). *@
- <header class="bg-white border-b border-slate-200 shadow-sm z-10 flex flex-col">
+ <header class="bg-white border-b border-slate-200/70 z-10 flex flex-col">
  @* Fond bleu royal identique à .sidebar-user-card (bg-primary-600) : décision produit du 19/09/2026
  reliant visuellement cette rangée à la carte de profil du Directeur. Les pastilles (horloge, mode,
  année scolaire, démarrage, salutation) GARDENT leur fond clair d'origine (bg-slate-100 etc.) —
  elles ressortent déjà naturellement sur le bleu, inutile de les repeindre. Seuls les éléments posés
  directement sur le bleu (titre, boutons icône sans pastille) passent en blanc. *@
- <div class="bg-primary-600 h-16 flex items-center justify-between gap-4 px-4 lg:px-8">
- <div class="flex items-center gap-4 min-w-0">
+ <div class="h-16 flex items-center justify-between gap-4 px-4 lg:px-8">
+ <div class="flex flex-1 items-center gap-4 min-w-0">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
- <button x-on:click="sidebarOpen = true" class="lg:hidden shrink-0 p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
+ <button x-on:click="sidebarOpen = true" class="lg:hidden shrink-0 p-2 -ml-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-xl">
  <icon name="menu" class="w-6 h-6" />
  </button>
 
@@ -500,15 +533,7 @@
  tiroir superposé, pas un panneau à réduire). État persisté en localStorage : la navigation
  se fait par rechargement complet de page (MVC classique), donc l'état Alpine du <body> ne
  survit pas d'une page à l'autre sans cette persistance. *@
- <button type="button"
- x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed); document.documentElement.classList.toggle('sidebar-collapsed', sidebarCollapsed)"
- :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
- :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
- @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
- clavier (Tab) en a besoin pour rester accessible. *@
- class="hidden lg:inline-flex shrink-0 p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all duration-200 active:scale-95">
- <icon name="menu" class="w-6 h-6" />
- </button>
+ @* Le bouton de pliage du menu est désormais dans l'en-tête du menu latéral (.sidebar-toggle), à côté du logo. *@
 
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas
@@ -523,7 +548,14 @@
  qui cède la place, jamais les pastilles. Historique : shrink-0 + whitespace-nowrap : le titre gardait sa largeur de contenu mais la colonne de gauche
  se comprimait sous la pression des pastilles de droite, si bien que le texte débordait sur
  l'horloge voisine. Le titre ne rétrécit plus ; c'est la colonne de droite qui absorbe. *@
- <h2 title="@ViewData["Title"]" class="hidden sm:block min-w-0 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
+ @* Titre retiré de l'affichage (il figure déjà en grand dans la page, et la navigation rapide indique le module) :
+    conservé pour les lecteurs d'écran et le titre accessible de la région. *@
+ <h2 class="sr-only">@ViewData["Title"]</h2>
+ @* Navigation rapide entre modules : sur la rangée UNIQUE de la barre du haut (marine), alignée avec les pastilles.
+    Bureau seulement ; sous lg, le sélecteur « Saut rapide » a sa petite rangée (voir plus bas). *@
+ <div class="hidden min-w-0 flex-1 lg:block">
+ @await Html.PartialAsync("_QuickNav", path)
+ </div>
  </div>
 
  <div class="flex items-center gap-3 shrink-0">
@@ -532,7 +564,7 @@
  entrées, ce qui est le cas de l'immense majorité des comptes. *@
  <div x-data="schoolSwitcher()" x-show="hasMultipleSchools" x-cloak class="relative hidden sm:block">
  <button type="button" x-on:click="isOpen = !isOpen" :disabled="isSwitching"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 disabled:opacity-60">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 disabled:opacity-60">
  <icon name="building" class="w-4 h-4" />
  <span class="max-w-[10rem] truncate" x-text="isSwitching ? 'Bascule…' : currentSchoolName"></span>
  <icon name="chevron-down" class="w-3.5 h-3.5" />
@@ -566,10 +598,6 @@
  faisait le plus gros élément de la barre — plus imposant que le nom de l'utilisateur ou que
  l'année scolaire active, alors qu'elle ne porte aucune information propre à l'établissement.
  Ramenée au gabarit des autres pastilles (text-sm, px-2.5 py-1), elle s'y harmonise. *@
- <div x-data="digitalClock()" class="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold shrink-0 whitespace-nowrap" x-cloak>
- <icon name="clock" class="w-4 h-4 shrink-0" />
- <span><span x-text="currentDate"></span> • <span class="font-bold" x-text="currentHour"></span></span>
- </div>
 
  @* L'ancien badge de connectivité de la barre supérieure a été retiré : il mesurait la même
  chose que la pastille « Connecté / Hors ligne » de la barre d'état en bas d'écran (§9), et les
@@ -588,8 +616,8 @@
  <div x-data="sandboxModeBadge()" x-show="loaded" x-cloak :class="isLive ? 'hidden sm:block' : ''">
  <a x-show="isDirecteur" x-cloak href="/parametres?tab=securite#mode-reel"
  :title="isLive ? 'Mode réel — les données enregistrées sont définitives (Paramètres › Paramètres système)' : 'Mode test — les données saisies sont des essais. Cliquez pour passer en Mode Réel (Paramètres › Paramètres système › Passer en mode réel)'"
- class="inline-flex items-center gap-2 rounded-full text-sm ring-1 transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
- :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200 focus-visible:ring-slate-400' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 hover:bg-orange-800 focus-visible:ring-orange-700'">
+ class="inline-flex items-center gap-2 rounded-xl text-sm ring-1 transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-primary-50 text-primary-700 ring-primary-100 hover:bg-primary-100 focus-visible:ring-primary' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 hover:bg-orange-800 focus-visible:ring-orange-700'">
  <icon name="alert-circle" class="w-3.5 h-3.5 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
  <span x-show="isLive" x-cloak>Mode réel</span>
@@ -599,8 +627,8 @@
  </a>
  <span x-show="!isDirecteur" x-cloak
  :title="isLive ? 'Mode réel — les données enregistrées sont définitives' : 'Mode test — les données saisies sont des essais : n\'y enregistrez pas de données réelles. Seul le Directeur peut passer en Mode Réel.'"
- class="inline-flex items-center gap-2 rounded-full text-sm ring-1"
- :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700'">
+ class="inline-flex items-center gap-2 rounded-xl text-sm ring-1"
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-primary-50 text-primary-700 ring-primary-100' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700'">
  <icon name="alert-circle" class="w-3.5 h-3.5 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
  <span x-show="isLive" x-cloak>Mode réel</span>
@@ -610,25 +638,6 @@
  </span>
  </div>
 
- @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
- travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
- SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers
- l'onglet Paramètres › Années où la bascule se confirme par mot de passe (Volume_7_Security §16) ;
- informatif pour les autres rôles. Masqué sous `sm` pour ne pas encombrer la barre sur mobile. *@
- <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block shrink-0">
- <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
- title="Année scolaire active — gérer dans Paramètres › Années"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95"
- <icon name="calendar" class="w-4 h-4" />
- <span x-text="label"></span>
- </a>
- <span x-show="!isDirecteur" x-cloak
- title="Année scolaire active de l'établissement"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-slate-100 text-slate-600 text-sm font-medium">
- <icon name="calendar" class="w-4 h-4" />
- <span x-text="label"></span>
- </span>
- </div>
 
  @* Recherche globale désactivée : la maquette Volume 5 la prévoyait, mais aucun backend
  ne l'alimente et elle fait doublon avec la recherche spécifique de chaque écran
@@ -646,128 +655,20 @@
  class="w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 placeholder:text-slate-300 cursor-not-allowed" />
  </div> *@
 
- @* ─────────────────────────────────────────────────────────────────────────────────────────
- Assistant de Premier Paramétrage (wwwroot/js/setup-assistant.js).
-
- DISTINCT du Centre d'aide (« Aide & Documentation », barre latérale → /aide) : celui-ci n'est
- pas une documentation mais un PARCOURS d'amorçage séquentiel — année scolaire, pédagogie, frais,
- enseignants, première inscription, SIMEN — dont chaque étape affiche son état RÉEL lu depuis
- l'API, plus un pourcentage d'avancement. Réservé aux rôles qui paramètrent l'établissement
- (Directeur, Secrétariat) ; s'ouvre de lui-même une seule fois, au tout premier accès.
- ───────────────────────────────────────────────────────────────────────────────────────────── *@
- <div x-data="setupAssistant()" x-show="eligible" x-cloak class="relative">
- @* Une fois le paramétrage à 100 %, la pastille « Démarrage » disparaît : elle n'a plus rien à
- signaler et libère la barre. Seul le bouton est masqué (la modale reste dans le DOM). *@
- <button type="button" x-on:click="toggle()" x-show="!allDone" x-cloak
- :title="allDone ? 'Assistant de démarrage — paramétrage terminé' : 'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
- :class="allDone ? 'bg-success-bg text-success hover:bg-success/10' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
- <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-sparkle"></use></svg>
- <span class="hidden sm:block">Démarrage</span>
- <span x-show="loaded" x-cloak x-text="percent + '%'"
- class="inline-flex items-center justify-center px-1.5 h-5 rounded-full bg-white/70 text-[11px] font-semibold tabular-nums"></span>
- </button>
- @* Pastille d'attention tant que le paramétrage n'est pas terminé et la modale fermée. *@
- <span x-show="loaded && !allDone && !open" x-cloak aria-hidden="true"
- class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-white"></span>
-
- <modal-shell open="open" on-close="close()" size="2xl">
- <modal-title>
- <span class="inline-flex items-center gap-2">
- <span aria-hidden="true" class="inline-flex w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-400 text-white items-center justify-center">
- <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><use href="#icon-sparkle"></use></svg>
- </span>
- Assistant de démarrage
- </span>
- </modal-title>
- <modal-subtitle>
- <div class="flex items-center gap-3">
- <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
- <div class="h-full rounded-full bg-primary-600 transition-all duration-500" :style="'width:' + percent + '%'"></div>
- </div>
- <span class="text-sm font-semibold text-slate-700 tabular-nums shrink-0" x-text="percent + '%'"></span>
- </div>
- <p class="mt-1.5 text-xs text-slate-500">
- <span x-text="doneCount"></span> / <span x-text="applicableSteps.length"></span> étapes ·
- <span x-show="!allDone">suivez l'ordre pour un démarrage sans accroc</span>
- <span x-show="allDone" class="font-medium text-success">votre établissement est prêt 🎉</span>
- </p>
- </modal-subtitle>
-
- @* Analyse en cours (premier chargement). *@
- <div x-show="!loaded" class="py-12 text-center text-sm text-slate-400">Analyse de votre paramétrage…</div>
-
- <ol x-show="loaded" x-cloak class="space-y-2">
- <template x-for="(step, index) in steps" :key="step.key">
- <li class="rounded-xl border transition-colors"
- :class="index === expanded ? 'border-primary-200 bg-primary-50/40' : 'border-slate-200 bg-white'">
- <button type="button" x-on:click="toggleStep(index)"
- :class="isLocked(index) ? 'cursor-not-allowed' : ''"
- class="w-full flex items-center gap-3 p-3 text-left">
- <span class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
- :class="{
- 'bg-success-bg text-success': step.state === 'done',
- 'bg-warning-bg text-warning': step.state === 'todo' && isUnlocked(index),
- 'bg-slate-100 text-slate-400': step.state === 'na' || isLocked(index)
- }">
- <svg x-show="step.state === 'done'" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><use href="#icon-checkmark-circle"></use></svg>
- <svg x-show="step.state === 'todo' && isUnlocked(index)" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-clock"></use></svg>
- <svg x-show="isLocked(index)" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-lock-closed"></use></svg>
- <svg x-show="step.state === 'na'" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-block"></use></svg>
- </span>
-
- <span class="flex-1 min-w-0">
- <span class="block text-xs font-medium text-slate-400">Étape <span x-text="index + 1"></span> / <span x-text="steps.length"></span></span>
- <span class="flex items-center gap-2">
- <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0 text-slate-400"><use :href="'#icon-' + step.icon"></use></svg>
- <span class="text-sm font-semibold text-slate-800 truncate" x-text="step.title"></span>
- </span>
- </span>
-
- <span class="shrink-0" :class="badgeFor(step, index).cls" x-text="badgeFor(step, index).label"></span>
- <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
- class="w-4 h-4 shrink-0 text-slate-400 transition-transform duration-200"
- :class="index === expanded ? 'rotate-180' : ''"><use href="#icon-chevron-down"></use></svg>
- </button>
-
- <div x-show="index === expanded" x-cloak x-transition.opacity>
- <div class="px-3 pb-3 pl-14 space-y-3">
- <p class="text-sm leading-relaxed text-slate-600" x-text="step.why"></p>
- <p x-show="step.state === 'na'" class="text-xs text-slate-400" x-text="step.naReason"></p>
- <div x-show="step.state !== 'na'" class="flex flex-wrap gap-2">
- <template x-for="action in step.actions" :key="action.url">
- <button type="button" x-on:click="go(action.url)" :disabled="isLocked(index)"
- :class="step.state === 'done' ? 'btn-modal-secondary' : 'btn-modal-primary'">
- <span x-text="(step.state === 'done' ? 'Revoir · ' : '') + action.label"></span>
- <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-chevron-right"></use></svg>
- </button>
- </template>
- </div>
- <p x-show="isLocked(index)" class="text-xs text-slate-400">Terminez d'abord les étapes précédentes.</p>
- </div>
- </div>
- </li>
- </template>
- </ol>
-
- <modal-footer>
- <button type="button" x-on:click="refresh()" :disabled="checking" class="btn-modal-secondary">
- <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4" :class="checking ? 'animate-spin' : ''"><use href="#icon-clock"></use></svg>
- <span x-text="checking ? 'Vérification…' : 'Revérifier'"></span>
- </button>
- <button type="button" x-on:click="close()" class="btn-modal-primary">Fermer</button>
- </modal-footer>
- </modal-shell>
- </div>
 
  @* Salutation selon l'heure. Remplace l'ancienne pastille utilisateur (avatar « C » + nom
  complet), devenue redondante avec la carte de profil de la barre latérale — laquelle porte
  déjà le nom, le rôle et la déconnexion. Purement décorative, aucune donnée personnelle : une
  touche chaleureuse qui accompagne l'horloge (voir greeting() dans ui-components.js). *@
- <div x-data="greeting()" x-cloak class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium shrink-0 whitespace-nowrap">
+ <div x-data="greeting()" x-cloak class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary-50 text-primary-700 text-sm font-medium shrink-0 whitespace-nowrap">
  <span x-text="emoji" aria-hidden="true"></span>
- <span x-text="label"></span>
+ <span class="greeting-label" x-text="label"></span>
  </div>
+ @* Bouton d'aide contextuelle, en couleur d'appel à l'action (voir .btn-help) : présent sur TOUS les écrans. *@
+ <button type="button" x-data x-on:click="$store.howTo.show()" class="btn-help hidden shrink-0 lg:inline-flex">
+ <icon name="help-circle" class="w-4 h-4" />
+ <span class="btn-help-label">Comment faire ?</span>
+ </button>
  </div>
  </div>
 
@@ -776,8 +677,14 @@
     pas à <header> ni <body>. Modèle = `path`, déjà calculé plus haut dans ce fichier
     (Context.Request.Path.Value) : une partial ne hérite pas des variables locales de
     l'appelant, on le passe donc explicitement plutôt que de le recalculer. *@
- <div class="relative border-t border-slate-100 px-4 lg:px-8 py-2">
+ <div class="relative flex items-center gap-4 px-4 py-2 lg:hidden">
+ <div class="min-w-0 flex-1">
  @await Html.PartialAsync("_QuickNav", path)
+ </div>
+ <button type="button" x-data x-on:click="$store.howTo.show()" class="btn-help shrink-0">
+ <icon name="help-circle" class="w-4 h-4" />
+ <span>Comment faire ?</span>
+ </button>
  </div>
  </header>
 
@@ -808,7 +715,7 @@
  gardant <main> sans padding, top:0 colle réellement contre son bord, juste sous le header. Ne
  remettez pas ce padding sur <main> — voir .sticky-sub-header (Styles/input.css) et
  Views/Classrooms|Subjects|Buildings/Index.cshtml, qui en dépendent. *@
- <main class="flex-1 overflow-y-auto overflow-x-hidden">
+ <main class="app-canvas flex-1 overflow-y-auto overflow-x-hidden">
  @* Padding resserré sur mobile (p-4 = 16px) pour rendre ~32px de largeur utile sur un téléphone —
     p-8 étranglait le contenu. Il s'ouvre par palier : sm:p-6 sur tablette, lg:p-10 sur desktop
     (gabarit d'origine). `.sticky-sub-header` (Styles/input.css) suit ces trois paliers avec ses
@@ -859,6 +766,7 @@
     Ouverte par window.guide('Titre', 'Message') quand un bouton d'action a un pré-requis manquant :
     remplace le bandeau rouge « erreur système » par un message d'étape à suivre. *@
  @await Html.PartialAsync("_GuidanceModal")
+ @await Html.PartialAsync("_HowToModal")
 
  @* Modale d'AVERTISSEMENT « Établissement en Mode Test » — s'ouvre une fois par session à l'arrivée
     sur Inscriptions, Caisse ou Notes tant que l'école est en bac à sable et son paramétrage de

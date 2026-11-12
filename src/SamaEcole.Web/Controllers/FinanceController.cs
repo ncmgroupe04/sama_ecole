@@ -433,6 +433,27 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
             file.FileName);
     }
 
+    /// <summary>
+    /// Même situation au format PDF (impression / téléchargement). <c>status</c> (paid | partial | unpaid)
+    /// limite le document à une seule catégorie ; absent = les trois. Même policy que l'écran.
+    /// </summary>
+    [HttpGet("monthly-status/pdf")]
+    [Authorize(Policy = FinancePolicies.CanViewMonthlyStatus)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> MonthlyStatusPdf(
+        [FromQuery] Guid schoolYearId, [FromQuery] int month, [FromQuery] Guid? classroomId,
+        [FromQuery] string? status, CancellationToken cancellationToken)
+    {
+        var file = await mediator.Send(
+            new SamaEcole.Application.Finance.Queries.GetMonthlyStatusPdf.GetMonthlyStatusPdfQuery(
+                schoolYearId, month, classroomId, string.IsNullOrWhiteSpace(status) ? null : status),
+            cancellationToken);
+
+        return File(file.Content, "application/pdf", file.FileName);
+    }
+
     // ------------------------------------------------------------------ Tableau de bord (JGK-F04)
 
     /// <summary>

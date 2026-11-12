@@ -37,11 +37,24 @@ const toTriple = (hex) => {
 
 /** Marque de la plateforme — rampe officielle (voir tailwind.config.js) + un 950 ajouté pour le sombre. */
 const PRIMARY = {
-  50: "#EEF4FF", 100: "#DBE1FF", 200: "#C8D3FF", 300: "#B4C5FF", 400: "#6D94F5",
-  500: "#2563EB", 600: "#004AC6", 700: "#003EA8", 800: "#002B7A", 900: "#00174B", 950: "#0A1638"
+  50: "#EEF4FF", 100: "#DBE1FF", 200: "#C8D3FF", 300: "#B4C5FF", 400: "#5B76A8",
+  500: "#00174B", 600: "#002B7A", 700: "#001239", 800: "#00174B", 900: "#00174B", 950: "#0A1638"
 };
 
 const NEUTRALS = ["slate", "gray", "zinc", "stone"];
+
+/**
+ * Design fluide 2026 — « encre » : TOUS les neutres (slate, gray, zinc, stone) prennent en clair la même
+ * échelle de gris teintée de bleu marine, au lieu des gris neutres de Tailwind. Le rail marine, les actions
+ * bleues et les surfaces partagent ainsi une seule famille de teintes : plus de gris « froid » posé à côté
+ * d'un bleu. Luminosités proches de celles de Tailwind (contrastes AA conservés : 500 ≈ 5:1 sur blanc).
+ * 50 = fond de page (identique à `.app-canvas`), 900 = marine du rail. Le mode sombre n'est PAS touché :
+ * ses cibles viennent toujours de colors.slate.
+ */
+const INK = {
+  50: "#F7F9FC", 100: "#EFF3F9", 200: "#E1E8F2", 300: "#C3CDE5", 400: "#8D9BBF",
+  500: "#5E6C93", 600: "#44527C", 700: "#2F3C66", 800: "#1B2852", 900: "#0A1A44", 950: "#050E2B"
+};
 const HUES = ["red", "rose", "orange", "amber", "yellow", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "pink"];
 
 // shade clair → shade (de la même famille) utilisé en sombre. Les shades absentes ne changent pas.
@@ -59,9 +72,9 @@ const MAPS = {
 };
 
 const primaryDark = {
-  fond: { 50: "#0A1638", 100: PRIMARY[900], 200: PRIMARY[800], 300: PRIMARY[700] },
+  fond: { 50: "#0A1638", 100: "#00174B", 200: "#002B7A", 300: "#003EA8", 500: "#2563EB", 600: "#3B7BF2", 700: "#2563EB" },
   encre: { 500: "#6D94F5", 600: "#8EAAF7", 700: "#B4C5FF", 800: "#C8D3FF", 900: "#DBE1FF" },
-  trait: { 50: "#0A1638", 100: PRIMARY[900], 200: PRIMARY[800], 300: PRIMARY[700] }
+  trait: { 50: "#0A1638", 100: "#00174B", 200: "#002B7A", 300: "#003EA8" }
 };
 
 const GROUPS = {
@@ -95,12 +108,16 @@ function build() {
       for (const shade of SHADES) {
         if (!scale[shade]) continue;
         const target = MAPS[kind][group][shade];
-        // Seules les shades transformées sont émises : les autres héritent du thème par défaut.
-        if (target === undefined) continue;
+        // Neutres : même sans cible sombre, la teinte CLAIRE est émise (échelle INK) ; les autres
+        // familles héritent du thème par défaut pour les shades non transformées.
+        if (target === undefined) {
+          if (kind === "neutral") put(group, family, shade, INK[shade], null);
+          continue;
+        }
         // Neutres : TOUTES les familles (zinc, gray, stone…) visent l'échelle slate en sombre, pour que fond de
         // page, cartes et traits partagent une même teinte bleutée quelle que soit la famille écrite dans la vue.
         const source = kind === "neutral" ? colors.slate : scale;
-        put(group, family, shade, scale[shade], source[target]);
+        put(group, family, shade, kind === "neutral" ? INK[shade] : scale[shade], source[target]);
       }
     }
   };

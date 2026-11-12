@@ -55,18 +55,39 @@ module.exports = {
       //   neutral = secondary #565E74
       // `warning` n'a pas d'équivalent dans le design system (pas de token ambre officiel) :
       // conservé tel quel, seule couleur de ce groupe qui reste une teinte Tailwind ad hoc.
+      // Design fluide 2026 : ombres teintées de bleu marine (jamais un gris neutre), une pour les
+      // panneaux, une pour les aplats bleus (bouton principal, élément actif).
+      // Arrondis très fins, uniformes sur toute la plateforme (demande produit : « presque
+      // imperceptibles »). Redéfinir l'échelle ici change d'un coup les ~1000 usages de rounded-lg/xl/2xl/3xl
+      // des vues, des composants et des Tag Helpers. `rounded-full` (avatars, pastilles, jauges) est conservé.
+      borderRadius: {
+        sm: "2px",
+        DEFAULT: "3px",
+        md: "4px",
+        lg: "4px",
+        xl: "5px",
+        "2xl": "6px",
+        "3xl": "6px"
+      },
+      boxShadow: {
+        fluid: "0 1px 2px rgb(10 26 68 / 0.04), 0 14px 32px -22px rgb(21 52 140 / 0.16)",
+        "fluid-blue": "0 8px 18px -8px rgb(0 23 75 / 0.55)"
+      },
       colors: {
         primary: {
-          DEFAULT: "#2563EB",
+          // UNE seule couleur de marque : le marine du panneau de connexion (#00174B). 500 = 900 ; 600 est
+          // l'état survol (un cran plus clair, #002B7A) et 700 l'état pressé. Les teintes 50 à 300 restent des
+          // fonds clairs de pastilles et de survols.
+          DEFAULT: "#00174B",
           50: "#EEF4FF",
           100: "#DBE1FF",
           200: "#C8D3FF",
           300: "#B4C5FF",
-          400: "#6D94F5",
-          500: "#2563EB",
-          600: "#004AC6",
-          700: "#003EA8",
-          800: "#002B7A",
+          400: "#5B76A8",
+          500: "#00174B",
+          600: "#002B7A",
+          700: "#001239",
+          800: "#00174B",
           900: "#00174B"
         },
         success: { DEFAULT: "#006242", bg: "#BDFFDB" }, // Vert — validation, paiement effectué, abonnement actif
@@ -79,13 +100,15 @@ module.exports = {
         // système Segoe UI (Volume 5 §2.2). Elle était déjà déclarée ici mais jamais chargée : la
         // plateforme rendait en Segoe UI.
         // Cairo : glyphes arabes uniquement (unicode-range, voir Styles/input.css) — le latin reste en Inter.
-        sans: ["Inter", "Cairo", "Segoe UI", "system-ui", "sans-serif"],
+        // Design fluide 2026 : Figtree (variable, AUTO-HÉBERGÉE) passe en tête ; Inter reste en repli
+        // (glyphes hors latin étendu, italiques).
+        sans: ["Figtree", "Inter", "Cairo", "Segoe UI", "system-ui", "sans-serif"],
         // Harmonisation demandée : `font-mono` ne bascule PLUS vers une chasse fixe. C'est la même
         // Inter que le reste de la plateforme ; les chiffres tabulaires (pour aligner les colonnes
         // de nombres — matricules, montants FCFA, n° de reçu, dates, ~22 vues) sont ajoutés via une
         // règle `.font-mono { font-variant-numeric: tabular-nums }` dans Styles/input.css. Une seule
         // redéfinition ici plutôt que 22 vues éditées, et tout futur `font-mono` hérite du bon rendu.
-        mono: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+        mono: ["Figtree", "Inter", "Segoe UI", "system-ui", "sans-serif"],
         // Grilles de saisie RTL (notes des matières arabes) : Cairo EN TÊTE, Inter derrière. Cairo n'étant
         // déclarée que sur les blocs arabes (unicode-range), les chiffres et le latin restent rendus en Inter.
         arabic: ["Cairo", "Inter", "Segoe UI", "system-ui", "sans-serif"]

@@ -745,7 +745,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedSubjectName = this.newSubject.name;
                 this.revealCycleFor(this.newSubject.level);
                 await this.loadSubjects();
-                this.showAddedDialog = true; // confirmation « Matière ajoutée »
+                window.toast?.success('Matière « ' + this.addedSubjectName + ' » ajoutée.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la matière.');
             } finally {
@@ -792,7 +792,6 @@ document.addEventListener('alpine:init', () => {
                 this.revealCycleFor(this.editing.level);
                 this.closeEdit();
                 await this.loadSubjects();
-                this.showEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     this.editErrors = { global: 'Cette matière vient d\'être modifiée par un autre utilisateur. La liste a été rafraîchie — vérifiez les valeurs puis réessayez.' };
