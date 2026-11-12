@@ -19,7 +19,7 @@
       demande de réduire les animations). -->
  <div class="auth-hero hidden lg:flex flex-col bg-primary-900 text-white px-14 py-12 overflow-hidden">
  <div class="flex items-center gap-3">
- <div aria-hidden="true" class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] flex items-center justify-center"><icon name="logo-mark" class="w-9 h-9" /></div>
+ <div aria-hidden="true" class="w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 flex items-center justify-center"><icon name="logo-mark" class="w-9 h-9" /></div>
  <span class="font-bold text-2xl tracking-tight">Unikol</span>
  </div>
 
@@ -71,7 +71,7 @@
 
  <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
  <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
- <div aria-hidden="true" class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] flex items-center justify-center"><icon name="logo-mark" class="w-7 h-7" /></div>
+ <div aria-hidden="true" class="w-9 h-9 rounded-xl bg-primary-500 flex items-center justify-center"><icon name="logo-mark" class="w-7 h-7" /></div>
  <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
@@ -154,15 +154,18 @@
  </div>
  <p id="passwordError" x-cloak x-show="errors.password" x-text="errors.password" class="text-red-500 text-xs mt-1" role="alert"></p>
  @* Voie self-service (POST /api/v1/auth/forgot-password + reset-password), là où on la cherche : sous le champ. *@
- <p class="mt-2 text-right text-sm">
- <a href="/mot-de-passe-oublie" class="font-semibold text-primary-600 hover:underline">Mot de passe oublié ?</a>
+ <p class="mt-2 flex justify-end">
+ <a href="/mot-de-passe-oublie" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-3 py-1.5 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+ <icon name="key" class="w-4 h-4" />
+ Mot de passe oublié ?
+ </a>
  </p>
  </div>
 
  <button type="submit"
  x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
- class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:brightness-110 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none">
+ class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none">
  <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -174,24 +177,39 @@
  @* Pied de formulaire regroupé : un filet, deux liens d'inscription / suivi, puis le support en petit. Le lien
     « Mot de passe oublié » est sous le champ ; la voie administrative (réinitialisation par l'administrateur de
     l'établissement, POST /api/v1/users/{id}/reset-password) reste mentionnée ci-dessous. *@
- <div class="mt-8 space-y-3 border-t border-slate-200 pt-6 text-[0.9375rem] text-slate-600">
- <p>Votre établissement n'est pas encore inscrit ?
- <a href="/inscription" class="font-semibold text-primary-600 hover:underline">Inscrire mon établissement</a></p>
- <p>Demande déjà envoyée ?
- <a href="/suivi-demande" class="font-semibold text-primary-600 hover:underline">Suivre son état</a></p>
+ @* Pied de formulaire : de vrais boutons (fond teinté), pas des liens colorés. Chaque bouton a sa question en petit au-dessus ;
+    le support est un bouton vert WhatsApp. La voie administrative (réinitialisation par l'administrateur) reste mentionnée. *@
+ <div class="mt-8 grid gap-4 border-t border-slate-200 pt-6">
+ <div>
+ <p class="mb-1.5 text-[0.8125rem] text-slate-500">Votre établissement n'est pas encore inscrit ?</p>
+ <a href="/inscription" class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-50 px-3 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+ <icon name="plus" class="w-4 h-4" />
+ Inscrire mon établissement
+ </a>
+ </div>
+ <div>
+ <p class="mb-1.5 text-[0.8125rem] text-slate-500">Demande déjà envoyée ?</p>
+ <a href="/suivi-demande" class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-50 px-3 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+ <icon name="clock" class="w-4 h-4" />
+ Suivre son état
+ </a>
+ </div>
  @* Volet de marque masqué sous lg : sans ce lien, un prospect sur mobile n'aurait aucun accès à la grille depuis cet écran. *@
- <p class="lg:hidden">Vous équipez votre établissement ?
- <a href="/vitrine#tarifs" class="font-semibold text-primary-600 hover:underline">Voir la grille tarifaire</a></p>
+ <div class="lg:hidden">
+ <p class="mb-1.5 text-[0.8125rem] text-slate-500">Vous équipez votre établissement ?</p>
+ <a href="/vitrine#tarifs" class="flex h-11 w-full items-center justify-center rounded-xl bg-primary-50 px-3 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100">Voir la grille tarifaire</a>
+ </div>
  </div>
 
- <div class="mt-6 space-y-1 text-[0.8125rem] text-slate-500">
- <p>Mot de passe inaccessible ? Contactez l'administrateur de votre établissement.</p>
- <p>Inscription en attente de validation ? Contactez-nous pour accélérer le processus.</p>
- <p>Un problème technique ?
- <a href="https://wa.me/221763545916" class="inline-flex items-center gap-1 font-semibold text-slate-700 hover:underline">
+ <div class="mt-6 space-y-3 text-[0.8125rem] text-slate-500">
+ <p>Mot de passe inaccessible ? Contactez l'administrateur de votre établissement. Inscription en attente de validation ? Contactez-nous pour accélérer le processus.</p>
+ <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+ <span>Un problème technique ?</span>
+ <a href="https://wa.me/221763545916" class="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
  <icon name="whatsapp" class="w-4 h-4" />
  WhatsApp : +221 76 354 59 16
- </a></p>
+ </a>
+ </div>
  </div>
  </div>
  </div>

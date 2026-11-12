@@ -821,7 +821,7 @@
     inset: 6px;
     z-index: 29;
     pointer-events: none;
-    border: 1px solid rgb(37 99 235 / 0.38);
+    border: 1px solid rgb(0 23 75 / 0.30);
     border-radius: 2px;
   }
 
@@ -1142,7 +1142,7 @@
   }
 
   .quick-nav-link:hover::after {
-    background: rgb(37 99 235 / 0.28);
+    background: rgb(0 23 75 / 0.22);
   }
 
   .quick-nav-link-active {
@@ -1151,7 +1151,7 @@
 
   .quick-nav-link-active::after,
   .quick-nav-link-active:hover::after {
-    background: #2563EB;
+    background: #00174B;
   }
 
   .tab-btn {

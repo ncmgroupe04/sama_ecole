@@ -37,8 +37,8 @@ const toTriple = (hex) => {
 
 /** Marque de la plateforme — rampe officielle (voir tailwind.config.js) + un 950 ajouté pour le sombre. */
 const PRIMARY = {
-  50: "#EEF4FF", 100: "#DBE1FF", 200: "#C8D3FF", 300: "#B4C5FF", 400: "#6D94F5",
-  500: "#2563EB", 600: "#004AC6", 700: "#003EA8", 800: "#002B7A", 900: "#00174B", 950: "#0A1638"
+  50: "#EEF4FF", 100: "#DBE1FF", 200: "#C8D3FF", 300: "#B4C5FF", 400: "#5B76A8",
+  500: "#00174B", 600: "#002B7A", 700: "#001239", 800: "#00174B", 900: "#00174B", 950: "#0A1638"
 };
 
 const NEUTRALS = ["slate", "gray", "zinc", "stone"];
@@ -72,9 +72,9 @@ const MAPS = {
 };
 
 const primaryDark = {
-  fond: { 50: "#0A1638", 100: PRIMARY[900], 200: PRIMARY[800], 300: PRIMARY[700] },
+  fond: { 50: "#0A1638", 100: "#00174B", 200: "#002B7A", 300: "#003EA8", 500: "#2563EB", 600: "#3B7BF2", 700: "#2563EB" },
   encre: { 500: "#6D94F5", 600: "#8EAAF7", 700: "#B4C5FF", 800: "#C8D3FF", 900: "#DBE1FF" },
-  trait: { 50: "#0A1638", 100: PRIMARY[900], 200: PRIMARY[800], 300: PRIMARY[700] }
+  trait: { 50: "#0A1638", 100: "#00174B", 200: "#002B7A", 300: "#003EA8" }
 };
 
 const GROUPS = {

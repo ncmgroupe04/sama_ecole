@@ -139,7 +139,7 @@
  <!-- En-tête Sidebar / Logo -->
  <div class="sidebar-header flex items-center justify-start h-16 border-b border-white/10 pl-7 pr-4">
  <div class="flex items-center gap-3">
- <div class="sidebar-logo w-11 h-11 rounded-xl bg-gradient-to-br from-[#3B7BF2] via-primary-500 to-[#1C4FCB] text-white flex items-center justify-center shrink-0" aria-hidden="true">
+ <div class="sidebar-logo w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 text-white flex items-center justify-center shrink-0" aria-hidden="true">
  <icon name="logo-mark" class="w-9 h-9" />
  </div>
  <span class="sidebar-label font-bold text-[1.6875rem] text-white tracking-tight">Unikol</span>
@@ -164,7 +164,7 @@
  des lignes voisines. *@
  const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95";
  const string LinkIdle = $"{LinkBase} text-primary-200 hover:bg-white/10 hover:text-white";
- const string LinkActive = $"{LinkBase} text-white bg-primary-500 font-medium shadow-fluid-blue";
+ const string LinkActive = $"{LinkBase} text-white bg-white/15 font-medium";
  const string LinkSoon = $"{LinkBase} text-primary-300/60 cursor-not-allowed select-none";
 
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
@@ -424,7 +424,7 @@
  :title="name || role">
  @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
  (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
- <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium uppercase"
+ <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-full bg-white/15 ring-1 ring-white/25 text-white flex items-center justify-center font-medium uppercase"
  x-text="(name || role) ? (name || role)[0] : '?'"></div>
 
  <div class="sidebar-label flex-1 min-w-0 text-left">

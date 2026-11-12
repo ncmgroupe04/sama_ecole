@@ -71,20 +71,23 @@ module.exports = {
       },
       boxShadow: {
         fluid: "0 1px 2px rgb(10 26 68 / 0.04), 0 14px 32px -22px rgb(21 52 140 / 0.16)",
-        "fluid-blue": "0 8px 18px -8px rgb(37 99 235 / 0.75)"
+        "fluid-blue": "0 8px 18px -8px rgb(0 23 75 / 0.55)"
       },
       colors: {
         primary: {
-          DEFAULT: "#2563EB",
+          // UNE seule couleur de marque : le marine du panneau de connexion (#00174B). 500 = 900 ; 600 est
+          // l'état survol (un cran plus clair, #002B7A) et 700 l'état pressé. Les teintes 50 à 300 restent des
+          // fonds clairs de pastilles et de survols.
+          DEFAULT: "#00174B",
           50: "#EEF4FF",
           100: "#DBE1FF",
           200: "#C8D3FF",
           300: "#B4C5FF",
-          400: "#6D94F5",
-          500: "#2563EB",
-          600: "#004AC6",
-          700: "#003EA8",
-          800: "#002B7A",
+          400: "#5B76A8",
+          500: "#00174B",
+          600: "#002B7A",
+          700: "#001239",
+          800: "#00174B",
           900: "#00174B"
         },
         success: { DEFAULT: "#006242", bg: "#BDFFDB" }, // Vert — validation, paiement effectué, abonnement actif
