@@ -68,7 +68,45 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("/fonts/figtree-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @layer base {
+  /* Design fluide 2026 — fond de la zone de contenu : bleu très pâle + lueur diffuse en tête de
+     page. `local` : la lueur défile avec le contenu au lieu de rester collée à la fenêtre. Coupée
+     en mode sombre, où le fond remappé du <body> reprend la main. */
+  .app-canvas {
+    background-color: #F3F6FD;
+    background-image:
+      radial-gradient(700px 280px at 12% -40px, rgb(37 99 235 / 0.16), transparent 70%),
+      radial-gradient(520px 240px at 78% -60px, rgb(109 148 245 / 0.13), transparent 70%);
+    background-repeat: no-repeat;
+    background-attachment: local;
+  }
+
+  .dark .app-canvas {
+    background-color: transparent;
+    background-image: none;
+  }
+
+  /* Montants, matricules, dates : chiffres alignés partout, sans classe à poser. */
+  body {
+    font-variant-numeric: tabular-nums;
+  }
   /*
     Alpine ne retire l'attribut x-cloak qu'une fois initialisé. Sans cette règle, tout élément
     x-show apparaît en clair pendant le chargement du script (bandeau d'erreur vide, indicateur de
@@ -103,26 +141,26 @@
      4.5:1 pour le texte courant (Volume 5 §8). primary-600 (6.29:1) le respecte sans dévier de la
      teinte de marque (#6366F1 reste la référence pour logo/avatar/accents, voir tailwind.config.js). */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white shadow-fluid-blue transition-all hover:bg-primary-600 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-danger px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-danger px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
   }
 
   /* Boutons standardisés pour les modales (SaaS 2026). `py-3 sm:py-2` : ~44px de haut sur mobile
      (plancher tactile — ce sont les actions principales d'une modale, souvent plein écran sur
      téléphone), retour au gabarit dense `py-2` dès `sm:` pour ne rien changer au rendu desktop. */
   .btn-modal-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-primary-600 text-white hover:bg-primary-700 px-5 py-3 sm:py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-primary-500 text-white hover:bg-primary-600 px-5 py-3 sm:py-2 rounded-xl font-semibold text-sm shadow-fluid-blue transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-3 sm:py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-primary-50 text-primary-700 hover:bg-primary-100 px-4 py-3 sm:py-2 rounded-xl font-semibold text-sm transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-danger {
@@ -134,8 +172,9 @@
      et seule l'ombre portée les séparait du fond. Le ton 200 à 60 % d'opacité pose un contour lu
      comme une limite sans jamais devenir un trait. C'est la même valeur que .kpi-card, pour que la
      rangée de cartes de synthèse et le panneau qu'elle surmonte aient exactement le même contour. */
+  /* Design fluide 2026 : grand rayon et ombre teintée de marine (jeton shadow-fluid). */
   .card {
-    @apply rounded-2xl border border-slate-200/60 bg-white shadow-sm;
+    @apply rounded-3xl border border-slate-200/60 bg-white shadow-fluid;
   }
 
   /* ---------------------------------------------------------------- Champs de formulaire
@@ -157,7 +196,7 @@
      mis côte à côte — le défaut le plus visible des barres de filtres. Les deux dérogations légitimes
      (textarea, select natif) sont traitées juste en dessous, PAS par une classe concurrente. */
   .input-field {
-    @apply mt-1 block h-11 sm:h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
+    @apply mt-1 block h-11 sm:h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
   }
 
   /* Un <textarea> à hauteur fixe de 40px n'affiche qu'une ligne et demie : la hauteur devient un
@@ -256,7 +295,7 @@
      des tableaux garde 13px (jeton jgk-table, .table-cell) : seul l'en-tête rétrécit, ce qui
      accentue la hiérarchie en-tête/données. */
   .table-head {
-    @apply border-b border-slate-100 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-100 bg-slate-50/80 text-[13px] font-medium text-slate-500;
   }
 
   .table-cell {
@@ -517,8 +556,8 @@
     max-height: none !important;
     padding: 0.5rem;
     border-radius: 1rem;
-    background: white;
-    border: 1px solid rgb(241 245 249);
+    background: #00174B; /* marine du rail (primary-900) : les liens y sont clairs */
+    border: 1px solid rgb(255 255 255 / 0.08);
     box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15), 0 4px 6px -2px rgb(0 0 0 / 0.05);
     z-index: 40;
   }
@@ -612,11 +651,11 @@
   }
 
   .page-title {
-    @apply text-jgk-title font-bold tracking-tight text-slate-900;
+    @apply text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 lg:text-[2.125rem];
   }
 
   .page-subtitle {
-    @apply mt-1 text-jgk-subtitle text-slate-500;
+    @apply mt-1.5 max-w-[60ch] text-base text-slate-500;
   }
 
   /* Titre d'un bloc INTERNE (« Encaissements par mode de paiement »), sous le titre
@@ -784,11 +823,11 @@
      quand l'une porte une indication secondaire (.kpi-hint) et l'autre non — sans quoi la ligne
      se met à onduler dès qu'un seul indicateur gagne une précision. */
   .kpi-card {
-    @apply flex h-full items-center justify-between gap-3 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm;
+    @apply flex h-full items-center justify-between gap-3 rounded-3xl border border-slate-200/60 bg-white p-5 shadow-fluid;
   }
 
   .kpi-label {
-    @apply text-[11px] font-bold uppercase tracking-wider text-slate-500;
+    @apply text-[13px] font-medium text-slate-500;
   }
 
   .kpi-value {
@@ -898,7 +937,7 @@
   }
 
   .tab-btn-active {
-    @apply bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:text-white;
+    @apply bg-primary-500 text-white shadow-fluid-blue hover:bg-primary-600 hover:text-white;
   }
 
   /* ---------------------------------------------------------------- Tuile de synthèse
@@ -909,7 +948,7 @@
   }
 
   .stat-tile-label {
-    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply text-xs font-medium text-slate-500;
   }
 
   .stat-tile-value {

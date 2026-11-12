@@ -55,6 +55,12 @@ module.exports = {
       //   neutral = secondary #565E74
       // `warning` n'a pas d'équivalent dans le design system (pas de token ambre officiel) :
       // conservé tel quel, seule couleur de ce groupe qui reste une teinte Tailwind ad hoc.
+      // Design fluide 2026 : ombres teintées de bleu marine (jamais un gris neutre), une pour les
+      // panneaux, une pour les aplats bleus (bouton principal, élément actif).
+      boxShadow: {
+        fluid: "0 1px 2px rgb(10 26 68 / 0.05), 0 24px 48px -28px rgb(21 52 140 / 0.22)",
+        "fluid-blue": "0 8px 18px -8px rgb(37 99 235 / 0.75)"
+      },
       colors: {
         primary: {
           DEFAULT: "#2563EB",
@@ -79,13 +85,15 @@ module.exports = {
         // système Segoe UI (Volume 5 §2.2). Elle était déjà déclarée ici mais jamais chargée : la
         // plateforme rendait en Segoe UI.
         // Cairo : glyphes arabes uniquement (unicode-range, voir Styles/input.css) — le latin reste en Inter.
-        sans: ["Inter", "Cairo", "Segoe UI", "system-ui", "sans-serif"],
+        // Design fluide 2026 : Figtree (variable, AUTO-HÉBERGÉE) passe en tête ; Inter reste en repli
+        // (glyphes hors latin étendu, italiques).
+        sans: ["Figtree", "Inter", "Cairo", "Segoe UI", "system-ui", "sans-serif"],
         // Harmonisation demandée : `font-mono` ne bascule PLUS vers une chasse fixe. C'est la même
         // Inter que le reste de la plateforme ; les chiffres tabulaires (pour aligner les colonnes
         // de nombres — matricules, montants FCFA, n° de reçu, dates, ~22 vues) sont ajoutés via une
         // règle `.font-mono { font-variant-numeric: tabular-nums }` dans Styles/input.css. Une seule
         // redéfinition ici plutôt que 22 vues éditées, et tout futur `font-mono` hérite du bon rendu.
-        mono: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+        mono: ["Figtree", "Inter", "Segoe UI", "system-ui", "sans-serif"],
         // Grilles de saisie RTL (notes des matières arabes) : Cairo EN TÊTE, Inter derrière. Cairo n'étant
         // déclarée que sur les blocs arabes (unicode-range), les chiffres et le latin restent rendus en Inter.
         arabic: ["Cairo", "Inter", "Segoe UI", "system-ui", "sans-serif"]

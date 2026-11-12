@@ -1,6 +1,11 @@
 /**
- * Situation des mensualités (/mensualites). Année scolaire + mois obligatoires, classe facultative, puis
- * « Afficher la situation » : GET /finance/monthly-status → trois listes (payé / partiel / non payé) et un résumé.
+ * Situation des mensualités (/mensualites). Année scolaire + mois obligatoires, classe facultative :
+ * GET /finance/monthly-status → trois listes (payé / partiel / non payé) et un résumé.
+ *
+ * Design fluide 2026 : la situation se charge dès l'arrivée (année active, mois courant) et à chaque
+ * changement de mois, d'année ou de classe — plus de bouton « Afficher ». Le RUBAN (un segment par
+ * catégorie, largeur proportionnelle au nombre d'élèves) sert de filtre : un clic sur un segment ne
+ * montre que ces élèves, et le PDF / l'impression suivent ce filtre.
  *
  * Le bouton Excel interroge la route jumelle (/finance/monthly-status/excel) avec LES MÊMES filtres que ceux
  * dont la situation affichée est issue (`applied`, figés au clic) : le fichier correspond à l'écran, même si
@@ -48,6 +53,7 @@ document.addEventListener('alpine:init', () => {
                 const active = this.schoolYears.find((y) => y.isActive);
                 if (active) this.schoolYearId = active.id;
                 this.month = String(new Date().getMonth() + 1);
+                if (this.schoolYearId) await this.load();
             } catch (err) {
                 this.error = window.api.toMessage(err, 'Impossible de charger les années scolaires et les classes.');
             }
@@ -81,9 +87,89 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Une section (paid | partial | unpaid) est visible si aucun filtre n'est posé ou si c'est la bonne. */
-        showSection(key) {
-            return !this.statusFilter || this.statusFilter === key;
+        // ------------------------------------------------------------------ Bande de mois
+
+        /**
+         * Les douze mois dans l'ORDRE DE L'ANNÉE SCOLAIRE choisie (son mois de début en premier, d'après
+         * startDate), en libellés courts. Sans année connue : septembre en premier.
+         */
+        get schoolMonths() {
+            const short = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+            const year = this.schoolYears.find((y) => y.id === this.schoolYearId);
+            const parsed = year && year.startDate ? Number(String(year.startDate).slice(5, 7)) : 9;
+            const start = parsed >= 1 && parsed <= 12 ? parsed : 9;
+            return Array.from({ length: 12 }, (_, i) => {
+                const value = ((start - 1 + i) % 12) + 1;
+                return { value: String(value), label: short[value - 1], full: this.monthOptions[value - 1].label };
+            });
+        },
+
+        selectMonth(value) {
+            if (this.isLoading || String(this.month) === String(value)) return;
+            this.month = String(value);
+            this.load();
+        },
+
+        // ------------------------------------------------------------------ Ruban et liste
+
+        /** Les trois segments du ruban, dans l'ordre d'affichage. `count` pilote la largeur. */
+        get segments() {
+            if (!this.data) return [];
+            return [
+                { key: 'paid', label: 'Ont payé', count: this.data.paid.length },
+                { key: 'partial', label: 'Partiellement', count: this.data.partial.length },
+                { key: 'unpaid', label: "N'ont rien payé", count: this.data.unpaid.length }
+            ];
+        },
+
+        /** Clic sur un segment : filtre sur cette catégorie ; second clic : retour à tous les élèves. */
+        toggleStatus(key) {
+            this.statusFilter = this.statusFilter === key ? '' : key;
+        },
+
+        /**
+         * Largeur d'un segment : proportionnelle à son effectif (plancher 1 pour qu'un segment à zéro
+         * reste cliquable et lisible) ; le segment filtré s'élargit pour marquer la sélection.
+         */
+        segmentStyle(segment) {
+            const grow = Math.max(segment.count, 1) * (this.statusFilter === segment.key ? 1.8 : 1);
+            return { flexGrow: String(grow) };
+        },
+
+        /**
+         * Une seule liste : les impayés d'abord (ce que le comptable doit traiter), puis les partiels,
+         * puis ceux qui ont payé — réduite à la catégorie du ruban quand un filtre est posé.
+         */
+        get rows() {
+            if (!this.data) return [];
+            const tag = (list, kind) => list.map((r) => ({ ...r, kind }));
+            return [
+                ...tag(this.data.unpaid, 'unpaid'),
+                ...tag(this.data.partial, 'partial'),
+                ...tag(this.data.paid, 'paid')
+            ].filter((r) => !this.statusFilter || r.kind === this.statusFilter);
+        },
+
+        listTitle() {
+            const found = this.statusOptions.find((o) => o.value === this.statusFilter);
+            return this.statusFilter && found ? found.label : 'Tous les élèves';
+        },
+
+        /** Part du mois déjà réglée, de 0 à 100 (0 si rien n'est attendu). */
+        paidPercent(row) {
+            if (!row.expectedAmount || row.expectedAmount <= 0) return 0;
+            return Math.min(100, Math.max(0, Math.round((row.paidAmount / row.expectedAmount) * 100)));
+        },
+
+        recoveryRate() {
+            const s = this.data ? this.data.summary : null;
+            if (!s || !s.totalExpected) return null;
+            return Math.round((s.totalCollected / s.totalExpected) * 100);
+        },
+
+        /** Initiales de la pastille : première lettre des deux premiers mots du nom. */
+        initials(name) {
+            return String(name || '').trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('');
         },
 
         /**
