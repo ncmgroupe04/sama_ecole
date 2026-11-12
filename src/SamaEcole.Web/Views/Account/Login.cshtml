@@ -172,10 +172,7 @@
  x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
  class="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-100">
- <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
- <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
- <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
- </svg>
+ <span class="book-loader book-loader-sm" aria-hidden="true" x-cloak x-show="isSubmitting"><i></i><i></i><i></i></span>
  <span x-text="isSubmitting ? 'Connexion…' : 'Se connecter'">Se connecter</span>
  </button>
  </form>

@@ -90,7 +90,7 @@
                                 <button @@click="printBillet(item.id)" :disabled="printingId === item.id"
                                         class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== item.id" />
-                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === item.id" x-cloak />
+                                    <span class="book-loader book-loader-sm" aria-hidden="true" x-show="printingId === item.id" x-cloak><i></i><i></i><i></i></span>
                                     <span x-text="printingId === item.id ? 'Génération...' : 'Imprimer le billet'"></span>
                                 </button>
                             </td>
@@ -261,7 +261,7 @@
                                 <button @@click="printExitBillet(item.id)" :disabled="printingExitId === item.id"
                                         class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="print" class="w-4 h-4" x-show="printingExitId !== item.id" />
-                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingExitId === item.id" x-cloak />
+                                    <span class="book-loader book-loader-sm" aria-hidden="true" x-show="printingExitId === item.id" x-cloak><i></i><i></i><i></i></span>
                                     <span x-text="printingExitId === item.id ? 'Génération...' : 'Imprimer le billet'"></span>
                                 </button>
                             </td>
