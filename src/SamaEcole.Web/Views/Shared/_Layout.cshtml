@@ -134,16 +134,26 @@
     sélecteurs plus spécifiques qu'une classe utilitaire), donc par sidebar-boot.js dès le premier rendu. *@
  <aside
  :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'sidebar-collapsed' : '']"
- class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 lg:w-[17rem] bg-primary-900 border-r border-primary-900 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
+ class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 lg:w-[17rem] bg-primary-900 border-r border-primary-900 transition-all duration-300 lg:translate-x-0 lg:relative lg:inset-auto flex flex-col h-full shadow-sm">
 
  <!-- En-tête Sidebar / Logo -->
- <div class="sidebar-header flex items-center justify-start h-16 border-b border-white/10 pl-7 pr-4">
+ <div class="sidebar-header flex items-center justify-between h-16 border-b border-white/10 pl-7 pr-3">
  <div class="flex items-center gap-3">
  <div class="sidebar-logo w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 text-white flex items-center justify-center shrink-0" aria-hidden="true">
  <icon name="logo-mark" class="w-9 h-9" />
  </div>
  <span class="sidebar-label font-bold text-[1.6875rem] text-white tracking-tight">Unikol</span>
  </div>
+ @* Plier / déplier le menu : petite flèche dans l'en-tête du menu, à côté du logo. L'état est mémorisé et posé sur <html>
+    (sidebar-boot.js) pour qu'il survive au changement de page. En mode replié, la flèche se pose sur le bord du menu. *@
+ <button type="button"
+ x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed); document.documentElement.classList.toggle('sidebar-collapsed', sidebarCollapsed)"
+ :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ :aria-expanded="(!sidebarCollapsed).toString()"
+ class="sidebar-toggle hidden lg:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-primary-200 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+ <icon name="chevron-left" class="h-5 w-5 transition-transform duration-200" x-bind:class="sidebarCollapsed ? 'rotate-180' : ''" />
+ </button>
  </div>
 
  @*
@@ -518,15 +528,7 @@
  tiroir superposé, pas un panneau à réduire). État persisté en localStorage : la navigation
  se fait par rechargement complet de page (MVC classique), donc l'état Alpine du <body> ne
  survit pas d'une page à l'autre sans cette persistance. *@
- <button type="button"
- x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed); document.documentElement.classList.toggle('sidebar-collapsed', sidebarCollapsed)"
- :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
- :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
- @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
- clavier (Tab) en a besoin pour rester accessible. *@
- class="hidden lg:inline-flex shrink-0 p-2 -ml-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all duration-200 active:scale-95">
- <icon name="menu" class="w-6 h-6" />
- </button>
+ @* Le bouton de pliage du menu est désormais dans l'en-tête du menu latéral (.sidebar-toggle), à côté du logo. *@
 
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas

@@ -144,7 +144,7 @@
                              <div class="relative w-20 h-20 shrink-0 mb-3">
                                  <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
                                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
-                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round" :stroke-dasharray="boysFraction() + ' ' + (100 - boysFraction())"></circle>
+                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#00174B" stroke-width="4" stroke-linecap="round" :stroke-dasharray="boysFraction() + ' ' + (100 - boysFraction())"></circle>
                                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#BE185D" stroke-width="4" stroke-linecap="round" :stroke-dasharray="girlsFraction() + ' ' + (100 - girlsFraction())" :stroke-dashoffset="-boysFraction()"></circle>
                                  </svg>
                              </div>
@@ -184,7 +184,7 @@
                                  <div class="relative w-10 h-10 shrink-0">
                                      <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
                                          <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#DBE1FF" stroke-width="4"></circle>
-                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#004AC6" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(analyticsData.todayOccupancyRate, 1) + ' 100'"></circle>
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#00174B" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(analyticsData.todayOccupancyRate, 1) + ' 100'"></circle>
                                      </svg>
                                  </div>
                              </div>
@@ -253,7 +253,7 @@
                                     <div class="relative w-14 h-14 shrink-0">
                                         <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
                                             <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
-                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#004AC6" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(financeData.recoveryRate || financeData.yearlyRecoveryRate, 1) + ' 100'"></circle>
+                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#00174B" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(financeData.recoveryRate || financeData.yearlyRecoveryRate, 1) + ' 100'"></circle>
                                         </svg>
                                         <div class="absolute inset-0 flex items-center justify-center">
                                             <span class="text-[10px] font-bold text-slate-700" x-text="formatPercent(financeData.recoveryRate || financeData.yearlyRecoveryRate)"></span>

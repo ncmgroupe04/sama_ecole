@@ -971,6 +971,26 @@
      les pôles masqués par x-cloak (Gestion Scolaire, Surveillance, Comptabilité) apparaissaient un à un après le
      chargement et la barre « sursautait ». Filet de sécurité : visible au bout de 2 s si le script n'a pas répondu,
      et toujours visible sans JavaScript. */
+  /* Flèche plier / déplier (en-tête du menu). Menu replié (5rem) : plus de place dans l'en-tête, la flèche
+     devient une petite pastille blanche posée sur le bord droit du menu. */
+  .sidebar-collapsed .sidebar-toggle {
+    position: absolute;
+    top: 1.25rem;
+    right: -0.875rem;
+    z-index: 40;
+    height: 1.75rem;
+    width: 1.75rem;
+    background: #fff;
+    color: #00174B;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgb(0 23 75 / 0.35);
+  }
+
+  .sidebar-collapsed .sidebar-toggle:hover {
+    background: #EEF4FF;
+    color: #00174B;
+  }
+
   .sidebar-nav {
     opacity: 0;
     animation: sidebar-nav-fallback 0s linear 2s forwards;
