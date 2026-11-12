@@ -1,4 +1,5 @@
 using System.Data;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -58,6 +59,45 @@ public class SubscriptionPaymentStore(ApplicationDbContext dbContext) : ISubscri
         command.Parameters.AddWithValue("finalStatus", finalStatus.ToString());
         command.Parameters.AddWithValue("webhookPayload", webhookPayloadJson);
 
+        return await ReadConfirmationAsync(command, cancellationToken);
+    }
+
+    public async Task<SubscriptionPaymentConfirmation?> ConfirmWavePaymentAsync(
+        Guid internalPaymentId,
+        string transactionRef,
+        string reviewPayloadJson,
+        CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            """
+            SELECT was_processed, school_id, school_name, director_user_id, director_email,
+                   director_full_name, new_expires_at
+            FROM confirm_wave_subscription_payment(@internalPaymentId, @transactionRef, @reviewPayload::jsonb)
+            """,
+            cancellationToken);
+
+        command.Parameters.AddWithValue("internalPaymentId", internalPaymentId);
+        command.Parameters.AddWithValue("transactionRef", transactionRef);
+        command.Parameters.AddWithValue("reviewPayload", reviewPayloadJson);
+
+        try
+        {
+            return await ReadConfirmationAsync(command, cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            // L'index unique partiel refuse l'identifiant : cette transaction Wave a déjà activé un abonnement. La
+            // fonction SQL a été annulée en entier — ni confirmation ni prolongation n'ont eu lieu.
+            throw new BusinessRuleException(
+                "Cet identifiant de transaction Wave a déjà servi à valider un autre paiement. "
+                + "Un même règlement ne peut activer qu'un seul abonnement.",
+                "WAVE_TRANSACTION_ALREADY_USED");
+        }
+    }
+
+    private static async Task<SubscriptionPaymentConfirmation?> ReadConfirmationAsync(
+        NpgsqlCommand command, CancellationToken cancellationToken)
+    {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         if (!await reader.ReadAsync(cancellationToken))

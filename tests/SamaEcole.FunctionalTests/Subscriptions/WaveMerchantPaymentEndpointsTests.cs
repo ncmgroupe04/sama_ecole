@@ -100,8 +100,23 @@ public class WaveMerchantPaymentEndpointsTests(AuthApiFactory factory) : IClassF
         return (await response.Content.ReadFromJsonAsync<List<PendingWave>>())!;
     }
 
-    private Task<HttpResponseMessage> ReviewAsync(string superAdminToken, Guid paymentId, string decision) =>
-        _client.SendAsync(Authorized(HttpMethod.Post, $"/api/v1/admin/platform/wave-payments/{paymentId}/{decision}", superAdminToken));
+    /// <summary>
+    /// Valider exige l'identifiant de la transaction Wave : par défaut (<c>"AUTO"</c>) un identifiant unique est généré,
+    /// sinon la valeur donnée est envoyée telle quelle (<c>""</c> = champ vide). Rejeter n'envoie aucun corps.
+    /// </summary>
+    private Task<HttpResponseMessage> ReviewAsync(
+        string superAdminToken, Guid paymentId, string decision, string? transactionRef = "AUTO")
+    {
+        var url = $"/api/v1/admin/platform/wave-payments/{paymentId}/{decision}";
+
+        if (decision != "approve")
+        {
+            return _client.SendAsync(Authorized(HttpMethod.Post, url, superAdminToken));
+        }
+
+        var reference = transactionRef == "AUTO" ? "T_" + Guid.NewGuid().ToString("N")[..12] : transactionRef;
+        return _client.SendAsync(Authorized(HttpMethod.Post, url, superAdminToken, new { transactionRef = reference }));
+    }
 
     [Fact]
     public async Task Initiating_A_Wave_Payment_Returns_The_Merchant_Instructions_Without_Calling_The_Aggregator()
@@ -188,13 +203,14 @@ public class WaveMerchantPaymentEndpointsTests(AuthApiFactory factory) : IClassF
         var superAdmin = await LoginAsSuperAdminAsync();
         var initiated = await InitiateAsync(director.AccessToken, approval.SchoolId, "WaveMerchant", "Yearly");
 
-        var response = await ReviewAsync(superAdmin.AccessToken, initiated.PaymentId, "approve");
+        var response = await ReviewAsync(superAdmin.AccessToken, initiated.PaymentId, "approve", " t_ab12cd34ef ");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var payment = await factory.GetSubscriptionPaymentAsync(initiated.PaymentId);
         payment!.Status.Should().Be(SubscriptionPaymentStatus.Confirmed);
         payment.ConfirmedAt.Should().NotBeNull();
         payment.WebhookPayloadRaw.Should().Contain("wave-merchant-manual").And.Contain("approved");
+        payment.ExternalTransactionRef.Should().Be("T_AB12CD34EF", "l'identifiant est rogné et normalisé en majuscules");
 
         var subscription = await factory.GetSubscriptionAsync(approval.SchoolId);
         subscription!.Status.Should().Be(SubscriptionStatus.Active);
@@ -202,6 +218,52 @@ public class WaveMerchantPaymentEndpointsTests(AuthApiFactory factory) : IClassF
         subscription.ExpiresAt!.Value.Should().BeAfter(DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(11));
 
         (await ListPendingAsync(superAdmin.AccessToken)).Should().NotContain(p => p.PaymentId == initiated.PaymentId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("AB1")]
+    [InlineData("T_AB12 CD34")]
+    public async Task Approving_Without_A_Valid_Transaction_Reference_Is_Refused(string? transactionRef)
+    {
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var approval = await CreateAwaitingPaymentSchoolAsync($"École Wave SansRef {tag}", $"wave-sansref-{tag}@test.sn");
+        var director = await LoginAsync($"wave-sansref-{tag}@test.sn", DirectorPassword);
+        var superAdmin = await LoginAsSuperAdminAsync();
+        var initiated = await InitiateAsync(director.AccessToken, approval.SchoolId, "WaveMerchant", "Monthly");
+
+        var response = await ReviewAsync(superAdmin.AccessToken, initiated.PaymentId, "approve", transactionRef);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await factory.GetSubscriptionPaymentAsync(initiated.PaymentId))!.Status.Should().Be(SubscriptionPaymentStatus.Initiated,
+            "sans identifiant de transaction exploitable, rien ne prouve le règlement");
+        (await factory.GetSubscriptionAsync(approval.SchoolId))!.Status.Should().Be(SubscriptionStatus.AwaitingPayment);
+    }
+
+    [Fact]
+    public async Task One_Wave_Transaction_Cannot_Activate_Two_Schools()
+    {
+        var firstApproval = await CreateAwaitingPaymentSchoolAsync("École Wave Même Txn A", "wave-txn-a@test.sn");
+        var secondApproval = await CreateAwaitingPaymentSchoolAsync("École Wave Même Txn B", "wave-txn-b@test.sn");
+        var firstDirector = await LoginAsync("wave-txn-a@test.sn", DirectorPassword);
+        var secondDirector = await LoginAsync("wave-txn-b@test.sn", DirectorPassword);
+        var superAdmin = await LoginAsSuperAdminAsync();
+        var first = await InitiateAsync(firstDirector.AccessToken, firstApproval.SchoolId, "WaveMerchant", "Monthly");
+        var second = await InitiateAsync(secondDirector.AccessToken, secondApproval.SchoolId, "WaveMerchant", "Monthly");
+
+        (await ReviewAsync(superAdmin.AccessToken, first.PaymentId, "approve", "T_SAME000001")).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        var reused = await ReviewAsync(superAdmin.AccessToken, second.PaymentId, "approve", "t_same000001");
+
+        reused.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await reused.Content.ReadAsStringAsync()).Should().Contain("WAVE_TRANSACTION_ALREADY_USED");
+        (await factory.GetSubscriptionPaymentAsync(second.PaymentId))!.Status.Should().Be(SubscriptionPaymentStatus.Initiated,
+            "le refus de l'identifiant annule toute la confirmation");
+        (await factory.GetSubscriptionAsync(secondApproval.SchoolId))!.Status.Should().Be(SubscriptionStatus.AwaitingPayment,
+            "un même règlement ne peut activer qu'un seul abonnement");
+        (await ListPendingAsync(superAdmin.AccessToken)).Should().Contain(p => p.PaymentId == second.PaymentId,
+            "la demande reste à traiter : l'école peut toujours être validée avec son propre identifiant");
     }
 
     [Fact]

@@ -972,16 +972,33 @@ paths:
         l'abonnement et le prolonge (même fonction `confirm_subscription_payment` que le webhook), journalise l'acte
         sur l'école ciblée et prévient le Directeur par e-mail. Seules les demandes de GET /admin/platform/wave-payments
         sont éligibles : un paiement d'agrégateur ne peut JAMAIS être validé ainsi (AGENTS.md règle #11).
+        Le corps porte l'identifiant de la transaction Wave retrouvée sur le relevé (`transactionRef`, obligatoire) :
+        il est normalisé en majuscules et UNIQUE — un même règlement ne peut activer qu'un seul abonnement.
       parameters:
         - name: paymentId
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactionRef]
+              properties:
+                transactionRef:
+                  type: string
+                  minLength: 6
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9_-]+$'
+                  description: Identifiant de la transaction Wave (relevé du compte marchand), ex. T_AB12CD34EF
       responses:
         '204': { description: Paiement validé, abonnement activé }
         '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
         '404': { description: Aucune demande Wave en attente ne correspond (inconnue, déjà traitée ou paiement d'agrégateur) }
-        '409': { description: Demande traitée entre-temps par un appel concurrent (WAVE_PAYMENT_ALREADY_REVIEWED) }
+        '409': { description: Demande traitée entre-temps (WAVE_PAYMENT_ALREADY_REVIEWED) ou identifiant de transaction déjà utilisé pour un autre paiement (WAVE_TRANSACTION_ALREADY_USED) }
+        '422': { description: Identifiant de transaction absent ou mal formé (VALIDATION_ERROR) }
 
   /admin/platform/wave-payments/{paymentId}/reject:
     post:

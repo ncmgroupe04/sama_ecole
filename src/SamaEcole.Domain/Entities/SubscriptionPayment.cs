@@ -38,6 +38,14 @@ public class SubscriptionPayment : AuditableEntity, ITenantEntity
     /// <summary>Référence retournée par l'agrégateur à la création de la facture. NULL uniquement si l'appel amont a échoué avant persistance (cas exceptionnel).</summary>
     public string? ProviderTransactionRef { get; set; }
 
+    /// <summary>
+    /// Identifiant de la transaction Wave retrouvée sur le relevé marchand, saisi par le Super Admin à la validation d'un
+    /// paiement <c>WaveMerchant</c> (normalisé en majuscules). Un lien marchand statique ne porte aucune référence : cet
+    /// identifiant est la seule pièce qui relie la demande à un règlement réel. Unique (index partiel) : une même
+    /// transaction ne peut jamais activer deux abonnements. NULL pour tout autre paiement.
+    /// </summary>
+    public string? ExternalTransactionRef { get; set; }
+
     public SubscriptionPaymentStatus Status { get; set; } = SubscriptionPaymentStatus.Initiated;
 
     /// <summary>Copie brute du webhook reçu (JGK-I06), pour audit/réconciliation. Vide tant que ce paiement n'est qu'Initiated.</summary>

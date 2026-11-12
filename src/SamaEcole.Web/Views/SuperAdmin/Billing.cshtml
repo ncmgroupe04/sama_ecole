@@ -198,12 +198,35 @@
  @* Décision sur un paiement Wave : irréversible (le paiement quitte la liste « en attente »). *@
  <modal-shell open="waveReviewTarget" on-close="closeWaveReview()" size="md" theme="dark">
  <modal-title>Paiement Wave</modal-title>
- <p class="text-sm text-zinc-400" x-show="waveReviewApprove">
- Confirmez-vous avoir reçu
- <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? formatXof(waveReviewTarget.amount) : ''"></span>
- de <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? waveReviewTarget.schoolName : ''"></span>
- sur le compte Wave ? L'abonnement sera activé immédiatement.
+ <div x-show="waveReviewApprove" class="space-y-3">
+ <p class="text-sm text-zinc-400">
+ Valider active l'abonnement de
+ <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? waveReviewTarget.schoolName : ''"></span>
+ immédiatement. La plateforme ne reçoit aucun signal de Wave : rien ne prouve que l'argent est arrivé, sauf votre relevé.
  </p>
+ <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
+ Cherchez dans l'historique de votre <strong>compte marchand</strong> Wave un paiement entrant de
+ <strong x-text="waveReviewTarget ? formatXof(waveReviewTarget.amount) : ''"></strong>,
+ envoyé après le <span x-text="waveReviewTarget ? formatDateTime(waveReviewTarget.initiatedAt) : ''"></span>
+ par <span x-text="waveReviewTarget ? (waveReviewTarget.directorFullName || 'le Directeur') : ''"></span>
+ <span x-show="waveReviewTarget && waveReviewTarget.directorPhone">(<span x-text="waveReviewTarget ? waveReviewTarget.directorPhone : ''"></span>)</span>.
+ </div>
+ <div>
+ <label for="wave-transaction-ref" class="block text-xs font-medium text-zinc-300">Identifiant de la transaction Wave</label>
+ <input id="wave-transaction-ref" type="text" x-model="waveReviewTransactionRef" maxlength="64" autocomplete="off" spellcheck="false"
+ placeholder="Recopiez-le depuis le relevé (ex. T_AB12CD34EF)"
+ class="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500 focus:outline-none" />
+ <p class="mt-1 text-xs text-zinc-500">Un même identifiant ne peut valider qu'un seul abonnement : cela empêche d'utiliser un paiement pour deux écoles.</p>
+ </div>
+ <label class="flex items-start gap-2 text-sm text-zinc-200 cursor-pointer">
+ <input type="checkbox" x-model="waveReviewChecked" class="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-emerald-500 focus:ring-emerald-500" />
+ <span>
+ J'ai vu ce paiement de
+ <strong x-text="waveReviewTarget ? formatXof(waveReviewTarget.amount) : ''"></strong>
+ sur le relevé de mon compte marchand Wave.
+ </span>
+ </label>
+ </div>
  <p class="text-sm text-zinc-400" x-show="!waveReviewApprove" x-cloak>
  Le paiement de <span class="font-medium text-zinc-100" x-text="waveReviewTarget ? waveReviewTarget.schoolName : ''"></span>
  sera marqué comme non retrouvé et le Directeur en sera informé par e-mail.
@@ -214,7 +237,7 @@
  class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
  Annuler
  </button>
- <button type="button" x-on:click="confirmWaveReview()" :disabled="isReviewingWave"
+ <button type="button" x-on:click="confirmWaveReview()" :disabled="isReviewingWave || (waveReviewApprove && !canApproveWave)"
  :class="waveReviewApprove ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-rose-500 hover:bg-rose-400'"
  class="rounded-2xl px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50">
  <span x-text="isReviewingWave ? 'Traitement…' : (waveReviewApprove ? 'Valider le paiement' : 'Rejeter le paiement')"></span>

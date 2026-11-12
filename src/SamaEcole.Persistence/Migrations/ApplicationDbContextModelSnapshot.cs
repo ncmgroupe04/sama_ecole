@@ -6134,6 +6134,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
+                    b.Property<string>("ExternalTransactionRef")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTimeOffset>("InitiatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -6175,6 +6179,11 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("jsonb");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExternalTransactionRef")
+                        .IsUnique()
+                        .HasDatabaseName("UX_subscription_payments_external_transaction_ref")
+                        .HasFilter("\"ExternalTransactionRef\" IS NOT NULL");
 
                     b.HasIndex("ProviderTransactionRef")
                         .IsUnique()
