@@ -90,7 +90,7 @@
      page. `local` : la lueur défile avec le contenu au lieu de rester collée à la fenêtre. Coupée
      en mode sombre, où le fond remappé du <body> reprend la main. */
   .app-canvas {
-    background-color: #F3F6FD;
+    background-color: #F3F6FD; /* = INK[50], voir tailwind.dark-theme.js */
     background-image:
       radial-gradient(700px 280px at 12% -40px, rgb(37 99 235 / 0.16), transparent 70%),
       radial-gradient(520px 240px at 78% -60px, rgb(109 148 245 / 0.13), transparent 70%);
@@ -696,7 +696,7 @@
   }
 
   .icon-chip-indigo {
-    @apply bg-indigo-50 text-indigo-600;
+    @apply bg-primary-100 text-primary-700;
   }
 
   .icon-chip-emerald {
@@ -712,7 +712,7 @@
   }
 
   .icon-chip-blue {
-    @apply bg-blue-50 text-blue-600;
+    @apply bg-primary-50 text-primary-600;
   }
 
   .icon-chip-pink {
@@ -871,7 +871,7 @@
      (vert = inscrits, rouge = non inscrits, bleu = tous). La vitrine publique a son propre jeu
      (`mkt-tab`), elle ne s'aligne pas ici non plus. */
   .tab-nav {
-    @apply inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1;
+    @apply inline-flex items-center gap-1 rounded-2xl border border-primary-100/60 bg-white/70 p-1 backdrop-blur;
   }
 
   /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible

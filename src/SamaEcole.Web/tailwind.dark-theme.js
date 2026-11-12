@@ -42,6 +42,19 @@ const PRIMARY = {
 };
 
 const NEUTRALS = ["slate", "gray", "zinc", "stone"];
+
+/**
+ * Design fluide 2026 — « encre » : TOUS les neutres (slate, gray, zinc, stone) prennent en clair la même
+ * échelle de gris teintée de bleu marine, au lieu des gris neutres de Tailwind. Le rail marine, les actions
+ * bleues et les surfaces partagent ainsi une seule famille de teintes : plus de gris « froid » posé à côté
+ * d'un bleu. Luminosités proches de celles de Tailwind (contrastes AA conservés : 500 ≈ 5:1 sur blanc).
+ * 50 = fond de page (identique à `.app-canvas`), 900 = marine du rail. Le mode sombre n'est PAS touché :
+ * ses cibles viennent toujours de colors.slate.
+ */
+const INK = {
+  50: "#F3F6FD", 100: "#EAEFFA", 200: "#DCE3F3", 300: "#C3CDE5", 400: "#8D9BBF",
+  500: "#5E6C93", 600: "#44527C", 700: "#2F3C66", 800: "#1B2852", 900: "#0A1A44", 950: "#050E2B"
+};
 const HUES = ["red", "rose", "orange", "amber", "yellow", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "pink"];
 
 // shade clair → shade (de la même famille) utilisé en sombre. Les shades absentes ne changent pas.
@@ -95,12 +108,16 @@ function build() {
       for (const shade of SHADES) {
         if (!scale[shade]) continue;
         const target = MAPS[kind][group][shade];
-        // Seules les shades transformées sont émises : les autres héritent du thème par défaut.
-        if (target === undefined) continue;
+        // Neutres : même sans cible sombre, la teinte CLAIRE est émise (échelle INK) ; les autres
+        // familles héritent du thème par défaut pour les shades non transformées.
+        if (target === undefined) {
+          if (kind === "neutral") put(group, family, shade, INK[shade], null);
+          continue;
+        }
         // Neutres : TOUTES les familles (zinc, gray, stone…) visent l'échelle slate en sombre, pour que fond de
         // page, cartes et traits partagent une même teinte bleutée quelle que soit la famille écrite dans la vue.
         const source = kind === "neutral" ? colors.slate : scale;
-        put(group, family, shade, scale[shade], source[target]);
+        put(group, family, shade, kind === "neutral" ? INK[shade] : scale[shade], source[target]);
       }
     }
   };
