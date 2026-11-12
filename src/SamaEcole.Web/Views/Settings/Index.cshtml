@@ -90,38 +90,38 @@
  que son spoke portait dans _SettingsSidebar : profil/intégration/formats/années/finance/système
  pour tout rôle atteignant l'écran, "Notation & mentions" sous canViewMentions, et
  Facturation/Utilisateurs/Journal d'audit/Notifications SMS réservés au Directeur. -->
- <div class="mt-6 flex flex-col lg:flex-row gap-6 items-start">
+ <div class="settings-shell mt-6 flex flex-col lg:flex-row gap-6 items-start">
  <nav class="settings-nav w-full lg:w-64 shrink-0" role="tablist" aria-label="Sections des paramètres">
  <p class="settings-nav-group">Établissement</p>
  <button type="button" role="tab" x-on:click="goToTab('profil')" :aria-selected="tab === 'profil'"
- class="settings-nav-link" :class="tabClass('profil')">Profil de l'établissement</button>
+ class="settings-nav-link" :class="tabClass('profil')"><span class="flex min-w-0 items-center gap-2.5"><icon name="building" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Profil de l'établissement</span></span></button>
  <button type="button" role="tab" x-on:click="goToTab('modules')" :aria-selected="tab === 'modules'"
- class="settings-nav-link" :class="tabClass('modules')">Modules &amp; fonctionnalités</button>
+ class="settings-nav-link" :class="tabClass('modules')"><span class="flex min-w-0 items-center gap-2.5"><icon name="layers" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Modules &amp; fonctionnalités</span></span></button>
  <button type="button" role="tab" x-on:click="goToTab('annees-scolaires')" :aria-selected="tab === 'annees-scolaires'"
- class="settings-nav-link" :class="tabClass('annees-scolaires')">Années scolaires</button>
+ class="settings-nav-link" :class="tabClass('annees-scolaires')"><span class="flex min-w-0 items-center gap-2.5"><icon name="calendar" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Années scolaires</span></span></button>
  <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
- class="settings-nav-link" :class="tabClass('formats-signatures')">Formats &amp; signatures officielles</button>
+ class="settings-nav-link" :class="tabClass('formats-signatures')"><span class="flex min-w-0 items-center gap-2.5"><icon name="document-text" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Formats &amp; signatures officielles</span></span></button>
  <p class="settings-nav-group">Pédagogie</p>
  <button type="button" role="tab" x-show="canViewMentions" x-cloak x-on:click="goToTab('pedagogie')" :aria-selected="tab === 'pedagogie'"
- class="settings-nav-link" :class="tabClass('pedagogie')">Notation &amp; mentions</button>
+ class="settings-nav-link" :class="tabClass('pedagogie')"><span class="flex min-w-0 items-center gap-2.5"><icon name="target" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Notation &amp; mentions</span></span></button>
  <button type="button" role="tab" x-show="canViewStateIntegration" x-cloak x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
- class="settings-nav-link" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
+ class="settings-nav-link" :class="tabClass('integration-etatique')"><span class="flex min-w-0 items-center gap-2.5"><icon name="globe" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Intégration étatique (SIMEN)</span></span></button>
  <p class="settings-nav-group">Finances</p>
  <button type="button" role="tab" x-on:click="goToTab('finance')" :aria-selected="tab === 'finance'"
- class="settings-nav-link" :class="tabClass('finance')">Mensualités &amp; autorisations de caisse</button>
+ class="settings-nav-link" :class="tabClass('finance')"><span class="flex min-w-0 items-center gap-2.5"><icon name="payment" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Mensualités &amp; autorisations de caisse</span></span></button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('facturation')" :aria-selected="tab === 'facturation'"
- class="settings-nav-link" :class="tabClass('facturation')">Facturation &amp; historique</button>
+ class="settings-nav-link" :class="tabClass('facturation')"><span class="flex min-w-0 items-center gap-2.5"><icon name="wallet" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Facturation &amp; historique</span></span></button>
  <p class="settings-nav-group">Accès et communication</p>
  <button type="button" role="tab" x-on:click="goToTab('securite')" :aria-selected="tab === 'securite'"
- class="settings-nav-link" :class="tabClass('securite')">Paramètres système</button>
+ class="settings-nav-link" :class="tabClass('securite')"><span class="flex min-w-0 items-center gap-2.5"><icon name="shield" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Paramètres système</span></span></button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('utilisateurs')" :aria-selected="tab === 'utilisateurs'"
- class="settings-nav-link" :class="tabClass('utilisateurs')">Utilisateurs &amp; rôles</button>
+ class="settings-nav-link" :class="tabClass('utilisateurs')"><span class="flex min-w-0 items-center gap-2.5"><icon name="users" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Utilisateurs &amp; rôles</span></span></button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('journal-audit')" :aria-selected="tab === 'journal-audit'"
- class="settings-nav-link" :class="tabClass('journal-audit')">Journal d'audit</button>
+ class="settings-nav-link" :class="tabClass('journal-audit')"><span class="flex min-w-0 items-center gap-2.5"><icon name="clock" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Journal d'audit</span></span></button>
  @* Notifications SMS : entrée visible hors formule, avec un badge Premium ; SmsController ([RequireFeature]) refuse réellement l'accès. *@
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('sms')" :aria-selected="tab === 'sms'"
  class="settings-nav-link" :class="tabClass('sms')">
- <span>Notifications SMS</span>
+ <span class="flex min-w-0 items-center gap-2.5"><icon name="envelope" class="h-[18px] w-[18px] shrink-0 text-slate-400" /><span>Notifications SMS</span></span>
  <span x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
  class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 shrink-0">
  Premium
@@ -135,7 +135,7 @@
  l'onglet ouvert, comme dans la maquette de référence. Les trois widgets ne lisent QUE des
  données réelles déjà chargées par cet écran ou par setupAssistant() (aucune valeur inventée :
  pas de « payé », pas de QR, pas de compteur fictif — voir docs/design-references/README.md). -->
- <div class="grid w-full min-w-0 flex-1 grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+ <div class="settings-content grid w-full min-w-0 flex-1 grid-cols-1 lg:grid-cols-12 gap-6 items-start content-start">
  <main class="w-full min-w-0" :class="tab === 'profil' ? 'lg:col-span-8' : 'lg:col-span-12'">
 
  <!-- Chargement -->
