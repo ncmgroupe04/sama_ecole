@@ -84,6 +84,10 @@ public class SelectFieldTagHelper : TagHelper
         var idAttr = string.IsNullOrWhiteSpace(Id) ? "" : $""" id="{WebUtility.HtmlEncode(Id)}" """.Trim() + " ";
         var requiredAttr = Required ? "required " : "";
         var placeholder = WebUtility.HtmlEncode(Placeholder);
+        // Le placeholder est aussi injecté dans une expression JS entre apostrophes (x-text) : le navigateur
+        // décodant &#39; avant qu'Alpine n'évalue, une apostrophe (« Choisir l'année ») fermait la chaîne
+        // et cassait l'expression. On échappe donc pour JS AVANT l'encodage HTML.
+        var placeholderJs = WebUtility.HtmlEncode(Placeholder.Replace("\\", "\\\\").Replace("'", "\\'"));
         var searchPlaceholder = WebUtility.HtmlEncode(SearchPlaceholder);
         var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? Placeholder);
         var defaultMt = (Class?.Contains("mt-") == true || Class?.Contains("!mt-") == true || Class?.Contains("my-") == true) ? "" : "mt-1";
@@ -125,7 +129,7 @@ public class SelectFieldTagHelper : TagHelper
                         aria-label="{{ariaLabel}}"
                         :class="({{disabled}}) ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-slate-300')"
                         class="{{buttonClass}}">
-                    <span :class="({{Model}} ? 'text-gray-900' : 'text-gray-400') + ' truncate whitespace-nowrap'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
+                    <span :class="({{Model}} ? 'text-gray-900' : 'text-gray-400') + ' truncate whitespace-nowrap'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholderJs}}'"></span>
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}
                 </button>
 

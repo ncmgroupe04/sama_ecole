@@ -271,6 +271,7 @@ public static class DependencyInjection
 
         // Export de la Situation des mensualités — même bibliothèque, aucune nouvelle dépendance.
         services.AddSingleton<IMonthlyStatusExcelGenerator, MonthlyStatusExcelGenerator>();
+        services.AddSingleton<IMonthlyStatusPdfGenerator, MonthlyStatusPdfGenerator>();
 
         // Module Examens officiels : relevé d'inscription (.xlsx, ClosedXML) et fiches de candidature /
         // convocations PDF (QuestPDF, charte OfficialHeaderComponent). Sans état, comme le reste.

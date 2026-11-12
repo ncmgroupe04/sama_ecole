@@ -35,12 +35,25 @@
                     <select-field model="classroomId" aria-label="Filtrer par classe" class="mt-0" placeholder="Toutes les classes"
                         options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
                 </div>
+ <div>
+                    <label class="form-label-sm">Catégorie</label>
+                    <select-field model="statusFilter" aria-label="Filtrer par catégorie de paiement" class="mt-0 w-56" placeholder="Toutes les catégories"
+                        options-expr="statusOptions" />
+                </div>
                 <button type="button" x-on:click="load()" :disabled="isLoading" class="btn-modal-primary group">
                     <icon name="chart-multiple" class="w-4 h-4" />
                     <span x-text="isLoading ? 'Calcul…' : 'Afficher la situation'"></span>
                 </button>
             </div>
-            <div>
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="button" x-on:click="exportPdf(true)" :disabled="pdfBusy || !data" class="btn-modal-secondary group">
+                    <icon name="print" class="w-4 h-4" />
+                    <span>Imprimer</span>
+                </button>
+                <button type="button" x-on:click="exportPdf(false)" :disabled="pdfBusy || !data" class="btn-modal-secondary group">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="pdfBusy ? 'PDF…' : 'Télécharger en PDF'"></span>
+                </button>
                 <button type="button" x-on:click="exportExcel()" :disabled="exporting || !data" class="btn-modal-secondary group">
                     <icon name="download" class="w-4 h-4" />
                     <span x-text="exporting ? 'Export…' : 'Exporter en Excel'"></span>
@@ -73,7 +86,7 @@
             </div>
 
             <!-- A. Payé -->
-            <div class="card mt-6 border-l-4 border-emerald-500">
+            <div x-show="showSection('paid')" class="card mt-6 border-l-4 border-emerald-500">
                 <div class="p-4 flex items-center justify-between">
                     <h2 class="section-title text-emerald-700">Ont payé <span class="text-slate-400 font-normal" x-text="'(' + data.paid.length + ')'"></span></h2>
                 </div>
@@ -101,7 +114,7 @@
             </div>
 
             <!-- B. Partiel -->
-            <div class="card mt-6 border-l-4 border-amber-500">
+            <div x-show="showSection('partial')" class="card mt-6 border-l-4 border-amber-500">
                 <div class="p-4 flex items-center justify-between">
                     <h2 class="section-title text-amber-700">Ont partiellement payé <span class="text-slate-400 font-normal" x-text="'(' + data.partial.length + ')'"></span></h2>
                 </div>
@@ -129,7 +142,7 @@
             </div>
 
             <!-- C. Non payé -->
-            <div class="card mt-6 border-l-4 border-rose-500">
+            <div x-show="showSection('unpaid')" class="card mt-6 border-l-4 border-rose-500">
                 <div class="p-4 flex items-center justify-between">
                     <h2 class="section-title text-rose-700">N'ont pas payé <span class="text-slate-400 font-normal" x-text="'(' + data.unpaid.length + ')'"></span></h2>
                 </div>
