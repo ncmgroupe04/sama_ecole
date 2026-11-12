@@ -117,7 +117,7 @@ document.addEventListener('alpine:init', () => {
                     password: this.newUser.password
                 };
                 await this.load();
-                this.showAddedDialog = true; // confirmation « Utilisateur ajouté »
+                window.toast?.success('Utilisateur ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création du compte.');
             } finally {

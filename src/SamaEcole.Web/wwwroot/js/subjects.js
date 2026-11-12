@@ -745,7 +745,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedSubjectName = this.newSubject.name;
                 this.revealCycleFor(this.newSubject.level);
                 await this.loadSubjects();
-                this.showAddedDialog = true; // confirmation « Matière ajoutée »
+                window.toast?.success('Matière « ' + this.addedSubjectName + ' » ajoutée.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la matière.');
             } finally {

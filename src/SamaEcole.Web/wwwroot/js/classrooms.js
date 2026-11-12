@@ -366,7 +366,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedClassroomName = this.newClassroom.name;
                 this.resetNewClassroom(true); // enchaînement possible : on garde le cycle
                 await this.loadClassrooms();
-                this.showAddedDialog = true; // confirmation « Classe ajoutée »
+                window.toast?.success('Classe « ' + this.addedClassroomName + ' » ajoutée.');
             } catch (err) {
                 // La bannière createErrors.global (ci-dessus, dans la vue) est déjà le canal visible par
                 // l'utilisateur — ce console.error est un filet purement diagnostique : sur un réseau très

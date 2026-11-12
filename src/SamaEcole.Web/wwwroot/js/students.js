@@ -1014,7 +1014,7 @@ document.addEventListener('alpine:init', () => {
                 // Rafraîchir la liste
                 this.page = 1;
                 await this.loadStudents();
-                this.showAddedDialog = true; // confirmation « Élève ajouté »
+                window.toast?.success('Élève ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(
                     err, "Une erreur est survenue lors de la création.");

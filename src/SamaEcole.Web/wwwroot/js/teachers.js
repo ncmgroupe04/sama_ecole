@@ -473,7 +473,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedTeacherName = this.newTeacher.fullName;
                 this.page = 1;
                 await this.loadTeachers();
-                this.showAddedDialog = true; // confirmation « Enseignant ajouté »
+                window.toast?.success('Enseignant « ' + this.addedTeacherName + ' » ajouté.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Une erreur est survenue lors de la création.');
             } finally {

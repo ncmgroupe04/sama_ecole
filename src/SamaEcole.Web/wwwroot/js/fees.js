@@ -231,7 +231,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedCategoryName = this.newCategory.name;
                 await this.loadAll();
                 this.selectedCategoryId = created.id; // bascule sur la catégorie qu'on vient de créer
-                this.showCategoryAddedDialog = true; // confirmation « Catégorie ajoutée »
+                window.toast?.success('Catégorie « ' + this.addedCategoryName + ' » ajoutée.');
             } catch (err) {
                 this.categoryErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la catégorie.');
             } finally {

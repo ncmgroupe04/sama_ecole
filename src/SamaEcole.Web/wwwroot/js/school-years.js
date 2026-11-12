@@ -263,7 +263,7 @@ document.addEventListener('alpine:init', () => {
                 this.isCreateOpen = false;
                 this.addedYearLabel = this.newYear.label;
                 await this.loadYears();
-                this.showAddedDialog = true; // confirmation « Année scolaire ajoutée »
+                window.toast?.success('Année scolaire « ' + this.addedYearLabel + ' » ajoutée.');
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création de l'année scolaire.");
             } finally {
