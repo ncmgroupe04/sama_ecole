@@ -90,34 +90,37 @@
  que son spoke portait dans _SettingsSidebar : profil/intégration/formats/années/finance/système
  pour tout rôle atteignant l'écran, "Notation & mentions" sous canViewMentions, et
  Facturation/Utilisateurs/Journal d'audit/Notifications SMS réservés au Directeur. -->
- <nav class="mt-6 tab-nav-scroll" role="tablist" aria-label="Sections des paramètres">
+ <div class="mt-6 flex flex-col lg:flex-row gap-6 items-start">
+ <nav class="settings-nav w-full lg:w-64 shrink-0" role="tablist" aria-label="Sections des paramètres">
+ <p class="settings-nav-group">Établissement</p>
  <button type="button" role="tab" x-on:click="goToTab('profil')" :aria-selected="tab === 'profil'"
- class="tab-btn" :class="tabClass('profil')">Profil de l'établissement</button>
+ class="settings-nav-link" :class="tabClass('profil')">Profil de l'établissement</button>
  <button type="button" role="tab" x-on:click="goToTab('modules')" :aria-selected="tab === 'modules'"
- class="tab-btn" :class="tabClass('modules')">Modules &amp; fonctionnalités</button>
- <button type="button" role="tab" x-show="canViewStateIntegration" x-cloak x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
- class="tab-btn" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
- <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
- class="tab-btn" :class="tabClass('formats-signatures')">Formats &amp; signatures officielles</button>
+ class="settings-nav-link" :class="tabClass('modules')">Modules &amp; fonctionnalités</button>
  <button type="button" role="tab" x-on:click="goToTab('annees-scolaires')" :aria-selected="tab === 'annees-scolaires'"
- class="tab-btn" :class="tabClass('annees-scolaires')">Années scolaires</button>
+ class="settings-nav-link" :class="tabClass('annees-scolaires')">Années scolaires</button>
+ <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
+ class="settings-nav-link" :class="tabClass('formats-signatures')">Formats &amp; signatures officielles</button>
+ <p class="settings-nav-group">Pédagogie</p>
  <button type="button" role="tab" x-show="canViewMentions" x-cloak x-on:click="goToTab('pedagogie')" :aria-selected="tab === 'pedagogie'"
- class="tab-btn" :class="tabClass('pedagogie')">Notation &amp; mentions</button>
+ class="settings-nav-link" :class="tabClass('pedagogie')">Notation &amp; mentions</button>
+ <button type="button" role="tab" x-show="canViewStateIntegration" x-cloak x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
+ class="settings-nav-link" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
+ <p class="settings-nav-group">Finances</p>
  <button type="button" role="tab" x-on:click="goToTab('finance')" :aria-selected="tab === 'finance'"
- class="tab-btn" :class="tabClass('finance')">Mensualités &amp; autorisations de caisse</button>
+ class="settings-nav-link" :class="tabClass('finance')">Mensualités &amp; autorisations de caisse</button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('facturation')" :aria-selected="tab === 'facturation'"
- class="tab-btn" :class="tabClass('facturation')">Facturation &amp; historique</button>
+ class="settings-nav-link" :class="tabClass('facturation')">Facturation &amp; historique</button>
+ <p class="settings-nav-group">Accès et communication</p>
  <button type="button" role="tab" x-on:click="goToTab('securite')" :aria-selected="tab === 'securite'"
- class="tab-btn" :class="tabClass('securite')">Paramètres système</button>
+ class="settings-nav-link" :class="tabClass('securite')">Paramètres système</button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('utilisateurs')" :aria-selected="tab === 'utilisateurs'"
- class="tab-btn" :class="tabClass('utilisateurs')">Utilisateurs &amp; rôles</button>
+ class="settings-nav-link" :class="tabClass('utilisateurs')">Utilisateurs &amp; rôles</button>
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('journal-audit')" :aria-selected="tab === 'journal-audit'"
- class="tab-btn" :class="tabClass('journal-audit')">Journal d'audit</button>
- @* Notifications SMS — offre Premium. L'onglet reste VISIBLE hors formule, avec un badge : une
- fonctionnalité qu'on cache ne se vend pas. C'est SmsController ([RequireFeature]) qui refuse
- réellement l'accès, jamais ce x-show. *@
+ class="settings-nav-link" :class="tabClass('journal-audit')">Journal d'audit</button>
+ @* Notifications SMS : entrée visible hors formule, avec un badge Premium ; SmsController ([RequireFeature]) refuse réellement l'accès. *@
  <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('sms')" :aria-selected="tab === 'sms'"
- class="tab-btn" :class="tabClass('sms')">
+ class="settings-nav-link" :class="tabClass('sms')">
  <span>Notifications SMS</span>
  <span x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
  class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 shrink-0">
@@ -132,7 +135,7 @@
  l'onglet ouvert, comme dans la maquette de référence. Les trois widgets ne lisent QUE des
  données réelles déjà chargées par cet écran ou par setupAssistant() (aucune valeur inventée :
  pas de « payé », pas de QR, pas de compteur fictif — voir docs/design-references/README.md). -->
- <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+ <div class="grid w-full min-w-0 flex-1 grid-cols-1 lg:grid-cols-12 gap-6 items-start">
  <main class="w-full min-w-0" :class="tab === 'profil' ? 'lg:col-span-8' : 'lg:col-span-12'">
 
  <!-- Chargement -->
@@ -1628,6 +1631,7 @@
  </div>
  </div>
  </aside>
+ </div>
  </div>
 
  <!-- Création d'une mention -->

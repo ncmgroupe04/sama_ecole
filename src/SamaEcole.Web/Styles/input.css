@@ -1280,6 +1280,19 @@
     }
   }
 
+  /* Navigation latérale des Paramètres : sections regroupées par sujet. Sous lg : rangée défilable, sans titres de groupe. */
+  .settings-nav { display: flex; gap: 0.25rem; overflow-x: auto; }
+  .settings-nav-group { display: none; }
+  .settings-nav-link { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 0.5rem; border-radius: 6px; padding: 0.55rem 0.75rem; text-align: left; font-size: 0.9rem; font-weight: 500; color: #44527c; transition: background-color 0.15s, color 0.15s; }
+  .settings-nav-link:hover { background-color: #eef2f9; color: #00174b; }
+  .settings-nav-link.tab-btn-active { background-color: #fff; color: #00174b; font-weight: 600; box-shadow: 0 0 0 1px #e2e8f3, 0 6px 16px -10px rgb(0 23 75 / 0.35); }
+  .settings-nav-link.tab-btn-active::after { display: none; }
+  @media (min-width: 1024px) {
+    .settings-nav { position: sticky; top: 1rem; flex-direction: column; overflow: visible; }
+    .settings-nav-group { display: block; margin: 1rem 0.75rem 0.25rem; font-size: 0.75rem; font-weight: 600; color: #7a86a6; }
+    .settings-nav-group:first-child { margin-top: 0; }
+  }
+
   .quick-nav-link::after {
     content: "";
     position: absolute;
