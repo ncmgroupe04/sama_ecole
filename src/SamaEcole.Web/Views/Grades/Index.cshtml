@@ -143,7 +143,7 @@
 
  <!-- Chargement -->
  <div x-show="hasSelection && isLoadingRows" x-cloak class="card mt-6 p-12 flex items-center justify-center">
- <span class="book-loader book-loader-md" aria-hidden="true"><i></i><i></i><i></i></span>
+ <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
  </div>
 
  <!-- Aucun élève dans la classe -->
@@ -187,7 +187,7 @@
  x-model="row.devoir1.value"
  x-on:blur="saveCell(index, 'devoir1')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir1')" />
- <span class="book-loader book-loader-sm" aria-hidden="true" x-show="row.devoir1.status === 'saving'" x-cloak><i></i><i></i><i></i></span>
+ <svg x-show="row.devoir1.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
  <icon x-show="row.devoir1.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
  </div>
  <p x-show="row.devoir1.error" x-cloak x-text="row.devoir1.error" class="field-error text-center"></p>
@@ -205,7 +205,7 @@
  x-model="row.devoir2.value"
  x-on:blur="saveCell(index, 'devoir2')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir2')" />
- <span class="book-loader book-loader-sm" aria-hidden="true" x-show="row.devoir2.status === 'saving'" x-cloak><i></i><i></i><i></i></span>
+ <svg x-show="row.devoir2.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
  <icon x-show="row.devoir2.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
  </div>
  <p x-show="row.devoir2.error" x-cloak x-text="row.devoir2.error" class="field-error text-center"></p>
@@ -223,7 +223,7 @@
  x-model="row.composition.value"
  x-on:blur="saveCell(index, 'composition')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'composition')" />
- <span class="book-loader book-loader-sm" aria-hidden="true" x-show="row.composition.status === 'saving'" x-cloak><i></i><i></i><i></i></span>
+ <svg x-show="row.composition.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
  <icon x-show="row.composition.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
  </div>
  <p x-show="row.composition.error" x-cloak x-text="row.composition.error" class="field-error text-center"></p>

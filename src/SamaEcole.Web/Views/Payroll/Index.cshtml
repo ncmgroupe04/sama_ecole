@@ -99,7 +99,7 @@
                                                 title="Attestation de travail" aria-label="Télécharger l'attestation de travail"
                                                 class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-60 transition-colors">
                                             <icon name="document-text" class="w-4 h-4" x-show="downloadingCertificateId !== contract.id" />
-                                            <span class="book-loader book-loader-sm" aria-hidden="true" x-show="downloadingCertificateId === contract.id" x-cloak><i></i><i></i><i></i></span>
+                                            <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingCertificateId === contract.id" x-cloak />
                                         </button>
                                         <button type="button" x-show="!contract.endDate" x-cloak
                                                 x-on:click="openEditContractModal(contract)" title="Modifier le salaire/taux horaire"
@@ -197,7 +197,7 @@
                                         <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
                                                 class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                             <icon name="print" class="w-4 h-4" x-show="printingPayslipId !== payslip.id" />
-                                            <span class="book-loader book-loader-sm" aria-hidden="true" x-show="printingPayslipId === payslip.id" x-cloak><i></i><i></i><i></i></span>
+                                            <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingPayslipId === payslip.id" x-cloak />
                                             <span x-text="printingPayslipId === payslip.id ? 'Génération...' : (payslip.status === 'Paid' ? 'Reçu PDF' : 'Bulletin PDF')"></span>
                                         </button>
                                     </div>

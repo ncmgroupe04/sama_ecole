@@ -71,7 +71,7 @@
                                         title="Télécharger le PV de discipline" aria-label="Télécharger le PV de discipline"
                                         class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-primary-700 hover:bg-primary-50 disabled:opacity-60 transition-colors">
                                     <icon name="document-text" class="w-4 h-4" x-show="printingId !== record.id" />
-                                    <span class="book-loader book-loader-sm" aria-hidden="true" x-show="printingId === record.id" x-cloak><i></i><i></i><i></i></span>
+                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
                                     <span class="text-xs font-medium" x-text="printingId === record.id ? 'Génération…' : 'PV'"></span>
                                 </button>
                             </td>

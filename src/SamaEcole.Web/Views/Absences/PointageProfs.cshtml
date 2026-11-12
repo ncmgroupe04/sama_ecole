@@ -39,7 +39,7 @@
         <div class="mt-4 flex justify-end">
             <button type="button" x-on:click="downloadHourRecordSheet()" :disabled="!selectedContractId || downloadingSheet" class="btn-modal-secondary group">
                 <icon name="download" class="w-4 h-4" x-show="!downloadingSheet" />
-                <span class="book-loader book-loader-sm" aria-hidden="true" x-show="downloadingSheet" x-cloak><i></i><i></i><i></i></span>
+                <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingSheet" x-cloak />
                 <span x-text="downloadingSheet ? 'Génération...' : 'Fiche heures (PDF)'"></span>
             </button>
         </div>

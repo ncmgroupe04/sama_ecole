@@ -151,7 +151,7 @@
                                 <button type="button" x-on:click="downloadDeclarationPdf(declaration.id)" :disabled="downloadingPdfId === declaration.id"
                                         class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="download" class="w-4 h-4" x-show="downloadingPdfId !== declaration.id" />
-                                    <span class="book-loader book-loader-sm" aria-hidden="true" x-show="downloadingPdfId === declaration.id" x-cloak><i></i><i></i><i></i></span>
+                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingPdfId === declaration.id" x-cloak />
                                     <span x-text="downloadingPdfId === declaration.id ? 'Génération...' : 'PDF'"></span>
                                 </button>
                             </td>

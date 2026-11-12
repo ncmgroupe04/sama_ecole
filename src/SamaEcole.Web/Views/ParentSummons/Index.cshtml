@@ -144,7 +144,7 @@
                                     <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
                                             class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                         <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
-                                        <span class="book-loader book-loader-sm" aria-hidden="true" x-show="printingId === record.id" x-cloak><i></i><i></i><i></i></span>
+                                        <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
                                         <span x-text="printingId === record.id ? 'Génération...' : 'Avis PDF'"></span>
                                     </button>
                                 </div>
