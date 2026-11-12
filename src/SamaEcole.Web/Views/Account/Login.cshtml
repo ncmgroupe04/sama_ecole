@@ -10,71 +10,65 @@
  redirection, exactement comme le faisait l'inline qu'il remplace. *@
 <script src="~/js/redirect-if-authenticated.js" asp-append-version="true"></script>
 
-<div class="min-h-screen lg:grid lg:grid-cols-2">
+<div class="min-h-screen lg:grid lg:grid-cols-[1.08fr_1fr]">
 
- <!-- Panneau de marque — masqué sur mobile, où l'écran doit aller droit au formulaire -->
- <div class="hidden lg:flex flex-col justify-between bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white p-12 relative overflow-hidden">
- <!-- Halos décoratifs : purement visuels, aria-hidden pour ne pas polluer la lecture d'écran -->
- <div aria-hidden="true" class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10"></div>
- <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
-
- <div class="relative flex items-center gap-3">
- <div class="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center font-bold text-xl">U</div>
- <span class="font-bold text-xl tracking-tight">Unikol</span>
+ <!-- Panneau de marque — masqué sur mobile, où l'écran doit aller droit au formulaire.
+      Fond marine (celui du menu latéral) + grille Seyès du cahier d'écolier et sa marge rouge ; au
+      chargement, la marge se trace puis les trois bénéfices sont « corrigés » (cochés) un à un.
+      Styles et animation : .auth-hero / .auth-point dans Styles/input.css (désactivés si le système
+      demande de réduire les animations). -->
+ <div class="auth-hero hidden lg:flex flex-col bg-primary-900 text-white px-14 py-12 overflow-hidden">
+ <div class="flex items-center gap-3">
+ <div aria-hidden="true" class="w-11 h-11 rounded-xl bg-primary-500 text-white flex items-center justify-center font-bold text-xl">U</div>
+ <span class="font-bold text-2xl tracking-tight">Unikol</span>
  </div>
 
- <div class="relative max-w-md">
- <h2 class="text-3xl font-bold leading-tight">La gestion de votre école, réunie en un seul endroit.</h2>
- <p class="mt-4 text-white/80 text-jgk-body leading-relaxed">
- Inscriptions, notes, bulletins et finances — accessibles partout, à jour en permanence.
+ <div class="mt-auto max-w-lg">
+ <h2 class="text-[2.75rem] font-bold leading-[1.05] tracking-tight max-w-[14ch]">La gestion de votre école, réunie en un seul endroit.</h2>
+ <p class="mt-5 text-primary-200 text-lg leading-relaxed max-w-[46ch]">
+ Inscriptions, notes, bulletins et finances, accessibles partout et à jour en permanence.
  </p>
 
- <ul class="mt-8 space-y-3 text-white/90 text-jgk-body">
- <li class="flex items-center gap-3">
- <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <ul class="auth-points mt-8 space-y-3.5 text-white/95 text-base">
+ <li class="auth-point flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle class="auth-ring" pathLength="1" cx="12" cy="12" r="9" /><path class="auth-tick" pathLength="1" d="M8 12.5l2.7 2.7L16 9.5" /></svg>
  <span>Dossiers élèves et matricules automatiques</span>
  </li>
- <li class="flex items-center gap-3">
- <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <li class="auth-point flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle class="auth-ring" pathLength="1" cx="12" cy="12" r="9" /><path class="auth-tick" pathLength="1" d="M8 12.5l2.7 2.7L16 9.5" /></svg>
  <span>Reçus et bulletins prêts à imprimer</span>
  </li>
- <li class="flex items-center gap-3">
- <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <li class="auth-point flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle class="auth-ring" pathLength="1" cx="12" cy="12" r="9" /><path class="auth-tick" pathLength="1" d="M8 12.5l2.7 2.7L16 9.5" /></svg>
  <span>Données de votre établissement, isolées et protégées</span>
  </li>
  </ul>
+ </div>
 
- @* Accroche prospects, en bas du volet de marque : la carte de connexion reste dédiée à la connexion. Le lien pointe
-    sur la section #tarifs de la vitrine (LandingB2B.cshtml). Ce volet est masqué sur mobile — voir le lien équivalent
+ @* Accroche prospects : une simple ligne, la carte de connexion reste dédiée à la connexion. Le lien pointe sur la
+    section #tarifs de la vitrine (LandingB2B.cshtml). Ce volet est masqué sur mobile — voir le lien équivalent
     sous le formulaire (lg:hidden). *@
- <div class="mt-10 rounded-2xl border border-white/25 bg-white/10 px-5 py-5 backdrop-blur-sm">
- <p class="text-jgk-body font-semibold leading-snug text-white">
- Vous souhaitez équiper votre établissement ? Consultez nos tarifs adaptés (Public &amp; Privé)
- et découvrez la formule idéale pour votre école.
+ <p class="mt-12 text-sm text-primary-200">
+ Vous équipez votre établissement ?
+ <a href="/vitrine#tarifs" class="font-semibold text-white underline decoration-white/40 underline-offset-4 transition-colors hover:decoration-white">Voir la grille tarifaire</a>
  </p>
- <a href="/vitrine#tarifs"
- class="mt-4 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-primary-700 shadow-sm transition-colors hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-600">
- Voir la grille tarifaire
- </a>
- </div>
- </div>
 
- <p class="relative text-white/60 text-jgk-table">© 2026 Unikol — Sénégal</p>
+ <p class="mt-5 text-xs text-primary-300/80">© 2026 Unikol, Sénégal</p>
  </div>
 
  <!-- Formulaire -->
  <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
- <div class="w-full max-w-md" x-data="loginForm()">
+ <div class="w-full max-w-[25rem]" x-data="loginForm()">
 
  <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
  <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
- <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">U</div>
+ <div aria-hidden="true" class="w-9 h-9 rounded-xl bg-primary-500 text-white flex items-center justify-center font-bold">U</div>
  <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
  <div class="text-center lg:text-left mb-8">
  <h1 class="page-title">Connexion</h1>
- <p class="text-jgk-body text-slate-500 mt-2">Accédez à l'espace de votre établissement.</p>
+ <p class="text-base text-slate-500 mt-2">Accédez à l'espace de votre établissement.</p>
  </div>
 
  <!-- Message d'erreur. aria-live : lu par un lecteur d'écran sans déplacer le focus. -->
@@ -83,7 +77,7 @@
  x-transition.opacity
  role="alert"
  aria-live="polite"
- class="mb-6 flex items-start gap-3 rounded-2xl bg-danger/10 border border-danger/20 px-4 py-3">
+ class="mb-6 flex items-start gap-3 rounded-xl bg-danger/10 border border-danger/20 px-4 py-3">
  <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
  <p class="text-jgk-body text-danger" x-text="error"></p>
  </div>
@@ -111,7 +105,7 @@
  x-bind:aria-invalid="(error || errors.email) ? 'true' : 'false'"
  aria-describedby="emailError"
  x-bind:class="errors.email && 'input-field-error'"
- class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ class="w-full h-12 pl-10 pr-4 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
  </div>
  <p id="emailError" x-cloak x-show="errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
@@ -138,7 +132,7 @@
  x-bind:aria-invalid="(error || errors.password) ? 'true' : 'false'"
  aria-describedby="passwordError"
  x-bind:class="errors.password && 'input-field-error'"
- class="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ class="w-full h-12 pl-10 pr-11 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
 
  <button type="button"
  x-on:click="showPassword = !showPassword"
@@ -150,12 +144,16 @@
  </button>
  </div>
  <p id="passwordError" x-cloak x-show="errors.password" x-text="errors.password" class="text-red-500 text-xs mt-1" role="alert"></p>
+ @* Voie self-service (POST /api/v1/auth/forgot-password + reset-password), là où on la cherche : sous le champ. *@
+ <p class="mt-2 text-right text-sm">
+ <a href="/mot-de-passe-oublie" class="font-semibold text-primary-600 hover:underline">Mot de passe oublié ?</a>
+ </p>
  </div>
 
  <button type="submit"
  x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
- class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white rounded-2xl px-5 py-[9px] text-base font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+ class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none">
  <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -164,46 +162,28 @@
  </button>
  </form>
 
- @* ÉTAPE 2 livrée : le parcours self-service existe désormais (POST /api/v1/auth/forgot-password +
- POST /api/v1/auth/reset-password). Le lien mailto vers le support, qui tenait lieu de solution
- d'attente, est remplacé par la page dédiée — comme l'annonçait la note précédente. Le recours à
- l'administrateur de l'établissement reste mentionné : il garde la voie administrative
- (POST /api/v1/users/{id}/reset-password) pour un compte dont l'adresse n'est plus accessible. *@
- <p class="mt-6 text-center text-jgk-body font-semibold text-slate-700">
- Mot de passe oublié ?
- <a href="/mot-de-passe-oublie" class="text-primary font-semibold hover:underline">Réinitialisez-le</a>
- ou contactez l'administrateur de votre établissement.
- </p>
-
- <p class="mt-3 text-center text-jgk-body font-semibold text-slate-700">
- Votre établissement n'est pas encore inscrit ?
- <a href="/inscription" class="block mt-1 text-primary font-semibold hover:underline">Inscrire mon établissement</a>
- </p>
-
+ @* Pied de formulaire regroupé : un filet, deux liens d'inscription / suivi, puis le support en petit. Le lien
+    « Mot de passe oublié » est sous le champ ; la voie administrative (réinitialisation par l'administrateur de
+    l'établissement, POST /api/v1/users/{id}/reset-password) reste mentionnée ci-dessous. *@
+ <div class="mt-8 space-y-3 border-t border-slate-200 pt-6 text-[0.9375rem] text-slate-600">
+ <p>Votre établissement n'est pas encore inscrit ?
+ <a href="/inscription" class="font-semibold text-primary-600 hover:underline">Inscrire mon établissement</a></p>
+ <p>Demande déjà envoyée ?
+ <a href="/suivi-demande" class="font-semibold text-primary-600 hover:underline">Suivre son état</a></p>
  @* Volet de marque masqué sous lg : sans ce lien, un prospect sur mobile n'aurait aucun accès à la grille depuis cet écran. *@
- <p class="mt-2 text-center text-jgk-body font-semibold text-slate-700 lg:hidden">
- Vous souhaitez équiper votre établissement ?
- <a href="/vitrine#tarifs" class="block mt-1 text-primary font-semibold hover:underline">Voir la grille tarifaire</a>
- </p>
+ <p class="lg:hidden">Vous équipez votre établissement ?
+ <a href="/vitrine#tarifs" class="font-semibold text-primary-600 hover:underline">Voir la grille tarifaire</a></p>
+ </div>
 
- <p class="mt-2 text-center text-jgk-body font-semibold text-slate-700">
- Demande déjà envoyée ?
- <a href="/suivi-demande" class="block mt-1 text-primary font-semibold hover:underline">Suivre son état</a>
- </p>
-
- @* Ligne d'assistance pour les directeurs dont l'inscription attend encore une validation
- manuelle (aucune automatisation de ce côté à ce jour) — plus sobre que les liens ci-dessus, mais
- remontée en lisibilité (jgk-table + slate-600) avec le reste du pied de formulaire. *@
- <p class="mt-6 text-center text-jgk-table font-medium text-slate-600">
- Inscription en attente de validation ? Contactez-nous pour accélérer le processus.
- </p>
- <p class="mt-1 text-center text-jgk-table font-medium text-slate-600">
- Vous rencontrez un problème technique ? Contactez le support sur 
- <a href="https://wa.me/221763545916" class="text-primary font-semibold hover:underline inline-flex items-center gap-1">
+ <div class="mt-6 space-y-1 text-[0.8125rem] text-slate-500">
+ <p>Mot de passe inaccessible ? Contactez l'administrateur de votre établissement.</p>
+ <p>Inscription en attente de validation ? Contactez-nous pour accélérer le processus.</p>
+ <p>Un problème technique ?
+ <a href="https://wa.me/221763545916" class="inline-flex items-center gap-1 font-semibold text-slate-700 hover:underline">
  <icon name="whatsapp" class="w-4 h-4" />
  WhatsApp : +221 76 354 59 16
- </a>
- </p>
+ </a></p>
+ </div>
  </div>
  </div>
 </div>

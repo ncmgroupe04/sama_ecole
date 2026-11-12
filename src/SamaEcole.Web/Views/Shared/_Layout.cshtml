@@ -121,14 +121,20 @@
       class="fixed inset-0 z-20 bg-slate-900/60 backdrop-blur-sm transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
 
  <!-- Barre latérale -->
- @* Largeur dépliée : 15rem (lg:w-60), mesurée avec TOUS les sous-menus ouverts : le libellé le plus long
-    (« Aide & Documentation ») garde ~13 px de marge à droite. Les libellés ne passent jamais à la ligne
-    (whitespace-nowrap sur LinkBase) : si un libellé plus long arrive, c'est cette largeur qu'il faut revoir.
-    Elle était de 18rem (w-72) du temps de la police Inter en text-base ; Figtree est plus étroite. Le tiroir
-    mobile garde w-72. La barre est en flux (lg:static) : aucun décalage codé en dur ailleurs n'en dépend. *@
+ @* Largeur dépliée : 17rem (lg:w-[17rem]). Un titre de groupe (« Gestion Scolaire ») ne doit JAMAIS passer à la
+    ligne, y compris quand un sous-menu ouvert fait défiler le menu et qu'une barre de défilement (~11 px,
+    fine, voir .sidebar-nav dans Styles/input.css) réduit la largeur utile : d'où 17rem et non 15rem, des
+    marges latérales px-3 et whitespace-nowrap sur les boutons de groupe. Libellé le plus long mesuré :
+    « Rapports institutionnels », marge ≥ 12 px sans barre de défilement. Si un libellé plus long arrive,
+    c'est cette largeur qu'il faut revoir. Tiroir mobile : w-72. La barre est en flux (lg:static) : aucun
+    décalage codé en dur ailleurs n'en dépend.
+    La largeur lg:w-[17rem] est dans le balisage STATIQUE (pas dans le :class Alpine) : avant l'hydratation d'Alpine
+    la barre prenait sa largeur de base (w-72) puis passait à 17rem, et la transition de 300 ms animait cet
+    étirement à chaque changement de page. Le mode replié (5rem) est posé par .sidebar-collapsed (Styles/input.css,
+    sélecteurs plus spécifiques qu'une classe utilitaire), donc par sidebar-boot.js dès le premier rendu. *@
  <aside
- :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20 sidebar-collapsed' : 'lg:w-60']"
- class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 bg-primary-900 border-r border-primary-900 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
+ :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'sidebar-collapsed' : '']"
+ class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 lg:w-[17rem] bg-primary-900 border-r border-primary-900 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
 
  <!-- En-tête Sidebar / Logo -->
  <div class="sidebar-header flex items-center justify-start h-16 border-b border-white/10 pl-7 pr-4">
@@ -170,7 +176,7 @@
  }
 
  <!-- Navigation -->
- <nav class="sidebar-nav flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
+ <nav class="sidebar-nav flex-1 px-3 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
 
  <a href="/tableau-de-bord" title="Tableau de bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
  <icon name="dashboard" class="w-6 h-6 shrink-0" />
@@ -195,7 +201,7 @@
  matériel) : il n'a accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous
  gagne ou perd un rôle, cette liste doit être mise à jour en écho. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
- <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
+ <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Gestion Scolaire</span>
@@ -303,7 +309,7 @@
  Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
  pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant']) && pedagogyEnabled" x-cloak>
- <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(surveillanceOpen ? "true" : "false")">
+ <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Surveillance</span>
@@ -344,7 +350,7 @@
  aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
  flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
  <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool && financeEnabled" x-cloak class="sidebar-pole relative space-y-1">
- <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
+ <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 text-primary-200 hover:bg-white/10 hover:text-white" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Comptabilité</span>
@@ -430,13 +436,12 @@
  </button>
 
  @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
- qui s'ouvrirait vers le bas sortirait de l'écran. Largeur FIXE (w-64, comme schoolSwitcher()) et
- non "left-3 right-3" : cette dernière étire le menu à la largeur du panneau parent, qui tombe à
- 5rem (w-20) quand la barre est réduite (.sidebar-collapsed) — le menu se retrouvait alors comprimé
- à ~56px, un mot par ligne. Ancré à gauche (left-3), il déborde du rail réduit sans être découpé :
- <aside> n'a pas d'overflow-hidden. *@
+ qui s'ouvrirait vers le bas sortirait de l'écran. Rail déplié : left-3 right-3, donc EXACTEMENT la
+ largeur de la carte du profil, alignée sur la barre latérale. Rail replié (5rem) : left-3 right-3 le
+ comprimerait à ~56px avec du texte ; le menu y prend une largeur fixe (w-14) et n'affiche que des
+ icônes. Ancré à gauche (left-3), il n'est pas découpé : <aside> n'a pas d'overflow-hidden. *@
  <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
- :class="sidebarCollapsed ? 'w-14' : 'w-64'"
+ :class="sidebarCollapsed ? 'w-14' : 'right-3'"
  class="absolute bottom-full left-3 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
  @* Deux actions PLEINES et contrastées (demande produit) : « Changer mon mot de passe » sur fond
     noir, « Se déconnecter » sur fond rouge (jeton danger, comme .btn-danger) — texte et icône
@@ -465,7 +470,7 @@
  :class="sidebarCollapsed ? 'justify-center px-0' : 'px-3 text-left'"
  class="w-full flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
- <span x-show="!sidebarCollapsed">Changer mon mot de passe</span>
+ <span x-show="!sidebarCollapsed">Mot de passe</span>
  </button>
  @* Directeur/Super Admin seulement — voir sessionMenu() (auth.js) et AuthController.ChangeEmail. *@
  <button type="button" x-show="canChangeEmail" x-cloak x-on:click="isOpen = false; $store.changeEmailModal.open()"
@@ -473,7 +478,7 @@
  :class="sidebarCollapsed ? 'justify-center px-0' : 'px-3 text-left'"
  class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="envelope" class="w-4 h-4 shrink-0 text-white/70" />
- <span x-show="!sidebarCollapsed">Changer mon e-mail</span>
+ <span x-show="!sidebarCollapsed">Adresse e-mail</span>
  </button>
  <button type="button" x-on:click="isOpen = false; logout()"
  title="Se déconnecter" aria-label="Se déconnecter"
