@@ -669,7 +669,6 @@ document.addEventListener('alpine:init', () => {
                 this.closeEditTeacher();
                 await this.refreshTeacherDetail();
                 await this.loadTeachers();
-                this.showTeacherEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     this.teacherEditErrors = { global: 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — vérifiez les valeurs puis réessayez.' };

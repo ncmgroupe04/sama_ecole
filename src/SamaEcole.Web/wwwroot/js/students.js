@@ -871,7 +871,6 @@ document.addEventListener('alpine:init', () => {
                 this.closeEditStudent();
                 await this.refreshStudentDetail();
                 await this.loadStudents();
-                this.showStudentEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     // Verrou optimiste (AGENTS.md règle #5) : on recharge la fiche pour montrer l'état

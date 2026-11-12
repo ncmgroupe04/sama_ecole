@@ -420,7 +420,6 @@ document.addEventListener('alpine:init', () => {
                 this.editedClassroomName = this.editing.name;
                 this.closeEdit();
                 await this.loadClassrooms();
-                this.showEditedDialog = true;
             } catch (err) {
                 // Voir le commentaire équivalent de submitCreate() : filet diagnostique, la bannière
                 // editErrors.global reste le canal visible par l'utilisateur.

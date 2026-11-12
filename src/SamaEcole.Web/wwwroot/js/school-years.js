@@ -320,7 +320,6 @@ document.addEventListener('alpine:init', () => {
                 // Rechargement complet : le serveur a pu recaler les trimestres, et c'est l'état RÉEL
                 // de l'année qu'il faut afficher — pas ce que le navigateur croit avoir envoyé.
                 await this.loadYears();
-                this.showEditedDialog = true;
             } catch (err) {
                 this.editErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
             } finally {

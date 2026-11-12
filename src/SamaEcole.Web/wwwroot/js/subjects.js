@@ -792,7 +792,6 @@ document.addEventListener('alpine:init', () => {
                 this.revealCycleFor(this.editing.level);
                 this.closeEdit();
                 await this.loadSubjects();
-                this.showEditedDialog = true;
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     this.editErrors = { global: 'Cette matière vient d\'être modifiée par un autre utilisateur. La liste a été rafraîchie — vérifiez les valeurs puis réessayez.' };
