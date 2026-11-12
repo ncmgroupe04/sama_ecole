@@ -83,6 +83,8 @@
  les données ne viennent que de l'API, qui exige le JWT (voir PagesController).
  Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
  <script src="~/js/require-session.js" asp-append-version="true"></script>
+ @* Bouton « Comment faire ? » : store Alpine enregistré sur alpine:init, donc AVANT Alpine (qui est differé). *@
+ <script src="~/js/how-to.js" asp-append-version="true"></script>
 
  @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
  Voir _AuthLayout.cshtml pour le raisonnement complet. *@
@@ -798,8 +800,15 @@
     pas à <header> ni <body>. Modèle = `path`, déjà calculé plus haut dans ce fichier
     (Context.Request.Path.Value) : une partial ne hérite pas des variables locales de
     l'appelant, on le passe donc explicitement plutôt que de le recalculer. *@
- <div class="relative px-4 py-2 lg:px-8 lg:py-0">
+ <div class="relative flex items-center gap-4 px-4 py-2 lg:px-8 lg:py-0">
+ <div class="min-w-0 flex-1">
  @await Html.PartialAsync("_QuickNav", path)
+ </div>
+ @* Bouton d'aide contextuelle, en couleur d'appel à l'action (voir .btn-help) : présent sur TOUS les écrans. *@
+ <button type="button" x-data x-on:click="$store.howTo.show()" class="btn-help shrink-0">
+ <icon name="alert-circle" class="w-4 h-4" />
+ <span>Comment faire ?</span>
+ </button>
  </div>
  </header>
 
@@ -881,6 +890,7 @@
     Ouverte par window.guide('Titre', 'Message') quand un bouton d'action a un pré-requis manquant :
     remplace le bandeau rouge « erreur système » par un message d'étape à suivre. *@
  @await Html.PartialAsync("_GuidanceModal")
+ @await Html.PartialAsync("_HowToModal")
 
  @* Modale d'AVERTISSEMENT « Établissement en Mode Test » — s'ouvre une fois par session à l'arrivée
     sur Inscriptions, Caisse ou Notes tant que l'école est en bac à sable et son paramétrage de
