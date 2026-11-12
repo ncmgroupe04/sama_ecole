@@ -451,6 +451,22 @@ document.addEventListener('alpine:init', () => {
         init() {
             // Référence STABLE : voir le commentaire équivalent de dateField.init().
             this.boundClose = () => this.close();
+            this.boundReposition = () => this.reposition();
+        },
+
+        /**
+         * Hauteur RÉELLE attendue du menu : champ de recherche + une ligne par option, plafonnée à 300 px. Une liste
+         * courte (3 options ≈ 200 px) ne doit pas basculer vers le haut sous prétexte qu'il reste moins de 300 px en bas.
+         */
+        estimatedMenuHeight() {
+            return Math.min(300, 76 + this.options.length * 42);
+        },
+
+        /** Replace le menu selon la place disponible à l'instant (ouverture, redimensionnement de la fenêtre). */
+        reposition() {
+            if (!this.open) return;
+            const pos = window.computeFloatingPosition(this.$root, this.estimatedMenuHeight());
+            this.floatingStyle = window.floatingStyleFrom(pos);
         },
 
         get filteredOptions() {
@@ -465,10 +481,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             // AVANT d'afficher (pas de $nextTick) : voir le commentaire équivalent de dateField.toggle().
-            const pos = window.computeFloatingPosition(this.$root, 300);
+            const pos = window.computeFloatingPosition(this.$root, this.estimatedMenuHeight());
             this.floatingStyle = window.floatingStyleFrom(pos);
             this.open = true;
             this.search = '';
+            // Fenêtre redimensionnée / appareil pivoté pendant que le menu est ouvert : il se replace au lieu de déborder.
+            window.addEventListener('resize', this.boundReposition);
             // Le champ de recherche, lui, n'existe dans le DOM qu'une fois `open` vrai (x-show) :
             // il lui faut bien le prochain tick avant de pouvoir recevoir le focus.
             this.$nextTick(() => this.$refs.search?.focus());
@@ -480,6 +498,7 @@ document.addEventListener('alpine:init', () => {
         close() {
             this.open = false;
             window.removeEventListener('scroll', this.boundClose, true);
+            window.removeEventListener('resize', this.boundReposition);
         },
 
         labelFor(value) {

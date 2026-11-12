@@ -337,6 +337,16 @@
     @apply border-b border-slate-100 bg-slate-50/80 text-[13px] font-medium text-slate-500;
   }
 
+  /* Lignes de tableau (design des mensualités, propagé) : survol teinté de la marque, transition douce. Spécificité
+     supérieure aux `hover:bg-slate-50` posés dans les vues : un seul comportement pour tous les tableaux des cartes. */
+  .card table tbody tr {
+    transition: background-color 0.15s;
+  }
+
+  .card table tbody tr:hover {
+    background-color: rgb(238 244 255 / 0.55);
+  }
+
   .table-cell {
     @apply text-jgk-table text-gray-700;
   }
@@ -945,7 +955,7 @@
      (vert = inscrits, rouge = non inscrits, bleu = tous). La vitrine publique a son propre jeu
      (`mkt-tab`), elle ne s'aligne pas ici non plus. */
   .tab-nav {
-    @apply inline-flex items-center gap-1 rounded-2xl border border-slate-200/70 bg-white p-1;
+    @apply inline-flex max-w-full items-center gap-1 border-b border-slate-200;
   }
 
   /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible
@@ -959,7 +969,7 @@
      (.tab-btn-active) au chargement et à chaque changement, et l'enveloppe .tab-nav-scroll-wrap
      ci-dessous (dégradés d'estompement + flèches [<] [>], révélés du seul côté encore masqué). */
   .tab-nav-scroll {
-    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x rounded-2xl border border-slate-200/70 bg-white p-1 scrollbar-hide;
+    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x border-b border-slate-200 scrollbar-hide;
   }
 
   .tab-nav-scroll.is-dragging {
@@ -1191,7 +1201,59 @@
   }
 
   .quick-nav-link {
-    @apply relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-3.5 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    @apply relative inline-flex h-16 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  /* Barre du haut en marine de marque (.app-topbar) : onglets de navigation clairs, trait actif blanc. */
+  .app-topbar .quick-nav-link {
+    color: #B4C5FF;
+  }
+
+  .app-topbar .quick-nav-link:hover,
+  .app-topbar .quick-nav-link-active {
+    color: #fff;
+  }
+
+  .app-topbar .quick-nav-link:hover::after {
+    background: rgb(255 255 255 / 0.35);
+  }
+
+  .app-topbar .quick-nav-link-active::after,
+  .app-topbar .quick-nav-link-active:hover::after {
+    background: #fff;
+  }
+
+  /* Rangée unique : la navigation partage la ligne avec les pastilles. Sous 1750 px la salutation s'efface et les onglets
+     perdent leur icône ; sous 1300 px le bouton d'aide ne garde que son icône. Les sept modules tiennent sans défilement. */
+  @media (max-width: 1750px) {
+    .header-optional {
+      display: none !important;
+    }
+
+    .quick-nav-link {
+      gap: 0;
+      padding-left: 0.625rem;
+      padding-right: 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .quick-nav-link svg {
+      display: none;
+    }
+  }
+
+  @media (max-width: 1300px) {
+    .btn-help-label {
+      display: none;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    .quick-nav-link {
+      padding-left: 0.4rem;
+      padding-right: 0.4rem;
+      font-size: 0.75rem;
+    }
   }
 
   .quick-nav-link::after {
@@ -1220,11 +1282,32 @@
   }
 
   .tab-btn {
-    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-transparent px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-200/50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 disabled:opacity-50;
+    @apply relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-transparent px-3.5 py-3 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50;
+  }
+
+  .tab-btn::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background-color 0.2s;
+  }
+
+  .tab-btn:hover::after {
+    background: rgb(0 23 75 / 0.22);
   }
 
   .tab-btn-active {
-    @apply bg-primary-500 text-white shadow-fluid-blue hover:bg-primary-600 hover:text-white;
+    @apply font-semibold text-primary-900;
+  }
+
+  .tab-btn-active::after,
+  .tab-btn-active:hover::after {
+    background: #00174B;
   }
 
   /* ---------------------------------------------------------------- Tuile de synthèse
