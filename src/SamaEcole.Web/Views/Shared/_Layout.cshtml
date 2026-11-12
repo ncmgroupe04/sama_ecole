@@ -140,12 +140,15 @@
 
  <!-- En-tête Sidebar / Logo -->
  <div class="sidebar-header flex items-center justify-between h-16 border-b border-white/10 pl-7 pr-3">
- <div class="flex items-center gap-3">
- <div class="sidebar-logo w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 text-white flex items-center justify-center shrink-0" aria-hidden="true">
+ @* Logo + nom cliquables : retour à l'écran d'accueil du rôle (auth.defaultLandingForRole, comme après la connexion) ;
+    /tableau-de-bord en repli le temps que le script s'exécute. *@
+ <a href="/tableau-de-bord" x-data :href="window.auth.defaultLandingForRole()" title="Accueil" aria-label="Unikol, retour à l'accueil"
+ class="flex items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+ <div class="sidebar-logo w-11 h-11 rounded-xl bg-white/10 ring-1 ring-white/25 text-white flex items-center justify-center shrink-0 transition-colors hover:bg-white/20" aria-hidden="true">
  <icon name="logo-mark" class="w-9 h-9" />
  </div>
  <span class="sidebar-label font-bold text-[1.6875rem] text-white tracking-tight">Unikol</span>
- </div>
+ </a>
  @* Plier / déplier le menu : petite flèche dans l'en-tête du menu, à côté du logo. L'état est mémorisé et posé sur <html>
     (sidebar-boot.js) pour qu'il survive au changement de page. En mode replié, la flèche se pose sur le bord du menu. *@
  <button type="button"

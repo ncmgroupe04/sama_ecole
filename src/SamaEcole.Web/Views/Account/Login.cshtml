@@ -10,7 +10,7 @@
  redirection, exactement comme le faisait l'inline qu'il remplace. *@
 <script src="~/js/redirect-if-authenticated.js" asp-append-version="true"></script>
 
-<div class="min-h-screen lg:grid lg:grid-cols-[1.08fr_1fr]">
+<div class="min-h-screen lg:grid lg:h-screen lg:grid-cols-[1.08fr_1fr] lg:overflow-hidden">
 
  <!-- Panneau de marque — masqué sur mobile, où l'écran doit aller droit au formulaire.
       Fond marine (celui du menu latéral) + grille Seyès du cahier d'écolier et sa marge rouge ; au
@@ -66,8 +66,8 @@
  </div>
 
  <!-- Formulaire -->
- <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
- <div class="w-full max-w-[25rem]" x-data="loginForm()">
+ <div class="flex items-center justify-center p-6 sm:px-12 sm:py-6 min-h-screen lg:min-h-0 lg:h-screen lg:overflow-y-auto">
+ <div class="w-full max-w-[34rem]" x-data="loginForm()">
 
  <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
  <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
@@ -75,9 +75,22 @@
  <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
- <div class="text-center lg:text-left mb-8">
+  @* Sélecteur en tête : « Se connecter » est la page courante, « S'inscrire » mène à la page d'inscription d'un établissement
+    (/inscription). Il remplace le bouton « Inscrire mon établissement » du bas : un seul choix, côte à côte, et tout
+    le formulaire tient dans la hauteur de la fenêtre. *@
+ <nav aria-label="Connexion ou inscription" class="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white p-1 ring-1 ring-slate-200">
+ <span aria-current="page" class="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary-500 text-sm font-semibold text-white shadow-fluid-blue">
+ <icon name="key" class="w-4 h-4" />
+ Se connecter
+ </span>
+ <a href="/inscription" class="flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-slate-600 transition-colors hover:bg-primary-50 hover:text-primary-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+ <icon name="plus" class="w-4 h-4" />
+ S'inscrire
+ </a>
+ </nav>
+
+ <div class="text-center lg:text-left mb-4">
  <h1 class="page-title">Connexion</h1>
- <p class="text-base text-slate-500 mt-2">Accédez à l'espace de votre établissement.</p>
  </div>
 
  <!-- Message d'erreur. aria-live : lu par un lecteur d'écran sans déplacer le focus. -->
@@ -91,7 +104,7 @@
  <p class="text-jgk-body text-danger" x-text="error"></p>
  </div>
 
- <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
+ <form x-on:submit.prevent="submit()" novalidate class="space-y-4">
 
  <div>
  <label for="email" class="form-label">
@@ -114,7 +127,7 @@
  x-bind:aria-invalid="(error || errors.email) ? 'true' : 'false'"
  aria-describedby="emailError"
  x-bind:class="errors.email && 'input-field-error'"
- class="w-full h-12 pl-10 pr-4 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
+ class="w-full h-11 pl-10 pr-4 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
  </div>
  <p id="emailError" x-cloak x-show="errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
@@ -141,7 +154,7 @@
  x-bind:aria-invalid="(error || errors.password) ? 'true' : 'false'"
  aria-describedby="passwordError"
  x-bind:class="errors.password && 'input-field-error'"
- class="w-full h-12 pl-10 pr-11 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
+ class="w-full h-11 pl-10 pr-11 bg-white border border-slate-300 rounded-xl text-base placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" />
 
  <button type="button"
  x-on:click="showPassword = !showPassword"
@@ -153,19 +166,12 @@
  </button>
  </div>
  <p id="passwordError" x-cloak x-show="errors.password" x-text="errors.password" class="text-red-500 text-xs mt-1" role="alert"></p>
- @* Voie self-service (POST /api/v1/auth/forgot-password + reset-password), là où on la cherche : sous le champ. *@
- <p class="mt-2 flex justify-end">
- <a href="/mot-de-passe-oublie" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-100 text-primary-900 ring-1 ring-primary-900/25 hover:bg-primary-200 hover:ring-primary-900/40 px-3 py-1.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
- <icon name="key" class="w-4 h-4" />
- Mot de passe oublié ?
- </a>
- </p>
  </div>
 
  <button type="submit"
  x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
- class="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-100">
+ class="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-primary-500 text-white text-base font-semibold shadow-fluid-blue transition-all duration-200 hover:bg-primary-600 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-100">
  <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -177,39 +183,43 @@
  @* Pied de formulaire regroupé : un filet, deux liens d'inscription / suivi, puis le support en petit. Le lien
     « Mot de passe oublié » est sous le champ ; la voie administrative (réinitialisation par l'administrateur de
     l'établissement, POST /api/v1/users/{id}/reset-password) reste mentionnée ci-dessous. *@
- @* Pied de formulaire : de vrais boutons (fond teinté), pas des liens colorés. Chaque bouton a sa question en petit au-dessus ;
-    le support est un bouton vert WhatsApp. La voie administrative (réinitialisation par l'administrateur) reste mentionnée. *@
- <div class="mt-8 grid gap-4 border-t border-slate-200 pt-6">
- <div>
- <p class="mb-1.5 text-[0.8125rem] text-slate-500">Votre établissement n'est pas encore inscrit ?</p>
- <a href="/inscription" class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-100 text-primary-900 ring-1 ring-primary-900/25 hover:bg-primary-200 hover:ring-primary-900/40 px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
- <icon name="plus" class="w-4 h-4" />
- Inscrire mon établissement
+ @* Pied de formulaire : tout tient dans la hauteur de la fenêtre (pas de défilement). Deux vrais boutons côte à côte, une
+    seule phrase d'aide suivie du bouton WhatsApp ; la voie administrative (réinitialisation par l'administrateur) y est
+    mentionnée en quelques mots. *@
+ @* Pied de formulaire : les textes d'origine, qui expliquent quoi faire dans chaque cas, avec un vrai bouton à chaque fois.
+    Mis en page côte à côte pour que tout tienne dans la hauteur de la fenêtre (pas de défilement). *@
+ <div class="mt-4 grid gap-x-4 gap-y-3 items-end border-t border-slate-200 pt-4 text-[0.8125rem] text-slate-600 sm:grid-cols-2">
+ @* Voie self-service (POST /api/v1/auth/forgot-password + reset-password). L'inscription n'a plus de bouton ici : elle est dans le sélecteur du haut. *@
+ <div class="flex flex-col justify-between gap-1.5">
+ <a href="/mot-de-passe-oublie" class="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-primary-500 px-2 text-[0.8125rem] font-semibold text-white shadow-fluid-blue transition-colors hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+ <icon name="key" class="w-4 h-4 shrink-0" />
+ Mot de passe oublié ?
  </a>
  </div>
- <div>
- <p class="mb-1.5 text-[0.8125rem] text-slate-500">Demande déjà envoyée ?</p>
- <a href="/suivi-demande" class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-100 text-primary-900 ring-1 ring-primary-900/25 hover:bg-primary-200 hover:ring-primary-900/40 px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
- <icon name="clock" class="w-4 h-4" />
+ <div class="flex flex-col justify-between gap-1.5">
+ <p class="font-semibold text-slate-700">Demande déjà envoyée ?</p>
+ <a href="/suivi-demande" class="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-primary-500 px-2 text-[0.8125rem] font-semibold text-white shadow-fluid-blue transition-colors hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+ <icon name="clock" class="w-4 h-4 shrink-0" />
  Suivre son état
  </a>
  </div>
  @* Volet de marque masqué sous lg : sans ce lien, un prospect sur mobile n'aurait aucun accès à la grille depuis cet écran. *@
- <div class="lg:hidden">
- <p class="mb-1.5 text-[0.8125rem] text-slate-500">Vous équipez votre établissement ?</p>
- <a href="/vitrine#tarifs" class="flex h-11 w-full items-center justify-center rounded-xl bg-primary-100 text-primary-900 ring-1 ring-primary-900/25 hover:bg-primary-200 hover:ring-primary-900/40 px-3 text-sm font-semibold transition-colors">Voir la grille tarifaire</a>
+ <div class="flex flex-col gap-1.5 sm:col-span-2 lg:hidden">
+ <p class="font-semibold text-slate-700">Vous souhaitez équiper votre établissement ?</p>
+ <a href="/vitrine#tarifs" class="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-primary-100 px-2 text-[0.8125rem] font-semibold text-primary-900 ring-1 ring-primary-900/25 transition-colors hover:bg-primary-200 hover:ring-primary-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">Voir la grille tarifaire</a>
  </div>
  </div>
 
- <div class="mt-6 space-y-3 text-[0.8125rem] text-slate-500">
- <p>Mot de passe inaccessible ? Contactez l'administrateur de votre établissement. Inscription en attente de validation ? Contactez-nous pour accélérer le processus.</p>
- <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
- <span>Un problème technique ?</span>
- <a href="https://wa.me/221763545916" class="inline-flex h-10 items-center gap-2 rounded-xl bg-[#25D366] px-3.5 text-sm font-bold text-[#052E16] shadow-sm transition-colors hover:bg-[#1FBF5B] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#128C7E]">
+ <div class="mt-3 space-y-2 text-[0.8125rem] leading-snug text-slate-600">
+ <p>Pas de réinitialisation possible ? Contactez l'administrateur de votre établissement.</p>
+ <p>Inscription en attente de validation ? Contactez-nous pour accélérer le processus.</p>
+ <p class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+ <span>Vous rencontrez un problème technique ? Contactez le support sur</span>
+ <a href="https://wa.me/221763545916" class="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#25D366] px-3 text-[0.8125rem] font-bold text-[#052E16] shadow-sm transition-colors hover:bg-[#1FBF5B] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#128C7E]">
  <icon name="whatsapp" class="w-4 h-4" />
  WhatsApp : +221 76 354 59 16
  </a>
- </div>
+ </p>
  </div>
  </div>
  </div>
