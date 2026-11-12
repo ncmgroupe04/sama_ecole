@@ -58,7 +58,7 @@ module.exports = {
       // Design fluide 2026 : ombres teintées de bleu marine (jamais un gris neutre), une pour les
       // panneaux, une pour les aplats bleus (bouton principal, élément actif).
       boxShadow: {
-        fluid: "0 1px 2px rgb(10 26 68 / 0.05), 0 24px 48px -28px rgb(21 52 140 / 0.22)",
+        fluid: "0 1px 2px rgb(10 26 68 / 0.04), 0 14px 32px -22px rgb(21 52 140 / 0.16)",
         "fluid-blue": "0 8px 18px -8px rgb(37 99 235 / 0.75)"
       },
       colors: {

@@ -86,16 +86,13 @@
 }
 
 @layer base {
-  /* Design fluide 2026 — fond de la zone de contenu : bleu très pâle + lueur diffuse en tête de
-     page. `local` : la lueur défile avec le contenu au lieu de rester collée à la fenêtre. Coupée
-     en mode sombre, où le fond remappé du <body> reprend la main. */
+  /* Design fluide 2026 — fond de la zone de contenu. Transparent en mode sombre, où le fond remappé
+     du <body> reprend la main. */
   .app-canvas {
-    background-color: #F3F6FD; /* = INK[50], voir tailwind.dark-theme.js */
-    background-image:
-      radial-gradient(700px 280px at 12% -40px, rgb(37 99 235 / 0.16), transparent 70%),
-      radial-gradient(520px 240px at 78% -60px, rgb(109 148 245 / 0.13), transparent 70%);
-    background-repeat: no-repeat;
-    background-attachment: local;
+    /* Fond = INK[50] (voir tailwind.dark-theme.js) : un blanc froid très peu saturé, SANS dégradé ni
+       lueur. Les surfaces (cartes, barre du haut) sont blanches et se détachent par leur liseré et
+       leur ombre, pas par une teinte concurrente : une seule famille de couleurs, du fond à la carte. */
+    background-color: #F7F9FC;
   }
 
   .dark .app-canvas {
@@ -883,7 +880,7 @@
      (vert = inscrits, rouge = non inscrits, bleu = tous). La vitrine publique a son propre jeu
      (`mkt-tab`), elle ne s'aligne pas ici non plus. */
   .tab-nav {
-    @apply inline-flex items-center gap-1 rounded-2xl border border-primary-100/60 bg-white/70 p-1 backdrop-blur;
+    @apply inline-flex items-center gap-1 rounded-2xl border border-slate-200/70 bg-white p-1;
   }
 
   /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible
@@ -897,7 +894,7 @@
      (.tab-btn-active) au chargement et à chaque changement, et l'enveloppe .tab-nav-scroll-wrap
      ci-dessous (dégradés d'estompement + flèches [<] [>], révélés du seul côté encore masqué). */
   .tab-nav-scroll {
-    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x rounded-xl bg-slate-100 p-1 scrollbar-hide;
+    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x rounded-2xl border border-slate-200/70 bg-white p-1 scrollbar-hide;
   }
 
   .tab-nav-scroll.is-dragging {

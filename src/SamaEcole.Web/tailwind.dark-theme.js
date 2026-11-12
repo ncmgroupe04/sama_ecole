@@ -52,7 +52,7 @@ const NEUTRALS = ["slate", "gray", "zinc", "stone"];
  * ses cibles viennent toujours de colors.slate.
  */
 const INK = {
-  50: "#F3F6FD", 100: "#EAEFFA", 200: "#DCE3F3", 300: "#C3CDE5", 400: "#8D9BBF",
+  50: "#F7F9FC", 100: "#EFF3F9", 200: "#E1E8F2", 300: "#C3CDE5", 400: "#8D9BBF",
   500: "#5E6C93", 600: "#44527C", 700: "#2F3C66", 800: "#1B2852", 900: "#0A1A44", 950: "#050E2B"
 };
 const HUES = ["red", "rose", "orange", "amber", "yellow", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "pink"];
