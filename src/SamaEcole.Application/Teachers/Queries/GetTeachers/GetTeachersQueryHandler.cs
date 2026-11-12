@@ -25,6 +25,16 @@ public class GetTeachersQueryHandler(IApplicationDbContext dbContext)
                 t.Email.ToLower().Contains(search));
         }
 
+        if (request.Status is { } status)
+        {
+            query = query.Where(t => t.Status == status);
+        }
+
+        if (request.SubjectId is { } subjectId)
+        {
+            query = query.Where(t => dbContext.TeacherSubjects.Any(ts => ts.TeacherId == t.Id && ts.SubjectId == subjectId));
+        }
+
         // Compté AVANT la pagination : le total de la recherche, pas le nombre de lignes renvoyées.
         var totalCount = await query.CountAsync(cancellationToken);
 

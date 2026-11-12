@@ -65,7 +65,21 @@
  placeholder="Nom, matricule ou e-mail..." aria-label="Rechercher un enseignant"
  class="input-field mt-0 pl-9 pr-3 w-full" />
  </div>
- <button type="button" x-show="search.trim()" x-cloak x-on:click="resetFilters()"
+ <select x-model="statusFilter" x-on:change="applyFilters()" aria-label="Filtrer par statut"
+ class="input-field mt-0 w-full sm:w-44">
+ <option value="">Statut : Tous</option>
+ <option value="Active">Actif</option>
+ <option value="Suspended">Suspendu</option>
+ <option value="Blocked">Bloqué</option>
+ </select>
+ <select x-model="subjectFilter" x-on:change="applyFilters()" aria-label="Filtrer par matière"
+ class="input-field mt-0 w-full sm:w-52">
+ <option value="">Matière : Toutes</option>
+ <template x-for="subject in subjects" :key="subject.id">
+ <option :value="subject.id" x-text="subject.name"></option>
+ </template>
+ </select>
+ <button type="button" x-show="search.trim() || statusFilter || subjectFilter" x-cloak x-on:click="resetFilters()"
  class="-mx-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
  Réinitialiser
  </button>

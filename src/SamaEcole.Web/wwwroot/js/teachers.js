@@ -63,6 +63,8 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         error: null,
         search: '',
+        statusFilter: '',
+        subjectFilter: '',
 
         // Ouverture PDF partagée (openPdfPreview → nouvel onglet, visionneuse native) —
         // même mixin que la liste des élèves, voir wwwroot/js/pdf-preview.js.
@@ -273,6 +275,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 const params = new URLSearchParams({ page: this.page, pageSize: this.pageSize });
                 if (this.search.trim()) params.set('search', this.search.trim());
+                if (this.statusFilter) params.set('status', this.statusFilter);
+                if (this.subjectFilter) params.set('subjectId', this.subjectFilter);
 
                 const data = await window.api.get(`/teachers?${params.toString()}`);
                 this.teachers = data.items || [];
@@ -291,6 +295,8 @@ document.addEventListener('alpine:init', () => {
 
         resetFilters() {
             this.search = '';
+            this.statusFilter = '';
+            this.subjectFilter = '';
             this.applyFilters();
         },
 

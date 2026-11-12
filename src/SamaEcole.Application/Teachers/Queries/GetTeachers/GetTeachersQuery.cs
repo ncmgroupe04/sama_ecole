@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Teachers.Queries.GetTeachers;
 
@@ -13,6 +14,12 @@ public record GetTeachersQuery : IRequest<PaginatedTeachers>
 
     /// <summary>Recherche sur le nom, le matricule ou l'e-mail.</summary>
     public string? Search { get; init; }
+
+    /// <summary>Filtre par statut (Actif, Suspendu, Bloqué) ; absent = tous.</summary>
+    public EntityStatus? Status { get; init; }
+
+    /// <summary>Filtre par matière enseignée ; absent = toutes.</summary>
+    public Guid? SubjectId { get; init; }
 }
 
 public record TeacherListItem(
