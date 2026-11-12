@@ -160,6 +160,27 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-3.5 py-2 text-sm font-bold text-amber-950 shadow-sm ring-1 ring-amber-500/40 transition-all hover:bg-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 active:scale-[0.97];
   }
 
+  /* Carte de CHOIX sélectionnée (type d'établissement, profil, cycles, tranche — page d'inscription) : fond marine de
+     marque, texte blanc. Les textes de la carte portent des couleurs propres (titre sombre, description grise) : les
+     règles ci-dessous les ramènent au blanc sans toucher au balisage (spécificité supérieure aux utilitaires). */
+  .choice-selected {
+    @apply border-primary-500 bg-primary-500 text-white shadow-fluid-blue;
+  }
+
+  .choice-selected span,
+  .choice-selected p {
+    color: #fff;
+  }
+
+  .choice-selected .text-xs {
+    color: rgb(255 255 255 / 0.82);
+  }
+
+  .choice-selected input[type="checkbox"] {
+    accent-color: #fff;
+    border-color: #fff;
+  }
+
   .btn-modal-primary {
     @apply inline-flex items-center justify-center gap-2 bg-primary-500 text-white hover:bg-primary-600 px-5 py-3 sm:py-2 rounded-xl font-semibold text-sm shadow-fluid-blue transition-all active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
   }

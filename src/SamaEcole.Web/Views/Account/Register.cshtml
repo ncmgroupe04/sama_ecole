@@ -89,7 +89,7 @@
  <div class="text-center lg:text-left mb-8">
  <h1 class="page-title">Inscription de votre établissement</h1>
  <p class="text-jgk-body text-slate-500 mt-2">
- Déjà inscrit ? <a href="/login" class="text-primary font-medium hover:underline">Se connecter</a>
+ Déjà inscrit ? <a href="/login" class="ml-1 inline-flex items-center rounded-lg bg-primary-500 px-3.5 py-1.5 text-sm font-semibold text-white shadow-fluid-blue transition-colors hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Se connecter</a>
  </p>
  </div>
 
@@ -125,14 +125,14 @@
  <button type="button" role="radio" x-bind:aria-checked="ownership === 'Public' ? 'true' : 'false'"
  x-on:click="selectOwnership('Public')"
  class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
- x-bind:class="ownership === 'Public' ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ x-bind:class="ownership === 'Public' ? 'choice-selected' : 'border-slate-200 bg-white hover:bg-slate-50'">
  <span class="block font-semibold text-slate-900">Public</span>
  <span class="block text-xs text-slate-500">École élémentaire, CEM ou lycée public.</span>
  </button>
  <button type="button" role="radio" x-bind:aria-checked="ownership === 'Private' ? 'true' : 'false'"
  x-on:click="selectOwnership('Private')"
  class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
- x-bind:class="ownership === 'Private' ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ x-bind:class="ownership === 'Private' ? 'choice-selected' : 'border-slate-200 bg-white hover:bg-slate-50'">
  <span class="block font-semibold text-slate-900">Privé</span>
  <span class="block text-xs text-slate-500">École classique, franco-arabe, daara ou gestion financière.</span>
  </button>
@@ -220,7 +220,7 @@
  <button type="button" role="radio" x-bind:aria-checked="profile === option.value ? 'true' : 'false'"
  x-on:click="selectProfile(option.value)"
  class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
- x-bind:class="profile === option.value ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ x-bind:class="profile === option.value ? 'choice-selected' : 'border-slate-200 bg-white hover:bg-slate-50'">
  <span class="block font-semibold text-slate-900" x-text="option.label"></span>
  <span class="block text-xs text-slate-500" x-text="option.hint"></span>
  </button>
@@ -236,7 +236,7 @@
  <div class="grid grid-cols-2 gap-3">
  <template x-for="choice in cycleChoices" x-bind:key="choice.value">
  <label class="flex items-center gap-2 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors"
- x-bind:class="isCycleChecked(choice.value) ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ x-bind:class="isCycleChecked(choice.value) ? 'choice-selected' : 'border-slate-200 bg-white hover:bg-slate-50'">
  <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
  x-bind:checked="isCycleChecked(choice.value)" x-on:change="toggleCycle(choice.value)" />
  <span class="text-sm font-medium text-slate-800" x-text="choice.label"></span>
@@ -265,7 +265,7 @@
  <button type="button" role="radio" x-bind:aria-checked="tier === option.value ? 'true' : 'false'"
  x-bind:disabled="option.disabled" x-on:click="selectTier(option.value)"
  class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40 disabled:cursor-not-allowed"
- x-bind:class="tier === option.value ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ x-bind:class="tier === option.value ? 'choice-selected' : 'border-slate-200 bg-white hover:bg-slate-50'">
  <span class="block font-semibold text-slate-900" x-text="option.label"></span>
  <span class="block text-xs text-slate-500" x-text="formatXof(option.monthly) + ' / mois · ' + formatXof(option.annual) + ' / an'"></span>
  </button>
