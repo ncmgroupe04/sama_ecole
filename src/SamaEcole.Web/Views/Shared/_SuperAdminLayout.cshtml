@@ -105,9 +105,10 @@
  </button>
 
  @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
- qui s'ouvrirait vers le bas sortirait de l'écran — même raisonnement que _Layout. *@
+ qui s'ouvrirait vers le bas sortirait de l'écran — même raisonnement que _Layout. left-3 right-3 : le menu a
+ EXACTEMENT la largeur de la carte du profil (le conteneur a p-3), il ne déborde plus de la barre. *@
  <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
- class="absolute bottom-full left-3 w-64 mb-2 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-lg z-30">
+ class="absolute bottom-full left-3 right-3 mb-2 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-lg z-30">
  <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-zinc-500" />
