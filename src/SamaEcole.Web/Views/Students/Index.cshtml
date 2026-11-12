@@ -254,15 +254,15 @@
  immédiat) ; l'historique scolaire, les notes et les paiements sont chargés depuis
  GET /students/{id} (studentDetail) et présentés en onglets ci-dessous. -->
  <modal-shell open="detailStudent" on-close="closeDetail()" hide-header="true" no-padding="true" size="5xl">
-    <div class="bg-white border-b border-slate-100 p-6 flex justify-between items-start">
+    <div class="bg-gradient-to-b from-primary-50/70 to-white border-b border-slate-100 p-6 flex justify-between items-start">
         <div class="flex items-center gap-4">
             <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
-                 class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md object-cover flex-shrink-0" x-cloak />
+                 class="w-20 h-20 rounded-full ring-4 ring-primary-50 shadow-md object-cover flex-shrink-0" x-cloak />
             <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" 
-                 class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md flex items-center justify-center font-bold text-xl flex-shrink-0"
+                 class="w-20 h-20 rounded-full ring-4 ring-primary-50 shadow-md flex items-center justify-center font-bold text-2xl flex-shrink-0"
                  x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
             <div>
-                <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
+                <h2 class="text-[1.65rem] leading-tight font-bold text-primary-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
                 <p x-show="detailStudent && detailStudent.fullNameAr" x-cloak dir="rtl"
                    class="text-lg font-semibold text-slate-500" x-text="detailStudent ? detailStudent.fullNameAr : ''"></p>
                 <div class="mt-1.5 flex items-center gap-2">
@@ -288,7 +288,7 @@
                 </div>
             </div>
         </div>
-        <button type="button" @@click="closeDetail()" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 p-2 rounded-xl transition-all duration-200 shadow-sm flex items-center justify-center focus:outline-none shrink-0">
+        <button type="button" @@click="closeDetail()" class="bg-white text-slate-500 hover:bg-slate-100 hover:text-primary-900 border border-slate-200 p-2 rounded-lg transition-all duration-200 shadow-sm flex items-center justify-center focus:outline-none shrink-0">
             <span class="sr-only">Fermer</span>
             <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
         </button>
@@ -314,9 +314,9 @@
 
     @* grid-cols-1 sur mobile : les valeurs (adresse, lieu de naissance, IEN) sont trop longues pour
        tenir en 2 colonnes sur un téléphone. md: ne compile pas dans ce projet (sm/lg seuls). *@
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6 px-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5 my-5 mx-6 rounded-lg border border-slate-200 bg-white p-5 shadow-fluid">
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Matricule</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">Matricule</p>
             <div class="flex items-center gap-2">
                 <span class="font-mono bg-slate-100 text-slate-800 px-2 py-1 rounded text-sm font-semibold" x-text="detailStudent ? detailStudent.matricule : ''"></span>
                 @* Correction du matricule — Directeur seul, et seulement une fois la fiche complète
@@ -343,31 +343,31 @@
             </div>
         </div>
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <p class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 Date de naissance
             </p>
             <p class="text-sm font-medium text-slate-900" x-text="detailStudent ? formatDate(detailStudent.birthDate) : ''"></p>
         </div>
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <p class="text-xs font-medium text-slate-500 mb-1 flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 Lieu de naissance
             </p>
             <p class="text-sm font-medium text-slate-900" x-text="detailStudent && detailStudent.birthPlace ? detailStudent.birthPlace : '—'"></p>
         </div>
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Genre</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">Genre</p>
             <span class="inline-flex items-center font-medium text-xs px-2.5 py-1 rounded-full w-max"
                   :class="detailStudent && detailStudent.gender === 'F' ? 'bg-pink-50 text-pink-600' : 'bg-blue-50 text-blue-600'"
                   x-text="detailStudent ? (detailStudent.gender === 'F' ? 'Fille' : 'Garçon') : ''"></span>
         </div>
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Classe</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">Classe</p>
             <p class="text-sm font-medium text-slate-900" x-text="detailStudent ? detailStudent.classroomName : ''"></p>
         </div>
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Adresse de résidence</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">Adresse de résidence</p>
             <template x-if="detailStudent && detailStudent.address">
                 <p class="text-sm font-medium text-slate-900" x-text="detailStudent.address"></p>
             </template>
@@ -380,7 +380,7 @@
            complète (studentDetail.identity), pas sur la ligne de liste. Un numéro provisoire est
            marqué comme tel — jamais présenté comme un identifiant national valide. *@
         <div>
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">IEN</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">IEN</p>
             <template x-if="studentDetail && studentDetail.identity && studentDetail.identity.ienNumber">
                 <div class="flex items-center gap-2">
                     <span class="font-mono text-sm font-semibold px-2 py-1 rounded"
@@ -407,7 +407,7 @@
            .status-badge impose whitespace-nowrap, donc sans ça le texte débordait et la fiche affichait une barre de
            défilement horizontale. *@
         <div class="min-w-0">
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hébergement</p>
+            <p class="text-xs font-medium text-slate-500 mb-1">Hébergement</p>
             <template x-if="activeEnrollment() && activeEnrollment().boardingStatus !== 'Externe'">
                 <badge variant="primary" class="max-w-full whitespace-normal rounded-xl text-start leading-snug" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
             </template>
@@ -417,8 +417,8 @@
         </div>
     </div>
 
-    <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+    <div class="bg-white border border-slate-200 rounded-lg p-5 mx-6 mb-5 shadow-fluid">
+        <h3 class="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
             <span class="bg-primary-100 text-primary-600 p-1.5 rounded-md">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </span>
@@ -426,13 +426,13 @@
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Nom</p>
+                <p class="text-xs font-medium text-slate-500 mb-1">Nom</p>
                 <p class="text-sm font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianName ? detailStudent.guardianName : '—'"></p>
                 <p x-show="detailStudent && detailStudent.guardianNameAr" x-cloak dir="rtl"
                    class="text-sm font-semibold text-slate-500 mt-0.5" x-text="detailStudent ? detailStudent.guardianNameAr : ''"></p>
             </div>
             <div>
-                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Téléphone</p>
+                <p class="text-xs font-medium text-slate-500 mb-1">Téléphone</p>
                 <div class="flex items-center gap-2">
                     <p class="font-mono font-bold text-slate-900 text-base" x-text="detailStudent && detailStudent.guardianPhone ? formatPhoneSenegal(detailStudent.guardianPhone) : '—'"></p>
                     <template x-if="detailStudent && detailStudent.guardianPhone">
@@ -443,7 +443,7 @@
                 </div>
             </div>
             <div>
-                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">E-mail</p>
+                <p class="text-xs font-medium text-slate-500 mb-1">E-mail</p>
                 <p class="text-sm font-bold text-slate-900 truncate" x-text="detailStudent && detailStudent.guardianEmail ? detailStudent.guardianEmail : '—'"></p>
             </div>
         </div>
@@ -452,11 +452,11 @@
     @* Matières optionnelles (Évolution N°6) : les options de l'élève pour l'année active (LV2, option
        scientifique…). Elles décident de ses grilles de saisie et de son bulletin. Masquée si sa classe n'a
        aucun groupe d'options ; modifiable par ceux qui gèrent les inscriptions (Directeur, Secrétariat). *@
-    <div x-show="studentOptionGroups.length > 0" x-cloak class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm space-y-3">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Matières optionnelles</h3>
+    <div x-show="studentOptionGroups.length > 0" x-cloak class="bg-white border border-slate-200 rounded-lg p-5 mx-6 mb-5 shadow-fluid space-y-3">
+        <h3 class="text-sm font-semibold text-slate-800">Matières optionnelles</h3>
         <template x-for="group in studentOptionGroups" :key="group.name">
             <fieldset>
-                <legend class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1" x-text="group.name"></legend>
+                <legend class="text-xs font-medium text-slate-500 mb-1" x-text="group.name"></legend>
                 <div class="flex flex-wrap gap-x-4 gap-y-2">
                     <template x-for="option in group.options" :key="option.classSubjectId">
                         <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
@@ -482,8 +482,8 @@
     @* Dispenses (matières obligatoires) : l'élève ne suit pas la matière cette année-là — elle sort de ses moyennes et de
        sa saisie, et le bulletin la marque « Dispensé(e) ». Un motif est obligatoire ; il ne figure sur aucun document.
        Masquée si la classe n'a aucune matière dispensable ; modifiable par ceux qui gèrent l'élève. *@
-    <div x-show="studentExemptions.length > 0" x-cloak class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm space-y-3">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Dispenses</h3>
+    <div x-show="studentExemptions.length > 0" x-cloak class="bg-white border border-slate-200 rounded-lg p-5 mx-6 mb-5 shadow-fluid space-y-3">
+        <h3 class="text-sm font-semibold text-slate-800">Dispenses</h3>
         <p class="text-xs text-slate-400">
             Une matière dispensée n'entre plus dans les moyennes et n'est plus saisie ; sur le bulletin elle reste, marquée « Dispensé(e) ».
         </p>
@@ -761,7 +761,7 @@
  <icon name="document-text" class="w-5 h-5" />
  </div>
  <div>
- <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total dû</p>
+ <p class="text-sm font-semibold text-slate-800">Total dû</p>
  <p class="text-2xl font-extrabold text-slate-900 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
  </div>
  </div>
@@ -934,7 +934,7 @@
  Modifier la fiche
  </button>
  </template>
- <button type="button" @@click="closeDetail()" class="bg-rose-600 text-white hover:bg-rose-700 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors">
+ <button type="button" @@click="closeDetail()" class="bg-primary-900 text-white hover:bg-primary-600 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors">
  Fermer
  </button>
  </div>

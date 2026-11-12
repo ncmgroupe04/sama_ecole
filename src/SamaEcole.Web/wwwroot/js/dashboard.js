@@ -236,16 +236,3 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 });
-
-/*
- * Rubans de cartes (.kpi-ribbon) : un clic sur une carte l'élargit (classe is-open) ; une seule carte ouverte à la fois
- * dans un même ruban ; un second clic la referme. Délégation : fonctionne aussi pour les cartes affichées après coup.
- */
-document.addEventListener('click', function (event) {
-  var card = event.target && event.target.closest ? event.target.closest('.kpi-ribbon > *') : null;
-  if (!card) return;
-  var ribbon = card.parentElement;
-  var wasOpen = card.classList.contains('is-open');
-  Array.prototype.forEach.call(ribbon.children, function (child) { child.classList.remove('is-open'); });
-  if (!wasOpen) card.classList.add('is-open');
-});

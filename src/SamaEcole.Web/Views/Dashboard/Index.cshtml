@@ -33,13 +33,11 @@
          propre balise au rendu (`output.TagName = null`), donc tout attribut posé dessus serait perdu
          sans le moindre avertissement. `class="contents"` retire l'enveloppe de la grille pour que la
          carte reste l'élément de grille direct. -->
-    @* Ruban de cartes : sur grand écran les cartes se partagent la ligne et celle que l'on survole ou sur laquelle on clique
-       s'élargit (même geste que les segments de la Situation des mensualités). Voir .kpi-ribbon (Styles/input.css) et
-       dashboard.js. Sous lg : la grille d'origine. *@
     <div class="mb-6 space-y-4">
 
         <!-- Pédagogie (4 cartes) -->
-        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+        <p class="text-xs font-semibold text-slate-500 -mb-2">Pédagogie</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 <div class="min-w-0" x-show="analyticsRole">
             <stat-card label="Élèves inscrits" icon="users" accent="primary">
                 <span x-text="analyticsData?.enrollments?.total || 0">0</span>
@@ -73,7 +71,8 @@
         <!-- Finance (4 cartes majeures)
              `emphasis` pose le liseré d'accent à gauche et l'ombre plus marquée : même grille, même
              ordre, même palette que les cartes secondaires ci-dessous — seule l'emphase change. -->
-        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+        <p class="text-xs font-semibold text-slate-500 -mb-2">Finances de l'année</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 <div class="min-w-0" x-show="financeRole">
             @* Le solde net est la seule valeur du tableau de bord qui change de SENS avec son signe :
                sa couleur suit donc la donnée (vert au-dessus de zéro, rose en dessous) au lieu d'être
@@ -104,7 +103,8 @@
     </div>
 
         <!-- Finance (4 cartes secondaires) -->
-        <div class="kpi-ribbon grid grid-cols-1 sm:grid-cols-2 lg:flex gap-4">
+        <p class="text-xs font-semibold text-slate-500 -mb-2">Recouvrement</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 <div class="min-w-0" x-show="financeRole">
             <stat-card label="Encaissement (Aujourd'hui)" icon="wallet" accent="primary">
                 <span x-text="formatMoney(financeData?.collectedToday)">—</span>

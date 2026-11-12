@@ -907,52 +907,33 @@
      quand l'une porte une indication secondaire (.kpi-hint) et l'autre non — sans quoi la ligne
      se met à onduler dès qu'un seul indicateur gagne une précision. */
   .kpi-card {
-    @apply flex h-full items-center justify-between gap-3 rounded-3xl border border-slate-200/60 bg-white p-5 shadow-fluid;
+    @apply flex h-full items-start justify-between gap-3 rounded-3xl border border-slate-200/60 bg-white px-5 pb-6 pt-3 shadow-fluid;
   }
 
-  /* Ruban de cartes du tableau de bord : une seule ligne ; la carte survolée / ouverte au clic s'élargit (flex-grow),
-     les autres se resserrent — même geste que le ruban de la Situation des mensualités. Sous lg : grille d'origine. */
-  .kpi-ribbon > * {
-    cursor: pointer;
+  /* Pastille d'icône des grandes cartes : réduite (28 px, glyphe 14 px), alignée en haut avec le libellé. */
+  .kpi-card .icon-chip-md {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 4px;
   }
 
-  @media (min-width: 1024px) {
-    .kpi-ribbon {
-      display: flex;
-    }
-
-    .kpi-ribbon > * {
-      flex: 1 1 0;
-      min-width: 0;
-      transition: flex-grow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    .kpi-ribbon > *:hover,
-    .kpi-ribbon > .is-open {
-      flex-grow: 1.6;
-    }
-  }
-
-  .kpi-ribbon > .is-open .kpi-card {
-    box-shadow: 0 0 0 2px #00174B, 0 14px 32px -22px rgb(21 52 140 / 0.35);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .kpi-ribbon > * {
-      transition: none;
-    }
+  .kpi-card .icon-chip-md svg {
+    width: 0.875rem;
+    height: 0.875rem;
   }
 
   .kpi-label {
-    @apply text-[13px] font-medium text-slate-500;
+    @apply text-[12px] font-medium text-slate-500;
   }
 
   .kpi-value {
-    @apply mt-1 text-2xl font-bold tabular-nums;
+    font-size: 22px;
+    overflow-wrap: anywhere;
+    @apply mt-1 font-bold tabular-nums leading-tight;
   }
 
   .kpi-hint {
-    @apply mt-1 text-[11px] text-slate-500;
+    @apply mt-1 text-[10.5px] text-slate-500;
   }
 
   .kpi-accent-primary {
