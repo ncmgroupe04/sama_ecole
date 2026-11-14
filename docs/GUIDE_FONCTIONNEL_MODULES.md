@@ -261,8 +261,8 @@ son emploi du temps) ; écriture réservée à Directeur et Secrétariat (§19.2
 
 ### Flux d'utilisation typique
 1. Le Directeur ou le Secrétariat déclare les bâtiments, puis les salles de chacun.
-2. Ces salles deviennent sélectionnables dans l'Emploi du temps et, si l'Internat est activé, dans les
-   dortoirs.
+2. Ces salles deviennent sélectionnables dans l'Emploi du temps. Les dortoirs ne se déclarent plus ici :
+   « Dortoir » n'est plus proposé pour une nouvelle salle, ils se créent dans Internat › Pavillons (§7).
 3. Tout rôle de l'établissement peut ensuite consulter cette liste en lecture seule.
 
 ---
@@ -312,12 +312,18 @@ affectation en chambre — module désactivable par école, **désactivé par d�
 Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
 
 ### Fonctionnalités clés & règles métier
-- **Aucune entité « Lit » distincte** : l'hébergement réutilise les chambres du module Infrastructures
-  (`RoomType.Dortoir`) ; la capacité se compte au niveau de la chambre, jamais lit par lit.
+- **Pavillons › chambres › lits** : l'Internat tient sa propre cartographie (écran Internat, onglet
+  « Pavillons »). La capacité d'un pavillon ou d'une chambre est la **somme de ses lits**, jamais saisie ;
+  chaque pensionnaire occupe un lit précis, un lit peut être mis en maintenance, et un séjour sans lit est
+  « En attente de lit ». Les anciennes salles de type Dortoir restent lisibles mais aucune nouvelle ne se crée.
+- **Écran Internat, cinq onglets** : Occupation (cartes Internes, Demi-pensionnaires, En attente de lit,
+  Chambres complètes ; « Affecter un élève », « Changer / Libérer »), Pavillons, Pensionnaires (filtres
+  Pavillon, Chambre, Régime ; fiche, contact d'urgence, personnes habilitées, fiche médicale), Sorties et
+  Pointage.
 - **Le régime d'hébergement est porté par l'inscription, pas par l'élève** — portée annuelle : une
   réinscription reconfirme ou change le régime, jamais un report automatique d'une année sur l'autre.
-- Comptage de capacité simple : occupants actifs (inscription non annulée, année active) comparés à la
-  capacité de la chambre.
+- Capacité : lits occupés comparés aux lits de la chambre ; une chambre sans lit libre n'est plus proposée
+  à l'inscription ni à l'affectation.
 - **La pension n'est jamais retirée à la libération** d'un élève de l'Internat : sortir un élève
   (retour à Externe, changement de chambre) ne retranche pas la ligne de pension déjà facturée — toute
   correction suit la règle Finance habituelle (règle #4 d'`AGENTS.md`, correction tracée par
@@ -327,13 +333,14 @@ Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
   indépendamment à l'inscription et à l'affectation de chambre.
 
 ### Flux d'utilisation typique
-1. Le Directeur active le module Internat dans Paramètres, puis déclare des dortoirs via
-   Infrastructures.
-2. À l'inscription d'un élève, la Secrétariat choisit son régime d'hébergement (section « Régime &
-   Hébergement » du formulaire) — une pension est ajoutée à son compte financier si Interne.
-3. Depuis `/internat`, la Secrétariat ou la Surveillance affecte, transfère ou libère une chambre via
-   la modale d'affectation rapide, avec recherche d'élève.
-4. Le tableau de bord par chambre reflète l'occupation en temps réel.
+1. Le Directeur active le module Internat dans Paramètres, puis crée ses pavillons, chambres et lits dans
+   Internat › Pavillons.
+2. À l'inscription d'un élève, le Secrétariat choisit son régime (section « Régime & Hébergement ») puis,
+   hors Externe, une chambre ayant un lit libre ; la case « Ajouter le frais de pension à la fiche
+   financière » ajoute la ligne de pension au montant dû.
+3. Depuis `/internat` › Occupation, le Secrétariat ou la Surveillance affecte, transfère ou libère un lit via
+   « Affecter un élève » et « Changer / Libérer », avec recherche d'élève.
+4. Le tableau d'occupation reflète les lits occupés en temps réel.
 
 ---
 

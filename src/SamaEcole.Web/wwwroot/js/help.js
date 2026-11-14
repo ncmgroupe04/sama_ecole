@@ -1011,7 +1011,7 @@
                     probleme:
                         "Un volume manquant ou une salle doublement réservée ne se voit qu'à l'usage, en pleine semaine de cours.",
                     procedure: [
-                        "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». Videz la case pour revenir à la référence.",
+                        "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». « Revenir à la référence » (ou une case vidée puis enregistrée) rétablit la grille de référence.",
                         "Un réglage de série l'emporte sur celui du niveau, qui l'emporte sur la grille de référence.",
                         "CONTRÔLE : Enseignants › Emploi du temps, en vue « Par classe », une fois la classe choisie. Le panneau « Conformité aux volumes horaires » apparaît sous la grille et se met à jour quand vous changez de classe. Il rappelle le niveau (et la série) reconnus, le total planifié rapporté au total de référence, puis une ligne par matière : Planifié, Référence, Écart et Statut (Conforme, Sous le volume, Au-dessus ou Sans référence).",
                         "CHEVAUCHEMENTS : sous le tableau, un encart vert confirme qu'aucun enseignant, aucune salle ni aucune classe n'est placé deux fois sur la même plage ; sinon il devient rouge, indique le nombre de chevauchements touchant la classe, et « Voir le détail » liste la ressource concernée, le jour et les deux créneaux en cause."
@@ -1067,8 +1067,8 @@
                     probleme:
                         "Les distinctions et décisions se recalculent à la main à chaque conseil, avec des seuils qui varient d'un établissement à l'autre.",
                     procedure: [
-                        "SEUILS (Directeur) : Paramètres › Notation & mentions — par défaut Félicitations 14, Tableau d'honneur 12 sans note éliminatoire (< 5), Encouragements 12, passage 10, redoublement 8,5.",
-                        "PV : Notes et bulletins, bouton « PV » (période) ou « PV annuel ».",
+                        "SEUILS (Directeur) : Paramètres › Notation & mentions — par défaut Félicitations 14, Tableau d'honneur 12 sans note éliminatoire (< 5), Encouragements 12, passage 10, redoublement 8,5. « Enregistrer les seuils » valide ; « Revenir aux valeurs du Ministère » rétablit ces valeurs.",
+                        "PV : Notes et bulletins, une fois la classe et la période choisies, bouton « PV Délibération » (période) ou « PV annuel » (fin d'année).",
                         "DÉCISIONS : « Appliquer les décisions proposées » enregistre les propositions de fin d'année pour les élèves encore sans décision."
                     ],
                     impacts: [
@@ -1485,11 +1485,11 @@
                         "L'édition d'une promotion entière mobilise le secrétariat plusieurs jours par trimestre.",
                     procedure: [
                         "Assurez-vous au préalable que toutes les notes du trimestre sont saisies et contrôlées.",
-                        "Complétez, le cas échéant, les appréciations et les décisions du conseil des professeurs pour chaque élève.",
+                        "Complétez, le cas échéant, la distinction et la décision du conseil des professeurs de chaque élève : Gestion Scolaire › Élèves, fiche de l'élève, onglet « Notes & bulletins », fenêtre « Observations du conseil » (Distinction, Décision du Conseil, Observations).",
                         "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et la période.",
-                        "BULLETIN INDIVIDUEL : depuis la ligne de l'élève, demandez l'aperçu. Le document s'affiche à l'écran avant toute impression.",
-                        "BULLETINS DE CLASSE : demandez l'édition groupée. Un unique document PDF réunit l'ensemble des bulletins de la classe, prêt pour l'impression en série.",
-                        "PROCÈS-VERBAL DE DÉLIBÉRATION : éditez, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
+                        "BULLETIN INDIVIDUEL : dans la fiche de l'élève (Élèves), onglet « Notes & bulletins », cliquez sur « Aperçu bulletin » dans le bloc du trimestre voulu. Le document s'affiche à l'écran avant toute impression.",
+                        "BULLETINS DE CLASSE : dans Notes et bulletins, une fois la classe et la période choisies, « Aperçu bulletins » ouvre un unique PDF réunissant tous les bulletins de la classe (une page par élève), et « Bulletins (ZIP) » télécharge une archive avec un fichier par élève.",
+                        "PROCÈS-VERBAL DE DÉLIBÉRATION : « PV Délibération » (période) ou « PV annuel » (fin d'année) éditent, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
                         "Contrôlez l'aperçu, puis imprimez. Le document reflète l'état des données à l'instant de sa génération."
                     ],
                     impacts: [
@@ -1570,8 +1570,8 @@
                         "Définissez les seuils de mention dans Paramètres › Notation & mentions : libellé et moyenne minimale, exprimée sur vingt.",
                         "Saisissez les notes : les moyennes, les totaux et le rang se recalculent à chaque enregistrement.",
                         "Consultez la synthèse de la classe pour vérifier la cohérence d'ensemble avant le conseil.",
-                        "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale (Félicitations à partir de 16, Tableau d'honneur à partir de 14, Encouragements à partir de 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
-                        "Renseignez la décision du conseil lorsque la période concernée l'exige.",
+                        "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale et des seuils réglés dans Paramètres › Notation & mentions (par défaut : Félicitations dès 14, Tableau d'honneur dès 12 sans note éliminatoire inférieure à 5, Encouragements dès 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
+                        "Renseignez la « Décision du Conseil » dans la fenêtre « Observations du conseil » de la fiche élève (onglet « Notes & bulletins ») lorsque la période concernée l'exige.",
                         "Tant qu'aucune appréciation n'a été saisie, le bulletin imprime les cases vierges plutôt qu'une valeur inventée."
                     ],
                     impacts: [
@@ -2028,7 +2028,8 @@
             concept:
                 "Une candidature aux examens officiels (CFEE en fin de CM2, BFEM en fin de troisième, BAC en terminale) " +
                 "traverse un cycle de vie précis : le dossier s'ouvre INCOMPLET, ne devient COMPLET que lorsque l'extrait de " +
-                "naissance est déclaré présent et l'état civil déclaré conforme, ne peut être TRANSMIS à l'Inspection de " +
+                "naissance est déclaré présent et l'état civil déclaré conforme (pour le CFEE, la photo d'identité et la quittance " +
+                "des frais d'inscription sont également exigées), ne peut être TRANSMIS à l'Inspection de " +
                 "l'Éducation et de la Formation (IEF) ou à l'Inspection d'Académie (IA) qu'une fois Complet, et ne reçoit un " +
                 "résultat qu'une fois Transmis. Chaque étape verrouille la précédente : on ne transmet jamais un dossier dont " +
                 "il manque une pièce, et on ne délibère jamais un dossier qui n'a pas été transmis. Le numéro de table, comme " +
@@ -2058,9 +2059,9 @@
                         "L'élève concerné se retrouve alors exclu de la session en cours.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Examens officiels, onglet Sessions, et créez la session : année scolaire, type d'examen (CFEE, BFEM, BAC) et, pour le BAC, la série.",
-                        "Basculez vers l'onglet Dossiers et cliquez sur « Nouveau dossier » : recherchez l'élève par son matricule ou son nom, la classe se préremplit depuis sa classe actuelle.",
+                        "Basculez vers l'onglet Dossiers et cliquez sur « Nouveau dossier » : recherchez l'élève par son matricule ou son nom, la classe se préremplit depuis sa classe actuelle. Pour le CFEE, l'onglet « Candidats CM2 » liste d'un coup les élèves actuellement en CM2 avec l'avancement de leur pièce (« n / 4 »), le bouton « Créer la session CFEE de l'année » si elle n'existe pas, « Ouvrir le dossier » et « Modifier la checklist ».",
                         "Depuis la fiche du dossier, déclarez la présence de l'extrait de naissance et la conformité de l'état civil au regard des pièces reçues.",
-                        "Le dossier passe automatiquement à Complet dès que ces deux contrôles sont positifs — aucune case à cocher séparément ne fait foi.",
+                        "Le dossier passe automatiquement à Complet dès que les contrôles sont positifs : extrait de naissance présent et état civil conforme, et — pour le CFEE seulement — photo d'identité présente et quittance des frais d'inscription présente (4 pièces). Pour le BFEM et le BAC, la photo et la quittance peuvent être cochées mais n'influent pas sur le statut. Aucune case « Complet » ne se coche à la main.",
                         "Avant la date limite, ouvrez l'onglet Audit, sélectionnez la session : la liste des dossiers encore Incomplets s'affiche, avec le détail exact de ce qui manque à chacun.",
                         "Une fois un dossier Complet, transmettez-le à l'IEF/l'IA depuis l'onglet Dossiers ; un dossier encore Incomplet voit ce bouton refuser l'opération et renvoie vers l'Audit."
                     ],
@@ -2913,15 +2914,15 @@
                         "contestation : impossible de prouver qu'un élève a déjà été averti pour un fait " +
                         "similaire, et le conseil de discipline se retrouve à statuer sans dossier.",
                     procedure: [
-                        "Ouvrez Surveillance › Registre Discipline et créez une nouvelle entrée.",
-                        "Sélectionnez l'élève, décrivez le fait constaté, et choisissez la sanction : Avertissement, Blâme, Retenue ou Exclusion.",
-                        "Validez. Le procès-verbal est généré au format PDF, prêt à être imprimé et signé selon l'usage de l'établissement.",
-                        "Consultez l'historique disciplinaire complet de l'élève avant de statuer sur un nouveau fait, pour apprécier une éventuelle récidive."
+                        "Ouvrez Surveillance › Registre Discipline et cliquez sur « Ajouter une sanction ».",
+                        "Dans la fenêtre « Nouvelle Sanction », sélectionnez l'« Élève concerné », choisissez le « Type de sanction » (Avertissement par défaut, Blâme, Retenue ou Exclusion), la « Date de l'incident » et décrivez l'incident.",
+                        "Cliquez sur « Enregistrer » : la sanction apparaît dans le registre. Le procès-verbal ne se génère pas automatiquement : sur la ligne de la sanction, « Télécharger le PV de discipline » produit le PDF, à imprimer et à signer selon l'usage de l'établissement.",
+                        "Parcourez le registre (date, élève, type, motif) avant de statuer sur un nouveau fait, pour apprécier une éventuelle récidive."
                     ],
                     impacts: [
                         "Bulletin de notes : les distinctions du conseil de classe (§ Notes & Bulletins) sont une décision PÉDAGOGIQUE distincte de ce registre — les deux ne s'alimentent pas automatiquement l'une l'autre.",
                         "Convocations : une sanction grave — retenue, exclusion — motive fréquemment une convocation de parent en complément du procès-verbal.",
-                        "Dossier de l'élève : l'historique disciplinaire complet reste consultable depuis la fiche de l'élève."
+                        "Historique : toutes les sanctions restent consultables dans le registre, datées et rattachées à l'élève ; la fiche de l'élève n'en affiche pas le détail."
                     ],
                     recommandations: [
                         "Décrivez le fait avec précision et sans jugement de valeur : c'est ce texte, et lui seul, qui devra convaincre un conseil de discipline ou une famille en désaccord.",
@@ -2954,15 +2955,15 @@
                         "conseil de discipline.",
                     procedure: [
                         "Ouvrez Surveillance › Convocations parent et créez une nouvelle convocation, ou utilisez le bouton « Convoquer » du bilan d'assiduité (Gestion Scolaire › Rapports), qui pré-remplit le motif à partir des chiffres de la période.",
-                        "Sélectionnez l'élève, précisez le motif de l'entretien et la date proposée.",
+                        "Cliquez sur « Nouvelle convocation », sélectionnez l'élève, puis renseignez la date et l'heure de convocation et le motif de l'entretien.",
                         "Validez. L'avis de convocation est généré au format PDF, à remettre à la famille par le canal habituel de l'établissement.",
-                        "À l'issue de l'entretien, ouvrez la convocation et posez sa SUITE : Honorée (l'entretien a eu lieu, le compte rendu reste facultatif), Non honorée ou Reportée (le compte rendu devient alors OBLIGATOIRE).",
+                        "À l'issue de l'entretien, cliquez sur « Consigner » sur la ligne de la convocation et posez sa SUITE : « Honorée — le parent s'est présenté » (le compte rendu reste facultatif), « Non honorée — le parent ne s'est pas présenté » ou « Reportée — entretien à reprogrammer » (le compte rendu devient alors OBLIGATOIRE). Le filtre « En retard uniquement » isole les convocations planifiées dont la date est dépassée sans suite.",
                         "Une suite ne se pose qu'UNE SEULE FOIS, et seulement depuis l'état Planifiée : une convocation déjà close ne peut pas être rouverte ni recevoir une seconde suite — c'est refusé plutôt qu'écrasé silencieusement."
                     ],
                     impacts: [
-                        "Registre de discipline : une convocation née d'une sanction grave reste liée, dans le dossier de l'élève, au fait qui l'a motivée, même si les deux registres ne se confondent pas.",
+                        "Registre de discipline : une convocation et une sanction sont deux registres distincts, sans lien automatique — la convocation convoque un parent pour un entretien, la sanction acte un fait déjà constaté.",
                         "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation, et peut désormais convoquer directement depuis le bilan (voir « Rapport d'assiduité détaillé »).",
-                        "Dossier de l'élève : l'historique des convocations reste consultable, daté, motivé et assorti de sa suite le cas échéant.",
+                        "Historique : les convocations restent consultables dans la liste, datées, motivées et assorties de leur suite le cas échéant ; la fiche de l'élève n'en affiche pas le détail.",
                         "Registre : les convocations encore SANS SUITE remontent en tête de liste, quelle que soit leur date — une convocation planifiée puis oubliée reste donc visible en premier plutôt que de se noyer chronologiquement parmi les entretiens déjà tenus.",
                         "Avis PDF : il n'est JAMAIS réédité avec la suite — c'est la pièce remise AVANT l'entretien, elle ne peut pas porter un résultat qui n'existait pas encore au moment de son impression."
                     ],
@@ -3085,43 +3086,40 @@
                 {
                     id: 'activation-dortoirs',
                     title: 'Activer le module et déclarer les dortoirs',
-                    location: 'Paramètres › Modules & fonctionnalités, puis Bâtiments & Salles',
+                    location: 'Paramètres › Modules & fonctionnalités, puis Internat › Pavillons',
                     href: '/parametres?tab=modules',
                     roles: ['Directeur'],
                     definition:
                         "Section « Internat » de Paramètres › Modules & fonctionnalités : un interrupteur, désactivé par " +
                         "défaut, qui rend le module visible ou invisible pour tout le personnel de l'établissement. Une " +
-                        "fois activé, les DORTOIRS se déclarent comme des salles ordinaires depuis Bâtiments & Salles, " +
-                        "avec le type « Dortoir » et une capacité en nombre de places — exactement le même écran que pour " +
-                        "une salle de classe ou un bureau, aucun écran séparé.",
+                        "fois activé, les DORTOIRS se déclarent dans Internat › Pavillons : un pavillon contient des " +
+                        "chambres, et chaque chambre des lits ; la capacité est la somme des lits, jamais saisie.",
                     objectif:
                         "Réserver le module aux établissements qui hébergent réellement des élèves, sans imposer à tous " +
                         "les autres un menu et un vocabulaire — pension, dortoir, régime — qui ne les concernent pas ; et " +
-                        "réutiliser l'inventaire des locaux déjà tenu par Infrastructures plutôt que de faire ressaisir " +
-                        "une seconde cartographie des bâtiments.",
+                        "tenir une cartographie fine de l'hébergement (pavillons, chambres, lits) où chaque pensionnaire a son lit.",
                     probleme:
                         "Un module actif par défaut pour toutes les écoles ferait apparaître un menu « Internat » et une " +
                         "section « Régime & Hébergement » sur le formulaire d'inscription même pour un externat pur — une " +
                         "complexité et une question posée à chaque famille qui n'a simplement pas lieu d'être. À " +
-                        "l'inverse, sans réutiliser les salles déjà déclarées, un établissement qui héberge des élèves " +
-                        "devrait tenir deux inventaires de locaux en parallèle, l'un pour les classes, l'autre pour les " +
-                        "dortoirs, aussitôt sujets à diverger.",
+                        "l'inverse, sans suivi des lits, un établissement qui héberge des élèves ne sait pas quelle " +
+                        "chambre est réellement complète ni qui occupe quel lit.",
                     procedure: [
                         "Ouvrez Paramètres › Modules & fonctionnalités et activez l'interrupteur « Internat », réservé au Directeur.",
-                        "Ouvrez ensuite Gestion Scolaire › Bâtiments & Salles et créez, si besoin, un bâtiment dédié à l'hébergement (« Pavillon Garçons », « Pavillon Filles »).",
-                        "Ajoutez ses salles comme d'habitude, mais choisissez le type « Dortoir » et renseignez une capacité SINCÈRE — le nombre de lits réellement disponibles dans la chambre.",
-                        "Aucune autre déclaration n'est nécessaire : dès qu'au moins un dortoir existe, l'écran Internat et la section « Régime & Hébergement » de l'inscription s'ouvrent d'eux-mêmes.",
+                        "Ouvrez ensuite Internat › onglet « Pavillons » et cliquez sur « Nouveau pavillon » : nom du pavillon (« Pavillon Garçons », « Pavillon Filles »), genre, nom et téléphone du surveillant, notes.",
+                        "Dans « Chambres et lits » du pavillon, cliquez sur « Ajouter une chambre » : nom de la chambre et nombre de lits (de 1 à 40) — les lits sont créés avec la chambre ; « + Lit » en ajoute un, « Remettre en service » rétablit un lit en maintenance. Comptez des lits réels : la capacité n'est jamais saisie, c'est la somme des lits.",
+                        "Aucune autre déclaration n'est nécessaire : l'écran Internat (onglets Occupation, Pavillons, Pensionnaires, Sorties, Pointage) et la section « Régime & Hébergement » de l'inscription sont ouverts par l'interrupteur « Internat » seul ; l'inscription ne propose toutefois que les chambres ayant un lit libre.",
                         "Désactiver le module par la suite masque le menu et bloque toute nouvelle affectation (l'API la refuse en 422), mais ne supprime ni les dortoirs ni l'historique des élèves déjà hébergés."
                     ],
                     impacts: [
-                        "Bâtiments & Salles : un dortoir reste une salle comme les autres — il compte dans le total de capacité de l'établissement et peut être archivé comme n'importe quelle salle devenue inutilisable.",
+                        "Bâtiments & Salles : « Dortoir » n'est plus proposé pour une nouvelle salle (l'API refuse ce type) ; les dortoirs se gèrent uniquement dans Internat › Pavillons. Un ancien dortoir créé avant ce changement garde son type.",
                         "Menu et formulaire d'inscription : la visibilité du lien « Internat » et de la section « Régime & Hébergement » suit l'interrupteur côté client, par confort d'affichage — la garde réelle est posée côté serveur et vaut pour tous les rôles, y compris un accès direct par adresse.",
-                        "Capacité : elle se compte au niveau de la CHAMBRE (occupants actifs comparés à la capacité de la salle), jamais lit par lit — aucune réservation nominative d'un lit précis n'existe."
+                        "Capacité : elle est DÉRIVÉE des lits (jamais saisie) et chaque pensionnaire occupe un lit précis ; un pensionnaire sans lit (lit supprimé) apparaît « En attente de lit » dans l'onglet Pensionnaires."
                     ],
                     recommandations: [
                         "Activez le module et déclarez vos dortoirs AVANT la campagne d'inscription : une section « Régime & Hébergement » qui apparaît en cours de campagne oblige à revenir sur des dossiers déjà saisis.",
-                        "Ne créez pas un dortoir par lit : la granularité du module est la chambre, pas la place individuelle — un suivi plus fin resterait à tenir hors de l'application.",
-                        "Distinguez clairement, dans le nom du bâtiment ou de la salle, un dortoir d'une salle de classe ordinaire : c'est ce nom qui apparaît sur le tableau de bord Internat et sur la fiche de l'élève."
+                        "Créez les lits tels qu'ils existent : un lit en panne se met en maintenance (« Remettre en service » le rétablit) plutôt que de se supprimer, ce qui conserve l'historique d'occupation.",
+                        "Donnez à chaque pavillon et à chaque chambre un nom explicite (« Pavillon Garçons », « Chambre 3 ») : ce sont ces noms qui apparaissent dans l'onglet Occupation et dans la liste « Chambre » de l'inscription."
                     ]
                 },
                 {
@@ -3151,16 +3149,16 @@
                     procedure: [
                         "Ouvrez Gestion Scolaire › Inscriptions (première inscription ou réinscription) et sélectionnez la classe comme d'habitude.",
                         "Dans la section « Régime & Hébergement », choisissez Externe, Demi-pensionnaire ou Interne.",
-                        "Pour Interne, choisissez le dortoir dans la liste : seuls les dortoirs ayant encore de la place s'y proposent, avec leur occupation courante.",
-                        "Validez l'inscription : si une catégorie de frais de pension existe dans le barème de la classe, sa ligne s'ajoute d'elle-même au montant dû — rien à cocher séparément.",
+                        "Dès que le régime n'est pas Externe, le champ obligatoire « Chambre » apparaît : choisissez-y une chambre ; seules les chambres ayant un lit libre sont proposées. S'il n'y en a aucune, le formulaire renvoie vers Internat pour créer un pavillon, ajouter des lits ou en libérer.",
+                        "Cochez, si l'élève doit payer la pension, « Ajouter le frais de pension à la fiche financière » (case proposée pour tout régime autre qu'Externe), puis validez l'inscription : la ligne de pension du barème de la classe s'ajoute alors au montant dû.",
                         "CHAQUE ANNÉE, à la réinscription, reconfirmez le régime : il n'est JAMAIS reconduit automatiquement d'un exercice sur l'autre, au même titre que le redoublement.",
-                        "Un changement de régime ou de chambre EN COURS D'ANNÉE se fait depuis le tableau de bord Internat, pas en rouvrant le formulaire d'inscription (voir la fiche « Tableau de bord par chambre, affectation, transfert et libération »)."
+                        "Un changement de régime ou de chambre EN COURS D'ANNÉE se fait depuis Internat › Occupation (« Affecter un élève », « Changer / Libérer »), pas en rouvrant le formulaire d'inscription (voir la fiche « Tableau de bord par chambre, affectation, transfert et libération »)."
                     ],
                     impacts: [
                         "Échéancier : la ligne de pension suit exactement la règle des autres lignes de frais — figée à la validation, jamais modifiée en silence ; une correction relève du Secrétariat ou de la Direction et reste historisée.",
                         "Fiche élève : un badge d'hébergement rappelle le régime en cours et, pour un Interne, sa chambre.",
                         "Libération : faire repasser un élève en Externe, ou le changer de chambre, ne retire JAMAIS la ligne de pension déjà facturée — elle correspond à une période réellement vécue à l'internat.",
-                        "Capacité : un dortoir déjà complet n'apparaît plus dans la liste des chambres disponibles proposée par ce formulaire."
+                        "Capacité : une chambre sans lit libre n'apparaît plus dans la liste « Chambre » proposée par ce formulaire."
                     ],
                     recommandations: [
                         "Ne laissez jamais un élève en régime Interne sans dortoir attribué : le formulaire l'exige, mais vérifiez la cohérence si un dortoir a été archivé après le choix initial.",
@@ -3190,10 +3188,10 @@
                         "présentée comme complète peut en réalité avoir de la place, et un dépassement de capacité ne se " +
                         "découvre qu'au moment où un lit manque physiquement.",
                     procedure: [
-                        "Ouvrez Internat : chaque dortoir apparaît avec son nom, sa capacité et son occupation courante.",
-                        "Recherchez un élève par nom ou par matricule pour retrouver sa chambre actuelle, ou pour l'affecter s'il est encore en régime Externe ou Demi-pensionnaire.",
-                        "Ouvrez la modale d'affectation rapide : elle propose selon le cas d'AFFECTER l'élève à un dortoir, de le TRANSFÉRER vers un autre, ou de le LIBÉRER (retour à Externe).",
-                        "Un dortoir déjà complet n'accepte aucune nouvelle affectation : le message l'indique explicitement plutôt que de laisser dépasser la capacité déclarée.",
+                        "Ouvrez Internat (onglet « Occupation », ouvert par défaut) : les cartes de synthèse donnent Occupation, Internes, Demi-pensionnaires, En attente de lit et Chambres complètes ; chaque pavillon liste ses chambres avec leur taux d'occupation, et « Voir les occupants » déplie les lits.",
+                        "L'onglet « Pensionnaires » (filtres Pavillon, Chambre, Régime ; recherche par nom, prénom ou matricule) donne la situation de chacun — Actif, En attente de lit, Séjour clos — et sa fiche (contact d'urgence, personnes habilitées, fiche médicale, sorties récentes, fiche PDF).",
+                        "Cliquez sur « Affecter un élève » (en-tête, ou depuis une chambre) : recherchez l'élève, choisissez le régime et un lit disponible, puis confirmez. Sur un lit occupé, « Changer / Libérer » permet de TRANSFÉRER l'élève vers un autre lit (« Confirmer le transfert ») ou de le LIBÉRER (« Confirmer la libération »).",
+                        "Une chambre sans lit libre n'accepte aucune nouvelle affectation : la liste affiche « Aucun lit disponible » plutôt que de laisser dépasser la capacité.",
                         "Validez : l'occupation du ou des dortoirs concernés se met à jour immédiatement sur le tableau de bord.",
                         "Si deux agents modifient la même affectation au même instant, le second à valider reçoit un refus explicite plutôt qu'un écrasement silencieux du premier — rouvrez simplement la fiche pour repartir de l'état à jour."
                     ],
