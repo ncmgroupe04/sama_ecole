@@ -244,7 +244,7 @@
                         "« Supprimer la salle » (ou « Supprimer le bâtiment ») lance la suppression guidée : l'élément est archivé, jamais effacé, et reste restaurable depuis « Voir dans les éléments supprimés » ; l'historique des affectations passées demeure intact."
                     ],
                     impacts: [
-                        "Classes : l'affectation d'une classe à une salle confronte l'effectif inscrit à la capacité déclarée.",
+                        "Classes : aucune classe n'est rattachée à une salle depuis l'écran Classes ; la capacité d'une salle est descriptive et n'est jamais confrontée à l'effectif inscrit.",
                         "Emploi du temps : les créneaux s'appuient sur les salles existantes pour prévenir les collisions d'occupation.",
                         "Tableau de bord : la capacité totale nourrit les ratios d'occupation présentés à la direction.",
                         "Dossiers administratifs : la capacité d'accueil déclarée est une pièce régulièrement exigée lors des visites de conformité."
@@ -597,10 +597,10 @@
                         "cohérent. À l'échelle d'une rentrée, la reprise manuelle représente plusieurs journées de travail.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Classes.",
-                        "Cliquez sur « Nouvelle classe » et renseignez le nom exact du groupe.",
-                        "Sélectionnez le niveau : ce choix détermine le cycle, et par conséquent le barème de notation qui s'appliquera aux bulletins.",
-                        "Indiquez l'effectif maximal souhaité, puis, le cas échéant, la salle d'affectation.",
-                        "Désignez le professeur principal ou le titulaire de la classe lorsque l'établissement pratique cet usage.",
+                        "Cliquez sur « Nouvelle classe » et renseignez le « Nom de la classe » exact du groupe (ex. « CM2 B »).",
+                        "Sélectionnez le « Niveau » (Primaire, Collège, Lycée, Crèche ou Maternelle — seuls les cycles déclarés dans « Cycles gérés » sont proposés) : ce choix détermine le cycle, et par conséquent le barème de notation qui s'appliquera aux bulletins. Le niveau précis (6e, CM2…) se lit sur le nom de la classe.",
+                        "Indiquez la « Capacité d'accueil » (30 par défaut). Pour une classe de lycée, choisissez au besoin la « Série / Filière » (ses matières, options et coefficients officiels sont alors ajoutés à la classe ; « Général / Collège (aucune série) » pour une Seconde commune). Pour une classe qui valide deux niveaux en une année (ex. CI-CP), cochez « Classe Passerelle / Accélérée » et choisissez le « Second niveau validé ».",
+                        "Depuis la carte de la classe : « Imprimer la liste des élèves », « Télécharger les cartes scolaires », « Modifier » et « Supprimer » (suppression guidée, la classe est archivée).",
                         "Enregistrez. La classe devient immédiatement sélectionnable à l'inscription, à la saisie des notes et au paramétrage des frais."
                     ],
                     impacts: [
@@ -608,7 +608,7 @@
                         "Matières : les grilles d'évaluation sont attachées au NIVEAU ; deux classes de même niveau partagent la même grille.",
                         "Notes : le cycle de la classe fixe le barème par défaut de chaque note saisie.",
                         "Bulletins : le nom de la classe, son effectif et le rang de l'élève y figurent tels qu'ils sont enregistrés ici.",
-                        "Infrastructures : l'affectation d'une salle confronte l'effectif au nombre de places disponibles."
+                        "Infrastructures : l'écran Classes n'affecte aucune salle ; la capacité d'une salle (Bâtiments & Salles) reste descriptive et n'est jamais confrontée à l'effectif d'une classe."
                     ],
                     recommandations: [
                         "Arrêtez une convention de nommage AVANT la première création, et tenez-vous-y sans exception.",
@@ -3460,7 +3460,7 @@
                     procedure: [
                         "CHANGER SON MOT DE PASSE : ouvrez le menu profil, choisissez « Changer mon mot de passe », saisissez l'actuel puis le nouveau — la robustesse du nouveau est vérifiée à la saisie.",
                         "CHANGER SON E-MAIL (Directeur et Super Admin uniquement) : depuis la carte de profil de la barre latérale, choisissez « Changer mon e-mail », saisissez le nouvel e-mail et votre mot de passe ACTUEL pour confirmer. Vous serez déconnecté de toutes vos sessions, y compris celle-ci : reconnectez-vous avec la nouvelle adresse.",
-                        "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Corriger le profil d'un compte » (Paramètres › Utilisateurs & rôles).",
+                        "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Modifier le profil » (Paramètres › Utilisateurs & rôles).",
                         "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
                         "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
                         "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « Déconnexion automatique (minutes) »."
