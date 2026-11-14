@@ -188,7 +188,7 @@
                     procedure: [
                         "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
                         "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
-                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Pédagogie (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
+                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Notation & mentions (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
                         "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
@@ -207,7 +207,7 @@
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
                         "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
-                        "Choisissez le découpage (Paramètres › Pédagogie) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
+                        "Choisissez le découpage (Paramètres › Notation & mentions) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
                         "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé.",
                         "Avant de supprimer une année en mode bac à sable, exportez-la si elle contient des saisies que vous souhaitez relire : l'effacement est définitif et l'export ZIP (icône de téléchargement) reste la seule copie."
                     ]
@@ -827,7 +827,7 @@
                     procedure: [
                         "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Ajouter un enseignant ».",
                         "Renseignez le nom complet, l'e-mail et la date de naissance (obligatoires), puis le téléphone, le lieu de naissance, l'adresse de résidence et la photo. Cochez au moins une « matière enseignée » (matière qualifiée). Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
-                        "Dépliez au besoin « Informations pour le rapport STATEDUC » (facultatif) : genre, statut administratif, diplômes académique et professionnel, matricule de solde, première prise de service. La nature du contrat (permanent ou vacataire) et les éléments de paie ne se saisissent pas ici : ils relèvent de Comptabilité › Paie.",
+                        "Dépliez au besoin « Informations pour le rapport STATEDUC » (facultatif) : genre, statut administratif, diplômes académique et professionnel, matricule de solde, première prise de service. La nature du contrat (permanent ou vacataire) et les éléments de paie ne se saisissent pas ici : ils relèvent de Comptabilité › Fiches de Paie.",
                         "Depuis la fiche détaillée (« Voir la fiche »), section « Attribuer une classe / matière (année active) » : choisissez la classe, la matière, puis « Attribuer ». Une affectation se retire avec « Retirer cette affectation ».",
                         "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles (rôle « Enseignant »), puis rattachez-le à la fiche : à la création (champ « Compte de connexion (optionnel) », Directeur) ou plus tard (voir « Rattacher un compte enseignant »).",
                         "Un départ se traduit par le bouton « Supprimer » de la fiche (suppression guidée) : la fiche est archivée, jamais effacée, et l'historique des notes saisies et des heures pointées demeure intégralement conservé. Le statut (Actif, Suspendu, Bloqué) filtre la liste."
@@ -916,7 +916,7 @@
                     impacts: [
                         "Affectations : un créneau s'appuie sur les couples matière + classe déjà déclarés sur la fiche de l'enseignant — une matière qu'il n'enseigne pas ne lui est pas proposée.",
                         "Salles : le numéro de salle est un simple libellé indicatif porté par le créneau ; le module Infrastructures reste la référence de la capacité et de l'existence réelle des locaux.",
-                        "Pointage des heures : les heures effectivement faites se saisissent séparément (Comptabilité › Paie, Pointage Profs) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
+                        "Pointage des heures : les heures effectivement faites se saisissent séparément (Surveillance › Pointage Profs, Comptabilité › Fiches de Paie) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
                         "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé.",
                         "Jours de repos : la grille n'affiche que les jours ouvrés de l'établissement (par exemple du samedi au mercredi si le repos tombe le jeudi et le vendredi) et refuse tout créneau un jour de repos. Ces jours se règlent dans Paramètres › Notation & mentions ; un créneau déjà posé sur un jour devenu repos reste visible, marqué « repos », et peut être supprimé mais plus modifié."
                     ],
@@ -1652,9 +1652,9 @@
                     procedure: [
                         "Ouvrez Comptabilité › Frais Scolaires.",
                         "Vérifiez que l'année scolaire active est bien celle pour laquelle vous entendez paramétrer les tarifs.",
-                        "Créez les catégories de frais que pratique l'établissement : frais d'inscription, mensualité, tenue scolaire, transport, cantine, fournitures et frais d'examen.",
-                        "Pour chaque classe, renseignez le montant applicable à chaque catégorie.",
-                        "Précisez le caractère du frais : obligatoire ou facultatif, ponctuel ou récurrent.",
+                        "Dans l'onglet « Paramétrage des Frais », créez les catégories que pratique l'établissement (« Nouvelle catégorie de frais » : inscription, mensualité, tenue scolaire, transport, cantine, fournitures, frais d'examen — la liste est libre).",
+                        "Pour chaque catégorie, renseignez le montant de chaque classe (colonne « Montant », bouton « Modifier ») ; « Appliquer un montant standard » fixe en une fois le même montant pour toutes les classes, pour un niveau ou pour une sélection, avec la case « Écraser les montants déjà définis » (décochée, les exceptions classe par classe sont préservées).",
+                        "À la création de la catégorie, précisez son caractère : « Frais mensuel (dû chaque mois) » ou ponctuel (décoché), « Frais optionnel (au choix de la famille) », et « Frais d'internat (module Internat) » pour la pension.",
                         "Enregistrez. Le barème devient immédiatement opérant pour toute nouvelle inscription.",
                         "RÉVISION EN COURS D'ANNÉE : la modification d'un montant est historisée avec son auteur, sa date et son motif, et n'altère jamais les inscriptions déjà validées."
                     ],
@@ -2140,7 +2140,7 @@
                 {
                     id: 'contrats-personnel',
                     title: 'Contrats du personnel — Permanent et Vacataire',
-                    location: 'Comptabilité › Paie',
+                    location: 'Comptabilité › Fiches de Paie',
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2161,9 +2161,9 @@
                         "paie approximative ou par un désaccord entre l'employé et l'établissement sur le montant convenu — " +
                         "et un moyen de paiement non consigné oblige à le redemander à chaque virement.",
                     procedure: [
-                        "Ouvrez Comptabilité › Paie, onglet Contrats, puis « Nouveau contrat ».",
-                        "Choisissez le type d'employé : un enseignant déjà fiché, ou un utilisateur non-enseignant (personnel administratif).",
-                        "Sélectionnez le régime — Permanent ou Vacataire — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant.",
+                        "Ouvrez Comptabilité › Fiches de Paie, onglet Contrats, puis « Nouveau contrat ».",
+                        "Choisissez le « Type d'employé » : « Enseignant » (déjà fiché), « Utilisateur (non-enseignant) » (réservé au Directeur) ou « Personnel sans compte (gardien…) » : nom complet, fonction et téléphone suffisent, la personne est payée et reçoit son reçu sans jamais se connecter.",
+                        "Sélectionnez le « Type de contrat » — Permanent ou Vacataire (horaire) — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant. La case « Appliquer les retenues légales (IPRES, CSS, VRS/CFCE, BRS) » est cochée par défaut.",
                         "Renseignez le moyen de paiement de l'employé — espèces par défaut, ou virement bancaire, Wave, Orange Money avec la référence du compte correspondant.",
                         "Enregistrez : le contrat devient immédiatement sélectionnable pour la génération d'une fiche de paie.",
                         "RÉVISION : depuis la ligne du contrat, modifiez le salaire, le taux horaire, la prime ou le moyen de paiement, en indiquant obligatoirement le motif — une augmentation annuelle ou un changement de compte, par exemple.",
@@ -2187,7 +2187,7 @@
                 {
                     id: 'heures-vacataires-fiches-paie',
                     title: 'Pointage des heures et génération des fiches de paie',
-                    location: 'Comptabilité › Paie › Pointage Profs',
+                    location: 'Surveillance › Pointage Profs',
                     href: '/pointage-profs',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2205,8 +2205,8 @@
                         "au désavantage de l'un ou de l'autre selon les cas, et sans aucune pièce pour trancher un " +
                         "désaccord.",
                     procedure: [
-                        "Ouvrez Comptabilité › Paie › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
-                        "Si le message « Aucun enseignant vacataire n'a de contrat actif » s'affiche : c'est qu'aucun CONTRAT de type Vacataire n'a encore été créé. Marquer un enseignant « Vacataire » sur sa fiche (statut STATEDUC) ne suffit pas — créez d'abord son contrat dans Comptabilité › Paie › Contrats.",
+                        "Ouvrez Surveillance › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
+                        "Si le message « Aucun enseignant vacataire n'a de contrat actif » s'affiche : c'est qu'aucun CONTRAT de type Vacataire n'a encore été créé. Marquer un enseignant « Vacataire » sur sa fiche (statut STATEDUC) ne suffit pas — créez d'abord son contrat dans Comptabilité › Fiches de Paie › Contrats.",
                         "Sélectionnez le contrat concerné, puis ajoutez chaque heure : date, nombre d'heures (les demi-heures sont admises) et une note facultative.",
                         "Consultez, filtré par mois et par année, le récapitulatif des heures déjà pointées pour ce contrat.",
                         "Téléchargez la fiche d'heures au format PDF si une pièce signée est requise.",
@@ -2236,7 +2236,7 @@
                 {
                     id: 'declarations-fiscales',
                     title: 'Déclarations fiscales mensuelles — IPRES, CSS, VRS, BRS',
-                    location: 'Comptabilité › Paie',
+                    location: 'Comptabilité › Fiches de Paie',
                     href: '/fiscalite',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2246,7 +2246,7 @@
                         "période — collectée, déductible et nette — de sorte que la déclaration totalise en une seule " +
                         "fois tout ce que l'établissement doit verser à l'État ce mois-là. L'écran dédié Fiscalité " +
                         "(/fiscalite) l'affiche en cartes ; le même document reste consultable depuis l'onglet " +
-                        "Déclarations fiscales de Comptabilité › Paie.",
+                        "Déclarations fiscales de Comptabilité › Fiches de Paie.",
                     objectif:
                         "Éviter à l'établissement de reconstituer, fiche par fiche, ce qu'il doit verser à l'État chaque mois, " +
                         "et lui fournir un document unique, daté et vérifiable, à remettre en appui de sa déclaration " +
@@ -2258,7 +2258,7 @@
                         "déclaration devant l'administration fiscale.",
                     procedure: [
                         "Assurez-vous d'abord que TOUTES les fiches de paie du mois concerné sont générées : la déclaration n'agrège que ce qui existe déjà.",
-                        "Ouvrez Comptabilité › Fiscalité — ou, de façon équivalente, Comptabilité › Paie, onglet Déclarations fiscales.",
+                        "Ouvrez Comptabilité › VRS / IPRES (Taxes) (écran « Fiscalité ») — ou, de façon équivalente, Comptabilité › Fiches de Paie, onglet « Déclarations fiscales ».",
                         "Cliquez sur « Générer une déclaration », renseignez le mois et l'année, puis validez.",
                         "Consultez le détail par poste — IPRES, CSS, VRS, BRS — et le total dû à l'État qui en résulte.",
                         "Conservez ou transmettez ce récapitulatif pour la déclaration administrative effective auprès des organismes concernés."
@@ -2278,7 +2278,7 @@
                 {
                     id: 'paie-sans-retenues',
                     title: "Paie sans retenues légales — par contrat (Daara et structures non cotisantes)",
-                    location: "Comptabilité › Paie › Contrats",
+                    location: "Comptabilité › Fiches de Paie › Contrats",
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition: "Chaque contrat porte la case « Appliquer les retenues légales » (cochée par défaut). Décochée, la fiche de paie ne retient ni IPRES, ni CSS, ni VRS/CFCE, ni BRS : le net est le brut plus la prime de transport. Une même école peut donc avoir du personnel avec retenues et du personnel sans.",
@@ -2300,7 +2300,7 @@
                 {
                     id: 'fiche-paie-annuler-regenerer-payer',
                     title: "Fiches de paie — annuler, régénérer, payer et personnel sans compte",
-                    location: "Comptabilité › Paie › Fiches de paie",
+                    location: "Comptabilité › Fiches de Paie › Fiches de paie",
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition: "Une fiche de paie générée peut être ANNULÉE (conservée, marquée annulée, motif obligatoire) puis RÉGÉNÉRÉE sur les termes actuels du contrat, en une seule opération. Une fiche peut être PAYÉE : l'action crée un décaissement « Salaires » en trésorerie et le bulletin vaut reçu de paiement. Un contrat peut viser une personne sans compte (gardien…) avec nom, fonction et téléphone.",
@@ -2625,7 +2625,7 @@
                 {
                     id: 'patrimoine-categories',
                     title: 'Catégories et fiches de biens',
-                    location: 'Inventaire › Catalogue',
+                    location: 'Inventaire › Catalogue et Catégories',
                     href: '/inventaire',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
@@ -2645,11 +2645,11 @@
                         "nulle part, et un vol ou une perte de matériel passe inaperçu faute de référence à " +
                         "laquelle le comparer.",
                     procedure: [
-                        "Ouvrez Inventaire, puis créez d'abord les catégories dont l'établissement a besoin.",
-                        "Pour chaque catégorie, ajoutez les biens qu'elle regroupe : nom, état dominant et quantité totale de départ.",
+                        "Ouvrez Inventaire, onglet « Catégories », et cliquez sur « Nouvelle catégorie » (nom, description) pour créer les familles de biens dont l'établissement a besoin (Manuels scolaires, Informatique, Tenues…).",
+                        "Dans l'onglet « Catalogue », cliquez sur « Nouveau bien » : désignation, code d'inventaire (facultatif), catégorie, état, quantité initiale, salle d'entreposage ou emplacement libre, prix unitaire indicatif (facultatif, sans portée comptable), case « Consommable » (un consommable se distribue et ne peut pas être prêté) et notes. Un bien est un LOT : une quantité de matériel identique.",
                         "Renseignez un état SINCÈRE — l'état réel du lot, pas l'état théorique du bien à l'achat.",
-                        "La quantité totale saisie ici est le POINT DE DÉPART du journal de stock : toute variation ultérieure passe exclusivement par un mouvement, jamais par une correction directe de cette fiche.",
-                        "Un bien devenu obsolète ou intégralement sorti est archivé, jamais supprimé : l'historique de ses mouvements reste consultable."
+                        "La « Quantité initiale » saisie ici devient un mouvement d'entrée dans le journal de stock (zéro si le bien est attendu mais pas encore livré) : toute variation ultérieure passe exclusivement par un mouvement, jamais par une correction directe de cette fiche.",
+                        "Le bouton « Supprimer » d'un bien le retire du catalogue sans effacer l'historique de ses mouvements (suppression guidée) ; elle est refusée tant que des prêts de ce bien sont en cours. « Fiche d'inventaire (PDF) », en haut de l'écran, imprime l'état du patrimoine."
                     ],
                     impacts: [
                         "Mouvements de stock : chaque bien créé ici devient une cible de mouvement — réception, sortie, ajustement.",
@@ -2685,9 +2685,9 @@
                         "passé : perte, vol, casse ou simple erreur de comptage initial se confondent en un " +
                         "seul chiffre sans histoire, invérifiable un an plus tard.",
                     procedure: [
-                        "Ouvrez Inventaire, onglet Mouvements, et sélectionnez le bien concerné.",
+                        "Ouvrez Inventaire, onglet « Mouvements de stock », et cliquez sur « Nouveau mouvement » (ou sur « Enregistrer un mouvement » depuis la ligne d'un bien), puis sélectionnez le bien concerné : son disponible actuel s'affiche.",
                         "Choisissez le type de mouvement : Entrée, Sortie, Ajustement d'inventaire ou Mise au rebut. Le journal affiche ensuite un ajustement sous la forme « Ajustement (+) » ou « Ajustement (−) » selon le sens de l'écart, et les mouvements produits par les prêts (Attribution, Restitution, Perte sur prêt) ; ces derniers ne se saisissent pas ici.",
-                        "Saisissez la quantité concernée — toujours un nombre positif, quel que soit le sens du mouvement — et un motif explicite.",
+                        "Saisissez la « Quantité » concernée — toujours un nombre positif, quel que soit le sens du mouvement ; pour un « Ajustement d'inventaire », le champ devient « Effectif compté » : indiquez ce que vous avez réellement compté, l'écart par rapport au stock est calculé pour vous. Ajoutez la date (aujourd'hui par défaut), un motif explicite — c'est lui qui rend le journal opposable lors d'un contrôle — et, si utile, le fournisseur ou le destinataire.",
                         "Validez. La quantité disponible du bien est mise à jour dans la même transaction que l'écriture du mouvement : aucun écart n'est possible entre le journal et le solde affiché.",
                         "Une erreur de saisie NE SE CORRIGE PAS en modifiant la ligne : enregistrez un mouvement inverse qui compense l'écriture fautive, avec un motif qui le dit explicitement."
                     ],
@@ -2706,7 +2706,7 @@
                 {
                     id: 'prets-attributions',
                     title: 'Prêts et attributions de matériel',
-                    location: 'Inventaire › Prêts',
+                    location: 'Inventaire › Prêts & Décharges',
                     href: '/inventaire',
                     roles: ['Directeur', 'Secrétariat', 'Surveillant'],
                     definition:
@@ -2724,10 +2724,10 @@
                         "change de poste ou oublie l'accord verbal. L'établissement découvre alors, des " +
                         "mois plus tard, un matériel introuvable et personne pour en répondre.",
                     procedure: [
-                        "Ouvrez Inventaire, onglet Prêts, et créez une nouvelle attribution.",
+                        "Ouvrez Inventaire, onglet « Prêts & Décharges », et cliquez sur « Nouveau prêt ».",
                         "Sélectionnez le bien et la quantité prêtée, puis désignez le bénéficiaire.",
-                        "Validez. Une FICHE DE DÉCHARGE est générée au format PDF : faites-la signer par le bénéficiaire avant remise du matériel.",
-                        "Au retour du matériel, ouvrez l'attribution et enregistrez le retour — total ou partiel.",
+                        "Validez, puis cliquez sur « Imprimer la décharge » sur la ligne du prêt : la FICHE DE DÉCHARGE (PDF) est à faire signer par le bénéficiaire avant remise du matériel.",
+                        "Au retour du matériel, cliquez sur « Enregistrer une restitution » sur la ligne du prêt — totale ou partielle (statuts : En cours, Partiellement restitué, Restitué, Perdu ; le filtre « En retard uniquement » isole les prêts dépassés). « Annuler la fiche » annule un prêt saisi par erreur.",
                         "La quantité disponible du bien est restaurée dans la même transaction que l'enregistrement du retour."
                     ],
                     impacts: [
@@ -2995,14 +2995,17 @@
                 {
                     id: 'decaissements',
                     title: 'Enregistrement des décaissements',
-                    location: 'Comptabilité › Trésorerie',
-                    href: '/tresorerie',
+                    location: 'Comptabilité › Frais Scolaires › onglet Décaissements',
+                    href: '/frais',
                     roles: ['Directeur', 'Finance'],
                     definition:
-                        "Un décaissement est une dépense de l'établissement, classée par catégorie — " +
-                        "Salaires, Maintenance, Fournitures, Charges fixes, Loyer et charges, Eau et " +
-                        "électricité, Télécoms et Internet, Carburant, Assurances et honoraires, ou " +
-                        "Divers — datée et rattachée à un montant.",
+                        "Un décaissement est une dépense de l'établissement, enregistrée dans l'onglet « Décaissements » " +
+                        "de l'écran Frais Scolaires (et non dans l'écran Trésorerie, qui ne fait que les consolider). " +
+                        "Le formulaire propose cinq catégories — Salaires, Maintenance, Fournitures, Charges Fixes, " +
+                        "Divers — et chaque décaissement est daté, rattaché à un bénéficiaire, à un motif, à un montant " +
+                        "et à un mode de paiement. Le modèle de données connaît cinq catégories supplémentaires " +
+                        "(loyer et charges, eau et électricité, télécoms et Internet, carburant, assurances et honoraires), " +
+                        "mais le formulaire ne les propose pas à ce jour.",
                     objectif:
                         "Donner à la direction une image complète des sorties d'argent de l'établissement, " +
                         "ventilées par nature de dépense, sans dépendre d'une compilation manuelle de " +
@@ -3013,10 +3016,10 @@
                         "reconstituant, facture par facture, ce qui aurait dû être visible d'un coup " +
                         "d'œil.",
                     procedure: [
-                        "Ouvrez Comptabilité › Trésorerie et enregistrez un nouveau décaissement.",
-                        "Choisissez la catégorie de dépense la plus proche de la nature réelle de la sortie.",
-                        "Renseignez le montant et la date effective de la dépense.",
-                        "Validez. Le décaissement rejoint immédiatement l'agrégation affichée sur le tableau de bord Trésorerie."
+                        "Ouvrez Comptabilité › Frais Scolaires, onglet « Décaissements », et cliquez sur « Nouveau Décaissement ».",
+                        "Choisissez la catégorie de dépense la plus proche de la nature réelle de la sortie, puis renseignez le bénéficiaire (fournisseur ou employé) et le motif.",
+                        "Renseignez le montant, la date effective de la dépense et le « Mode de paiement » (Espèces, Chèque, Virement ou Mobile Money).",
+                        "Validez. Le décaissement apparaît dans l'« Historique des décaissements » et rejoint immédiatement l'agrégation affichée sur le tableau de bord Trésorerie. Une erreur se corrige par « Annuler ce décaissement » : une contre-écriture est créée et la ligne reste visible, marquée « Annulé ».",
                     ],
                     impacts: [
                         "Tableau de bord Trésorerie : chaque décaissement enregistré ici modifie instantanément la vue consolidée de la période.",
@@ -3048,8 +3051,8 @@
                         "de la tendance, ni de ce qui a réellement été dépensé sur la période.",
                     procedure: [
                         "Ouvrez Comptabilité › Trésorerie.",
-                        "Choisissez la période à consulter — par défaut, du premier jour du mois courant à aujourd'hui.",
-                        "Lisez le total des encaissements et celui des décaissements sur cette période, ainsi que le solde qui en résulte.",
+                        "Choisissez la période avec « Date de début » et « Date de fin » (par défaut, du premier jour du mois courant à aujourd'hui), puis « Actualiser » ; « Réinitialiser » revient à la période par défaut.",
+                        "Lisez les cartes « Total encaissé », « Total décaissé », « Solde net » et « Reste à recouvrer », puis les répartitions « Encaissements par mode de paiement » et « Décaissements par catégorie », et la liste des mouvements de la période (Type, Référence, Date, Montant). Cet écran est en lecture seule : les décaissements s'y consultent, ils ne s'y saisissent pas.",
                         "Changez la période pour comparer un mois à un autre, ou pour couvrir un trimestre entier."
                     ],
                     impacts: [
@@ -3378,7 +3381,7 @@
                         "Tableaux de bord et rapports : tous les indicateurs se rapportent à l'année active ; changer d'année change la lecture.",
                         "Effectifs, frais, présences : un élève non inscrit pour l'année active en est absent tant qu'il n'est pas inscrit (voir « Inscription différée »).",
                         "Sélecteurs : un enseignant ne voit dans les menus que ses propres affectations ; une liste courte peut donc être normale selon le rôle.",
-                        "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
+                        "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Fiches de Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
                         "États vides : ils sont dérivés des données déjà chargées et se mettent à jour sans rechargement dès que la cause disparaît."
                     ],
                     recommandations: [
