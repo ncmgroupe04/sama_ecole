@@ -641,7 +641,7 @@
                         "totaux recalculés à la main, des erreurs de report et des bulletins dont la présentation varie " +
                         "d'une classe à l'autre.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Matières et sélectionnez le niveau concerné : les grilles sont propres à chaque niveau.",
+                        "Ouvrez Gestion Scolaire › Matières et choisissez le cycle concerné dans la barre d'onglets du haut (Tous les cycles, Primaire, Collège, Lycée, Préscolaire, Autres niveaux — seuls les cycles qui contiennent des matières apparaissent, chacun avec son nombre de matières). Les grilles sont propres à chaque niveau. Le niveau d'une matière se choisit dans la liste fermée du formulaire (Crèche, Maternelle, Primaire, Collège, Lycée) ; c'est lui qui rattache la matière aux classes de ce niveau à la saisie des notes et sur le bulletin.",
                         "GRILLE SIMPLE (collège, lycée) : créez chaque matière avec son nom et son coefficient, et laissez le barème vide pour hériter de celui du cycle, soit /20.",
                         "GRILLE APC (primaire) : créez d'abord les DOMAINES parents — « Lang. & Com. », « Maths », « Éveil » — sans leur attribuer de barème, car un domaine n'est jamais noté.",
                         "Ajoutez ensuite, sous chaque domaine, les ACTIVITÉS filles : nom, coefficient et barème propre — sur 60, sur 40, sur 24 ou sur 16 — tel qu'il figure, ligne par ligne, sur la grille officielle.",
@@ -1435,13 +1435,15 @@
                         "généralement lorsque les parents ont déjà le bulletin en main.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Notes et bulletins.",
-                        "Sélectionnez successivement la classe, la matière et la période. Un enseignant ne se voit proposer que ses propres affectations.",
+                        "Sélectionnez successivement la classe, la matière et la période. La liste des matières se restreint d'elle-même au NIVEAU de la classe choisie (primaire, collège ou lycée) : les « Mathématiques » du lycée n'apparaissent pas pour une classe de collège. Tant qu'aucune classe n'est choisie, toutes les matières sont listées avec leur niveau entre parenthèses ; si aucune matière ne porte le niveau de la classe, la liste complète est conservée. Changer de classe efface la matière déjà choisie si elle n'appartient pas au nouveau niveau.",
+                        "Écoles Franco-Arabe : un sélecteur « Pôle » (Section française, Section arabe, Pôle commun) apparaît dès qu'une matière hors section française existe ; il réduit encore la liste des matières. Les domaines d'une grille APC n'y figurent pas : la note se saisit sur leurs activités.",
                         "La liste nominative s'affiche, accompagnée du barème applicable — celui de la ligne d'évaluation lorsqu'il est défini, celui du cycle à défaut.",
                         "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
-                        "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
+                        "Renseignez, dans chaque cellule de la ligne de l'élève, le Devoir 1, le Devoir 2 et la Composition.",
                         "IMPORT EN MASSE : téléchargez le modèle Excel de la classe, complétez-le hors ligne, puis réimportez-le. Les valeurs y sont contrôlées une à une avant intégration.",
                         "FICHE PAPIER : pour noter dans la salle, choisissez l'évaluation (Devoir 1, Devoir 2 ou Composition) puis cliquez sur « Fiche papier ». Le PDF obtenu est une grille vierge — élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo — que vous imprimez depuis l'aperçu, puis reportez à l'écran.",
-                        "Enregistrez. Chaque saisie est horodatée et attribuée à son auteur.",
+                        "Il n'y a pas de bouton « Enregistrer » : chaque cellule s'enregistre toute seule quand vous la quittez (Tabulation, Entrée ou clic ailleurs). Chaque saisie est horodatée et attribuée à son auteur.",
+                        "Droits : le Directeur, le Secrétariat et l'Enseignant saisissent une note dans n'importe quelle classe et matière listée — l'affectation de l'enseignant ne limite pas la saisie. Elle ne limite que la CORRECTION d'une note déjà enregistrée.",
                         "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit. Un enseignant corrige ses notes, ou celles de sa matière et de sa classe, pendant le délai fixé par le Directeur (7 jours par défaut, réglable dans Paramètres › Notation & mentions). Passé ce délai, la cellule est grisée : le Directeur ou le Secrétariat peuvent alors la corriger, sans limite de délai."
                     ],
                     impacts: [

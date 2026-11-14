@@ -42,8 +42,19 @@ const POLE_FILTERS = [
     { value: 'Common', label: 'Pôle commun' }
 ];
 
+// Synonymes de niveau → cycle : EXACTEMENT ceux du serveur (ClassroomCycle.ByLevel) et de l'écran
+// Matières (subjects.js, CYCLES). Un niveau hors liste (« 6e », « Terminale S2 ») reste lui-même et
+// ne se rapproche que d'un niveau écrit pareil.
+const LEVEL_SYNONYMS = {
+    primaire: 'primaire', elementaire: 'primaire', 'ecole elementaire': 'primaire', 'ecole primaire': 'primaire',
+    college: 'college', moyen: 'college', cem: 'college',
+    lycee: 'lycee', secondaire: 'lycee',
+    creche: 'prescolaire', maternelle: 'prescolaire', prescolaire: 'prescolaire'
+};
+
 function normalizeLevel(level) {
-    return (level || '').trim().toLowerCase();
+    const folded = (level || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return LEVEL_SYNONYMS[folded] || folded;
 }
 
 function sameLevel(a, b) {

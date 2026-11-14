@@ -54,6 +54,15 @@ test('le rapprochement ignore la casse et les espaces', () => {
     assert.deepEqual(view.visibleSubjects.map(s => s.id), ['maths-l', 'philo']);
 });
 
+test('les synonymes et les accents sont reconnus comme sur l’écran Matières', () => {
+    const view = gradesView();
+    view.classrooms.push({ id: 'cem', name: '5e A', level: 'CEM' });
+    view.subjects.push({ id: 'svt', name: 'SVT', level: 'College', sectionType: 'French' });
+    view.selectedClassroomId = 'cem';
+
+    assert.deepEqual(view.visibleSubjects.map(s => s.id), ['maths-c', 'svt']);
+});
+
 test('changer de classe efface la matière qui n’appartient plus au niveau', () => {
     const view = gradesView();
     view.selectedClassroomId = 'tle';

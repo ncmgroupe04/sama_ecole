@@ -2,7 +2,7 @@
 
 **Version :** 1.3.0
 **Date de rédaction :** 20/09/2026
-**Dernière mise à jour :** 11/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
+**Dernière mise à jour :** 14/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.
 
 Ce guide documente **chaque écran de la navigation principale**, un par un — pas de regroupement
@@ -350,6 +350,12 @@ Directeur, Secrétariat, Enseignant.
 
 ### Fonctionnalités clés & règles métier
 - Chaque matière porte un coefficient, utilisé dans le calcul des moyennes (§8.3).
+- **Niveau et cycle.** Le niveau d'une matière (Crèche, Maternelle, Primaire, Collège, Lycée) la rattache aux
+  classes du même niveau. L'écran se filtre par **onglets de cycle** (Tous les cycles, Primaire, Collège, Lycée,
+  Préscolaire, Autres niveaux), chacun avec son nombre de matières. Une même matière (« Mathématiques ») existe
+  donc une fois par niveau, avec son propre coefficient.
+- **Onglets de l'écran** : Matières, Structure d'évaluation, Coefficients et Matières par classe (ces deux
+  derniers réservés au Directeur et au Secrétariat ; écriture des coefficients : Directeur seul).
 - **Structure d'évaluation modulable / grilles APC** (option désactivée par défaut, onglet dédié) :
   le Directeur configure lui-même la grille d'un niveau — **deux niveaux de hiérarchie au plus** (un
   domaine porte des activités), une troisième profondeur n'a aucune colonne où s'afficher sur le
@@ -446,9 +452,16 @@ Super Admin, Directeur, Secrétariat.
 Saisie des notes par matière et génération du bulletin de notes officiel.
 
 ### Utilisateurs cibles
-Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées).
+Directeur, Secrétariat, Enseignant. L'Enseignant **saisit** dans toute classe et matière listée ; l'affectation
+ne borne que la **correction** d'une note déjà enregistrée (fenêtre de correction + auteur ou affecté, 403 sinon).
 
 ### Fonctionnalités clés & règles métier
+- **Sélecteurs Classe › (Pôle) › Matière › Période.** La liste des matières se restreint au **niveau de la
+  classe choisie** (§8.9 du Cahier des charges) : sans cela, les « Mathématiques » du primaire, du collège et du
+  lycée seraient indiscernables. Sans classe choisie, toutes les matières sont listées avec leur niveau entre
+  parenthèses.
+- **Enregistrement cellule par cellule** à la perte de focus (Devoir 1, Devoir 2, Composition) : il n'y a pas
+  de bouton « Enregistrer » global.
 - **Format du bulletin fixé au gabarit exact** de `docs/design-references/bulletin-reference.png` —
   reproduction fidèle, pas d'interprétation créative (§8.1, règle #12 d'`AGENTS.md`). Format A5
   portrait, largeurs de colonnes ajustées automatiquement pour ne jamais déborder sur une seconde page.
@@ -463,7 +476,8 @@ Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées)
   cases vides comprises, colonnes de regroupement calculées automatiquement.
 
 ### Flux d'utilisation typique
-1. L'Enseignant saisit les notes de ses classes et matières assignées, ou les importe via Excel.
+1. L'Enseignant (ou le Secrétariat) choisit la classe, la matière de son niveau et la période, puis saisit les
+   notes — ou les importe via Excel.
 2. Les totaux et la moyenne se calculent automatiquement.
 3. Le Directeur ou le Secrétariat édite le bulletin au format officiel, prêt à l'impression ou à la
    remise en main propre.
@@ -1150,6 +1164,9 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   **sans série** se règlent uniquement en mode « Classe ». L'écran affiche les classes concernées, explique la
   priorité dans une fenêtre (« Comment sont appliqués les coefficients ? ») et avertit lorsqu'un réglage n'a
   aucun effet ou qu'une valeur est invalide (hors de 0 à 20).
+- **Saisie des notes filtrée par niveau** : après le choix de la classe, seules les matières de son niveau
+  sont proposées (synonymes reconnus : Élémentaire = Primaire, Moyen/CEM = Collège, Secondaire = Lycée ; casse
+  et accents ignorés). Sans correspondance, la liste complète reste affichée, niveau en suffixe.
 - **Pôle pédagogique** des matières (Français, Arabe, Sciences islamiques, Commun) et nom arabe ; saisie des
   notes en écriture de droite à gauche pour les matières arabes (Franco-Arabe).
 - **Liste des élèves d'une classe en PDF** : bouton « Imprimer la liste des élèves » ; colonnes Matricule,

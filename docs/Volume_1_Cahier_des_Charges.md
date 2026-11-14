@@ -305,6 +305,22 @@ l'ordre de priorité :
 - **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
   les classes concernées ; l'écran l'annonce dès que des notes existent.
 
+### 8.9 Saisie des notes : matières proposées selon le niveau de la classe
+
+L'écran de saisie (`/notes`) ne propose, une fois la classe choisie, que les matières de **son niveau** : un
+même nom de matière (« Mathématiques ») existe au primaire, au collège et au lycée avec des coefficients
+différents, et les mélanger conduisait à noter la mauvaise matière.
+
+- **Rapprochement** : niveau de la matière = niveau de la classe, casse et accents ignorés, avec les mêmes
+  synonymes que l'écran Matières et le serveur (Élémentaire = Primaire ; Moyen, CEM = Collège ; Secondaire =
+  Lycée ; Crèche, Maternelle, Préscolaire = Préscolaire). Un niveau hors nomenclature ne se rapproche que d'un
+  niveau écrit pareil.
+- **Sans classe choisie**, ou si **aucune matière** ne porte le niveau de la classe, toute la liste reste
+  proposée et chaque libellé porte son niveau entre parenthèses.
+- **Changer de classe** efface la matière sélectionnée si elle n'appartient pas au nouveau niveau.
+- Filtre d'**affichage** uniquement : aucune règle serveur, aucun droit et aucun calcul ne change. Le filtre
+  « Pôle » (Franco-Arabe) s'applique en plus.
+
 ### 8.8 Séries du Baccalauréat, matières par classe et options (Évolution N°6)
 
 Référentiel des séries de l'Office du Baccalauréat du Sénégal, programme de chaque classe et matières au choix
