@@ -1,0 +1,243 @@
+@{
+    ViewData["Title"] = "Coran";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/coran.js" asp-append-version="true"></script>
+}
+
+@* Apostrophes TYPOGRAPHIQUES (’) dans `options-expr`/`placeholder` : une apostrophe droite échappée n'y survit pas
+   (voir Views/ParentSummons/Index.cshtml). *@
+<div x-data="coranPage()">
+    <div>
+        <h1 class="page-title">Coran</h1>
+        <p class="page-subtitle">
+            Suivi de mémorisation et évaluations orales de récitation, classe par classe.
+        </p>
+        <div class="mt-3"><how-to-button article="ecran-coran" label="Comment suivre la mémorisation du Coran ?" /></div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="card mt-4 p-4">
+        <div class="max-w-sm">
+            <label for="coran-classroom" class="form-label">Classe</label>
+            <select-field id="coran-classroom" model="selectedClassroomId" on-change="loadClassroom()"
+                          placeholder="Sélectionnez une classe…"
+                          options-expr="[{value:'', label:'Sélectionnez une classe…'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' — ' + c.level})))" />
+        </div>
+    </div>
+
+    <template x-if="!hasSelection && !isLoadingContext">
+        <div class="card mt-4">
+            <empty-state icon="book" title="Choisissez une classe."
+                         hint="Sélectionnez une classe pour consulter ou saisir le suivi de mémorisation et les évaluations orales de ses élèves." />
+        </div>
+    </template>
+
+    <template x-if="hasSelection">
+        <div class="mt-4">
+            <div class="tab-nav" role="tablist" aria-label="Sections du suivi coranique">
+                <button type="button" role="tab" x-on:click="selectTab('progress')" :aria-selected="(activeTab === 'progress').toString()"
+                        class="tab-btn" :class="activeTab === 'progress' ? 'tab-btn-active' : ''">Suivi de mémorisation</button>
+                <button type="button" role="tab" x-on:click="selectTab('evaluations')" :aria-selected="(activeTab === 'evaluations').toString()"
+                        class="tab-btn" :class="activeTab === 'evaluations' ? 'tab-btn-active' : ''">Évaluations orales</button>
+            </div>
+
+            <p x-show="activeError" x-cloak role="alert" class="form-error-banner mt-4" x-text="activeError"></p>
+
+            <div x-show="isLoadingRows" class="card mt-4 p-8 text-sm text-slate-500">Chargement de la classe…</div>
+
+            <div x-show="!isLoadingRows && !activeError && rows.length === 0" x-cloak class="card mt-4">
+                <empty-state icon="users" title="Aucun élève dans cette classe."
+                             hint="Inscrivez des élèves dans cette classe pour suivre leur mémorisation." />
+            </div>
+
+            <div x-show="!isLoadingRows && rows.length > 0" x-cloak class="card mt-4 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="py-3 px-4 text-left">Élève</th>
+                            <th class="py-3 px-4 text-left">Matricule</th>
+                            <th class="py-3 px-4 text-left" x-text="activeTab === 'progress' ? 'Dernière observation' : 'Dernière évaluation'"></th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-for="row in rows" :key="activeTab + row.studentId">
+                            <tr>
+                                <td colspan="4" class="p-0">
+                                    <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+                                        <span class="w-56 font-medium text-slate-900" x-text="row.fullName"></span>
+                                        <span class="w-28 text-slate-500" x-text="row.matricule"></span>
+                                        <span class="min-w-0 flex-1 text-slate-700" x-text="summary(row)"></span>
+                                        <span class="flex items-center gap-2">
+                                            <button type="button" x-on:click="toggle(row)" :aria-expanded="isExpanded(row).toString()"
+                                                    :disabled="row.entries.length === 0" class="btn-modal-secondary group disabled:opacity-40"
+                                                    x-text="isExpanded(row) ? 'Masquer l’historique' : 'Historique (' + row.entries.length + ')'"></button>
+                                            <button type="button" x-show="canEnterQuran" x-cloak x-on:click="openCreate(row)" class="btn-modal-primary group">
+                                                <icon name="plus" class="w-4 h-4" />
+                                                Ajouter
+                                            </button>
+                                        </span>
+                                    </div>
+
+                                    <div x-show="isExpanded(row)" x-cloak class="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
+                                        <table class="w-full text-sm" x-show="activeTab === 'progress'">
+                                            <thead class="text-xs uppercase tracking-wider text-slate-400">
+                                                <tr>
+                                                    <th class="py-1.5 pr-3 text-left">Juz</th><th class="py-1.5 pr-3 text-left">Hizb</th>
+                                                    <th class="py-1.5 pr-3 text-left">Sourate</th><th class="py-1.5 pr-3 text-left">Statut</th>
+                                                    <th class="py-1.5 pr-3 text-left">Date</th><th class="py-1.5 pr-3 text-left">Notes</th>
+                                                    <th class="py-1.5 text-right"><span class="sr-only">Actions</span></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="entry in sortedEntries(row)" :key="entry.id">
+                                                    <tr class="border-t border-slate-100">
+                                                        <td class="py-1.5 pr-3" x-text="entry.juzNumber"></td>
+                                                        <td class="py-1.5 pr-3" x-text="entry.hizbNumber"></td>
+                                                        <td class="py-1.5 pr-3" x-text="entry.surahNumber"></td>
+                                                        <td class="py-1.5 pr-3" x-text="statusLabel(entry.status)"></td>
+                                                        <td class="py-1.5 pr-3 text-slate-500" x-text="formatDate(entry.evaluationDate)"></td>
+                                                        <td class="py-1.5 pr-3 text-slate-600" x-text="entry.notes || '—'"></td>
+                                                        <td class="py-1.5 text-right">
+                                                            <button type="button" x-show="canEnterQuran" x-cloak x-on:click="openEdit(row, entry)"
+                                                                    class="text-xs font-medium text-primary-600 hover:text-primary-800">Corriger</button>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+
+                                        <table class="w-full text-sm" x-show="activeTab === 'evaluations'">
+                                            <thead class="text-xs uppercase tracking-wider text-slate-400">
+                                                <tr>
+                                                    <th class="py-1.5 pr-3 text-left">Date</th><th class="py-1.5 pr-3 text-left">Erreurs de mémoire</th>
+                                                    <th class="py-1.5 pr-3 text-left">Erreurs de tajwid</th><th class="py-1.5 pr-3 text-left">Hésitations</th>
+                                                    <th class="py-1.5 pr-3 text-left">Note</th>
+                                                    <th class="py-1.5 text-right"><span class="sr-only">Actions</span></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="entry in sortedEntries(row)" :key="entry.id">
+                                                    <tr class="border-t border-slate-100">
+                                                        <td class="py-1.5 pr-3" x-text="formatDate(entry.evaluationDate)"></td>
+                                                        <td class="py-1.5 pr-3" x-text="entry.memoryMistakes"></td>
+                                                        <td class="py-1.5 pr-3" x-text="entry.tajwidMistakes"></td>
+                                                        <td class="py-1.5 pr-3" x-text="entry.hesitations"></td>
+                                                        <td class="py-1.5 pr-3 font-medium" x-text="entry.finalScore"></td>
+                                                        <td class="py-1.5 text-right">
+                                                            <button type="button" x-show="canEnterQuran" x-cloak x-on:click="openEdit(row, entry)"
+                                                                    class="text-xs font-medium text-primary-600 hover:text-primary-800">Corriger</button>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <p x-show="!canEnterQuran" x-cloak class="mt-3 text-xs text-slate-400">
+                Consultation seule : la saisie est réservée au Directeur et à l’Enseignant.
+            </p>
+        </div>
+    </template>
+
+    @* ── Modale de saisie / correction ─────────────────────────────────────────────────────────────────────────── *@
+    <modal-shell size="lg" open="form.open" on-close="closeForm()" title="Observation coranique">
+        <div class="mt-2 text-sm text-slate-500">
+            <span class="font-medium text-slate-800" x-text="form.student ? form.student.fullName : ''"></span>
+            · <span x-text="form.kind === 'progress' ? 'Suivi de mémorisation' : 'Évaluation orale'"></span>
+            · <span x-text="isEdit ? 'Correction' : 'Nouvelle observation'"></span>
+        </div>
+
+        <p x-show="form.errors.global" x-cloak role="alert" class="form-error-banner mt-3" x-text="form.errors.global"></p>
+
+        <form x-on:submit.prevent="submit()" novalidate class="mt-4 space-y-4">
+            <template x-if="form.kind === 'progress'">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="form-label form-label-required" for="q-juz">Juz (1–30)</label>
+                            <input id="q-juz" type="number" min="1" max="30" x-model="form.juzNumber" :disabled="isEdit" class="input-field disabled:bg-slate-50" />
+                            <p x-show="form.errors.juzNumber" x-cloak class="field-error" x-text="form.errors.juzNumber"></p>
+                        </div>
+                        <div>
+                            <label class="form-label form-label-required" for="q-hizb">Hizb (1–60)</label>
+                            <input id="q-hizb" type="number" min="1" max="60" x-model="form.hizbNumber" :disabled="isEdit" class="input-field disabled:bg-slate-50" />
+                            <p x-show="form.errors.hizbNumber" x-cloak class="field-error" x-text="form.errors.hizbNumber"></p>
+                        </div>
+                        <div>
+                            <label class="form-label form-label-required" for="q-surah">Sourate (1–114)</label>
+                            <input id="q-surah" type="number" min="1" max="114" x-model="form.surahNumber" :disabled="isEdit" class="input-field disabled:bg-slate-50" />
+                            <p x-show="form.errors.surahNumber" x-cloak class="field-error" x-text="form.errors.surahNumber"></p>
+                        </div>
+                    </div>
+                    <p x-show="isEdit" x-cloak class="text-xs text-slate-400">Juz, Hizb et sourate ne se corrigent pas : saisissez une nouvelle observation.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label form-label-required">Statut</label>
+                            <select-field model="form.status" aria-label="Statut" options-expr="statusOptions" />
+                            <p x-show="form.errors.status" x-cloak class="field-error" x-text="form.errors.status"></p>
+                        </div>
+                        <div>
+                            <label class="form-label">Date (facultatif)</label>
+                            <date-field model="form.evaluationDate" aria-label="Date de l’observation" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" for="q-notes">Notes</label>
+                        <textarea id="q-notes" rows="3" maxlength="2000" x-model="form.notes" class="input-field"></textarea>
+                        <p x-show="form.errors.notes" x-cloak class="field-error" x-text="form.errors.notes"></p>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="form.kind === 'evaluation'">
+                <div class="space-y-4">
+                    <div class="max-w-xs">
+                        <label class="form-label form-label-required">Date de l’évaluation</label>
+                        <date-field model="form.evaluationDate" required="true" aria-label="Date de l’évaluation" />
+                        <p x-show="form.errors.evaluationDate" x-cloak class="field-error" x-text="form.errors.evaluationDate"></p>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="form-label form-label-required" for="q-mem">Erreurs de mémoire</label>
+                            <input id="q-mem" type="number" min="0" x-model="form.memoryMistakes" class="input-field" />
+                            <p x-show="form.errors.memoryMistakes" x-cloak class="field-error" x-text="form.errors.memoryMistakes"></p>
+                        </div>
+                        <div>
+                            <label class="form-label form-label-required" for="q-taj">Erreurs de tajwid</label>
+                            <input id="q-taj" type="number" min="0" x-model="form.tajwidMistakes" class="input-field" />
+                            <p x-show="form.errors.tajwidMistakes" x-cloak class="field-error" x-text="form.errors.tajwidMistakes"></p>
+                        </div>
+                        <div>
+                            <label class="form-label form-label-required" for="q-hes">Hésitations</label>
+                            <input id="q-hes" type="number" min="0" x-model="form.hesitations" class="input-field" />
+                            <p x-show="form.errors.hesitations" x-cloak class="field-error" x-text="form.errors.hesitations"></p>
+                        </div>
+                    </div>
+                    <div class="max-w-xs">
+                        <label class="form-label form-label-required" for="q-score">Note finale</label>
+                        <input id="q-score" type="number" min="0" step="0.25" x-model="form.finalScore" class="input-field" />
+                        <p x-show="form.errors.finalScore" x-cloak class="field-error" x-text="form.errors.finalScore"></p>
+                    </div>
+                </div>
+            </template>
+
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6">
+                <button type="button" x-on:click="closeForm()" :disabled="form.saving" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="form.saving" class="btn-modal-primary group">
+                    <span x-text="form.saving ? 'Enregistrement…' : (isEdit ? 'Corriger' : 'Enregistrer')"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+</div>

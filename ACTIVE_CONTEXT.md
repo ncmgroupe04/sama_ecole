@@ -160,8 +160,10 @@ Routes : `openapi.yaml` (préfixe `/api/v1/quran`). **Aucun écran ni JavaScript
 l'oral coranique) ; `Juz`/`Hizb`/`Sourate`/`Élève` immuables en correction ; **`SchoolType` est purement
 informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `ModuleAuthorizationHandler`.
 
-**Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
-(aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
+**Écran livré (14/11/2026) :** `/coran` (`Views/Coran/Index.cshtml`, `wwwroot/js/coran.js`), suivi de mémorisation et
+évaluations orales par classe, conditionné par `coranEnabled` (spec `docs/superpowers/specs/2026-09-29-coran-screen-design.md`).
+L'intégration de `Subject.SectionType` au bulletin était déjà livrée (bulletin bilingue) ; `SectionType` reste sans effet sur
+`Coefficient` ni sur les moyennes.
 
 ### Périodes d'évaluation dynamiques (24/09/2026) — livré (Évolution N°2)
 

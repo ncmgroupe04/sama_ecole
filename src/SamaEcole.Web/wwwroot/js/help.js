@@ -1590,6 +1590,45 @@
                     ]
                 },
                 {
+                    id: 'ecran-coran',
+                    title: 'Suivi de mémorisation et évaluations orales du Coran',
+                    location: 'Gestion Scolaire › Coran',
+                    href: '/coran',
+                    roles: ['Directeur', 'Enseignant', 'Secrétariat'],
+                    definition:
+                        "L'écran Coran suit, classe par classe, la mémorisation du Coran : le SUIVI DE MÉMORISATION " +
+                        "enregistre où en est chaque élève (Juz, Hizb, sourate et statut), et les ÉVALUATIONS ORALES " +
+                        "consignent chaque récitation (erreurs de mémoire, erreurs de tajwid, hésitations, note finale). " +
+                        "Il n'est pas rattaché à un trimestre : ce sont des observations datées, qui s'accumulent.",
+                    objectif:
+                        "Garder l'historique complet de la progression de chaque élève au lieu d'un cahier papier, et " +
+                        "permettre à l'enseignant comme à la direction de voir d'un coup d'œil la dernière observation " +
+                        "de chacun.",
+                    probleme:
+                        "Un suivi tenu sur des feuilles volantes se perd, ne se compare pas d'un enseignant à l'autre " +
+                        "et ne laisse aucune trace de qui a corrigé quoi.",
+                    procedure: [
+                        "Activez le module Coran dans Paramètres › Modules & fonctionnalités (Directeur) : sans lui, le lien « Coran » n'apparaît pas dans le menu.",
+                        "Ouvrez Gestion Scolaire › Coran et choisissez une classe : chaque élève s'affiche avec sa dernière observation.",
+                        "Deux onglets : « Suivi de mémorisation » et « Évaluations orales ». Les deux se chargent ensemble ; l'échec de l'un n'empêche pas l'autre.",
+                        "Cliquez sur « Historique (n) » pour déplier toutes les observations d'un élève, de la plus récente à la plus ancienne (une observation sans date passe en dernier).",
+                        "SAISIR (Directeur et Enseignant) : « Ajouter » ouvre une fenêtre. Suivi : Juz (1 à 30), Hizb (1 à 60), sourate (1 à 114), statut (En cours, Mémorisé, Révisé), date facultative et notes. Évaluation : date (aujourd'hui par défaut), erreurs de mémoire, erreurs de tajwid, hésitations et note finale (positive ou nulle).",
+                        "CORRIGER : « Corriger » rouvre la fenêtre pré-remplie. Juz, Hizb et sourate ne se corrigent pas (saisissez une nouvelle observation) ; le statut, la date et les notes, eux, se modifient.",
+                        "Si un collègue a modifié la même observation entre-temps, un message l'indique : rechargez la classe puis recommencez, ne forcez jamais."
+                    ],
+                    impacts: [
+                        "Droits : le Directeur et l'Enseignant saisissent et corrigent ; le Secrétariat consulte seulement (les boutons « Ajouter » et « Corriger » n'apparaissent pas). Comme pour les notes, la saisie n'est pas limitée aux affectations de l'enseignant.",
+                        "Distinct de l'Internat : les écrans Halqa, Oustaz et Suivi coranique (Hizb par Halqa, bulletin coranique) relèvent du module Internat et ne lisent pas ces observations.",
+                        "Bulletins : ce suivi n'entre ni dans les moyennes ni dans les coefficients.",
+                        "Réinitialisation de l'école en mode test : ces observations font partie des données effacées."
+                    ],
+                    recommandations: [
+                        "Saisissez la date réelle de la récitation : c'est elle qui range l'historique.",
+                        "Préférez une nouvelle observation à une correction quand la situation de l'élève a évolué : la correction sert à réparer une erreur de saisie.",
+                        "Les bornes (Juz, Hizb, sourate) sont vérifiées par le serveur : un refus affiche son message, corrigez la valeur indiquée."
+                    ]
+                },
+                {
                     id: 'franco-arabe-pole-rtl-alternance',
                     title: "Franco-Arabe — pôle pédagogique, saisie des notes en arabe et emplois du temps alternés",
                     location: "Matières ; Notes et bulletins ; Emploi du temps ; Examens",

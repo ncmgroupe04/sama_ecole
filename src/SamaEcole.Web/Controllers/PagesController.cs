@@ -87,6 +87,12 @@ public class PagesController : Controller
     [PageModule(SchoolModule.Internat)]
     public IActionResult QuranProgress() => View("~/Views/Internat/Progress.cshtml");
 
+    // Module Coran : suivi de mémorisation et évaluations orales d'une classe. QuranController garde l'accès
+    // ([RequireModule(SchoolModule.Coran)] + rôles Directeur/Enseignant en écriture, + Secrétariat en lecture) et la RLS isole.
+    [HttpGet("/coran")]
+    [PageModule(SchoolModule.Coran)]
+    public IActionResult Coran() => View("~/Views/Coran/Index.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
