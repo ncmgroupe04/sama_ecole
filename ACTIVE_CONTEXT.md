@@ -863,7 +863,9 @@ Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.
   d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
   état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
 - **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
-  `LegacyBoardingColumnsGuardTests`).
+  `LegacyBoardingColumnsGuardTests`) — **REPORTÉ (décision du 14/11/2026)** : conditions de lancement, porte de sécurité et
+  déroulé dans `docs/runbooks/internat-lot-f2-drop-legacy-columns.md`. La migration sera codée sur une PR dédiée, après une
+  livraison stable de F1 en production.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
