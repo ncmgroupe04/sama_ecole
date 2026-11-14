@@ -669,15 +669,15 @@
  l'API, plus un pourcentage d'avancement. Réservé aux rôles qui paramètrent l'établissement
  (Directeur, Secrétariat) ; s'ouvre de lui-même une seule fois, au tout premier accès.
  ───────────────────────────────────────────────────────────────────────────────────────────── *@
- <div x-data="setupAssistant()" x-show="eligible" x-cloak class="relative">
+ <div x-data="setupAssistant()" x-show="eligible" x-cloak class="relative shrink-0">
  @* Une fois le paramétrage à 100 %, la pastille « Démarrage » disparaît : elle n'a plus rien à
  signaler et libère la barre. Seul le bouton est masqué (la modale reste dans le DOM). *@
  <button type="button" x-on:click="toggle()" x-show="!allDone" x-cloak
  :title="allDone ? 'Assistant de démarrage — paramétrage terminé' : 'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
  :class="allDone ? 'bg-success-bg text-success hover:bg-success/10' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
+ class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-sparkle"></use></svg>
- <span class="hidden sm:block">Démarrage</span>
+ <span class="setup-assistant-label hidden sm:block">Démarrage</span>
  <span x-show="loaded" x-cloak x-text="percent + '%'"
  class="inline-flex items-center justify-center px-1.5 h-5 rounded-full bg-white/70 text-[11px] font-semibold tabular-nums"></span>
  </button>

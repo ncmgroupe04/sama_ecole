@@ -1266,9 +1266,21 @@
     header [x-data="sandboxModeBadge()"] > a,
     header [x-data="sandboxModeBadge()"] > span,
     header [x-data="greeting()"],
+    header [x-data="setupAssistant()"] > button,
     header .btn-help {
       padding-left: 0.65rem !important;
       padding-right: 0.65rem !important;
+    }
+
+    /* Bouton « Démarrage » compact : icône + pourcentage seulement (le libellé revient au-dessus de 1500 px, son
+       titre au survol le redit). La salutation, purement décorative, cède sa place pour que les sept modules de la
+       navigation rapide tiennent sans défilement dès 1320 px, comme avant l'arrivée du bouton. */
+    header [x-data="setupAssistant()"] .setup-assistant-label {
+      display: none !important;
+    }
+
+    header [x-data="greeting()"] {
+      display: none !important;
     }
   }
 

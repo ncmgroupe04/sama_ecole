@@ -15,10 +15,21 @@ const layout = readFileSync(
 
 test('la barre supérieure instancie setupAssistant() avec son bouton « Démarrage » et « Revérifier »', () => {
     assert.match(layout, /x-data="setupAssistant\(\)"/);
-    assert.match(layout, /<span class="hidden sm:block">Démarrage<\/span>/);
+    assert.match(layout, /<span class="setup-assistant-label hidden sm:block">Démarrage<\/span>/);
     assert.match(layout, /Revérifier/);
 });
 
 test('une seule instance de setupAssistant() est montée', () => {
     assert.equal((layout.match(/x-data="setupAssistant\(\)"/g) || []).length, 1);
+});
+
+test('le bouton reste compact et ne déborde pas de la barre : libellé masquable, bouton non rétrécissable', () => {
+    const css = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'Styles', 'input.css'), 'utf8');
+
+    assert.match(layout, /class="relative shrink-0"/);
+    assert.match(layout, /class="setup-assistant-label hidden sm:block">Démarrage</);
+    assert.match(css, /header \[x-data="setupAssistant\(\)"\] \.setup-assistant-label\s*\{\s*display: none !important;/);
+    // Même resserrement de padding que les autres pastilles de la barre.
+    assert.match(css, /header \[x-data="setupAssistant\(\)"\] > button,/);
 });
