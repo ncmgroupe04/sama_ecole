@@ -3002,11 +3002,10 @@
                     definition:
                         "Un décaissement est une dépense de l'établissement, enregistrée dans l'onglet « Décaissements » " +
                         "de l'écran Frais Scolaires (et non dans l'écran Trésorerie, qui ne fait que les consolider). " +
-                        "Le formulaire propose cinq catégories — Salaires, Maintenance, Fournitures, Charges Fixes, " +
+                        "Le formulaire propose dix catégories — Salaires, Maintenance, Fournitures, Charges Fixes, " +
+                        "Loyer et charges, Eau et électricité, Télécoms et Internet, Carburant, Assurances et honoraires, " +
                         "Divers — et chaque décaissement est daté, rattaché à un bénéficiaire, à un motif, à un montant " +
-                        "et à un mode de paiement. Le modèle de données connaît cinq catégories supplémentaires " +
-                        "(loyer et charges, eau et électricité, télécoms et Internet, carburant, assurances et honoraires), " +
-                        "mais le formulaire ne les propose pas à ce jour.",
+                        "et à un mode de paiement.",
                     objectif:
                         "Donner à la direction une image complète des sorties d'argent de l'établissement, " +
                         "ventilées par nature de dépense, sans dépendre d'une compilation manuelle de " +
