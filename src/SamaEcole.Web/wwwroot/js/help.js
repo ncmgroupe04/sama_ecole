@@ -1360,8 +1360,8 @@
                     objectif: "Retrouver et corriger rapidement chaque erreur d'un fichier de plusieurs centaines de lignes.",
                     probleme: "Il fallait faire défiler le fichier et survoler chaque cellule pour lire les messages.",
                     procedure: [
-                        "Importez le fichier ; l'aperçu s'affiche.",
-                        "Ouvrez le récapitulatif, filtrez les lignes en erreur, exportez-les en CSV si besoin.",
+                        "Dans Élèves (« Importer ») ou Enseignants (« Importer des enseignants »), téléchargez au besoin le modèle avec « Télécharger le modèle », puis déposez le fichier : l'aperçu s'affiche (validé ligne par ligne) et « Confirmer l'import » n'apparaît que lorsque toutes les lignes sont valides.",
+                        "Dans le panneau « Erreurs à corriger » (ligne, champ, valeur saisie, message), cochez « Afficher seulement les lignes en erreur » et, si besoin, « Exporter le rapport d'erreurs (.csv) ».",
                         "Corrigez le fichier d'origine puis réimportez."
                     ],
                     impacts: [
@@ -1382,7 +1382,7 @@
                     objectif: "Éviter les lits « fantômes » et les échéanciers orphelins après une annulation.",
                     probleme: "Un élève annulé puis réinscrit pouvait occuper deux lits, car le séjour d'internat restait actif.",
                     procedure: [
-                        "Annulez l'inscription depuis la liste des inscriptions.",
+                        "Ouvrez la fiche de l'élève (Élèves), onglet des inscriptions de l'année, et cliquez sur « Annuler l'inscription » (fenêtre de confirmation).",
                         "S'il existe un paiement, annulez-le d'abord : l'annulation est refusée tant qu'un paiement non annulé existe.",
                         "À l'internat, vous pouvez aussi annuler une sortie ou supprimer un séjour saisi par erreur.",
                         "Dans « Affecter un élève » ou « Changer / Libérer », le lit actuel de l'élève est proposé en tête (« lit actuel ») : le re-valider ajoute les frais d'internat manquants sans déplacer l'élève."
