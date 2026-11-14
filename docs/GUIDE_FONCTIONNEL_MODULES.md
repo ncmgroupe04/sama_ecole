@@ -1207,6 +1207,15 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   à l'inscription, mois réglé demandé à chaque encaissement). Le montant échu de la caisse couvre toutes les
   mensualités échues.
 - **Relance SMS** limitée aux échéances en retard, avec le montant en retard.
+- **Recouvrement** (`/recouvrement`, Directeur et Finance, pôle Comptabilité) : un lot de relance SMS **brouillon
+  par classe** est préparé chaque nuit dès que « Relances d'impayés » est activé (Paramètres › Notifications
+  SMS, avec un seuil de retard en jours). L'écran liste les lots par statut (À valider, Envoyés, Écartés, Tous),
+  permet de relire les destinataires (matricule, téléphone du tuteur, reliquat, jours de retard), de **recalculer**
+  les lots, d'**écarter** un lot ou de l'**envoyer** après confirmation. Un lot ne s'envoie qu'**une fois** ; un
+  tuteur sans numéro est écarté à l'envoi et signalé avant. Aucun SMS ne part sans geste humain.
+- **Décaissements** : dix catégories proposées (Salaires, Maintenance, Fournitures, Charges Fixes, Loyer et
+  charges, Eau et électricité, Télécoms et Internet, Carburant, Assurances et honoraires, Divers), saisies dans
+  Frais Scolaires › Décaissements ; la Trésorerie les consolide en lecture seule.
 - **Paie sans retenues légales**, choisie par contrat ; **fiches de paie** annulables, régénérables et
   payables (décaissement « Salaires ») ; personnel sans compte.
 

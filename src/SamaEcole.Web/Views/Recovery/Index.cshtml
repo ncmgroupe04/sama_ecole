@@ -1,0 +1,154 @@
+@{
+    ViewData["Title"] = "Recouvrement";
+}
+
+@* auth.js, api.js et formatters.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/recovery.js" asp-append-version="true"></script>
+}
+
+@* Apostrophes TYPOGRAPHIQUES (’) dans les attributs `options-expr`/`placeholder` : voir le commentaire de
+   Views/ParentSummons/Index.cshtml — une apostrophe droite échappée n'y survit pas. *@
+<div x-data="recoveryView()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Recouvrement</h1>
+            <p class="page-subtitle">
+                Lots de relance SMS des familles en retard de paiement, préparés chaque nuit par classe. Rien ne part sans
+                votre validation : relisez les destinataires, écartez les cas litigieux, puis envoyez.
+            </p>
+            <div class="mt-3"><how-to-button article="recouvrement" label="Comment relancer les familles en retard ?" /></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" x-on:click="recompute()" :disabled="isRecomputing" class="btn-modal-secondary group">
+                <icon name="clock" class="w-4 h-4" />
+                <span x-text="isRecomputing ? 'Calcul…' : 'Recalculer les lots'"></span>
+            </button>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div x-show="notice" x-cloak role="status"
+         class="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+        <icon name="checkmark-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+        <span x-text="notice"></span>
+    </div>
+
+    <div class="mt-6 tab-nav" role="group" aria-label="Statut des lots">
+        <template x-for="option in statusOptions" :key="option.value">
+            <button type="button" x-on:click="selectStatus(option.value)"
+                    :aria-pressed="(statusFilter === option.value).toString()"
+                    class="tab-btn" :class="statusFilter === option.value ? 'tab-btn-active' : ''"
+                    x-text="option.label"></button>
+        </template>
+    </div>
+
+    <div class="mt-4 space-y-4">
+        <template x-if="isLoading">
+            <div class="card p-8 text-sm text-slate-500">Chargement des lots de relance…</div>
+        </template>
+
+        <template x-if="!isLoading && batches.length === 0">
+            <div class="card">
+                <empty-state icon="document" title="Aucun lot de relance."
+                    hint="Activez « Relances d’impayés » et réglez le seuil de retard dans Paramètres › Notifications SMS : un lot par classe est alors préparé chaque nuit. « Recalculer les lots » les prépare sans attendre." />
+            </div>
+        </template>
+
+        <template x-for="batch in batches" :key="batch.id">
+            <div class="card overflow-hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="section-title" x-text="batch.classroomName"></h2>
+                            <span :class="statusBadge(batch.status)"><span class="status-dot" aria-hidden="true"></span><span x-text="statusLabel(batch.status)"></span></span>
+                        </div>
+                        <p class="mt-1 text-sm text-slate-500">
+                            <span x-text="batch.items.length"></span> élève(s) ·
+                            <span class="font-medium text-slate-700" x-text="money(batchTotal(batch))"></span> en retard ·
+                            seuil de <span x-text="batch.thresholdDays"></span> jour(s) ·
+                            préparé le <span x-text="formatDate(batch.generatedAt)"></span>
+                            <span x-show="batch.sentAt" x-cloak> · envoyé le <span x-text="formatDate(batch.sentAt)"></span></span>
+                        </p>
+                        <p x-show="isDraft(batch) && withoutPhone(batch) > 0" x-cloak class="mt-1 text-xs text-amber-700">
+                            <span x-text="withoutPhone(batch)"></span> élève(s) sans numéro de tuteur : aucun SMS ne leur sera envoyé.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" x-on:click="toggle(batch)" class="btn-modal-secondary group"
+                                :aria-expanded="(expandedId === batch.id).toString()"
+                                x-text="expandedId === batch.id ? 'Masquer les destinataires' : 'Voir les destinataires'"></button>
+                        <button type="button" x-show="isDraft(batch)" x-cloak x-on:click="openDismiss(batch)" class="btn-modal-secondary group">Écarter</button>
+                        <button type="button" x-show="isDraft(batch)" x-cloak x-on:click="openSend(batch)" class="btn-modal-primary group">
+                            <icon name="envelope" class="w-4 h-4" />
+                            Envoyer les SMS
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="expandedId === batch.id" x-cloak class="overflow-x-auto border-t border-slate-100">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="py-2.5 px-4 text-left">Élève</th>
+                                <th class="py-2.5 px-4 text-left">Matricule</th>
+                                <th class="py-2.5 px-4 text-left">Téléphone du tuteur</th>
+                                <th class="py-2.5 px-4 text-right">Reliquat</th>
+                                <th class="py-2.5 px-4 text-right">Jours de retard</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="item in batch.items" :key="item.enrollmentId">
+                                <tr>
+                                    <td class="py-2.5 px-4 font-medium text-slate-900" x-text="item.studentFullName"></td>
+                                    <td class="py-2.5 px-4 text-slate-500" x-text="item.matricule"></td>
+                                    <td class="py-2.5 px-4" :class="item.guardianPhone ? 'text-slate-700' : 'text-amber-700'" x-text="phoneLabel(item)"></td>
+                                    <td class="py-2.5 px-4 text-right tabular-nums" x-text="money(item.remainingBalance)"></td>
+                                    <td class="py-2.5 px-4 text-right tabular-nums" x-text="item.daysOverdue"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <modal-shell size="md" open="sendTarget !== null" on-close="closeSend()" title="Envoyer les SMS de relance">
+        <div class="space-y-3 text-sm text-slate-600">
+            <p>
+                Classe <span class="font-semibold text-slate-900" x-text="sendTarget ? sendTarget.classroomName : ''"></span> :
+                <span x-text="sendTarget ? sendTarget.items.length : 0"></span> tuteur(s) vont recevoir un SMS annonçant le
+                montant en retard de leur enfant.
+            </p>
+            <p x-show="sendTarget && withoutPhone(sendTarget) > 0" x-cloak class="text-amber-700">
+                <span x-text="sendTarget ? withoutPhone(sendTarget) : 0"></span> élève(s) n'ont pas de numéro de tuteur : ils seront écartés.
+            </p>
+            <p>Cette action est définitive : un lot ne peut être envoyé qu'une seule fois.</p>
+            <p x-show="sendError" x-cloak class="field-error" x-text="sendError"></p>
+        </div>
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6">
+            <button type="button" x-on:click="closeSend()" :disabled="isSending" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmSend()" :disabled="isSending" class="btn-modal-primary group">
+                <span x-text="isSending ? 'Envoi…' : 'Envoyer maintenant'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <modal-shell size="md" open="dismissTarget !== null" on-close="closeDismiss()" title="Écarter ce lot">
+        <div class="space-y-3 text-sm text-slate-600">
+            <p>
+                Le lot de la classe <span class="font-semibold text-slate-900" x-text="dismissTarget ? dismissTarget.classroomName : ''"></span>
+                sera écarté : aucun SMS ne sera envoyé pour cette série.
+            </p>
+            <p x-show="dismissError" x-cloak class="field-error" x-text="dismissError"></p>
+        </div>
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6">
+            <button type="button" x-on:click="closeDismiss()" :disabled="isDismissing" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmDismiss()" :disabled="isDismissing" class="btn-modal-primary group">
+                <span x-text="isDismissing ? 'Écartement…' : 'Écarter le lot'"></span>
+            </button>
+        </div>
+    </modal-shell>
+</div>

@@ -258,6 +258,11 @@ public class PagesController : Controller
     [HttpGet("/tresorerie")]
     public IActionResult Treasury() => View("~/Views/Treasury/Index.cshtml");
 
+    // Recouvrement : lots de relance SMS des débiteurs. Page nue comme les autres — ce sont les appels
+    // d'API (FinanceController, Directeur/Finance) qui sont protégés.
+    [HttpGet("/recouvrement")]
+    public IActionResult Recovery() => View("~/Views/Recovery/Index.cshtml");
+
     [HttpGet("/paie")]
     public IActionResult Payroll() => View("~/Views/Payroll/Index.cshtml");
 

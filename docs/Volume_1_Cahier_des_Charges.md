@@ -229,6 +229,12 @@ Détail par classe et par niveau : total payé, solde restant, pourcentage de pa
 
 Liste automatique des élèves débiteurs : montant dû, nombre de jours de retard.
 
+**Recouvrement (écran `/recouvrement`, Directeur et Finance).** Les élèves débiteurs sont regroupés en **lots de relance SMS
+brouillon, un par classe**, préparés chaque nuit lorsque « Relances d'impayés » est activé (seuil de retard en jours, Paramètres ›
+Notifications SMS). L'écran présente les lots par statut (À valider, Envoyés, Écartés), les destinataires (montant dû, jours de
+retard, téléphone du tuteur) et trois actions : recalculer, écarter, envoyer. L'envoi suit une **confirmation explicite**, ne se
+fait qu'**une seule fois** par lot (rejet en `409` ensuite) et n'a jamais lieu automatiquement.
+
 Simulation de revenus prévisionnels : `Nombre d'élèves × frais configurés`, avec comparaison revenus attendus / encaissés / restants.
 
 Graphiques : évolution mensuelle des recettes, répartition par classe, répartition des dépenses par catégorie, comparaison annuelle, taux de recouvrement mensuel.

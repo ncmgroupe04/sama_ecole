@@ -1736,16 +1736,16 @@
                 {
                     id: 'recouvrement',
                     title: 'Suivi des recouvrements, impayés et relances',
-                    location: 'Comptabilité › Situation des mensualités ; Élèves › fiche élève',
-                    href: '/mensualites',
+                    location: 'Comptabilité › Recouvrement ; Situation des mensualités ; Élèves › fiche élève',
+                    href: '/recouvrement',
                     roles: ['Directeur', 'Finance'],
                     definition:
                         "Dispositif de suivi des soldes débiteurs : la page « Situation des mensualités » classe, mois par " +
                         "mois, les élèves en impayé, en paiement partiel ou à jour et affiche le taux de recouvrement ; la " +
                         "fiche de l'élève permet d'éditer une sommation pour impayés et de formaliser un engagement " +
-                        "financier (échéancier personnalisé). Côté SMS, le serveur prépare chaque nuit des lots de relance " +
-                        "à l'état de brouillon, qu'aucun envoi ne rend effectifs sans un geste humain ; à ce jour, aucun " +
-                        "écran de l'application ne les affiche (ils ne sont accessibles que par l'API).",
+                        "financier (échéancier personnalisé). Côté SMS, le serveur prépare chaque nuit un lot de relance " +
+                        "par classe à l'état de brouillon ; l'écran « Recouvrement » les présente, et aucun SMS ne part " +
+                        "sans la validation explicite d'un agent.",
                     objectif:
                         "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui préserve " +
                         "la trésorerie de l'établissement sans exposer les familles à des relances injustifiées. Pour la " +
@@ -1762,14 +1762,16 @@
                         "Exportez la situation avec « Télécharger en PDF » ou « Exporter en Excel » pour la direction ou le conseil d'administration.",
                         "SOMMATION : ouvrez la fiche de l'élève (Élèves) ; tant qu'un solde reste dû sur son inscription active, le bouton « Sommation impayés » ouvre l'aperçu du document, à imprimer et à remettre au tuteur.",
                         "ARRANGEMENT : si la famille sollicite un délai, cliquez sur « Nouvel engagement financier » dans la même fiche pour formaliser un échéancier personnalisé, puis « Télécharger l'engagement créé ».",
-                        "RELANCE PAR SMS : le Directeur active « Relances d'impayés » et règle le « Seuil de retard avant relance (jours) » dans Paramètres › Notifications SMS. Les lots brouillon sont alors générés chaque nuit ; leur envoi, toujours manuel et classe par classe, n'a pas encore d'écran dédié.",
+                        "RELANCE PAR SMS : le Directeur active « Relances d'impayés » et règle le « Seuil de retard avant relance (jours) » dans Paramètres › Notifications SMS. Un lot brouillon par classe est alors préparé chaque nuit. Ouvrez Comptabilité › Recouvrement : l'onglet « À valider » liste les lots (classe, nombre d'élèves, montant en retard, seuil, date) ; « Recalculer les lots » les prépare sans attendre la nuit.",
+                        "Cliquez sur « Voir les destinataires » pour relire nominativement les élèves (matricule, téléphone du tuteur, reliquat, jours de retard) ; un tuteur sans numéro est signalé « Aucun numéro » et ne recevra pas de SMS.",
+                        "« Écarter » abandonne un lot sans rien envoyer ; « Envoyer les SMS » ouvre une fenêtre de confirmation, puis « Envoyer maintenant » met les SMS en file. Un lot ne s'envoie qu'une fois : il passe ensuite dans « Envoyés », et un lot déjà traité par un collègue est refusé. Le résultat annonce le nombre de SMS mis en file et d'élèves écartés.",
                         "Le taux de recouvrement figure aussi parmi les indicateurs du tableau de bord (« Taux Recouvrement »)."
                     ],
                     impacts: [
                         "La relance SMS ne vise que les élèves ayant au moins une échéance réellement en retard, et le message annonce le montant EN RETARD (pas le reliquat de l'année entière).",
                         "Échéanciers : c'est la date d'exigibilité de chaque échéance qui déclenche l'entrée en liste des débiteurs.",
                         "Encaissement : tout versement retire aussitôt l'élève de la liste dès lors que son solde est apuré.",
-                        "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS.",
+                        "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS ; l'écran Recouvrement est réservé au Directeur et à la Finance.",
                         "Trésorerie : l'encours des impayés pèse directement sur les prévisions de trésorerie.",
                         "Direction : le taux de recouvrement figure parmi les indicateurs du tableau de bord."
                     ],
