@@ -88,9 +88,10 @@
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
                         "L'écran Paramètres regroupe tout ce que l'établissement configure une fois pour toutes. Une barre " +
-                        "d'onglets horizontale défilante en tête donne accès à onze sections : Profil de l'établissement ; " +
-                        "Intégration étatique (SIMEN) ; Formats & signatures officielles ; Années scolaires ; Notation & " +
-                        "mentions ; Mensualités & autorisations de caisse ; Facturation & historique ; Paramètres système ; " +
+                        "d'onglets horizontale défilante en tête donne accès à douze sections : Profil de l'établissement ; " +
+                        "Modules & fonctionnalités ; Années scolaires ; Formats & signatures officielles ; Notation & " +
+                        "mentions ; Intégration étatique (SIMEN) ; " +
+                        "Mensualités & autorisations de caisse ; Facturation & historique ; Paramètres système ; " +
                         "Utilisateurs & rôles ; Journal d'audit ; Notifications SMS. L'onglet visible est rappelé dans " +
                         "l'adresse (?tab=…), ce qui rend chaque section partageable par un lien direct, sans rechargement.",
                     objectif:
@@ -104,7 +105,7 @@
                         "toucher. Les délégations de droits, en particulier, se donnent alors verbalement et ne se retrouvent " +
                         "jamais.",
                     procedure: [
-                        "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, et publication dans l'annuaire public.",
+                        "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, « Cycles gérés » et publication dans l'annuaire public (case « Lister mon établissement dans l'annuaire public Unikol »). Modules & fonctionnalités : les interrupteurs Pédagogie, Finance, Internat et filière Coranique (voir « Activer ou désactiver un module »).",
                         "Intégration étatique (SIMEN) : nom de l'établissement sur le bulletin, code établissement national, coordonnées GPS, rattachement IA/IEF — indispensables aux exports Planète et STATEDUC.",
                         "Formats & signatures officielles : gabarits de matricule, signatures numérisées (Directeur, Secrétariat, Caissier, Surveillant Général) et cachet officiel apposés sur les PDF.",
                         "Années scolaires : création, activation et clôture des exercices, découpage en périodes — trimestres par défaut, semestres ou personnalisé (fiche dédiée « Ouverture et clôture d'une année académique »). Sous la liste, le « Calendrier de fermeture » enregistre les jours fériés et les vacances de l'année (libellé arabe facultatif) : ils serviront au cahier de roulement bilingue.",
@@ -187,7 +188,7 @@
                         "fait dossier par dossier, longtemps après les faits.",
                     procedure: [
                         "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
-                        "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
+                        "Cliquez sur « Nouvelle année » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
                         "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Notation & mentions (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
@@ -236,11 +237,11 @@
                         "l'inspection académique.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Bâtiments & Salles.",
-                        "Créez d'abord le bâtiment : nom et description succincte (situation, étage, usage dominant).",
-                        "Depuis la fiche du bâtiment, ajoutez les salles une à une : nom, type et capacité en nombre de places.",
+                        "Cliquez sur « Nouveau bâtiment » : nom (ex. « Bâtiment A ») et description succincte (situation, étage, usage dominant).",
+                        "Dans la carte du bâtiment, cliquez sur « Ajouter une salle » : nom, type de salle et capacité (places physiques). Le type « Dortoir » n'est plus proposé : les dortoirs se créent dans Internat › Pavillons.",
                         "Renseignez une capacité SINCÈRE — le nombre de places réellement disponibles, et non le nombre théorique.",
                         "Les indicateurs en tête d'écran totalisent en temps réel les bâtiments, les salles et la capacité globale de l'établissement.",
-                        "Une salle devenue inutilisable est archivée, jamais supprimée : l'historique des affectations passées demeure intact."
+                        "« Supprimer la salle » (ou « Supprimer le bâtiment ») lance la suppression guidée : l'élément est archivé, jamais effacé, et reste restaurable depuis « Voir dans les éléments supprimés » ; l'historique des affectations passées demeure intact."
                     ],
                     impacts: [
                         "Classes : l'affectation d'une classe à une salle confronte l'effectif inscrit à la capacité déclarée.",
@@ -434,14 +435,14 @@
                 {
                     id: 'cycles-geres',
                     title: "Cycles gérés — déclarer les cycles de l'établissement",
-                    location: "Paramètres › Cycles gérés",
+                    location: "Paramètres › Profil de l'établissement › Cycles gérés",
                     href: '/parametres',
                     roles: ['Directeur'],
                     definition: "L'établissement déclare lui-même les cycles qu'il gère : Maternelle / Crèche, Primaire, Collège, Lycée. Les écrans de création de classe, d'inscription et d'examens s'adaptent à cette liste au lieu de la deviner à partir du profil. À l'inscription d'un établissement privé, ce même choix est demandé (rubrique « Cycles gérés »).",
                     objectif: "Ne proposer que ce qui a un sens pour l'école : un groupe scolaire qui n'a que le primaire ne voit ni classes de lycée ni examens du second cycle.",
                     probleme: "Auparavant, l'adaptation des écrans reposait sur le profil seul : une école hors du cas prévu voyait des choix inutiles ou, à l'inverse, ne pouvait pas ouvrir un cycle qu'elle gérait réellement.",
                     procedure: [
-                        "Ouvrez Paramètres et repérez le réglage « Cycles gérés ».",
+                        "Ouvrez Paramètres › Profil de l'établissement et repérez le bloc « Cycles gérés ».",
                         "Cochez les cycles que l'établissement gère réellement, puis enregistrez.",
                         "Retournez dans Classes, Inscriptions ou Examens : seuls les cycles déclarés sont proposés.",
                         "Pour retirer un cycle, il faut d'abord qu'il ne contienne plus aucune classe active : sinon l'enregistrement est refusé et la liste des classes concernées est affichée."
@@ -1870,8 +1871,8 @@
                         "investissement — se prennent alors sur une impression plutôt que sur une mesure.",
                     procedure: [
                         "Ouvrez le Tableau de bord : les indicateurs portent sur l'année scolaire ACTIVE.",
-                        "Consultez les effectifs par classe et par niveau, ainsi que leur évolution.",
-                        "Examinez les indicateurs financiers : montants attendus, encaissés et restant dus.",
+                        "Lisez le bloc « Pédagogie » : élèves inscrits (garçons et filles), enseignants actifs, taux de présence du mois et salles occupées ; « Vie Scolaire & Planning » ajoute les prochains cours du jour.",
+                        "Examinez le bloc « Finances de l'année » (solde net, encaissement de l'année, décaissements, reste à recouvrer, taux de recouvrement, encaissements du jour et du mois, attendu du mois), puis « Trésorerie & Bilan » (entrées vs sorties, catégories de dépenses) et la liste des « Derniers paiements » avec leur bouton « Aperçu ».",
                         "Ouvrez Gestion Scolaire › Rapports pour le détail de l'assiduité par classe et par élève.",
                         "Ouvrez Comptabilité › Rapports financiers pour la consolidation des recettes.",
                         "Exportez le rapport financier au format Excel afin de le transmettre au comptable ou au conseil d'administration.",
@@ -1951,13 +1952,13 @@
                         "présentes dans l'application — une double saisie, source d'écarts.",
                     procedure: [
                         "Ouvrez Comptabilité › Rapports financiers.",
-                        "Choisissez la période à consolider.",
-                        "Consultez la ventilation des recettes par cycle, par classe et par mode de paiement, ainsi que l'état de l'ancienneté des créances.",
-                        "Exportez l'état au format .xlsx : le fichier téléchargé porte EXACTEMENT les mêmes chiffres que l'écran, sur les mêmes bornes de période."
+                        "Choisissez la période avec « Date de début » et « Date de fin », puis cliquez sur « Générer » (« Réinitialiser » rétablit la période par défaut).",
+                        "Consultez le total encaissé et la ventilation des recettes par cycle, par classe et par mode de paiement, en tableaux et en graphiques (l'écran ne présente pas d'état d'ancienneté des créances : le suivi des impayés se fait dans « Situation des mensualités »).",
+                        "Cliquez sur « Télécharger le rapport financier .xlsx » : le fichier porte EXACTEMENT les mêmes chiffres que l'écran, sur les mêmes bornes de période. Le bouton est grisé, avec la mention de la formule requise, lorsque la formule de l'établissement n'inclut pas cet export, ou tant qu'aucun rapport n'est généré."
                     ],
                     impacts: [
                         "Caisse : chaque encaissement validé au guichet alimente cette consolidation.",
-                        "Recouvrement : l'état de l'ancienneté des créances recoupe directement la liste des débiteurs du module Comptabilité.",
+                        "Recouvrement : ce rapport ne porte que sur les encaissements ; les impayés se lisent dans Comptabilité › Situation des mensualités.",
                         "Trésorerie : le tableau de bord Trésorerie donne une lecture rapide des mêmes flux ; ce rapport en donne le détail exportable et ventilé."
                     ],
                     recommandations: [
@@ -1993,7 +1994,7 @@
                         "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial — un bandeau l'impose avant tout encaissement.",
                         "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative, visible en temps réel dans le bandeau (total encaissé, nombre de versements).",
                         "En fin de journée, comptez physiquement le numéraire du tiroir-caisse AVANT d'ouvrir la clôture — ne regardez le chiffre attendu qu'après avoir compté, pour ne pas vous y aligner inconsciemment.",
-                        "Cliquez sur « Clôturer la caisse » et saisissez le montant compté dans le champ dédié : ce champ est obligatoire, la clôture ne se valide pas sans lui.",
+                        "Cliquez sur « Clôturer la caisse » et saisissez le montant dans le champ « Espèces réellement comptées dans le tiroir-caisse (FCFA) » : ce champ est obligatoire, la clôture ne se valide pas sans lui.",
                         "Si le montant saisi ne correspond pas aux espèces attendues, un champ « Motif de l'écart » apparaît : il est obligatoire, qu'il s'agisse d'un manquant ou d'un surplus — décrivez la cause probable (rendu de monnaie, fonds d'ouverture mal compté…).",
                         "Confirmez : une session clôturée ne se rouvre plus, et ne se re-clôture jamais.",
                         "Téléchargez immédiatement le rapport de clôture au format PDF depuis la fenêtre de confirmation — il détaille désormais le solde théorique, le montant compté, l'écart et le motif.",
@@ -2441,7 +2442,7 @@
                 {
                     id: 'ien-eleve',
                     title: "Identifiant National de l'Élève (IEN)",
-                    location: 'Élèves › Fiche élève › Identifiant national',
+                    location: 'Élèves › Fiche élève › IEN',
                     href: '/eleves',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
@@ -2460,15 +2461,15 @@
                         "affectation. À l'échelle d'un fichier transmis, des lignes sans identifiant sont écartées du " +
                         "traitement national sans que l'école en soit avertie.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, puis le champ « Identifiant national (IEN) ».",
-                        "Saisissez le numéro OFFICIEL tel qu'il figure sur la liste transmise par l'IEF, puis enregistrez. C'est le mode normal, et le seul qui produise un identifiant opposable.",
-                        "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et utilisez l'action « Générer un numéro provisoire ».",
+                        "Ouvrez la fiche de l'élève : le champ « IEN » affiche « Non attribué » avec le lien « Renseigner » (ou le numéro actuel avec le lien « Gérer »). Il ouvre la fenêtre « Identifiant National de l'Élève (IEN) ».",
+                        "Saisissez le « Numéro IEN officiel » tel qu'il figure sur la liste transmise par l'IEF, puis enregistrez. C'est le mode normal, et le seul qui produise un identifiant opposable.",
+                        "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et cliquez sur « Générer un numéro provisoire ».",
                         "Un numéro provisoire commence toujours par la lettre P et s'affiche partout avec la mention « provisoire ». Il permet de ne pas bloquer vos traitements internes en attendant le vrai numéro.",
                         "Dès réception du numéro officiel, saisissez-le : il remplace le provisoire, qui disparaît définitivement.",
                         "La génération d'un provisoire exige que le code établissement national soit renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, le numéro fabriqué ne rattacherait l'élève à aucune école."
                     ],
                     impacts: [
-                        "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé AVANT le téléchargement.",
+                        "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé à la génération du fichier.",
                         "Rapport STATEDUC : les élèves sans IEN sont comptés dans une ligne distincte, jamais fondus dans les effectifs déclarés.",
                         "Certificat de mutation : l'IEN y est imprimé, avec la mention « provisoire » le cas échéant — l'école d'accueil doit savoir ce qu'elle recopie.",
                         "Unicité : deux élèves de votre établissement ne peuvent pas porter le même IEN. Unikol refuse la saisie en nommant l'élève qui le détient déjà."
@@ -2502,8 +2503,8 @@
                         "Vérifiez d'abord que le code établissement national est renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, l'export refuse de s'exécuter.",
                         "Ouvrez Intégration étatique › Export Planète et choisissez l'année scolaire concernée.",
                         "Choisissez le format : CSV pour un contrôle dans Excel, JSON si le portail du ministère le demande.",
-                        "Lisez les compteurs affichés avant de télécharger : nombre d'élèves, nombre d'identifiants provisoires, nombre d'élèves sans IEN.",
-                        "Si le nombre de provisoires ou de lignes sans IEN vous paraît élevé, renoncez au téléchargement et complétez d'abord les identifiants.",
+                        "Choisissez le périmètre (« Tout l'établissement » ou une classe), puis cliquez sur « Générer et télécharger » : un message signale alors le nombre d'élèves sans IEN et le nombre d'IEN provisoires inclus dans le fichier.",
+                        "Si ces nombres vous paraissent élevés, ne transmettez pas le fichier : complétez d'abord les identifiants sur les fiches élèves, puis régénérez l'export.",
                         "Téléchargez, ouvrez le fichier pour un dernier contrôle visuel, puis transmettez-le par la voie habituelle (dépôt, courriel, remise à l'IEF)."
                     ],
                     impacts: [
