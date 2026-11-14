@@ -229,6 +229,12 @@ Détail par classe et par niveau : total payé, solde restant, pourcentage de pa
 
 Liste automatique des élèves débiteurs : montant dû, nombre de jours de retard.
 
+**Recouvrement (écran `/recouvrement`, Directeur et Finance).** Les élèves débiteurs sont regroupés en **lots de relance SMS
+brouillon, un par classe**, préparés chaque nuit lorsque « Relances d'impayés » est activé (seuil de retard en jours, Paramètres ›
+Notifications SMS). L'écran présente les lots par statut (À valider, Envoyés, Écartés), les destinataires (montant dû, jours de
+retard, téléphone du tuteur) et trois actions : recalculer, écarter, envoyer. L'envoi suit une **confirmation explicite**, ne se
+fait qu'**une seule fois** par lot (rejet en `409` ensuite) et n'a jamais lieu automatiquement.
+
 Simulation de revenus prévisionnels : `Nombre d'élèves × frais configurés`, avec comparaison revenus attendus / encaissés / restants.
 
 Graphiques : évolution mensuelle des recettes, répartition par classe, répartition des dépenses par catégorie, comparaison annuelle, taux de recouvrement mensuel.
@@ -250,7 +256,7 @@ Suivi des dépenses par catégorie, avec justificatif attaché (upload de docume
 - **Référence exacte à reproduire** : `docs/design-references/bulletin-reference.png` (description détaillée dans `docs/design-references/README.md` §2) — colonnes, en-têtes, blocs de synthèse et mentions dans l'ordre exact de cette référence.
 - Format **A5 Portrait**, avec ajustement automatique des largeurs de colonnes pour éviter tout débordement sur une seconde page.
 - Colonnes Matière / Moyenne / Mention optimisées pour l'impression.
-- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Pédagogie
+- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Notation & mentions
   le découpage de l'année — trimestriel (défaut, 3 trimestres), semestriel (2 semestres) ou personnalisé
   (2 à 6 périodes réparties à parts égales). Il s'applique aux années créées ensuite ; sur l'année en cours
   il se rejoue à la demande, et **seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie**.
@@ -304,6 +310,22 @@ l'ordre de priorité :
   le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
 - **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
   les classes concernées ; l'écran l'annonce dès que des notes existent.
+
+### 8.9 Saisie des notes : matières proposées selon le niveau de la classe
+
+L'écran de saisie (`/notes`) ne propose, une fois la classe choisie, que les matières de **son niveau** : un
+même nom de matière (« Mathématiques ») existe au primaire, au collège et au lycée avec des coefficients
+différents, et les mélanger conduisait à noter la mauvaise matière.
+
+- **Rapprochement** : niveau de la matière = niveau de la classe, casse et accents ignorés, avec les mêmes
+  synonymes que l'écran Matières et le serveur (Élémentaire = Primaire ; Moyen, CEM = Collège ; Secondaire =
+  Lycée ; Crèche, Maternelle, Préscolaire = Préscolaire). Un niveau hors nomenclature ne se rapproche que d'un
+  niveau écrit pareil.
+- **Sans classe choisie**, ou si **aucune matière** ne porte le niveau de la classe, toute la liste reste
+  proposée et chaque libellé porte son niveau entre parenthèses.
+- **Changer de classe** efface la matière sélectionnée si elle n'appartient pas au nouveau niveau.
+- Filtre d'**affichage** uniquement : aucune règle serveur, aucun droit et aucun calcul ne change. Le filtre
+  « Pôle » (Franco-Arabe) s'applique en plus.
 
 ### 8.8 Séries du Baccalauréat, matières par classe et options (Évolution N°6)
 

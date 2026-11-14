@@ -415,7 +415,7 @@
                                 <span x-show="disbursementState(d) === 'reversed'" x-cloak class="mt-0.5 block text-xs text-slate-400">Annulé par une contre-écriture.</span>
                             </td>
                             <td class="py-3 px-4 text-sm text-slate-900">
-                                <badge variant="neutral" x-text="d.category"></badge>
+                                <badge variant="neutral" x-text="disbursementCategoryLabel(d.category)"></badge>
                                 <badge variant="danger" x-show="disbursementState(d) === 'reversal'" x-cloak class="ml-1">Annulation</badge>
                                 <badge variant="warning" x-show="disbursementState(d) === 'reversed'" x-cloak class="ml-1">Annulé</badge>
                             </td>
@@ -458,7 +458,7 @@
                 </div>
                 <div>
                     <label class="form-label" for="disb_category">Catégorie</label>
-                    <select-field id="disb_category" model="disbursementForm.category" options-expr="[{value:'Salaires', label:'Salaires'}, {value:'Maintenance', label:'Maintenance'}, {value:'Fournitures', label:'Fournitures'}, {value:'ChargesFixes', label:'Charges Fixes'}, {value:'Divers', label:'Divers'}]" />
+                    <select-field id="disb_category" model="disbursementForm.category" options-expr="window.DISBURSEMENT_CATEGORIES" />
                 </div>
                 <div>
                     <label class="form-label" for="disb_amount">Montant</label>

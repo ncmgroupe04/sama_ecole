@@ -88,9 +88,10 @@
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
                         "L'écran Paramètres regroupe tout ce que l'établissement configure une fois pour toutes. Une barre " +
-                        "d'onglets horizontale défilante en tête donne accès à onze sections : Profil de l'établissement ; " +
-                        "Intégration étatique (SIMEN) ; Formats & signatures officielles ; Années scolaires ; Notation & " +
-                        "mentions ; Mensualités & autorisations de caisse ; Facturation & historique ; Paramètres système ; " +
+                        "d'onglets horizontale défilante en tête donne accès à douze sections : Profil de l'établissement ; " +
+                        "Modules & fonctionnalités ; Années scolaires ; Formats & signatures officielles ; Notation & " +
+                        "mentions ; Intégration étatique (SIMEN) ; " +
+                        "Mensualités & autorisations de caisse ; Facturation & historique ; Paramètres système ; " +
                         "Utilisateurs & rôles ; Journal d'audit ; Notifications SMS. L'onglet visible est rappelé dans " +
                         "l'adresse (?tab=…), ce qui rend chaque section partageable par un lien direct, sans rechargement.",
                     objectif:
@@ -104,7 +105,7 @@
                         "toucher. Les délégations de droits, en particulier, se donnent alors verbalement et ne se retrouvent " +
                         "jamais.",
                     procedure: [
-                        "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, et publication dans l'annuaire public.",
+                        "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, « Cycles gérés » et publication dans l'annuaire public (case « Lister mon établissement dans l'annuaire public Unikol »). Modules & fonctionnalités : les interrupteurs Pédagogie, Finance, Internat et filière Coranique (voir « Activer ou désactiver un module »).",
                         "Intégration étatique (SIMEN) : nom de l'établissement sur le bulletin, code établissement national, coordonnées GPS, rattachement IA/IEF — indispensables aux exports Planète et STATEDUC.",
                         "Formats & signatures officielles : gabarits de matricule, signatures numérisées (Directeur, Secrétariat, Caissier, Surveillant Général) et cachet officiel apposés sur les PDF.",
                         "Années scolaires : création, activation et clôture des exercices, découpage en périodes — trimestres par défaut, semestres ou personnalisé (fiche dédiée « Ouverture et clôture d'une année académique »). Sous la liste, le « Calendrier de fermeture » enregistre les jours fériés et les vacances de l'année (libellé arabe facultatif) : ils serviront au cahier de roulement bilingue.",
@@ -187,8 +188,8 @@
                         "fait dossier par dossier, longtemps après les faits.",
                     procedure: [
                         "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
-                        "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
-                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Pédagogie (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
+                        "Cliquez sur « Nouvelle année » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
+                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Notation & mentions (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
                         "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
@@ -207,7 +208,7 @@
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
                         "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
-                        "Choisissez le découpage (Paramètres › Pédagogie) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
+                        "Choisissez le découpage (Paramètres › Notation & mentions) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
                         "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé.",
                         "Avant de supprimer une année en mode bac à sable, exportez-la si elle contient des saisies que vous souhaitez relire : l'effacement est définitif et l'export ZIP (icône de téléchargement) reste la seule copie."
                     ]
@@ -236,14 +237,14 @@
                         "l'inspection académique.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Bâtiments & Salles.",
-                        "Créez d'abord le bâtiment : nom et description succincte (situation, étage, usage dominant).",
-                        "Depuis la fiche du bâtiment, ajoutez les salles une à une : nom, type et capacité en nombre de places.",
+                        "Cliquez sur « Nouveau bâtiment » : nom (ex. « Bâtiment A ») et description succincte (situation, étage, usage dominant).",
+                        "Dans la carte du bâtiment, cliquez sur « Ajouter une salle » : nom, type de salle et capacité (places physiques). Le type « Dortoir » n'est plus proposé : les dortoirs se créent dans Internat › Pavillons.",
                         "Renseignez une capacité SINCÈRE — le nombre de places réellement disponibles, et non le nombre théorique.",
                         "Les indicateurs en tête d'écran totalisent en temps réel les bâtiments, les salles et la capacité globale de l'établissement.",
-                        "Une salle devenue inutilisable est archivée, jamais supprimée : l'historique des affectations passées demeure intact."
+                        "« Supprimer la salle » (ou « Supprimer le bâtiment ») lance la suppression guidée : l'élément est archivé, jamais effacé, et reste restaurable depuis « Voir dans les éléments supprimés » ; l'historique des affectations passées demeure intact."
                     ],
                     impacts: [
-                        "Classes : l'affectation d'une classe à une salle confronte l'effectif inscrit à la capacité déclarée.",
+                        "Classes : aucune classe n'est rattachée à une salle depuis l'écran Classes ; la capacité d'une salle est descriptive et n'est jamais confrontée à l'effectif inscrit.",
                         "Emploi du temps : les créneaux s'appuient sur les salles existantes pour prévenir les collisions d'occupation.",
                         "Tableau de bord : la capacité totale nourrit les ratios d'occupation présentés à la direction.",
                         "Dossiers administratifs : la capacité d'accueil déclarée est une pièce régulièrement exigée lors des visites de conformité."
@@ -434,14 +435,14 @@
                 {
                     id: 'cycles-geres',
                     title: "Cycles gérés — déclarer les cycles de l'établissement",
-                    location: "Paramètres › Cycles gérés",
+                    location: "Paramètres › Profil de l'établissement › Cycles gérés",
                     href: '/parametres',
                     roles: ['Directeur'],
                     definition: "L'établissement déclare lui-même les cycles qu'il gère : Maternelle / Crèche, Primaire, Collège, Lycée. Les écrans de création de classe, d'inscription et d'examens s'adaptent à cette liste au lieu de la deviner à partir du profil. À l'inscription d'un établissement privé, ce même choix est demandé (rubrique « Cycles gérés »).",
                     objectif: "Ne proposer que ce qui a un sens pour l'école : un groupe scolaire qui n'a que le primaire ne voit ni classes de lycée ni examens du second cycle.",
                     probleme: "Auparavant, l'adaptation des écrans reposait sur le profil seul : une école hors du cas prévu voyait des choix inutiles ou, à l'inverse, ne pouvait pas ouvrir un cycle qu'elle gérait réellement.",
                     procedure: [
-                        "Ouvrez Paramètres et repérez le réglage « Cycles gérés ».",
+                        "Ouvrez Paramètres › Profil de l'établissement et repérez le bloc « Cycles gérés ».",
                         "Cochez les cycles que l'établissement gère réellement, puis enregistrez.",
                         "Retournez dans Classes, Inscriptions ou Examens : seuls les cycles déclarés sont proposés.",
                         "Pour retirer un cycle, il faut d'abord qu'il ne contienne plus aucune classe active : sinon l'enregistrement est refusé et la liste des classes concernées est affichée."
@@ -596,10 +597,10 @@
                         "cohérent. À l'échelle d'une rentrée, la reprise manuelle représente plusieurs journées de travail.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Classes.",
-                        "Cliquez sur « Nouvelle classe » et renseignez le nom exact du groupe.",
-                        "Sélectionnez le niveau : ce choix détermine le cycle, et par conséquent le barème de notation qui s'appliquera aux bulletins.",
-                        "Indiquez l'effectif maximal souhaité, puis, le cas échéant, la salle d'affectation.",
-                        "Désignez le professeur principal ou le titulaire de la classe lorsque l'établissement pratique cet usage.",
+                        "Cliquez sur « Nouvelle classe » et renseignez le « Nom de la classe » exact du groupe (ex. « CM2 B »).",
+                        "Sélectionnez le « Niveau » (Primaire, Collège, Lycée, Crèche ou Maternelle — seuls les cycles déclarés dans « Cycles gérés » sont proposés) : ce choix détermine le cycle, et par conséquent le barème de notation qui s'appliquera aux bulletins. Le niveau précis (6e, CM2…) se lit sur le nom de la classe.",
+                        "Indiquez la « Capacité d'accueil » (30 par défaut). Pour une classe de lycée, choisissez au besoin la « Série / Filière » (ses matières, options et coefficients officiels sont alors ajoutés à la classe ; « Général / Collège (aucune série) » pour une Seconde commune). Pour une classe qui valide deux niveaux en une année (ex. CI-CP), cochez « Classe Passerelle / Accélérée » et choisissez le « Second niveau validé ».",
+                        "Depuis la carte de la classe : « Imprimer la liste des élèves », « Télécharger les cartes scolaires », « Modifier » et « Supprimer » (suppression guidée, la classe est archivée).",
                         "Enregistrez. La classe devient immédiatement sélectionnable à l'inscription, à la saisie des notes et au paramétrage des frais."
                     ],
                     impacts: [
@@ -607,7 +608,7 @@
                         "Matières : les grilles d'évaluation sont attachées au NIVEAU ; deux classes de même niveau partagent la même grille.",
                         "Notes : le cycle de la classe fixe le barème par défaut de chaque note saisie.",
                         "Bulletins : le nom de la classe, son effectif et le rang de l'élève y figurent tels qu'ils sont enregistrés ici.",
-                        "Infrastructures : l'affectation d'une salle confronte l'effectif au nombre de places disponibles."
+                        "Infrastructures : l'écran Classes n'affecte aucune salle ; la capacité d'une salle (Bâtiments & Salles) reste descriptive et n'est jamais confrontée à l'effectif d'une classe."
                     ],
                     recommandations: [
                         "Arrêtez une convention de nommage AVANT la première création, et tenez-vous-y sans exception.",
@@ -641,7 +642,7 @@
                         "totaux recalculés à la main, des erreurs de report et des bulletins dont la présentation varie " +
                         "d'une classe à l'autre.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Matières et sélectionnez le niveau concerné : les grilles sont propres à chaque niveau.",
+                        "Ouvrez Gestion Scolaire › Matières et choisissez le cycle concerné dans la barre d'onglets du haut (Tous les cycles, Primaire, Collège, Lycée, Préscolaire, Autres niveaux — seuls les cycles qui contiennent des matières apparaissent, chacun avec son nombre de matières). Les grilles sont propres à chaque niveau. Le niveau d'une matière se choisit dans la liste fermée du formulaire (Crèche, Maternelle, Primaire, Collège, Lycée) ; c'est lui qui rattache la matière aux classes de ce niveau à la saisie des notes et sur le bulletin.",
                         "GRILLE SIMPLE (collège, lycée) : créez chaque matière avec son nom et son coefficient, et laissez le barème vide pour hériter de celui du cycle, soit /20.",
                         "GRILLE APC (primaire) : créez d'abord les DOMAINES parents — « Lang. & Com. », « Maths », « Éveil » — sans leur attribuer de barème, car un domaine n'est jamais noté.",
                         "Ajoutez ensuite, sous chaque domaine, les ACTIVITÉS filles : nom, coefficient et barème propre — sur 60, sur 40, sur 24 ou sur 16 — tel qu'il figure, ligne par ligne, sur la grille officielle.",
@@ -826,14 +827,14 @@
                         "reste sans auteur identifiable. La responsabilité pédagogique se dilue.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Ajouter un enseignant ».",
-                        "Renseignez l'état civil, le téléphone, l'adresse électronique et la spécialité. Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
-                        "Précisez la nature du rattachement — permanent ou vacataire — ainsi que les éléments contractuels utiles à la paie.",
-                        "Depuis la fiche détaillée, ajoutez les affectations : pour chaque matière enseignée, désignez la ou les classes concernées.",
-                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles, en lui attribuant le rôle « Enseignant ».",
-                        "Un départ se traduit par l'archivage de la fiche : l'historique des notes saisies et des heures pointées demeure intégralement conservé."
+                        "Renseignez le nom complet, l'e-mail et la date de naissance (obligatoires), puis le téléphone, le lieu de naissance, l'adresse de résidence et la photo. Cochez au moins une « matière enseignée » (matière qualifiée). Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
+                        "Dépliez au besoin « Informations pour le rapport STATEDUC » (facultatif) : genre, statut administratif, diplômes académique et professionnel, matricule de solde, première prise de service. La nature du contrat (permanent ou vacataire) et les éléments de paie ne se saisissent pas ici : ils relèvent de Comptabilité › Fiches de Paie.",
+                        "Depuis la fiche détaillée (« Voir la fiche »), section « Attribuer une classe / matière (année active) » : choisissez la classe, la matière, puis « Attribuer ». Une affectation se retire avec « Retirer cette affectation ».",
+                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles (rôle « Enseignant »), puis rattachez-le à la fiche : à la création (champ « Compte de connexion (optionnel) », Directeur) ou plus tard (voir « Rattacher un compte enseignant »).",
+                        "Un départ se traduit par le bouton « Supprimer » de la fiche (suppression guidée) : la fiche est archivée, jamais effacée, et l'historique des notes saisies et des heures pointées demeure intégralement conservé. Le statut (Actif, Suspendu, Bloqué) filtre la liste."
                     ],
                     impacts: [
-                        "Saisie des notes : un enseignant ne voit et ne renseigne que les couples matière/classe qui lui sont affectés.",
+                        "Saisie des notes : la saisie n'est PAS limitée aux affectations ; seule la correction d'une note déjà enregistrée l'est (auteur de la note ou enseignant affecté à la classe et à la matière, dans le délai fixé par le Directeur).",
                         "Appel en classe : les classes proposées à l'appel découlent de ces mêmes affectations.",
                         "Emploi du temps et pointage : les créneaux et les heures effectuées s'adossent aux affectations déclarées.",
                         "Fiches de paie : les éléments contractuels de la fiche alimentent le calcul de la rémunération et les déclarations fiscales et sociales.",
@@ -885,7 +886,7 @@
                 {
                     id: 'emploi-du-temps',
                     title: 'Emploi du temps — grille des créneaux hebdomadaires',
-                    location: 'Gestion Scolaire › Enseignants — section « Emploi du temps »',
+                    location: 'Gestion Scolaire › Enseignants — onglet « Emploi du Temps »',
                     href: '/enseignants',
                     roles: ['Directeur', 'Secrétariat', 'Enseignant'],
                     definition:
@@ -906,7 +907,7 @@
                         "même professeur, deux professeurs pour une même salle — ne se voient qu'une fois les élèves " +
                         "devant la porte.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Enseignants et faites défiler jusqu'à la section « Emploi du temps ».",
+                        "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur l'onglet « Emploi du Temps » (à côté de « Liste des Enseignants » ; l'onglet n'apparaît que si le module Pédagogie est activé).",
                         "Choisissez le mode de lecture : « Par Enseignant » puis un professeur dans la liste, ou « Par Classe » puis une classe.",
                         "Cliquez sur « Nouveau Créneau » : renseignez le jour, l'heure de début et de fin, l'enseignant, la classe, la matière, et le numéro de salle si l'établissement le suit.",
                         "Enregistrez : le créneau apparaît aussitôt dans les DEUX vues — celle de l'enseignant et celle de la classe.",
@@ -916,7 +917,7 @@
                     impacts: [
                         "Affectations : un créneau s'appuie sur les couples matière + classe déjà déclarés sur la fiche de l'enseignant — une matière qu'il n'enseigne pas ne lui est pas proposée.",
                         "Salles : le numéro de salle est un simple libellé indicatif porté par le créneau ; le module Infrastructures reste la référence de la capacité et de l'existence réelle des locaux.",
-                        "Pointage des heures : les heures effectivement faites se saisissent séparément (Comptabilité › Paie, Pointage Profs) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
+                        "Pointage des heures : les heures effectivement faites se saisissent séparément (Surveillance › Pointage Profs, Comptabilité › Fiches de Paie) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
                         "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé.",
                         "Jours de repos : la grille n'affiche que les jours ouvrés de l'établissement (par exemple du samedi au mercredi si le repos tombe le jeudi et le vendredi) et refuse tout créneau un jour de repos. Ces jours se règlent dans Paramètres › Notation & mentions ; un créneau déjà posé sur un jour devenu repos reste visible, marqué « repos », et peut être supprimé mais plus modifié."
                     ],
@@ -1011,7 +1012,7 @@
                     probleme:
                         "Un volume manquant ou une salle doublement réservée ne se voit qu'à l'usage, en pleine semaine de cours.",
                     procedure: [
-                        "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». Videz la case pour revenir à la référence.",
+                        "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». « Revenir à la référence » (ou une case vidée puis enregistrée) rétablit la grille de référence.",
                         "Un réglage de série l'emporte sur celui du niveau, qui l'emporte sur la grille de référence.",
                         "CONTRÔLE : Enseignants › Emploi du temps, en vue « Par classe », une fois la classe choisie. Le panneau « Conformité aux volumes horaires » apparaît sous la grille et se met à jour quand vous changez de classe. Il rappelle le niveau (et la série) reconnus, le total planifié rapporté au total de référence, puis une ligne par matière : Planifié, Référence, Écart et Statut (Conforme, Sous le volume, Au-dessus ou Sans référence).",
                         "CHEVAUCHEMENTS : sous le tableau, un encart vert confirme qu'aucun enseignant, aucune salle ni aucune classe n'est placé deux fois sur la même plage ; sinon il devient rouge, indique le nombre de chevauchements touchant la classe, et « Voir le détail » liste la ressource concernée, le jour et les deux créneaux en cause."
@@ -1067,8 +1068,8 @@
                     probleme:
                         "Les distinctions et décisions se recalculent à la main à chaque conseil, avec des seuils qui varient d'un établissement à l'autre.",
                     procedure: [
-                        "SEUILS (Directeur) : Paramètres › Notation & mentions — par défaut Félicitations 14, Tableau d'honneur 12 sans note éliminatoire (< 5), Encouragements 12, passage 10, redoublement 8,5.",
-                        "PV : Notes et bulletins, bouton « PV » (période) ou « PV annuel ».",
+                        "SEUILS (Directeur) : Paramètres › Notation & mentions — par défaut Félicitations 14, Tableau d'honneur 12 sans note éliminatoire (< 5), Encouragements 12, passage 10, redoublement 8,5. « Enregistrer les seuils » valide ; « Revenir aux valeurs du Ministère » rétablit ces valeurs.",
+                        "PV : Notes et bulletins, une fois la classe et la période choisies, bouton « PV Délibération » (période) ou « PV annuel » (fin d'année).",
                         "DÉCISIONS : « Appliquer les décisions proposées » enregistre les propositions de fin d'année pour les élèves encore sans décision."
                     ],
                     impacts: [
@@ -1261,12 +1262,12 @@
                         "antérieurs deviennent introuvables et sa situation financière se scinde en deux.",
                     procedure: [
                         "Assurez-vous que la nouvelle année scolaire est ACTIVE et que ses barèmes de frais sont paramétrés.",
-                        "Ouvrez Gestion Scolaire › Inscriptions, puis choisissez « Réinscrire ».",
+                        "Ouvrez Gestion Scolaire › Inscriptions, puis choisissez « Réinscription » dans le sélecteur « Type de mouvement » (l'autre choix est « Nouvelle inscription »).",
                         "Recherchez l'élève par son matricule ou par son nom : sa fiche remonte avec l'intégralité de son historique.",
                         "Sélectionnez la classe d'accueil de la nouvelle année ; l'application propose le barème correspondant.",
                         "Vérifiez le montant dû et l'échéancier, puis validez la réinscription.",
                         "CHANGEMENT DE CLASSE EN COURS D'ANNÉE : ouvrez l'inscription en cours et sélectionnez la nouvelle classe. Si le barème diffère, la régularisation est historisée et demeure traçable.",
-                        "Éditez l'attestation de réinscription, remettez-la à la famille et orientez-la vers la Caisse pour le règlement."
+                        "Éditez l'attestation (bouton « Attestation » après validation), remettez-la à la famille et orientez-la vers la Caisse pour le règlement."
                     ],
                     impacts: [
                         "Historique : notes, bulletins et règlements des exercices antérieurs restent attachés au même élève et demeurent consultables.",
@@ -1307,15 +1308,15 @@
                     procedure: [
                         "Le montant dû est CALCULÉ par l'application à partir du barème de la classe : il n'est jamais saisi à la main lors de l'inscription.",
                         "À la validation, le détail ligne à ligne est FIGÉ sur l'inscription : une révision ultérieure du barème ne modifiera pas rétroactivement les reçus déjà remis.",
-                        "Consultez l'échéancier depuis la fiche de l'inscription : chaque échéance y figure avec sa date d'exigibilité et son montant.",
-                        "ÉCHÉANCIER PERSONNALISÉ : créez un plan sur mesure pour une famille donnée, en fixant vous-même les dates et les montants convenus.",
-                        "Une renégociation ne modifie jamais le plan en vigueur : elle le remplace, l'ancien étant annulé mais conservé, de sorte que l'accord antérieur reste consultable.",
+                        "Consultez l'échéancier dans la Caisse : après la recherche de l'élève, le panneau détaillé liste chaque échéance avec sa date d'exigibilité, son montant et son état (« En attente », réglée).",
+                        "ENGAGEMENT FINANCIER : pour une famille qui négocie un délai, ouvrez sa fiche (Élèves) et cliquez sur « Nouvel engagement financier » : saisissez un montant, une date d'échéance et les termes convenus, puis « Enregistrer » et « Télécharger l'engagement créé ». C'est une trace écrite de l'accord (reconnaissance de dette), pas un nouveau plan de paiement.",
+                        "Un engagement financier ne modifie jamais le montant dû ni les échéances de l'inscription, et ne vaut pas encaissement : seul un versement enregistré à la Caisse fait baisser le solde. Chaque nouvel engagement est un document supplémentaire ; aucun écran ne remplace ni n'annule un engagement précédent.",
                         "Chaque encaissement s'impute automatiquement sur le solde, et l'échéancier reflète en temps réel ce qui reste dû."
                     ],
                     impacts: [
                         "Caisse : le caissier voit, à l'écran, le solde exact et l'échéance courante de l'élève qu'il encaisse.",
                         "Recouvrement : le suivi des retards s'appuie sur les dates d'exigibilité de l'échéancier.",
-                        "Avis de sommes dues : l'avis remis à la famille est édité directement depuis l'échéancier.",
+                        "Sommation pour impayés : le document remis à la famille s'édite depuis la fiche de l'élève (bouton « Sommation impayés », visible tant qu'un solde reste dû).",
                         "Trésorerie : les échéances à venir alimentent les prévisions d'encaissement de la direction.",
                         "Rapports financiers : le rapprochement entre attendu et encaissé procède de cette même source."
                     ],
@@ -1359,8 +1360,8 @@
                     objectif: "Retrouver et corriger rapidement chaque erreur d'un fichier de plusieurs centaines de lignes.",
                     probleme: "Il fallait faire défiler le fichier et survoler chaque cellule pour lire les messages.",
                     procedure: [
-                        "Importez le fichier ; l'aperçu s'affiche.",
-                        "Ouvrez le récapitulatif, filtrez les lignes en erreur, exportez-les en CSV si besoin.",
+                        "Dans Élèves (« Importer ») ou Enseignants (« Importer des enseignants »), téléchargez au besoin le modèle avec « Télécharger le modèle », puis déposez le fichier : l'aperçu s'affiche (validé ligne par ligne) et « Confirmer l'import » n'apparaît que lorsque toutes les lignes sont valides.",
+                        "Dans le panneau « Erreurs à corriger » (ligne, champ, valeur saisie, message), cochez « Afficher seulement les lignes en erreur » et, si besoin, « Exporter le rapport d'erreurs (.csv) ».",
                         "Corrigez le fichier d'origine puis réimportez."
                     ],
                     impacts: [
@@ -1381,7 +1382,7 @@
                     objectif: "Éviter les lits « fantômes » et les échéanciers orphelins après une annulation.",
                     probleme: "Un élève annulé puis réinscrit pouvait occuper deux lits, car le séjour d'internat restait actif.",
                     procedure: [
-                        "Annulez l'inscription depuis la liste des inscriptions.",
+                        "Ouvrez la fiche de l'élève (Élèves), onglet des inscriptions de l'année, et cliquez sur « Annuler l'inscription » (fenêtre de confirmation).",
                         "S'il existe un paiement, annulez-le d'abord : l'annulation est refusée tant qu'un paiement non annulé existe.",
                         "À l'internat, vous pouvez aussi annuler une sortie ou supprimer un séjour saisi par erreur.",
                         "Dans « Affecter un élève » ou « Changer / Libérer », le lit actuel de l'élève est proposé en tête (« lit actuel ») : le re-valider ajoute les frais d'internat manquants sans déplacer l'élève."
@@ -1435,13 +1436,15 @@
                         "généralement lorsque les parents ont déjà le bulletin en main.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Notes et bulletins.",
-                        "Sélectionnez successivement la classe, la matière et la période. Un enseignant ne se voit proposer que ses propres affectations.",
+                        "Sélectionnez successivement la classe, la matière et la période. La liste des matières se restreint d'elle-même au NIVEAU de la classe choisie (primaire, collège ou lycée) : les « Mathématiques » du lycée n'apparaissent pas pour une classe de collège. Tant qu'aucune classe n'est choisie, toutes les matières sont listées avec leur niveau entre parenthèses ; si aucune matière ne porte le niveau de la classe, la liste complète est conservée. Changer de classe efface la matière déjà choisie si elle n'appartient pas au nouveau niveau.",
+                        "Écoles Franco-Arabe : un sélecteur « Pôle » (Section française, Section arabe, Pôle commun) apparaît dès qu'une matière hors section française existe ; il réduit encore la liste des matières. Les domaines d'une grille APC n'y figurent pas : la note se saisit sur leurs activités.",
                         "La liste nominative s'affiche, accompagnée du barème applicable — celui de la ligne d'évaluation lorsqu'il est défini, celui du cycle à défaut.",
                         "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
-                        "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
+                        "Renseignez, dans chaque cellule de la ligne de l'élève, le Devoir 1, le Devoir 2 et la Composition.",
                         "IMPORT EN MASSE : téléchargez le modèle Excel de la classe, complétez-le hors ligne, puis réimportez-le. Les valeurs y sont contrôlées une à une avant intégration.",
                         "FICHE PAPIER : pour noter dans la salle, choisissez l'évaluation (Devoir 1, Devoir 2 ou Composition) puis cliquez sur « Fiche papier ». Le PDF obtenu est une grille vierge — élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo — que vous imprimez depuis l'aperçu, puis reportez à l'écran.",
-                        "Enregistrez. Chaque saisie est horodatée et attribuée à son auteur.",
+                        "Il n'y a pas de bouton « Enregistrer » : chaque cellule s'enregistre toute seule quand vous la quittez (Tabulation, Entrée ou clic ailleurs). Chaque saisie est horodatée et attribuée à son auteur.",
+                        "Droits : le Directeur, le Secrétariat et l'Enseignant saisissent une note dans n'importe quelle classe et matière listée — l'affectation de l'enseignant ne limite pas la saisie. Elle ne limite que la CORRECTION d'une note déjà enregistrée.",
                         "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit. Un enseignant corrige ses notes, ou celles de sa matière et de sa classe, pendant le délai fixé par le Directeur (7 jours par défaut, réglable dans Paramètres › Notation & mentions). Passé ce délai, la cellule est grisée : le Directeur ou le Secrétariat peuvent alors la corriger, sans limite de délai."
                     ],
                     impacts: [
@@ -1483,11 +1486,11 @@
                         "L'édition d'une promotion entière mobilise le secrétariat plusieurs jours par trimestre.",
                     procedure: [
                         "Assurez-vous au préalable que toutes les notes du trimestre sont saisies et contrôlées.",
-                        "Complétez, le cas échéant, les appréciations et les décisions du conseil des professeurs pour chaque élève.",
+                        "Complétez, le cas échéant, la distinction et la décision du conseil des professeurs de chaque élève : Gestion Scolaire › Élèves, fiche de l'élève, onglet « Notes & bulletins », fenêtre « Observations du conseil » (Distinction, Décision du Conseil, Observations).",
                         "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et la période.",
-                        "BULLETIN INDIVIDUEL : depuis la ligne de l'élève, demandez l'aperçu. Le document s'affiche à l'écran avant toute impression.",
-                        "BULLETINS DE CLASSE : demandez l'édition groupée. Un unique document PDF réunit l'ensemble des bulletins de la classe, prêt pour l'impression en série.",
-                        "PROCÈS-VERBAL DE DÉLIBÉRATION : éditez, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
+                        "BULLETIN INDIVIDUEL : dans la fiche de l'élève (Élèves), onglet « Notes & bulletins », cliquez sur « Aperçu bulletin » dans le bloc du trimestre voulu. Le document s'affiche à l'écran avant toute impression.",
+                        "BULLETINS DE CLASSE : dans Notes et bulletins, une fois la classe et la période choisies, « Aperçu bulletins » ouvre un unique PDF réunissant tous les bulletins de la classe (une page par élève), et « Bulletins (ZIP) » télécharge une archive avec un fichier par élève.",
+                        "PROCÈS-VERBAL DE DÉLIBÉRATION : « PV Délibération » (période) ou « PV annuel » (fin d'année) éditent, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
                         "Contrôlez l'aperçu, puis imprimez. Le document reflète l'état des données à l'instant de sa génération."
                     ],
                     impacts: [
@@ -1568,8 +1571,8 @@
                         "Définissez les seuils de mention dans Paramètres › Notation & mentions : libellé et moyenne minimale, exprimée sur vingt.",
                         "Saisissez les notes : les moyennes, les totaux et le rang se recalculent à chaque enregistrement.",
                         "Consultez la synthèse de la classe pour vérifier la cohérence d'ensemble avant le conseil.",
-                        "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale (Félicitations à partir de 16, Tableau d'honneur à partir de 14, Encouragements à partir de 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
-                        "Renseignez la décision du conseil lorsque la période concernée l'exige.",
+                        "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale et des seuils réglés dans Paramètres › Notation & mentions (par défaut : Félicitations dès 14, Tableau d'honneur dès 12 sans note éliminatoire inférieure à 5, Encouragements dès 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
+                        "Renseignez la « Décision du Conseil » dans la fenêtre « Observations du conseil » de la fiche élève (onglet « Notes & bulletins ») lorsque la période concernée l'exige.",
                         "Tant qu'aucune appréciation n'a été saisie, le bulletin imprime les cases vierges plutôt qu'une valeur inventée."
                     ],
                     impacts: [
@@ -1650,9 +1653,9 @@
                     procedure: [
                         "Ouvrez Comptabilité › Frais Scolaires.",
                         "Vérifiez que l'année scolaire active est bien celle pour laquelle vous entendez paramétrer les tarifs.",
-                        "Créez les catégories de frais que pratique l'établissement : frais d'inscription, mensualité, tenue scolaire, transport, cantine, fournitures et frais d'examen.",
-                        "Pour chaque classe, renseignez le montant applicable à chaque catégorie.",
-                        "Précisez le caractère du frais : obligatoire ou facultatif, ponctuel ou récurrent.",
+                        "Dans l'onglet « Paramétrage des Frais », créez les catégories que pratique l'établissement (« Nouvelle catégorie de frais » : inscription, mensualité, tenue scolaire, transport, cantine, fournitures, frais d'examen — la liste est libre).",
+                        "Pour chaque catégorie, renseignez le montant de chaque classe (colonne « Montant », bouton « Modifier ») ; « Appliquer un montant standard » fixe en une fois le même montant pour toutes les classes, pour un niveau ou pour une sélection, avec la case « Écraser les montants déjà définis » (décochée, les exceptions classe par classe sont préservées).",
+                        "À la création de la catégorie, précisez son caractère : « Frais mensuel (dû chaque mois) » ou ponctuel (décoché), « Frais optionnel (au choix de la famille) », et « Frais d'internat (module Internat) » pour la pension.",
                         "Enregistrez. Le barème devient immédiatement opérant pour toute nouvelle inscription.",
                         "RÉVISION EN COURS D'ANNÉE : la modification d'un montant est historisée avec son auteur, sa date et son motif, et n'altère jamais les inscriptions déjà validées."
                     ],
@@ -1733,14 +1736,16 @@
                 {
                     id: 'recouvrement',
                     title: 'Suivi des recouvrements, impayés et relances',
-                    location: 'Comptabilité › Caisse et Rapports financiers',
-                    href: '/caisse',
+                    location: 'Comptabilité › Recouvrement ; Situation des mensualités ; Élèves › fiche élève',
+                    href: '/recouvrement',
                     roles: ['Directeur', 'Finance'],
                     definition:
-                        "Dispositif de suivi des soldes débiteurs : identification des élèves dont une échéance est " +
-                        "dépassée, classement par ancienneté de la créance, édition d'un avis de sommes dues et envoi de " +
-                        "relances par SMS aux tuteurs. Les lots de relance sont préparés chaque nuit par l'application, " +
-                        "mais demeurent à l'état de brouillon : aucun envoi de masse ne part sans un geste humain.",
+                        "Dispositif de suivi des soldes débiteurs : la page « Situation des mensualités » classe, mois par " +
+                        "mois, les élèves en impayé, en paiement partiel ou à jour et affiche le taux de recouvrement ; la " +
+                        "fiche de l'élève permet d'éditer une sommation pour impayés et de formaliser un engagement " +
+                        "financier (échéancier personnalisé). Côté SMS, le serveur prépare chaque nuit un lot de relance " +
+                        "par classe à l'état de brouillon ; l'écran « Recouvrement » les présente, et aucun SMS ne part " +
+                        "sans la validation explicite d'un agent.",
                     objectif:
                         "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui préserve " +
                         "la trésorerie de l'établissement sans exposer les familles à des relances injustifiées. Pour la " +
@@ -1752,19 +1757,21 @@
                         "c'est-à-dire trop tard pour être recouvrés sereinement. Les relances se font au jugé, certaines " +
                         "familles à jour sont importunées tandis que des retards anciens demeurent ignorés.",
                     procedure: [
-                        "Consultez la liste des débiteurs : elle recense les inscriptions dont une échéance est échue et non réglée.",
+                        "Ouvrez Comptabilité › Situation des mensualités, choisissez l'année, la classe (facultatif) puis le mois : la liste unique place les impayés en premier, puis les paiements partiels. Le « Taux de recouvrement » du mois figure dans la synthèse.",
                         "Examinez l'ancienneté de la créance : un retard de huit jours et un retard de trois mois n'appellent pas le même traitement.",
-                        "AVIS DE SOMMES DUES : éditez le document PDF détaillant ce qui reste dû et remettez-le au tuteur.",
-                        "RELANCE PAR SMS : ouvrez le lot de relance préparé pour la classe, vérifiez nominativement les destinataires, retirez les cas litigieux, puis déclenchez l'envoi.",
-                        "L'envoi n'intervient qu'après cette validation explicite : aucune campagne ne part automatiquement.",
-                        "ARRANGEMENT : si la famille sollicite un délai, formalisez un échéancier personnalisé plutôt qu'une tolérance verbale.",
-                        "Suivez le taux de recouvrement dans Comptabilité › Rapports financiers, et exportez le rapport au format Excel pour le conseil d'administration."
+                        "Exportez la situation avec « Télécharger en PDF » ou « Exporter en Excel » pour la direction ou le conseil d'administration.",
+                        "SOMMATION : ouvrez la fiche de l'élève (Élèves) ; tant qu'un solde reste dû sur son inscription active, le bouton « Sommation impayés » ouvre l'aperçu du document, à imprimer et à remettre au tuteur.",
+                        "ARRANGEMENT : si la famille sollicite un délai, cliquez sur « Nouvel engagement financier » dans la même fiche pour formaliser un échéancier personnalisé, puis « Télécharger l'engagement créé ».",
+                        "RELANCE PAR SMS : le Directeur active « Relances d'impayés » et règle le « Seuil de retard avant relance (jours) » dans Paramètres › Notifications SMS. Un lot brouillon par classe est alors préparé chaque nuit. Ouvrez Comptabilité › Recouvrement : l'onglet « À valider » liste les lots (classe, nombre d'élèves, montant en retard, seuil, date) ; « Recalculer les lots » les prépare sans attendre la nuit.",
+                        "Cliquez sur « Voir les destinataires » pour relire nominativement les élèves (matricule, téléphone du tuteur, reliquat, jours de retard) ; un tuteur sans numéro est signalé « Aucun numéro » et ne recevra pas de SMS.",
+                        "« Écarter » abandonne un lot sans rien envoyer ; « Envoyer les SMS » ouvre une fenêtre de confirmation, puis « Envoyer maintenant » met les SMS en file. Un lot ne s'envoie qu'une fois : il passe ensuite dans « Envoyés », et un lot déjà traité par un collègue est refusé. Le résultat annonce le nombre de SMS mis en file et d'élèves écartés.",
+                        "Le taux de recouvrement figure aussi parmi les indicateurs du tableau de bord (« Taux Recouvrement »)."
                     ],
                     impacts: [
                         "La relance SMS ne vise que les élèves ayant au moins une échéance réellement en retard, et le message annonce le montant EN RETARD (pas le reliquat de l'année entière).",
                         "Échéanciers : c'est la date d'exigibilité de chaque échéance qui déclenche l'entrée en liste des débiteurs.",
                         "Encaissement : tout versement retire aussitôt l'élève de la liste dès lors que son solde est apuré.",
-                        "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS.",
+                        "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS ; l'écran Recouvrement est réservé au Directeur et à la Finance.",
                         "Trésorerie : l'encours des impayés pèse directement sur les prévisions de trésorerie.",
                         "Direction : le taux de recouvrement figure parmi les indicateurs du tableau de bord."
                     ],
@@ -1786,7 +1793,7 @@
                     objectif: "Corriger une erreur d'encaissement tout en préservant la traçabilité comptable et sans réécrire une journée déjà arrêtée.",
                     probleme: "Un paiement erroné ne pouvait ni être supprimé (trace comptable) ni corrigé, et bloquait la suppression de l'élève ou de la classe.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, repérez le paiement et cliquez sur « Annuler ».",
+                        "Ouvrez la fiche de l'élève, repérez le paiement et cliquez sur « Annuler le paiement » (dans la Caisse, le bouton de la ligne de paiement s'intitule « Annuler »).",
                         "Choisissez le motif dans la liste (ou « Autre motif » avec saisie obligatoire) et la destination : simple correction (par défaut), réutilisé pour l'inscription de l'enfant, ou remboursé au parent.",
                         "Passé 48 heures, le Directeur utilise « Contre-passer » et lit l'avertissement avant de confirmer.",
                         "L'export d'année scolaire inclut les paiements annulés."
@@ -1813,7 +1820,7 @@
                     probleme: "Il fallait croiser la caisse, les échéanciers et les inscriptions à la main pour savoir qui n'avait pas réglé le mois.",
                     procedure: [
                         "Ouvrez Comptabilité › Situation des mensualités.",
-                        "Choisissez l'année scolaire et le mois ; ajoutez une classe si besoin, puis « Afficher la situation ».",
+                        "Choisissez l'année scolaire, puis une classe si besoin (« Toutes les classes » par défaut), puis cliquez sur un mois dans la bande de mois : il n'y a pas de bouton « Afficher la situation », la situation se charge à l'arrivée sur la page et à chaque changement d'année, de classe ou de mois.",
                         "Lisez les trois listes et la synthèse ; exportez en Excel au besoin.",
                         "Directeur — Paramètres : « Autoriser la comptabilité à consulter la situation des mensualités » (désactivé par défaut) ouvre la page à la Finance, en lecture seule ; le désactiver retire l'accès aussitôt.",
                         "Deux réglages d'école adaptent le calcul : « La mensualité versée avec l'inscription compte pour le dernier mois (juin) » et « Demander le mois réglé à chaque encaissement ». Ils n'agissent que sur cette page."
@@ -1866,8 +1873,8 @@
                         "investissement — se prennent alors sur une impression plutôt que sur une mesure.",
                     procedure: [
                         "Ouvrez le Tableau de bord : les indicateurs portent sur l'année scolaire ACTIVE.",
-                        "Consultez les effectifs par classe et par niveau, ainsi que leur évolution.",
-                        "Examinez les indicateurs financiers : montants attendus, encaissés et restant dus.",
+                        "Lisez le bloc « Pédagogie » : élèves inscrits (garçons et filles), enseignants actifs, taux de présence du mois et salles occupées ; « Vie Scolaire & Planning » ajoute les prochains cours du jour.",
+                        "Examinez le bloc « Finances de l'année » (solde net, encaissement de l'année, décaissements, reste à recouvrer, taux de recouvrement, encaissements du jour et du mois, attendu du mois), puis « Trésorerie & Bilan » (entrées vs sorties, catégories de dépenses) et la liste des « Derniers paiements » avec leur bouton « Aperçu ».",
                         "Ouvrez Gestion Scolaire › Rapports pour le détail de l'assiduité par classe et par élève.",
                         "Ouvrez Comptabilité › Rapports financiers pour la consolidation des recettes.",
                         "Exportez le rapport financier au format Excel afin de le transmettre au comptable ou au conseil d'administration.",
@@ -1947,13 +1954,13 @@
                         "présentes dans l'application — une double saisie, source d'écarts.",
                     procedure: [
                         "Ouvrez Comptabilité › Rapports financiers.",
-                        "Choisissez la période à consolider.",
-                        "Consultez la ventilation des recettes par cycle, par classe et par mode de paiement, ainsi que l'état de l'ancienneté des créances.",
-                        "Exportez l'état au format .xlsx : le fichier téléchargé porte EXACTEMENT les mêmes chiffres que l'écran, sur les mêmes bornes de période."
+                        "Choisissez la période avec « Date de début » et « Date de fin », puis cliquez sur « Générer » (« Réinitialiser » rétablit la période par défaut).",
+                        "Consultez le total encaissé et la ventilation des recettes par cycle, par classe et par mode de paiement, en tableaux et en graphiques (l'écran ne présente pas d'état d'ancienneté des créances : le suivi des impayés se fait dans « Situation des mensualités »).",
+                        "Cliquez sur « Télécharger le rapport financier .xlsx » : le fichier porte EXACTEMENT les mêmes chiffres que l'écran, sur les mêmes bornes de période. Le bouton est grisé, avec la mention de la formule requise, lorsque la formule de l'établissement n'inclut pas cet export, ou tant qu'aucun rapport n'est généré."
                     ],
                     impacts: [
                         "Caisse : chaque encaissement validé au guichet alimente cette consolidation.",
-                        "Recouvrement : l'état de l'ancienneté des créances recoupe directement la liste des débiteurs du module Comptabilité.",
+                        "Recouvrement : ce rapport ne porte que sur les encaissements ; les impayés se lisent dans Comptabilité › Situation des mensualités.",
                         "Trésorerie : le tableau de bord Trésorerie donne une lecture rapide des mêmes flux ; ce rapport en donne le détail exportable et ventilé."
                     ],
                     recommandations: [
@@ -1989,7 +1996,7 @@
                         "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial — un bandeau l'impose avant tout encaissement.",
                         "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative, visible en temps réel dans le bandeau (total encaissé, nombre de versements).",
                         "En fin de journée, comptez physiquement le numéraire du tiroir-caisse AVANT d'ouvrir la clôture — ne regardez le chiffre attendu qu'après avoir compté, pour ne pas vous y aligner inconsciemment.",
-                        "Cliquez sur « Clôturer la caisse » et saisissez le montant compté dans le champ dédié : ce champ est obligatoire, la clôture ne se valide pas sans lui.",
+                        "Cliquez sur « Clôturer la caisse » et saisissez le montant dans le champ « Espèces réellement comptées dans le tiroir-caisse (FCFA) » : ce champ est obligatoire, la clôture ne se valide pas sans lui.",
                         "Si le montant saisi ne correspond pas aux espèces attendues, un champ « Motif de l'écart » apparaît : il est obligatoire, qu'il s'agisse d'un manquant ou d'un surplus — décrivez la cause probable (rendu de monnaie, fonds d'ouverture mal compté…).",
                         "Confirmez : une session clôturée ne se rouvre plus, et ne se re-clôture jamais.",
                         "Téléchargez immédiatement le rapport de clôture au format PDF depuis la fenêtre de confirmation — il détaille désormais le solde théorique, le montant compté, l'écart et le motif.",
@@ -2024,7 +2031,8 @@
             concept:
                 "Une candidature aux examens officiels (CFEE en fin de CM2, BFEM en fin de troisième, BAC en terminale) " +
                 "traverse un cycle de vie précis : le dossier s'ouvre INCOMPLET, ne devient COMPLET que lorsque l'extrait de " +
-                "naissance est déclaré présent et l'état civil déclaré conforme, ne peut être TRANSMIS à l'Inspection de " +
+                "naissance est déclaré présent et l'état civil déclaré conforme (pour le CFEE, la photo d'identité et la quittance " +
+                "des frais d'inscription sont également exigées), ne peut être TRANSMIS à l'Inspection de " +
                 "l'Éducation et de la Formation (IEF) ou à l'Inspection d'Académie (IA) qu'une fois Complet, et ne reçoit un " +
                 "résultat qu'une fois Transmis. Chaque étape verrouille la précédente : on ne transmet jamais un dossier dont " +
                 "il manque une pièce, et on ne délibère jamais un dossier qui n'a pas été transmis. Le numéro de table, comme " +
@@ -2054,9 +2062,9 @@
                         "L'élève concerné se retrouve alors exclu de la session en cours.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Examens officiels, onglet Sessions, et créez la session : année scolaire, type d'examen (CFEE, BFEM, BAC) et, pour le BAC, la série.",
-                        "Basculez vers l'onglet Dossiers et cliquez sur « Nouveau dossier » : recherchez l'élève par son matricule ou son nom, la classe se préremplit depuis sa classe actuelle.",
+                        "Basculez vers l'onglet Dossiers et cliquez sur « Nouveau dossier » : recherchez l'élève par son matricule ou son nom, la classe se préremplit depuis sa classe actuelle. Pour le CFEE, l'onglet « Candidats CM2 » liste d'un coup les élèves actuellement en CM2 avec l'avancement de leur pièce (« n / 4 »), le bouton « Créer la session CFEE de l'année » si elle n'existe pas, « Ouvrir le dossier » et « Modifier la checklist ».",
                         "Depuis la fiche du dossier, déclarez la présence de l'extrait de naissance et la conformité de l'état civil au regard des pièces reçues.",
-                        "Le dossier passe automatiquement à Complet dès que ces deux contrôles sont positifs — aucune case à cocher séparément ne fait foi.",
+                        "Le dossier passe automatiquement à Complet dès que les contrôles sont positifs : extrait de naissance présent et état civil conforme, et — pour le CFEE seulement — photo d'identité présente et quittance des frais d'inscription présente (4 pièces). Pour le BFEM et le BAC, la photo et la quittance peuvent être cochées mais n'influent pas sur le statut. Aucune case « Complet » ne se coche à la main.",
                         "Avant la date limite, ouvrez l'onglet Audit, sélectionnez la session : la liste des dossiers encore Incomplets s'affiche, avec le détail exact de ce qui manque à chacun.",
                         "Une fois un dossier Complet, transmettez-le à l'IEF/l'IA depuis l'onglet Dossiers ; un dossier encore Incomplet voit ce bouton refuser l'opération et renvoie vers l'Audit."
                     ],
@@ -2135,7 +2143,7 @@
                 {
                     id: 'contrats-personnel',
                     title: 'Contrats du personnel — Permanent et Vacataire',
-                    location: 'Comptabilité › Paie',
+                    location: 'Comptabilité › Fiches de Paie',
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2156,9 +2164,9 @@
                         "paie approximative ou par un désaccord entre l'employé et l'établissement sur le montant convenu — " +
                         "et un moyen de paiement non consigné oblige à le redemander à chaque virement.",
                     procedure: [
-                        "Ouvrez Comptabilité › Paie, onglet Contrats, puis « Nouveau contrat ».",
-                        "Choisissez le type d'employé : un enseignant déjà fiché, ou un utilisateur non-enseignant (personnel administratif).",
-                        "Sélectionnez le régime — Permanent ou Vacataire — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant.",
+                        "Ouvrez Comptabilité › Fiches de Paie, onglet Contrats, puis « Nouveau contrat ».",
+                        "Choisissez le « Type d'employé » : « Enseignant » (déjà fiché), « Utilisateur (non-enseignant) » (réservé au Directeur) ou « Personnel sans compte (gardien…) » : nom complet, fonction et téléphone suffisent, la personne est payée et reçoit son reçu sans jamais se connecter.",
+                        "Sélectionnez le « Type de contrat » — Permanent ou Vacataire (horaire) — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant. La case « Appliquer les retenues légales (IPRES, CSS, VRS/CFCE, BRS) » est cochée par défaut.",
                         "Renseignez le moyen de paiement de l'employé — espèces par défaut, ou virement bancaire, Wave, Orange Money avec la référence du compte correspondant.",
                         "Enregistrez : le contrat devient immédiatement sélectionnable pour la génération d'une fiche de paie.",
                         "RÉVISION : depuis la ligne du contrat, modifiez le salaire, le taux horaire, la prime ou le moyen de paiement, en indiquant obligatoirement le motif — une augmentation annuelle ou un changement de compte, par exemple.",
@@ -2182,7 +2190,7 @@
                 {
                     id: 'heures-vacataires-fiches-paie',
                     title: 'Pointage des heures et génération des fiches de paie',
-                    location: 'Comptabilité › Paie › Pointage Profs',
+                    location: 'Surveillance › Pointage Profs',
                     href: '/pointage-profs',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2200,8 +2208,8 @@
                         "au désavantage de l'un ou de l'autre selon les cas, et sans aucune pièce pour trancher un " +
                         "désaccord.",
                     procedure: [
-                        "Ouvrez Comptabilité › Paie › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
-                        "Si le message « Aucun enseignant vacataire n'a de contrat actif » s'affiche : c'est qu'aucun CONTRAT de type Vacataire n'a encore été créé. Marquer un enseignant « Vacataire » sur sa fiche (statut STATEDUC) ne suffit pas — créez d'abord son contrat dans Comptabilité › Paie › Contrats.",
+                        "Ouvrez Surveillance › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
+                        "Si le message « Aucun enseignant vacataire n'a de contrat actif » s'affiche : c'est qu'aucun CONTRAT de type Vacataire n'a encore été créé. Marquer un enseignant « Vacataire » sur sa fiche (statut STATEDUC) ne suffit pas — créez d'abord son contrat dans Comptabilité › Fiches de Paie › Contrats.",
                         "Sélectionnez le contrat concerné, puis ajoutez chaque heure : date, nombre d'heures (les demi-heures sont admises) et une note facultative.",
                         "Consultez, filtré par mois et par année, le récapitulatif des heures déjà pointées pour ce contrat.",
                         "Téléchargez la fiche d'heures au format PDF si une pièce signée est requise.",
@@ -2231,7 +2239,7 @@
                 {
                     id: 'declarations-fiscales',
                     title: 'Déclarations fiscales mensuelles — IPRES, CSS, VRS, BRS',
-                    location: 'Comptabilité › Paie',
+                    location: 'Comptabilité › Fiches de Paie',
                     href: '/fiscalite',
                     roles: ['Directeur', 'Finance'],
                     definition:
@@ -2241,7 +2249,7 @@
                         "période — collectée, déductible et nette — de sorte que la déclaration totalise en une seule " +
                         "fois tout ce que l'établissement doit verser à l'État ce mois-là. L'écran dédié Fiscalité " +
                         "(/fiscalite) l'affiche en cartes ; le même document reste consultable depuis l'onglet " +
-                        "Déclarations fiscales de Comptabilité › Paie.",
+                        "Déclarations fiscales de Comptabilité › Fiches de Paie.",
                     objectif:
                         "Éviter à l'établissement de reconstituer, fiche par fiche, ce qu'il doit verser à l'État chaque mois, " +
                         "et lui fournir un document unique, daté et vérifiable, à remettre en appui de sa déclaration " +
@@ -2253,7 +2261,7 @@
                         "déclaration devant l'administration fiscale.",
                     procedure: [
                         "Assurez-vous d'abord que TOUTES les fiches de paie du mois concerné sont générées : la déclaration n'agrège que ce qui existe déjà.",
-                        "Ouvrez Comptabilité › Fiscalité — ou, de façon équivalente, Comptabilité › Paie, onglet Déclarations fiscales.",
+                        "Ouvrez Comptabilité › VRS / IPRES (Taxes) (écran « Fiscalité ») — ou, de façon équivalente, Comptabilité › Fiches de Paie, onglet « Déclarations fiscales ».",
                         "Cliquez sur « Générer une déclaration », renseignez le mois et l'année, puis validez.",
                         "Consultez le détail par poste — IPRES, CSS, VRS, BRS — et le total dû à l'État qui en résulte.",
                         "Conservez ou transmettez ce récapitulatif pour la déclaration administrative effective auprès des organismes concernés."
@@ -2273,7 +2281,7 @@
                 {
                     id: 'paie-sans-retenues',
                     title: "Paie sans retenues légales — par contrat (Daara et structures non cotisantes)",
-                    location: "Comptabilité › Paie › Contrats",
+                    location: "Comptabilité › Fiches de Paie › Contrats",
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition: "Chaque contrat porte la case « Appliquer les retenues légales » (cochée par défaut). Décochée, la fiche de paie ne retient ni IPRES, ni CSS, ni VRS/CFCE, ni BRS : le net est le brut plus la prime de transport. Une même école peut donc avoir du personnel avec retenues et du personnel sans.",
@@ -2295,14 +2303,14 @@
                 {
                     id: 'fiche-paie-annuler-regenerer-payer',
                     title: "Fiches de paie — annuler, régénérer, payer et personnel sans compte",
-                    location: "Comptabilité › Paie › Fiches de paie",
+                    location: "Comptabilité › Fiches de Paie › Fiches de paie",
                     href: '/paie',
                     roles: ['Directeur', 'Finance'],
                     definition: "Une fiche de paie générée peut être ANNULÉE (conservée, marquée annulée, motif obligatoire) puis RÉGÉNÉRÉE sur les termes actuels du contrat, en une seule opération. Une fiche peut être PAYÉE : l'action crée un décaissement « Salaires » en trésorerie et le bulletin vaut reçu de paiement. Un contrat peut viser une personne sans compte (gardien…) avec nom, fonction et téléphone.",
                     objectif: "Corriger une fiche erronée sans perdre l'historique, et relier la paie à la trésorerie.",
                     probleme: "Après correction d'un contrat, la fiche, instantané définitif, restait fausse : ni modifiable, ni supprimable, ni régénérable. La paie ne laissait aucune trace de trésorerie.",
                     procedure: [
-                        "Ouvrez la fiche, cliquez sur « Annuler » et saisissez le motif ; ou utilisez « Régénérer ».",
+                        "Sur la ligne de la fiche, cliquez sur « Annuler » et saisissez le motif ; pour corriger une fiche d'après le contrat actuel, cliquez sur « Corriger » puis validez « Annuler et régénérer » (la fiche d'origine est annulée et une nouvelle est générée en une seule opération).",
                         "Pour payer, utilisez l'action de paiement : le décaissement « Salaires » est créé.",
                         "Pour un agent sans compte, créez le contrat en saisissant nom, fonction et téléphone."
                     ],
@@ -2436,7 +2444,7 @@
                 {
                     id: 'ien-eleve',
                     title: "Identifiant National de l'Élève (IEN)",
-                    location: 'Élèves › Fiche élève › Identifiant national',
+                    location: 'Élèves › Fiche élève › IEN',
                     href: '/eleves',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
@@ -2455,15 +2463,15 @@
                         "affectation. À l'échelle d'un fichier transmis, des lignes sans identifiant sont écartées du " +
                         "traitement national sans que l'école en soit avertie.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, puis le champ « Identifiant national (IEN) ».",
-                        "Saisissez le numéro OFFICIEL tel qu'il figure sur la liste transmise par l'IEF, puis enregistrez. C'est le mode normal, et le seul qui produise un identifiant opposable.",
-                        "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et utilisez l'action « Générer un numéro provisoire ».",
+                        "Ouvrez la fiche de l'élève : le champ « IEN » affiche « Non attribué » avec le lien « Renseigner » (ou le numéro actuel avec le lien « Gérer »). Il ouvre la fenêtre « Identifiant National de l'Élève (IEN) ».",
+                        "Saisissez le « Numéro IEN officiel » tel qu'il figure sur la liste transmise par l'IEF, puis enregistrez. C'est le mode normal, et le seul qui produise un identifiant opposable.",
+                        "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et cliquez sur « Générer un numéro provisoire ».",
                         "Un numéro provisoire commence toujours par la lettre P et s'affiche partout avec la mention « provisoire ». Il permet de ne pas bloquer vos traitements internes en attendant le vrai numéro.",
                         "Dès réception du numéro officiel, saisissez-le : il remplace le provisoire, qui disparaît définitivement.",
                         "La génération d'un provisoire exige que le code établissement national soit renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, le numéro fabriqué ne rattacherait l'élève à aucune école."
                     ],
                     impacts: [
-                        "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé AVANT le téléchargement.",
+                        "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé à la génération du fichier.",
                         "Rapport STATEDUC : les élèves sans IEN sont comptés dans une ligne distincte, jamais fondus dans les effectifs déclarés.",
                         "Certificat de mutation : l'IEN y est imprimé, avec la mention « provisoire » le cas échéant — l'école d'accueil doit savoir ce qu'elle recopie.",
                         "Unicité : deux élèves de votre établissement ne peuvent pas porter le même IEN. Unikol refuse la saisie en nommant l'élève qui le détient déjà."
@@ -2497,8 +2505,8 @@
                         "Vérifiez d'abord que le code établissement national est renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, l'export refuse de s'exécuter.",
                         "Ouvrez Intégration étatique › Export Planète et choisissez l'année scolaire concernée.",
                         "Choisissez le format : CSV pour un contrôle dans Excel, JSON si le portail du ministère le demande.",
-                        "Lisez les compteurs affichés avant de télécharger : nombre d'élèves, nombre d'identifiants provisoires, nombre d'élèves sans IEN.",
-                        "Si le nombre de provisoires ou de lignes sans IEN vous paraît élevé, renoncez au téléchargement et complétez d'abord les identifiants.",
+                        "Choisissez le périmètre (« Tout l'établissement » ou une classe), puis cliquez sur « Générer et télécharger » : un message signale alors le nombre d'élèves sans IEN et le nombre d'IEN provisoires inclus dans le fichier.",
+                        "Si ces nombres vous paraissent élevés, ne transmettez pas le fichier : complétez d'abord les identifiants sur les fiches élèves, puis régénérez l'export.",
                         "Téléchargez, ouvrez le fichier pour un dernier contrôle visuel, puis transmettez-le par la voie habituelle (dépôt, courriel, remise à l'IEF)."
                     ],
                     impacts: [
@@ -2558,8 +2566,8 @@
                 {
                     id: 'certificat-mutation',
                     title: 'Certificat de mutation et livret de compétences',
-                    location: 'Élèves › Fiche élève › Délivrer un certificat de mutation',
-                    href: '/eleves',
+                    location: 'Intégration étatique › Certificats de mutation délivrés › Délivrer un certificat',
+                    href: '/integration-etatique',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
                         "Le CERTIFICAT DE MUTATION est la pièce officielle remise à l'élève qui quitte l'établissement, " +
@@ -2575,7 +2583,7 @@
                         "vérifiable par personne. L'école d'accueil ne peut ni confirmer son origine, ni savoir qu'il a " +
                         "été annulé depuis. Sans livret, elle affecte l'élève sur la seule foi de son âge.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, puis « Délivrer un certificat de mutation ».",
+                        "Ouvrez Intégration étatique, section « Certificats de mutation délivrés », puis cliquez sur « Délivrer un certificat » et recherchez l'élève dans la fenêtre (le bouton « Livret de compétences », juste à côté, ouvre le livret).",
                         "Choisissez l'année scolaire concernée et le motif de la mutation. Si vous choisissez « Autre », la précision devient obligatoire.",
                         "Renseignez l'établissement et la localité de destination s'ils sont connus. Ces champs peuvent rester vides : le certificat reste valable sans destination nommée.",
                         "Validez. Le certificat est délivré, numéroté, enregistré, et le PDF s'ouvre immédiatement.",
@@ -2620,7 +2628,7 @@
                 {
                     id: 'patrimoine-categories',
                     title: 'Catégories et fiches de biens',
-                    location: 'Inventaire › Catalogue',
+                    location: 'Inventaire › Catalogue et Catégories',
                     href: '/inventaire',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
@@ -2640,11 +2648,11 @@
                         "nulle part, et un vol ou une perte de matériel passe inaperçu faute de référence à " +
                         "laquelle le comparer.",
                     procedure: [
-                        "Ouvrez Inventaire, puis créez d'abord les catégories dont l'établissement a besoin.",
-                        "Pour chaque catégorie, ajoutez les biens qu'elle regroupe : nom, état dominant et quantité totale de départ.",
+                        "Ouvrez Inventaire, onglet « Catégories », et cliquez sur « Nouvelle catégorie » (nom, description) pour créer les familles de biens dont l'établissement a besoin (Manuels scolaires, Informatique, Tenues…).",
+                        "Dans l'onglet « Catalogue », cliquez sur « Nouveau bien » : désignation, code d'inventaire (facultatif), catégorie, état, quantité initiale, salle d'entreposage ou emplacement libre, prix unitaire indicatif (facultatif, sans portée comptable), case « Consommable » (un consommable se distribue et ne peut pas être prêté) et notes. Un bien est un LOT : une quantité de matériel identique.",
                         "Renseignez un état SINCÈRE — l'état réel du lot, pas l'état théorique du bien à l'achat.",
-                        "La quantité totale saisie ici est le POINT DE DÉPART du journal de stock : toute variation ultérieure passe exclusivement par un mouvement, jamais par une correction directe de cette fiche.",
-                        "Un bien devenu obsolète ou intégralement sorti est archivé, jamais supprimé : l'historique de ses mouvements reste consultable."
+                        "La « Quantité initiale » saisie ici devient un mouvement d'entrée dans le journal de stock (zéro si le bien est attendu mais pas encore livré) : toute variation ultérieure passe exclusivement par un mouvement, jamais par une correction directe de cette fiche.",
+                        "Le bouton « Supprimer » d'un bien le retire du catalogue sans effacer l'historique de ses mouvements (suppression guidée) ; elle est refusée tant que des prêts de ce bien sont en cours. « Fiche d'inventaire (PDF) », en haut de l'écran, imprime l'état du patrimoine."
                     ],
                     impacts: [
                         "Mouvements de stock : chaque bien créé ici devient une cible de mouvement — réception, sortie, ajustement.",
@@ -2680,9 +2688,9 @@
                         "passé : perte, vol, casse ou simple erreur de comptage initial se confondent en un " +
                         "seul chiffre sans histoire, invérifiable un an plus tard.",
                     procedure: [
-                        "Ouvrez Inventaire, onglet Mouvements, et sélectionnez le bien concerné.",
-                        "Choisissez le type de mouvement : Entrée, Sortie, Ajustement positif ou Ajustement négatif.",
-                        "Saisissez la quantité concernée — toujours un nombre positif, quel que soit le sens du mouvement — et un motif explicite.",
+                        "Ouvrez Inventaire, onglet « Mouvements de stock », et cliquez sur « Nouveau mouvement » (ou sur « Enregistrer un mouvement » depuis la ligne d'un bien), puis sélectionnez le bien concerné : son disponible actuel s'affiche.",
+                        "Choisissez le type de mouvement : Entrée, Sortie, Ajustement d'inventaire ou Mise au rebut. Le journal affiche ensuite un ajustement sous la forme « Ajustement (+) » ou « Ajustement (−) » selon le sens de l'écart, et les mouvements produits par les prêts (Attribution, Restitution, Perte sur prêt) ; ces derniers ne se saisissent pas ici.",
+                        "Saisissez la « Quantité » concernée — toujours un nombre positif, quel que soit le sens du mouvement ; pour un « Ajustement d'inventaire », le champ devient « Effectif compté » : indiquez ce que vous avez réellement compté, l'écart par rapport au stock est calculé pour vous. Ajoutez la date (aujourd'hui par défaut), un motif explicite — c'est lui qui rend le journal opposable lors d'un contrôle — et, si utile, le fournisseur ou le destinataire.",
                         "Validez. La quantité disponible du bien est mise à jour dans la même transaction que l'écriture du mouvement : aucun écart n'est possible entre le journal et le solde affiché.",
                         "Une erreur de saisie NE SE CORRIGE PAS en modifiant la ligne : enregistrez un mouvement inverse qui compense l'écriture fautive, avec un motif qui le dit explicitement."
                     ],
@@ -2692,7 +2700,7 @@
                         "Rapport d'inventaire : la synthèse de fin d'année recoupe le total, le disponible et l'historique des mouvements de la période."
                     ],
                     recommandations: [
-                        "Motivez systématiquement un ajustement : un « Ajustement négatif » sans motif est aussi peu exploitable qu'une case vide.",
+                        "Motivez systématiquement un ajustement : un « Ajustement (−) » sans motif est aussi peu exploitable qu'une case vide.",
                         "Ne cumulez pas plusieurs corrections dans un seul mouvement : une ligne, une cause.",
                         "Faites un inventaire physique au moins une fois par an et enregistrez l'écart constaté par un ajustement — c'est ce recoupement régulier qui donne sa valeur au journal.",
                         "Le rôle applicatif de la base de données n'a que lecture et écriture SEULE sur ce journal (append-only) : ne cherchez jamais à faire corriger une ligne en base par un tiers technique, la voie normale est le mouvement inverse."
@@ -2701,7 +2709,7 @@
                 {
                     id: 'prets-attributions',
                     title: 'Prêts et attributions de matériel',
-                    location: 'Inventaire › Prêts',
+                    location: 'Inventaire › Prêts & Décharges',
                     href: '/inventaire',
                     roles: ['Directeur', 'Secrétariat', 'Surveillant'],
                     definition:
@@ -2719,10 +2727,10 @@
                         "change de poste ou oublie l'accord verbal. L'établissement découvre alors, des " +
                         "mois plus tard, un matériel introuvable et personne pour en répondre.",
                     procedure: [
-                        "Ouvrez Inventaire, onglet Prêts, et créez une nouvelle attribution.",
+                        "Ouvrez Inventaire, onglet « Prêts & Décharges », et cliquez sur « Nouveau prêt ».",
                         "Sélectionnez le bien et la quantité prêtée, puis désignez le bénéficiaire.",
-                        "Validez. Une FICHE DE DÉCHARGE est générée au format PDF : faites-la signer par le bénéficiaire avant remise du matériel.",
-                        "Au retour du matériel, ouvrez l'attribution et enregistrez le retour — total ou partiel.",
+                        "Validez, puis cliquez sur « Imprimer la décharge » sur la ligne du prêt : la FICHE DE DÉCHARGE (PDF) est à faire signer par le bénéficiaire avant remise du matériel.",
+                        "Au retour du matériel, cliquez sur « Enregistrer une restitution » sur la ligne du prêt — totale ou partielle (statuts : En cours, Partiellement restitué, Restitué, Perdu ; le filtre « En retard uniquement » isole les prêts dépassés). « Annuler la fiche » annule un prêt saisi par erreur.",
                         "La quantité disponible du bien est restaurée dans la même transaction que l'enregistrement du retour."
                     ],
                     impacts: [
@@ -2765,7 +2773,7 @@
                     roles: ['Enseignant', 'Directeur', 'Secrétariat'],
                     definition:
                         "L'appel constate, pour une classe et un COURS de son emploi du temps, le statut de " +
-                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée. " +
+                        "chaque élève inscrit : Présent, Absent (justifié), Absent (non justifié). " +
                         "Le retard ne se saisit pas ici : il vient d'un billet d'entrée émis par la Surveillance. La journée d'un élève se compose ainsi " +
                         "de plusieurs appels, un par cours. Un enseignant ne voit et ne renseigne que ses " +
                         "propres cours ; sans emploi du temps ce jour-là, l'appel libre par demi-journée reste possible.",
@@ -2782,7 +2790,7 @@
                         "Ouvrez Surveillance › Appel en classe, choisissez la classe et la date : les cours de la journée s'affichent, tirés de l'emploi du temps.",
                         "Cliquez sur le cours à appeler : la matière et l'horaire (08:00-10:00) sont repris du cours, rien à saisir. Un cours déjà appelé est signalé « Appel fait ».",
                         "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, en lecture seule, avec la mention du billet.",
-                        "Modifiez le statut de chaque élève concerné : Absence justifiée ou Absence injustifiée. Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
+                        "Modifiez le statut de chaque élève concerné : Absent (justifié) ou Absent (non justifié). Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
                         "Si un élève présente un billet d'entrée en attente, cliquez sur « Accepter » : l'enseignant du cours constate ainsi que l'élève est bien entré en classe.",
                         "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
                         "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas pour le même cours : une correction passe par le rapport d'assiduité, non par un second appel.",
@@ -2796,7 +2804,7 @@
                     ],
                     recommandations: [
                         "Faites l'appel à chaque séance, sans exception : un rapport d'assiduité troué de créneaux non appelés ne dit rien de fiable sur l'élève qu'il est censé décrire.",
-                        "Ne marquez « Absence justifiée » qu'en présence d'un motif réellement établi ; à défaut, « Absence injustifiée » et la régularisation vient ensuite, jamais l'inverse.",
+                        "Ne marquez « Absent (justifié) » qu'en présence d'un motif réellement établi ; à défaut, « Absent (non justifié) » et la régularisation vient ensuite, jamais l'inverse.",
                         "Un retard systématique du même élève à la même heure trahit souvent une contrainte de transport plutôt qu'une négligence — vérifiez avant de sanctionner."
                     ]
                 },
@@ -2909,15 +2917,15 @@
                         "contestation : impossible de prouver qu'un élève a déjà été averti pour un fait " +
                         "similaire, et le conseil de discipline se retrouve à statuer sans dossier.",
                     procedure: [
-                        "Ouvrez Surveillance › Registre Discipline et créez une nouvelle entrée.",
-                        "Sélectionnez l'élève, décrivez le fait constaté, et choisissez la sanction : Avertissement, Blâme, Retenue ou Exclusion.",
-                        "Validez. Le procès-verbal est généré au format PDF, prêt à être imprimé et signé selon l'usage de l'établissement.",
-                        "Consultez l'historique disciplinaire complet de l'élève avant de statuer sur un nouveau fait, pour apprécier une éventuelle récidive."
+                        "Ouvrez Surveillance › Registre Discipline et cliquez sur « Ajouter une sanction ».",
+                        "Dans la fenêtre « Nouvelle Sanction », sélectionnez l'« Élève concerné », choisissez le « Type de sanction » (Avertissement par défaut, Blâme, Retenue ou Exclusion), la « Date de l'incident » et décrivez l'incident.",
+                        "Cliquez sur « Enregistrer » : la sanction apparaît dans le registre. Le procès-verbal ne se génère pas automatiquement : sur la ligne de la sanction, « Télécharger le PV de discipline » produit le PDF, à imprimer et à signer selon l'usage de l'établissement.",
+                        "Parcourez le registre (date, élève, type, motif) avant de statuer sur un nouveau fait, pour apprécier une éventuelle récidive."
                     ],
                     impacts: [
                         "Bulletin de notes : les distinctions du conseil de classe (§ Notes & Bulletins) sont une décision PÉDAGOGIQUE distincte de ce registre — les deux ne s'alimentent pas automatiquement l'une l'autre.",
                         "Convocations : une sanction grave — retenue, exclusion — motive fréquemment une convocation de parent en complément du procès-verbal.",
-                        "Dossier de l'élève : l'historique disciplinaire complet reste consultable depuis la fiche de l'élève."
+                        "Historique : toutes les sanctions restent consultables dans le registre, datées et rattachées à l'élève ; la fiche de l'élève n'en affiche pas le détail."
                     ],
                     recommandations: [
                         "Décrivez le fait avec précision et sans jugement de valeur : c'est ce texte, et lui seul, qui devra convaincre un conseil de discipline ou une famille en désaccord.",
@@ -2950,15 +2958,15 @@
                         "conseil de discipline.",
                     procedure: [
                         "Ouvrez Surveillance › Convocations parent et créez une nouvelle convocation, ou utilisez le bouton « Convoquer » du bilan d'assiduité (Gestion Scolaire › Rapports), qui pré-remplit le motif à partir des chiffres de la période.",
-                        "Sélectionnez l'élève, précisez le motif de l'entretien et la date proposée.",
+                        "Cliquez sur « Nouvelle convocation », sélectionnez l'élève, puis renseignez la date et l'heure de convocation et le motif de l'entretien.",
                         "Validez. L'avis de convocation est généré au format PDF, à remettre à la famille par le canal habituel de l'établissement.",
-                        "À l'issue de l'entretien, ouvrez la convocation et posez sa SUITE : Honorée (l'entretien a eu lieu, le compte rendu reste facultatif), Non honorée ou Reportée (le compte rendu devient alors OBLIGATOIRE).",
+                        "À l'issue de l'entretien, cliquez sur « Consigner » sur la ligne de la convocation et posez sa SUITE : « Honorée — le parent s'est présenté » (le compte rendu reste facultatif), « Non honorée — le parent ne s'est pas présenté » ou « Reportée — entretien à reprogrammer » (le compte rendu devient alors OBLIGATOIRE). Le filtre « En retard uniquement » isole les convocations planifiées dont la date est dépassée sans suite.",
                         "Une suite ne se pose qu'UNE SEULE FOIS, et seulement depuis l'état Planifiée : une convocation déjà close ne peut pas être rouverte ni recevoir une seconde suite — c'est refusé plutôt qu'écrasé silencieusement."
                     ],
                     impacts: [
-                        "Registre de discipline : une convocation née d'une sanction grave reste liée, dans le dossier de l'élève, au fait qui l'a motivée, même si les deux registres ne se confondent pas.",
+                        "Registre de discipline : une convocation et une sanction sont deux registres distincts, sans lien automatique — la convocation convoque un parent pour un entretien, la sanction acte un fait déjà constaté.",
                         "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation, et peut désormais convoquer directement depuis le bilan (voir « Rapport d'assiduité détaillé »).",
-                        "Dossier de l'élève : l'historique des convocations reste consultable, daté, motivé et assorti de sa suite le cas échéant.",
+                        "Historique : les convocations restent consultables dans la liste, datées, motivées et assorties de leur suite le cas échéant ; la fiche de l'élève n'en affiche pas le détail.",
                         "Registre : les convocations encore SANS SUITE remontent en tête de liste, quelle que soit leur date — une convocation planifiée puis oubliée reste donc visible en premier plutôt que de se noyer chronologiquement parmi les entretiens déjà tenus.",
                         "Avis PDF : il n'est JAMAIS réédité avec la suite — c'est la pièce remise AVANT l'entretien, elle ne peut pas porter un résultat qui n'existait pas encore au moment de son impression."
                     ],
@@ -2990,14 +2998,16 @@
                 {
                     id: 'decaissements',
                     title: 'Enregistrement des décaissements',
-                    location: 'Comptabilité › Trésorerie',
-                    href: '/tresorerie',
+                    location: 'Comptabilité › Frais Scolaires › onglet Décaissements',
+                    href: '/frais',
                     roles: ['Directeur', 'Finance'],
                     definition:
-                        "Un décaissement est une dépense de l'établissement, classée par catégorie — " +
-                        "Salaires, Maintenance, Fournitures, Charges fixes, Loyer et charges, Eau et " +
-                        "électricité, Télécoms et Internet, Carburant, Assurances et honoraires, ou " +
-                        "Divers — datée et rattachée à un montant.",
+                        "Un décaissement est une dépense de l'établissement, enregistrée dans l'onglet « Décaissements » " +
+                        "de l'écran Frais Scolaires (et non dans l'écran Trésorerie, qui ne fait que les consolider). " +
+                        "Le formulaire propose dix catégories — Salaires, Maintenance, Fournitures, Charges Fixes, " +
+                        "Loyer et charges, Eau et électricité, Télécoms et Internet, Carburant, Assurances et honoraires, " +
+                        "Divers — et chaque décaissement est daté, rattaché à un bénéficiaire, à un motif, à un montant " +
+                        "et à un mode de paiement.",
                     objectif:
                         "Donner à la direction une image complète des sorties d'argent de l'établissement, " +
                         "ventilées par nature de dépense, sans dépendre d'une compilation manuelle de " +
@@ -3008,10 +3018,10 @@
                         "reconstituant, facture par facture, ce qui aurait dû être visible d'un coup " +
                         "d'œil.",
                     procedure: [
-                        "Ouvrez Comptabilité › Trésorerie et enregistrez un nouveau décaissement.",
-                        "Choisissez la catégorie de dépense la plus proche de la nature réelle de la sortie.",
-                        "Renseignez le montant et la date effective de la dépense.",
-                        "Validez. Le décaissement rejoint immédiatement l'agrégation affichée sur le tableau de bord Trésorerie."
+                        "Ouvrez Comptabilité › Frais Scolaires, onglet « Décaissements », et cliquez sur « Nouveau Décaissement ».",
+                        "Choisissez la catégorie de dépense la plus proche de la nature réelle de la sortie, puis renseignez le bénéficiaire (fournisseur ou employé) et le motif.",
+                        "Renseignez le montant, la date effective de la dépense et le « Mode de paiement » (Espèces, Chèque, Virement ou Mobile Money).",
+                        "Validez. Le décaissement apparaît dans l'« Historique des décaissements » et rejoint immédiatement l'agrégation affichée sur le tableau de bord Trésorerie. Une erreur se corrige par « Annuler ce décaissement » : une contre-écriture est créée et la ligne reste visible, marquée « Annulé ».",
                     ],
                     impacts: [
                         "Tableau de bord Trésorerie : chaque décaissement enregistré ici modifie instantanément la vue consolidée de la période.",
@@ -3043,8 +3053,8 @@
                         "de la tendance, ni de ce qui a réellement été dépensé sur la période.",
                     procedure: [
                         "Ouvrez Comptabilité › Trésorerie.",
-                        "Choisissez la période à consulter — par défaut, du premier jour du mois courant à aujourd'hui.",
-                        "Lisez le total des encaissements et celui des décaissements sur cette période, ainsi que le solde qui en résulte.",
+                        "Choisissez la période avec « Date de début » et « Date de fin » (par défaut, du premier jour du mois courant à aujourd'hui), puis « Actualiser » ; « Réinitialiser » revient à la période par défaut.",
+                        "Lisez les cartes « Total encaissé », « Total décaissé », « Solde net » et « Reste à recouvrer », puis les répartitions « Encaissements par mode de paiement » et « Décaissements par catégorie », et la liste des mouvements de la période (Type, Référence, Date, Montant). Cet écran est en lecture seule : les décaissements s'y consultent, ils ne s'y saisissent pas.",
                         "Changez la période pour comparer un mois à un autre, ou pour couvrir un trimestre entier."
                     ],
                     impacts: [
@@ -3081,43 +3091,40 @@
                 {
                     id: 'activation-dortoirs',
                     title: 'Activer le module et déclarer les dortoirs',
-                    location: 'Paramètres › Modules & fonctionnalités, puis Bâtiments & Salles',
+                    location: 'Paramètres › Modules & fonctionnalités, puis Internat › Pavillons',
                     href: '/parametres?tab=modules',
                     roles: ['Directeur'],
                     definition:
                         "Section « Internat » de Paramètres › Modules & fonctionnalités : un interrupteur, désactivé par " +
                         "défaut, qui rend le module visible ou invisible pour tout le personnel de l'établissement. Une " +
-                        "fois activé, les DORTOIRS se déclarent comme des salles ordinaires depuis Bâtiments & Salles, " +
-                        "avec le type « Dortoir » et une capacité en nombre de places — exactement le même écran que pour " +
-                        "une salle de classe ou un bureau, aucun écran séparé.",
+                        "fois activé, les DORTOIRS se déclarent dans Internat › Pavillons : un pavillon contient des " +
+                        "chambres, et chaque chambre des lits ; la capacité est la somme des lits, jamais saisie.",
                     objectif:
                         "Réserver le module aux établissements qui hébergent réellement des élèves, sans imposer à tous " +
                         "les autres un menu et un vocabulaire — pension, dortoir, régime — qui ne les concernent pas ; et " +
-                        "réutiliser l'inventaire des locaux déjà tenu par Infrastructures plutôt que de faire ressaisir " +
-                        "une seconde cartographie des bâtiments.",
+                        "tenir une cartographie fine de l'hébergement (pavillons, chambres, lits) où chaque pensionnaire a son lit.",
                     probleme:
                         "Un module actif par défaut pour toutes les écoles ferait apparaître un menu « Internat » et une " +
                         "section « Régime & Hébergement » sur le formulaire d'inscription même pour un externat pur — une " +
                         "complexité et une question posée à chaque famille qui n'a simplement pas lieu d'être. À " +
-                        "l'inverse, sans réutiliser les salles déjà déclarées, un établissement qui héberge des élèves " +
-                        "devrait tenir deux inventaires de locaux en parallèle, l'un pour les classes, l'autre pour les " +
-                        "dortoirs, aussitôt sujets à diverger.",
+                        "l'inverse, sans suivi des lits, un établissement qui héberge des élèves ne sait pas quelle " +
+                        "chambre est réellement complète ni qui occupe quel lit.",
                     procedure: [
                         "Ouvrez Paramètres › Modules & fonctionnalités et activez l'interrupteur « Internat », réservé au Directeur.",
-                        "Ouvrez ensuite Gestion Scolaire › Bâtiments & Salles et créez, si besoin, un bâtiment dédié à l'hébergement (« Pavillon Garçons », « Pavillon Filles »).",
-                        "Ajoutez ses salles comme d'habitude, mais choisissez le type « Dortoir » et renseignez une capacité SINCÈRE — le nombre de lits réellement disponibles dans la chambre.",
-                        "Aucune autre déclaration n'est nécessaire : dès qu'au moins un dortoir existe, l'écran Internat et la section « Régime & Hébergement » de l'inscription s'ouvrent d'eux-mêmes.",
+                        "Ouvrez ensuite Internat › onglet « Pavillons » et cliquez sur « Nouveau pavillon » : nom du pavillon (« Pavillon Garçons », « Pavillon Filles »), genre, nom et téléphone du surveillant, notes.",
+                        "Dans « Chambres et lits » du pavillon, cliquez sur « Ajouter une chambre » : nom de la chambre et nombre de lits (de 1 à 40) — les lits sont créés avec la chambre ; « + Lit » en ajoute un, « Remettre en service » rétablit un lit en maintenance. Comptez des lits réels : la capacité n'est jamais saisie, c'est la somme des lits.",
+                        "Aucune autre déclaration n'est nécessaire : l'écran Internat (onglets Occupation, Pavillons, Pensionnaires, Sorties, Pointage) et la section « Régime & Hébergement » de l'inscription sont ouverts par l'interrupteur « Internat » seul ; l'inscription ne propose toutefois que les chambres ayant un lit libre.",
                         "Désactiver le module par la suite masque le menu et bloque toute nouvelle affectation (l'API la refuse en 422), mais ne supprime ni les dortoirs ni l'historique des élèves déjà hébergés."
                     ],
                     impacts: [
-                        "Bâtiments & Salles : un dortoir reste une salle comme les autres — il compte dans le total de capacité de l'établissement et peut être archivé comme n'importe quelle salle devenue inutilisable.",
+                        "Bâtiments & Salles : « Dortoir » n'est plus proposé pour une nouvelle salle (l'API refuse ce type) ; les dortoirs se gèrent uniquement dans Internat › Pavillons. Un ancien dortoir créé avant ce changement garde son type.",
                         "Menu et formulaire d'inscription : la visibilité du lien « Internat » et de la section « Régime & Hébergement » suit l'interrupteur côté client, par confort d'affichage — la garde réelle est posée côté serveur et vaut pour tous les rôles, y compris un accès direct par adresse.",
-                        "Capacité : elle se compte au niveau de la CHAMBRE (occupants actifs comparés à la capacité de la salle), jamais lit par lit — aucune réservation nominative d'un lit précis n'existe."
+                        "Capacité : elle est DÉRIVÉE des lits (jamais saisie) et chaque pensionnaire occupe un lit précis ; un pensionnaire sans lit (lit supprimé) apparaît « En attente de lit » dans l'onglet Pensionnaires."
                     ],
                     recommandations: [
                         "Activez le module et déclarez vos dortoirs AVANT la campagne d'inscription : une section « Régime & Hébergement » qui apparaît en cours de campagne oblige à revenir sur des dossiers déjà saisis.",
-                        "Ne créez pas un dortoir par lit : la granularité du module est la chambre, pas la place individuelle — un suivi plus fin resterait à tenir hors de l'application.",
-                        "Distinguez clairement, dans le nom du bâtiment ou de la salle, un dortoir d'une salle de classe ordinaire : c'est ce nom qui apparaît sur le tableau de bord Internat et sur la fiche de l'élève."
+                        "Créez les lits tels qu'ils existent : un lit en panne se met en maintenance (« Remettre en service » le rétablit) plutôt que de se supprimer, ce qui conserve l'historique d'occupation.",
+                        "Donnez à chaque pavillon et à chaque chambre un nom explicite (« Pavillon Garçons », « Chambre 3 ») : ce sont ces noms qui apparaissent dans l'onglet Occupation et dans la liste « Chambre » de l'inscription."
                     ]
                 },
                 {
@@ -3147,16 +3154,16 @@
                     procedure: [
                         "Ouvrez Gestion Scolaire › Inscriptions (première inscription ou réinscription) et sélectionnez la classe comme d'habitude.",
                         "Dans la section « Régime & Hébergement », choisissez Externe, Demi-pensionnaire ou Interne.",
-                        "Pour Interne, choisissez le dortoir dans la liste : seuls les dortoirs ayant encore de la place s'y proposent, avec leur occupation courante.",
-                        "Validez l'inscription : si une catégorie de frais de pension existe dans le barème de la classe, sa ligne s'ajoute d'elle-même au montant dû — rien à cocher séparément.",
+                        "Dès que le régime n'est pas Externe, le champ obligatoire « Chambre » apparaît : choisissez-y une chambre ; seules les chambres ayant un lit libre sont proposées. S'il n'y en a aucune, le formulaire renvoie vers Internat pour créer un pavillon, ajouter des lits ou en libérer.",
+                        "Cochez, si l'élève doit payer la pension, « Ajouter le frais de pension à la fiche financière » (case proposée pour tout régime autre qu'Externe), puis validez l'inscription : la ligne de pension du barème de la classe s'ajoute alors au montant dû.",
                         "CHAQUE ANNÉE, à la réinscription, reconfirmez le régime : il n'est JAMAIS reconduit automatiquement d'un exercice sur l'autre, au même titre que le redoublement.",
-                        "Un changement de régime ou de chambre EN COURS D'ANNÉE se fait depuis le tableau de bord Internat, pas en rouvrant le formulaire d'inscription (voir la fiche « Tableau de bord par chambre, affectation, transfert et libération »)."
+                        "Un changement de régime ou de chambre EN COURS D'ANNÉE se fait depuis Internat › Occupation (« Affecter un élève », « Changer / Libérer »), pas en rouvrant le formulaire d'inscription (voir la fiche « Tableau de bord par chambre, affectation, transfert et libération »)."
                     ],
                     impacts: [
                         "Échéancier : la ligne de pension suit exactement la règle des autres lignes de frais — figée à la validation, jamais modifiée en silence ; une correction relève du Secrétariat ou de la Direction et reste historisée.",
                         "Fiche élève : un badge d'hébergement rappelle le régime en cours et, pour un Interne, sa chambre.",
                         "Libération : faire repasser un élève en Externe, ou le changer de chambre, ne retire JAMAIS la ligne de pension déjà facturée — elle correspond à une période réellement vécue à l'internat.",
-                        "Capacité : un dortoir déjà complet n'apparaît plus dans la liste des chambres disponibles proposée par ce formulaire."
+                        "Capacité : une chambre sans lit libre n'apparaît plus dans la liste « Chambre » proposée par ce formulaire."
                     ],
                     recommandations: [
                         "Ne laissez jamais un élève en régime Interne sans dortoir attribué : le formulaire l'exige, mais vérifiez la cohérence si un dortoir a été archivé après le choix initial.",
@@ -3186,10 +3193,10 @@
                         "présentée comme complète peut en réalité avoir de la place, et un dépassement de capacité ne se " +
                         "découvre qu'au moment où un lit manque physiquement.",
                     procedure: [
-                        "Ouvrez Internat : chaque dortoir apparaît avec son nom, sa capacité et son occupation courante.",
-                        "Recherchez un élève par nom ou par matricule pour retrouver sa chambre actuelle, ou pour l'affecter s'il est encore en régime Externe ou Demi-pensionnaire.",
-                        "Ouvrez la modale d'affectation rapide : elle propose selon le cas d'AFFECTER l'élève à un dortoir, de le TRANSFÉRER vers un autre, ou de le LIBÉRER (retour à Externe).",
-                        "Un dortoir déjà complet n'accepte aucune nouvelle affectation : le message l'indique explicitement plutôt que de laisser dépasser la capacité déclarée.",
+                        "Ouvrez Internat (onglet « Occupation », ouvert par défaut) : les cartes de synthèse donnent Occupation, Internes, Demi-pensionnaires, En attente de lit et Chambres complètes ; chaque pavillon liste ses chambres avec leur taux d'occupation, et « Voir les occupants » déplie les lits.",
+                        "L'onglet « Pensionnaires » (filtres Pavillon, Chambre, Régime ; recherche par nom, prénom ou matricule) donne la situation de chacun — Actif, En attente de lit, Séjour clos — et sa fiche (contact d'urgence, personnes habilitées, fiche médicale, sorties récentes, fiche PDF).",
+                        "Cliquez sur « Affecter un élève » (en-tête, ou depuis une chambre) : recherchez l'élève, choisissez le régime et un lit disponible, puis confirmez. Sur un lit occupé, « Changer / Libérer » permet de TRANSFÉRER l'élève vers un autre lit (« Confirmer le transfert ») ou de le LIBÉRER (« Confirmer la libération »).",
+                        "Une chambre sans lit libre n'accepte aucune nouvelle affectation : la liste affiche « Aucun lit disponible » plutôt que de laisser dépasser la capacité.",
                         "Validez : l'occupation du ou des dortoirs concernés se met à jour immédiatement sur le tableau de bord.",
                         "Si deux agents modifient la même affectation au même instant, le second à valider reçoit un refus explicite plutôt qu'un écrasement silencieux du premier — rouvrez simplement la fiche pour repartir de l'état à jour."
                     ],
@@ -3376,7 +3383,7 @@
                         "Tableaux de bord et rapports : tous les indicateurs se rapportent à l'année active ; changer d'année change la lecture.",
                         "Effectifs, frais, présences : un élève non inscrit pour l'année active en est absent tant qu'il n'est pas inscrit (voir « Inscription différée »).",
                         "Sélecteurs : un enseignant ne voit dans les menus que ses propres affectations ; une liste courte peut donc être normale selon le rôle.",
-                        "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
+                        "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Fiches de Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
                         "États vides : ils sont dérivés des données déjà chargées et se mettent à jour sans rechargement dès que la cause disparaît."
                     ],
                     recommandations: [
@@ -3454,10 +3461,10 @@
                     procedure: [
                         "CHANGER SON MOT DE PASSE : ouvrez le menu profil, choisissez « Changer mon mot de passe », saisissez l'actuel puis le nouveau — la robustesse du nouveau est vérifiée à la saisie.",
                         "CHANGER SON E-MAIL (Directeur et Super Admin uniquement) : depuis la carte de profil de la barre latérale, choisissez « Changer mon e-mail », saisissez le nouvel e-mail et votre mot de passe ACTUEL pour confirmer. Vous serez déconnecté de toutes vos sessions, y compris celle-ci : reconnectez-vous avec la nouvelle adresse.",
-                        "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Corriger le profil d'un compte » (Paramètres › Utilisateurs & rôles).",
+                        "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Modifier le profil » (Paramètres › Utilisateurs & rôles).",
                         "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
                         "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
-                        "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « délai de déconnexion automatique »."
+                        "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « Déconnexion automatique (minutes) »."
                     ],
                     impacts: [
                         "Paramètres système : le délai d'inactivité y est réglé par le Directeur et s'applique à tous les comptes de l'établissement.",

@@ -2,7 +2,7 @@
 
 **Version :** 1.3.0
 **Date de rédaction :** 20/09/2026
-**Dernière mise à jour :** 11/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
+**Dernière mise à jour :** 14/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.
 
 Ce guide documente **chaque écran de la navigation principale**, un par un — pas de regroupement
@@ -261,8 +261,8 @@ son emploi du temps) ; écriture réservée à Directeur et Secrétariat (§19.2
 
 ### Flux d'utilisation typique
 1. Le Directeur ou le Secrétariat déclare les bâtiments, puis les salles de chacun.
-2. Ces salles deviennent sélectionnables dans l'Emploi du temps et, si l'Internat est activé, dans les
-   dortoirs.
+2. Ces salles deviennent sélectionnables dans l'Emploi du temps. Les dortoirs ne se déclarent plus ici :
+   « Dortoir » n'est plus proposé pour une nouvelle salle, ils se créent dans Internat › Pavillons (§7).
 3. Tout rôle de l'établissement peut ensuite consulter cette liste en lecture seule.
 
 ---
@@ -312,12 +312,18 @@ affectation en chambre — module désactivable par école, **désactivé par d�
 Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
 
 ### Fonctionnalités clés & règles métier
-- **Aucune entité « Lit » distincte** : l'hébergement réutilise les chambres du module Infrastructures
-  (`RoomType.Dortoir`) ; la capacité se compte au niveau de la chambre, jamais lit par lit.
+- **Pavillons › chambres › lits** : l'Internat tient sa propre cartographie (écran Internat, onglet
+  « Pavillons »). La capacité d'un pavillon ou d'une chambre est la **somme de ses lits**, jamais saisie ;
+  chaque pensionnaire occupe un lit précis, un lit peut être mis en maintenance, et un séjour sans lit est
+  « En attente de lit ». Les anciennes salles de type Dortoir restent lisibles mais aucune nouvelle ne se crée.
+- **Écran Internat, cinq onglets** : Occupation (cartes Internes, Demi-pensionnaires, En attente de lit,
+  Chambres complètes ; « Affecter un élève », « Changer / Libérer »), Pavillons, Pensionnaires (filtres
+  Pavillon, Chambre, Régime ; fiche, contact d'urgence, personnes habilitées, fiche médicale), Sorties et
+  Pointage.
 - **Le régime d'hébergement est porté par l'inscription, pas par l'élève** — portée annuelle : une
   réinscription reconfirme ou change le régime, jamais un report automatique d'une année sur l'autre.
-- Comptage de capacité simple : occupants actifs (inscription non annulée, année active) comparés à la
-  capacité de la chambre.
+- Capacité : lits occupés comparés aux lits de la chambre ; une chambre sans lit libre n'est plus proposée
+  à l'inscription ni à l'affectation.
 - **La pension n'est jamais retirée à la libération** d'un élève de l'Internat : sortir un élève
   (retour à Externe, changement de chambre) ne retranche pas la ligne de pension déjà facturée — toute
   correction suit la règle Finance habituelle (règle #4 d'`AGENTS.md`, correction tracée par
@@ -327,13 +333,14 @@ Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
   indépendamment à l'inscription et à l'affectation de chambre.
 
 ### Flux d'utilisation typique
-1. Le Directeur active le module Internat dans Paramètres, puis déclare des dortoirs via
-   Infrastructures.
-2. À l'inscription d'un élève, la Secrétariat choisit son régime d'hébergement (section « Régime &
-   Hébergement » du formulaire) — une pension est ajoutée à son compte financier si Interne.
-3. Depuis `/internat`, la Secrétariat ou la Surveillance affecte, transfère ou libère une chambre via
-   la modale d'affectation rapide, avec recherche d'élève.
-4. Le tableau de bord par chambre reflète l'occupation en temps réel.
+1. Le Directeur active le module Internat dans Paramètres, puis crée ses pavillons, chambres et lits dans
+   Internat › Pavillons.
+2. À l'inscription d'un élève, le Secrétariat choisit son régime (section « Régime & Hébergement ») puis,
+   hors Externe, une chambre ayant un lit libre ; la case « Ajouter le frais de pension à la fiche
+   financière » ajoute la ligne de pension au montant dû.
+3. Depuis `/internat` › Occupation, le Secrétariat ou la Surveillance affecte, transfère ou libère un lit via
+   « Affecter un élève » et « Changer / Libérer », avec recherche d'élève.
+4. Le tableau d'occupation reflète les lits occupés en temps réel.
 
 ---
 
@@ -350,6 +357,12 @@ Directeur, Secrétariat, Enseignant.
 
 ### Fonctionnalités clés & règles métier
 - Chaque matière porte un coefficient, utilisé dans le calcul des moyennes (§8.3).
+- **Niveau et cycle.** Le niveau d'une matière (Crèche, Maternelle, Primaire, Collège, Lycée) la rattache aux
+  classes du même niveau. L'écran se filtre par **onglets de cycle** (Tous les cycles, Primaire, Collège, Lycée,
+  Préscolaire, Autres niveaux), chacun avec son nombre de matières. Une même matière (« Mathématiques ») existe
+  donc une fois par niveau, avec son propre coefficient.
+- **Onglets de l'écran** : Matières, Structure d'évaluation, Coefficients et Matières par classe (ces deux
+  derniers réservés au Directeur et au Secrétariat ; écriture des coefficients : Directeur seul).
 - **Structure d'évaluation modulable / grilles APC** (option désactivée par défaut, onglet dédié) :
   le Directeur configure lui-même la grille d'un niveau — **deux niveaux de hiérarchie au plus** (un
   domaine porte des activités), une troisième profondeur n'a aucune colonne où s'afficher sur le
@@ -446,9 +459,16 @@ Super Admin, Directeur, Secrétariat.
 Saisie des notes par matière et génération du bulletin de notes officiel.
 
 ### Utilisateurs cibles
-Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées).
+Directeur, Secrétariat, Enseignant. L'Enseignant **saisit** dans toute classe et matière listée ; l'affectation
+ne borne que la **correction** d'une note déjà enregistrée (fenêtre de correction + auteur ou affecté, 403 sinon).
 
 ### Fonctionnalités clés & règles métier
+- **Sélecteurs Classe › (Pôle) › Matière › Période.** La liste des matières se restreint au **niveau de la
+  classe choisie** (§8.9 du Cahier des charges) : sans cela, les « Mathématiques » du primaire, du collège et du
+  lycée seraient indiscernables. Sans classe choisie, toutes les matières sont listées avec leur niveau entre
+  parenthèses.
+- **Enregistrement cellule par cellule** à la perte de focus (Devoir 1, Devoir 2, Composition) : il n'y a pas
+  de bouton « Enregistrer » global.
 - **Format du bulletin fixé au gabarit exact** de `docs/design-references/bulletin-reference.png` —
   reproduction fidèle, pas d'interprétation créative (§8.1, règle #12 d'`AGENTS.md`). Format A5
   portrait, largeurs de colonnes ajustées automatiquement pour ne jamais déborder sur une seconde page.
@@ -463,7 +483,8 @@ Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées)
   cases vides comprises, colonnes de regroupement calculées automatiquement.
 
 ### Flux d'utilisation typique
-1. L'Enseignant saisit les notes de ses classes et matières assignées, ou les importe via Excel.
+1. L'Enseignant (ou le Secrétariat) choisit la classe, la matière de son niveau et la période, puis saisit les
+   notes — ou les importe via Excel.
 2. Les totaux et la moyenne se calculent automatiquement.
 3. Le Directeur ou le Secrétariat édite le bulletin au format officiel, prêt à l'impression ou à la
    remise en main propre.
@@ -1150,6 +1171,9 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   **sans série** se règlent uniquement en mode « Classe ». L'écran affiche les classes concernées, explique la
   priorité dans une fenêtre (« Comment sont appliqués les coefficients ? ») et avertit lorsqu'un réglage n'a
   aucun effet ou qu'une valeur est invalide (hors de 0 à 20).
+- **Saisie des notes filtrée par niveau** : après le choix de la classe, seules les matières de son niveau
+  sont proposées (synonymes reconnus : Élémentaire = Primaire, Moyen/CEM = Collège, Secondaire = Lycée ; casse
+  et accents ignorés). Sans correspondance, la liste complète reste affichée, niveau en suffixe.
 - **Pôle pédagogique** des matières (Français, Arabe, Sciences islamiques, Commun) et nom arabe ; saisie des
   notes en écriture de droite à gauche pour les matières arabes (Franco-Arabe).
 - **Liste des élèves d'une classe en PDF** : bouton « Imprimer la liste des élèves » ; colonnes Matricule,
@@ -1183,6 +1207,15 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   à l'inscription, mois réglé demandé à chaque encaissement). Le montant échu de la caisse couvre toutes les
   mensualités échues.
 - **Relance SMS** limitée aux échéances en retard, avec le montant en retard.
+- **Recouvrement** (`/recouvrement`, Directeur et Finance, pôle Comptabilité) : un lot de relance SMS **brouillon
+  par classe** est préparé chaque nuit dès que « Relances d'impayés » est activé (Paramètres › Notifications
+  SMS, avec un seuil de retard en jours). L'écran liste les lots par statut (À valider, Envoyés, Écartés, Tous),
+  permet de relire les destinataires (matricule, téléphone du tuteur, reliquat, jours de retard), de **recalculer**
+  les lots, d'**écarter** un lot ou de l'**envoyer** après confirmation. Un lot ne s'envoie qu'**une fois** ; un
+  tuteur sans numéro est écarté à l'envoi et signalé avant. Aucun SMS ne part sans geste humain.
+- **Décaissements** : dix catégories proposées (Salaires, Maintenance, Fournitures, Charges Fixes, Loyer et
+  charges, Eau et électricité, Télécoms et Internet, Carburant, Assurances et honoraires, Divers), saisies dans
+  Frais Scolaires › Décaissements ; la Trésorerie les consolide en lecture seule.
 - **Paie sans retenues légales**, choisie par contrat ; **fiches de paie** annulables, régénérables et
   payables (décaissement « Salaires ») ; personnel sans compte.
 

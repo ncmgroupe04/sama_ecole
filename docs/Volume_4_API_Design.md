@@ -425,6 +425,10 @@ Ouverture/fermeture de la caisse de guichet, journal des encaissements de la jou
 | `GET` | `/api/v1/finance/sessions/{id}/closing-report` | Rapport de clôture (PDF) — ventilation par mode de paiement et par catégorie de frais, détail des transactions |
 | `GET` | `/api/v1/finance/daily-cash-register/pdf` | Journal de caisse du jour (PDF, bordereau) |
 | `GET` | `/api/v1/finance/dashboard` | Tableau de bord financier (encaissé jour/mois/année, recouvrement) |
+| `GET` | `/api/v1/finance/dues-reminder-batches` | Lots de relance SMS des débiteurs (`?status=Draft\|Sent\|Dismissed`), avec leurs destinataires — Directeur, Finance ; écran `/recouvrement` |
+| `POST` | `/api/v1/finance/dues-reminder-batches/recompute` | Recalcule les brouillons sans attendre le calcul nocturne ; renvoie le nombre de lots préparés |
+| `POST` | `/api/v1/finance/dues-reminder-batches/{id}/send` | Envoie un lot brouillon (`{ queuedCount, skippedCount, firstSkipReason }`) ; `409` si déjà envoyé ou écarté |
+| `POST` | `/api/v1/finance/dues-reminder-batches/{id}/dismiss` | Écarte un lot brouillon (`204`) ; `409` si déjà envoyé ou écarté |
 
 **Règles :**
 - La clôture **calcule** le solde de fermeture : `fonds d'ouverture + somme des paiements non annulés de la session`. Elle ne prend **aucun montant en paramètre**.

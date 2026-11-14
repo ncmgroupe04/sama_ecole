@@ -93,6 +93,32 @@
         return `${grouped}${NBSP}FCFA`;
     }
 
+    /**
+     * Catégories de décaissement : miroir de SamaEcole.Domain.Enums.DisbursementCategory. La liste sert
+     * au formulaire (Frais Scolaires › Décaissements) ET à l'affichage (historique, Trésorerie, tableau de
+     * bord), qui recevaient jusqu'ici le nom brut de l'énumération (« ChargesFixes »). Une valeur inconnue
+     * est renvoyée telle quelle : mieux vaut un libellé brut qu'un libellé inventé.
+     */
+    const DISBURSEMENT_CATEGORIES = [
+        { value: 'Salaires', label: 'Salaires' },
+        { value: 'Maintenance', label: 'Maintenance' },
+        { value: 'Fournitures', label: 'Fournitures' },
+        { value: 'ChargesFixes', label: 'Charges Fixes' },
+        { value: 'LoyerCharges', label: 'Loyer et charges' },
+        { value: 'EauElectricite', label: 'Eau et électricité' },
+        { value: 'TelecomsInternet', label: 'Télécoms et Internet' },
+        { value: 'Carburant', label: 'Carburant' },
+        { value: 'AssurancesHonoraires', label: 'Assurances et honoraires' },
+        { value: 'Divers', label: 'Divers' }
+    ];
+
+    function disbursementCategoryLabel(value) {
+        const found = DISBURSEMENT_CATEGORIES.find((c) => c.value === value);
+        return found ? found.label : value;
+    }
+
+    window.DISBURSEMENT_CATEGORIES = DISBURSEMENT_CATEGORIES;
+    window.disbursementCategoryLabel = disbursementCategoryLabel;
     window.formatSenegalPhone = formatSenegalPhone;
     window.formatSenegalPhoneOr = formatSenegalPhoneOr;
     window.formatFCFA = formatFCFA;
