@@ -1815,7 +1815,7 @@
                     probleme: "Il fallait croiser la caisse, les échéanciers et les inscriptions à la main pour savoir qui n'avait pas réglé le mois.",
                     procedure: [
                         "Ouvrez Comptabilité › Situation des mensualités.",
-                        "Choisissez l'année scolaire et le mois ; ajoutez une classe si besoin, puis « Afficher la situation ».",
+                        "Choisissez l'année scolaire, puis une classe si besoin (« Toutes les classes » par défaut), puis cliquez sur un mois dans la bande de mois : il n'y a pas de bouton « Afficher la situation », la situation se charge à l'arrivée sur la page et à chaque changement d'année, de classe ou de mois.",
                         "Lisez les trois listes et la synthèse ; exportez en Excel au besoin.",
                         "Directeur — Paramètres : « Autoriser la comptabilité à consulter la situation des mensualités » (désactivé par défaut) ouvre la page à la Finance, en lecture seule ; le désactiver retire l'accès aussitôt.",
                         "Deux réglages d'école adaptent le calcul : « La mensualité versée avec l'inscription compte pour le dernier mois (juin) » et « Demander le mois réglé à chaque encaissement ». Ils n'agissent que sur cette page."
@@ -2304,7 +2304,7 @@
                     objectif: "Corriger une fiche erronée sans perdre l'historique, et relier la paie à la trésorerie.",
                     probleme: "Après correction d'un contrat, la fiche, instantané définitif, restait fausse : ni modifiable, ni supprimable, ni régénérable. La paie ne laissait aucune trace de trésorerie.",
                     procedure: [
-                        "Ouvrez la fiche, cliquez sur « Annuler » et saisissez le motif ; ou utilisez « Régénérer ».",
+                        "Sur la ligne de la fiche, cliquez sur « Annuler » et saisissez le motif ; pour corriger une fiche d'après le contrat actuel, cliquez sur « Corriger » puis validez « Annuler et régénérer » (la fiche d'origine est annulée et une nouvelle est générée en une seule opération).",
                         "Pour payer, utilisez l'action de paiement : le décaissement « Salaires » est créé.",
                         "Pour un agent sans compte, créez le contrat en saisissant nom, fonction et téléphone."
                     ],
@@ -2560,8 +2560,8 @@
                 {
                     id: 'certificat-mutation',
                     title: 'Certificat de mutation et livret de compétences',
-                    location: 'Élèves › Fiche élève › Délivrer un certificat de mutation',
-                    href: '/eleves',
+                    location: 'Intégration étatique › Certificats de mutation délivrés › Délivrer un certificat',
+                    href: '/integration-etatique',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
                         "Le CERTIFICAT DE MUTATION est la pièce officielle remise à l'élève qui quitte l'établissement, " +
@@ -2577,7 +2577,7 @@
                         "vérifiable par personne. L'école d'accueil ne peut ni confirmer son origine, ni savoir qu'il a " +
                         "été annulé depuis. Sans livret, elle affecte l'élève sur la seule foi de son âge.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, puis « Délivrer un certificat de mutation ».",
+                        "Ouvrez Intégration étatique, section « Certificats de mutation délivrés », puis cliquez sur « Délivrer un certificat » et recherchez l'élève dans la fenêtre (le bouton « Livret de compétences », juste à côté, ouvre le livret).",
                         "Choisissez l'année scolaire concernée et le motif de la mutation. Si vous choisissez « Autre », la précision devient obligatoire.",
                         "Renseignez l'établissement et la localité de destination s'ils sont connus. Ces champs peuvent rester vides : le certificat reste valable sans destination nommée.",
                         "Validez. Le certificat est délivré, numéroté, enregistré, et le PDF s'ouvre immédiatement.",
@@ -2683,7 +2683,7 @@
                         "seul chiffre sans histoire, invérifiable un an plus tard.",
                     procedure: [
                         "Ouvrez Inventaire, onglet Mouvements, et sélectionnez le bien concerné.",
-                        "Choisissez le type de mouvement : Entrée, Sortie, Ajustement positif ou Ajustement négatif.",
+                        "Choisissez le type de mouvement : Entrée, Sortie, Ajustement d'inventaire ou Mise au rebut. Le journal affiche ensuite un ajustement sous la forme « Ajustement (+) » ou « Ajustement (−) » selon le sens de l'écart, et les mouvements produits par les prêts (Attribution, Restitution, Perte sur prêt) ; ces derniers ne se saisissent pas ici.",
                         "Saisissez la quantité concernée — toujours un nombre positif, quel que soit le sens du mouvement — et un motif explicite.",
                         "Validez. La quantité disponible du bien est mise à jour dans la même transaction que l'écriture du mouvement : aucun écart n'est possible entre le journal et le solde affiché.",
                         "Une erreur de saisie NE SE CORRIGE PAS en modifiant la ligne : enregistrez un mouvement inverse qui compense l'écriture fautive, avec un motif qui le dit explicitement."
@@ -2694,7 +2694,7 @@
                         "Rapport d'inventaire : la synthèse de fin d'année recoupe le total, le disponible et l'historique des mouvements de la période."
                     ],
                     recommandations: [
-                        "Motivez systématiquement un ajustement : un « Ajustement négatif » sans motif est aussi peu exploitable qu'une case vide.",
+                        "Motivez systématiquement un ajustement : un « Ajustement (−) » sans motif est aussi peu exploitable qu'une case vide.",
                         "Ne cumulez pas plusieurs corrections dans un seul mouvement : une ligne, une cause.",
                         "Faites un inventaire physique au moins une fois par an et enregistrez l'écart constaté par un ajustement — c'est ce recoupement régulier qui donne sa valeur au journal.",
                         "Le rôle applicatif de la base de données n'a que lecture et écriture SEULE sur ce journal (append-only) : ne cherchez jamais à faire corriger une ligne en base par un tiers technique, la voie normale est le mouvement inverse."
@@ -2767,7 +2767,7 @@
                     roles: ['Enseignant', 'Directeur', 'Secrétariat'],
                     definition:
                         "L'appel constate, pour une classe et un COURS de son emploi du temps, le statut de " +
-                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée. " +
+                        "chaque élève inscrit : Présent, Absent (justifié), Absent (non justifié). " +
                         "Le retard ne se saisit pas ici : il vient d'un billet d'entrée émis par la Surveillance. La journée d'un élève se compose ainsi " +
                         "de plusieurs appels, un par cours. Un enseignant ne voit et ne renseigne que ses " +
                         "propres cours ; sans emploi du temps ce jour-là, l'appel libre par demi-journée reste possible.",
@@ -2784,7 +2784,7 @@
                         "Ouvrez Surveillance › Appel en classe, choisissez la classe et la date : les cours de la journée s'affichent, tirés de l'emploi du temps.",
                         "Cliquez sur le cours à appeler : la matière et l'horaire (08:00-10:00) sont repris du cours, rien à saisir. Un cours déjà appelé est signalé « Appel fait ».",
                         "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, en lecture seule, avec la mention du billet.",
-                        "Modifiez le statut de chaque élève concerné : Absence justifiée ou Absence injustifiée. Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
+                        "Modifiez le statut de chaque élève concerné : Absent (justifié) ou Absent (non justifié). Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
                         "Si un élève présente un billet d'entrée en attente, cliquez sur « Accepter » : l'enseignant du cours constate ainsi que l'élève est bien entré en classe.",
                         "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
                         "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas pour le même cours : une correction passe par le rapport d'assiduité, non par un second appel.",
@@ -2798,7 +2798,7 @@
                     ],
                     recommandations: [
                         "Faites l'appel à chaque séance, sans exception : un rapport d'assiduité troué de créneaux non appelés ne dit rien de fiable sur l'élève qu'il est censé décrire.",
-                        "Ne marquez « Absence justifiée » qu'en présence d'un motif réellement établi ; à défaut, « Absence injustifiée » et la régularisation vient ensuite, jamais l'inverse.",
+                        "Ne marquez « Absent (justifié) » qu'en présence d'un motif réellement établi ; à défaut, « Absent (non justifié) » et la régularisation vient ensuite, jamais l'inverse.",
                         "Un retard systématique du même élève à la même heure trahit souvent une contrainte de transport plutôt qu'une négligence — vérifiez avant de sanctionner."
                     ]
                 },
@@ -3459,7 +3459,7 @@
                         "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Corriger le profil d'un compte » (Paramètres › Utilisateurs & rôles).",
                         "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
                         "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
-                        "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « délai de déconnexion automatique »."
+                        "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « Déconnexion automatique (minutes) »."
                     ],
                     impacts: [
                         "Paramètres système : le délai d'inactivité y est réglé par le Directeur et s'applique à tous les comptes de l'établissement.",
