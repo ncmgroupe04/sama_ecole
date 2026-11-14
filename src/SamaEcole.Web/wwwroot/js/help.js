@@ -826,14 +826,14 @@
                         "reste sans auteur identifiable. La responsabilité pédagogique se dilue.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Ajouter un enseignant ».",
-                        "Renseignez l'état civil, le téléphone, l'adresse électronique et la spécialité. Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
-                        "Précisez la nature du rattachement — permanent ou vacataire — ainsi que les éléments contractuels utiles à la paie.",
-                        "Depuis la fiche détaillée, ajoutez les affectations : pour chaque matière enseignée, désignez la ou les classes concernées.",
-                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles, en lui attribuant le rôle « Enseignant ».",
-                        "Un départ se traduit par l'archivage de la fiche : l'historique des notes saisies et des heures pointées demeure intégralement conservé."
+                        "Renseignez le nom complet, l'e-mail et la date de naissance (obligatoires), puis le téléphone, le lieu de naissance, l'adresse de résidence et la photo. Cochez au moins une « matière enseignée » (matière qualifiée). Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
+                        "Dépliez au besoin « Informations pour le rapport STATEDUC » (facultatif) : genre, statut administratif, diplômes académique et professionnel, matricule de solde, première prise de service. La nature du contrat (permanent ou vacataire) et les éléments de paie ne se saisissent pas ici : ils relèvent de Comptabilité › Paie.",
+                        "Depuis la fiche détaillée (« Voir la fiche »), section « Attribuer une classe / matière (année active) » : choisissez la classe, la matière, puis « Attribuer ». Une affectation se retire avec « Retirer cette affectation ».",
+                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles (rôle « Enseignant »), puis rattachez-le à la fiche : à la création (champ « Compte de connexion (optionnel) », Directeur) ou plus tard (voir « Rattacher un compte enseignant »).",
+                        "Un départ se traduit par le bouton « Supprimer » de la fiche (suppression guidée) : la fiche est archivée, jamais effacée, et l'historique des notes saisies et des heures pointées demeure intégralement conservé. Le statut (Actif, Suspendu, Bloqué) filtre la liste."
                     ],
                     impacts: [
-                        "Saisie des notes : un enseignant ne voit et ne renseigne que les couples matière/classe qui lui sont affectés.",
+                        "Saisie des notes : la saisie n'est PAS limitée aux affectations ; seule la correction d'une note déjà enregistrée l'est (auteur de la note ou enseignant affecté à la classe et à la matière, dans le délai fixé par le Directeur).",
                         "Appel en classe : les classes proposées à l'appel découlent de ces mêmes affectations.",
                         "Emploi du temps et pointage : les créneaux et les heures effectuées s'adossent aux affectations déclarées.",
                         "Fiches de paie : les éléments contractuels de la fiche alimentent le calcul de la rémunération et les déclarations fiscales et sociales.",
@@ -885,7 +885,7 @@
                 {
                     id: 'emploi-du-temps',
                     title: 'Emploi du temps — grille des créneaux hebdomadaires',
-                    location: 'Gestion Scolaire › Enseignants — section « Emploi du temps »',
+                    location: 'Gestion Scolaire › Enseignants — onglet « Emploi du Temps »',
                     href: '/enseignants',
                     roles: ['Directeur', 'Secrétariat', 'Enseignant'],
                     definition:
@@ -906,7 +906,7 @@
                         "même professeur, deux professeurs pour une même salle — ne se voient qu'une fois les élèves " +
                         "devant la porte.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Enseignants et faites défiler jusqu'à la section « Emploi du temps ».",
+                        "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur l'onglet « Emploi du Temps » (à côté de « Liste des Enseignants » ; l'onglet n'apparaît que si le module Pédagogie est activé).",
                         "Choisissez le mode de lecture : « Par Enseignant » puis un professeur dans la liste, ou « Par Classe » puis une classe.",
                         "Cliquez sur « Nouveau Créneau » : renseignez le jour, l'heure de début et de fin, l'enseignant, la classe, la matière, et le numéro de salle si l'établissement le suit.",
                         "Enregistrez : le créneau apparaît aussitôt dans les DEUX vues — celle de l'enseignant et celle de la classe.",
@@ -1261,12 +1261,12 @@
                         "antérieurs deviennent introuvables et sa situation financière se scinde en deux.",
                     procedure: [
                         "Assurez-vous que la nouvelle année scolaire est ACTIVE et que ses barèmes de frais sont paramétrés.",
-                        "Ouvrez Gestion Scolaire › Inscriptions, puis choisissez « Réinscrire ».",
+                        "Ouvrez Gestion Scolaire › Inscriptions, puis choisissez « Réinscription » dans le sélecteur « Type de mouvement » (l'autre choix est « Nouvelle inscription »).",
                         "Recherchez l'élève par son matricule ou par son nom : sa fiche remonte avec l'intégralité de son historique.",
                         "Sélectionnez la classe d'accueil de la nouvelle année ; l'application propose le barème correspondant.",
                         "Vérifiez le montant dû et l'échéancier, puis validez la réinscription.",
                         "CHANGEMENT DE CLASSE EN COURS D'ANNÉE : ouvrez l'inscription en cours et sélectionnez la nouvelle classe. Si le barème diffère, la régularisation est historisée et demeure traçable.",
-                        "Éditez l'attestation de réinscription, remettez-la à la famille et orientez-la vers la Caisse pour le règlement."
+                        "Éditez l'attestation (bouton « Attestation » après validation), remettez-la à la famille et orientez-la vers la Caisse pour le règlement."
                     ],
                     impacts: [
                         "Historique : notes, bulletins et règlements des exercices antérieurs restent attachés au même élève et demeurent consultables.",
@@ -1307,15 +1307,15 @@
                     procedure: [
                         "Le montant dû est CALCULÉ par l'application à partir du barème de la classe : il n'est jamais saisi à la main lors de l'inscription.",
                         "À la validation, le détail ligne à ligne est FIGÉ sur l'inscription : une révision ultérieure du barème ne modifiera pas rétroactivement les reçus déjà remis.",
-                        "Consultez l'échéancier depuis la fiche de l'inscription : chaque échéance y figure avec sa date d'exigibilité et son montant.",
-                        "ÉCHÉANCIER PERSONNALISÉ : créez un plan sur mesure pour une famille donnée, en fixant vous-même les dates et les montants convenus.",
-                        "Une renégociation ne modifie jamais le plan en vigueur : elle le remplace, l'ancien étant annulé mais conservé, de sorte que l'accord antérieur reste consultable.",
+                        "Consultez l'échéancier dans la Caisse : après la recherche de l'élève, le panneau détaillé liste chaque échéance avec sa date d'exigibilité, son montant et son état (« En attente », réglée).",
+                        "ENGAGEMENT FINANCIER : pour une famille qui négocie un délai, ouvrez sa fiche (Élèves) et cliquez sur « Nouvel engagement financier » : saisissez un montant, une date d'échéance et les termes convenus, puis « Enregistrer » et « Télécharger l'engagement créé ». C'est une trace écrite de l'accord (reconnaissance de dette), pas un nouveau plan de paiement.",
+                        "Un engagement financier ne modifie jamais le montant dû ni les échéances de l'inscription, et ne vaut pas encaissement : seul un versement enregistré à la Caisse fait baisser le solde. Chaque nouvel engagement est un document supplémentaire ; aucun écran ne remplace ni n'annule un engagement précédent.",
                         "Chaque encaissement s'impute automatiquement sur le solde, et l'échéancier reflète en temps réel ce qui reste dû."
                     ],
                     impacts: [
                         "Caisse : le caissier voit, à l'écran, le solde exact et l'échéance courante de l'élève qu'il encaisse.",
                         "Recouvrement : le suivi des retards s'appuie sur les dates d'exigibilité de l'échéancier.",
-                        "Avis de sommes dues : l'avis remis à la famille est édité directement depuis l'échéancier.",
+                        "Sommation pour impayés : le document remis à la famille s'édite depuis la fiche de l'élève (bouton « Sommation impayés », visible tant qu'un solde reste dû).",
                         "Trésorerie : les échéances à venir alimentent les prévisions d'encaissement de la direction.",
                         "Rapports financiers : le rapprochement entre attendu et encaissé procède de cette même source."
                     ],
@@ -1735,14 +1735,16 @@
                 {
                     id: 'recouvrement',
                     title: 'Suivi des recouvrements, impayés et relances',
-                    location: 'Comptabilité › Caisse et Rapports financiers',
-                    href: '/caisse',
+                    location: 'Comptabilité › Situation des mensualités ; Élèves › fiche élève',
+                    href: '/mensualites',
                     roles: ['Directeur', 'Finance'],
                     definition:
-                        "Dispositif de suivi des soldes débiteurs : identification des élèves dont une échéance est " +
-                        "dépassée, classement par ancienneté de la créance, édition d'un avis de sommes dues et envoi de " +
-                        "relances par SMS aux tuteurs. Les lots de relance sont préparés chaque nuit par l'application, " +
-                        "mais demeurent à l'état de brouillon : aucun envoi de masse ne part sans un geste humain.",
+                        "Dispositif de suivi des soldes débiteurs : la page « Situation des mensualités » classe, mois par " +
+                        "mois, les élèves en impayé, en paiement partiel ou à jour et affiche le taux de recouvrement ; la " +
+                        "fiche de l'élève permet d'éditer une sommation pour impayés et de formaliser un engagement " +
+                        "financier (échéancier personnalisé). Côté SMS, le serveur prépare chaque nuit des lots de relance " +
+                        "à l'état de brouillon, qu'aucun envoi ne rend effectifs sans un geste humain ; à ce jour, aucun " +
+                        "écran de l'application ne les affiche (ils ne sont accessibles que par l'API).",
                     objectif:
                         "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui préserve " +
                         "la trésorerie de l'établissement sans exposer les familles à des relances injustifiées. Pour la " +
@@ -1754,13 +1756,13 @@
                         "c'est-à-dire trop tard pour être recouvrés sereinement. Les relances se font au jugé, certaines " +
                         "familles à jour sont importunées tandis que des retards anciens demeurent ignorés.",
                     procedure: [
-                        "Consultez la liste des débiteurs : elle recense les inscriptions dont une échéance est échue et non réglée.",
+                        "Ouvrez Comptabilité › Situation des mensualités, choisissez l'année, la classe (facultatif) puis le mois : la liste unique place les impayés en premier, puis les paiements partiels. Le « Taux de recouvrement » du mois figure dans la synthèse.",
                         "Examinez l'ancienneté de la créance : un retard de huit jours et un retard de trois mois n'appellent pas le même traitement.",
-                        "AVIS DE SOMMES DUES : éditez le document PDF détaillant ce qui reste dû et remettez-le au tuteur.",
-                        "RELANCE PAR SMS : ouvrez le lot de relance préparé pour la classe, vérifiez nominativement les destinataires, retirez les cas litigieux, puis déclenchez l'envoi.",
-                        "L'envoi n'intervient qu'après cette validation explicite : aucune campagne ne part automatiquement.",
-                        "ARRANGEMENT : si la famille sollicite un délai, formalisez un échéancier personnalisé plutôt qu'une tolérance verbale.",
-                        "Suivez le taux de recouvrement dans Comptabilité › Rapports financiers, et exportez le rapport au format Excel pour le conseil d'administration."
+                        "Exportez la situation avec « Télécharger en PDF » ou « Exporter en Excel » pour la direction ou le conseil d'administration.",
+                        "SOMMATION : ouvrez la fiche de l'élève (Élèves) ; tant qu'un solde reste dû sur son inscription active, le bouton « Sommation impayés » ouvre l'aperçu du document, à imprimer et à remettre au tuteur.",
+                        "ARRANGEMENT : si la famille sollicite un délai, cliquez sur « Nouvel engagement financier » dans la même fiche pour formaliser un échéancier personnalisé, puis « Télécharger l'engagement créé ».",
+                        "RELANCE PAR SMS : le Directeur active « Relances d'impayés » et règle le « Seuil de retard avant relance (jours) » dans Paramètres › Notifications SMS. Les lots brouillon sont alors générés chaque nuit ; leur envoi, toujours manuel et classe par classe, n'a pas encore d'écran dédié.",
+                        "Le taux de recouvrement figure aussi parmi les indicateurs du tableau de bord (« Taux Recouvrement »)."
                     ],
                     impacts: [
                         "La relance SMS ne vise que les élèves ayant au moins une échéance réellement en retard, et le message annonce le montant EN RETARD (pas le reliquat de l'année entière).",
@@ -1788,7 +1790,7 @@
                     objectif: "Corriger une erreur d'encaissement tout en préservant la traçabilité comptable et sans réécrire une journée déjà arrêtée.",
                     probleme: "Un paiement erroné ne pouvait ni être supprimé (trace comptable) ni corrigé, et bloquait la suppression de l'élève ou de la classe.",
                     procedure: [
-                        "Ouvrez la fiche de l'élève, repérez le paiement et cliquez sur « Annuler ».",
+                        "Ouvrez la fiche de l'élève, repérez le paiement et cliquez sur « Annuler le paiement » (dans la Caisse, le bouton de la ligne de paiement s'intitule « Annuler »).",
                         "Choisissez le motif dans la liste (ou « Autre motif » avec saisie obligatoire) et la destination : simple correction (par défaut), réutilisé pour l'inscription de l'enfant, ou remboursé au parent.",
                         "Passé 48 heures, le Directeur utilise « Contre-passer » et lit l'avertissement avant de confirmer.",
                         "L'export d'année scolaire inclut les paiements annulés."
