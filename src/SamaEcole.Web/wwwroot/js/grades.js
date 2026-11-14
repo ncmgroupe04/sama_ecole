@@ -42,6 +42,14 @@ const POLE_FILTERS = [
     { value: 'Common', label: 'Pôle commun' }
 ];
 
+function normalizeLevel(level) {
+    return (level || '').trim().toLowerCase();
+}
+
+function sameLevel(a, b) {
+    return normalizeLevel(a) === normalizeLevel(b);
+}
+
 function poleOf(subject) {
     const section = (subject && subject.sectionType) || 'French';
     return ARABIC_SECTIONS.includes(section) ? 'Arabic' : section;
@@ -169,10 +177,32 @@ document.addEventListener('alpine:init', () => {
             return POLE_FILTERS;
         },
 
-        /** Matières proposées au sélecteur : les notables, restreintes au pôle choisi. */
+        /**
+         * Matières du NIVEAU de la classe choisie. Même rapprochement que les bulletins
+         * (EvaluationStructureBuilder) : Subject.Level = Classroom.Level, casse et espaces ignorés.
+         * Sans cela, « Mathématiques » du primaire, du collège et du lycée sont indiscernables dans la
+         * liste. Si aucune matière ne porte le niveau de la classe (nomenclature différente), on garde
+         * toute la liste plutôt qu'un sélecteur vide — le niveau reste affiché dans chaque libellé.
+         */
+        get classroomSubjects() {
+            const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
+            if (!classroom) return this.gradableSubjects;
+            const same = this.gradableSubjects.filter(s => sameLevel(s.level, classroom.level));
+            return same.length > 0 ? same : this.gradableSubjects;
+        },
+
+        /** Matières proposées au sélecteur : celles de la classe, restreintes au pôle choisi. */
         get visibleSubjects() {
-            if (!this.selectedPole) return this.gradableSubjects;
-            return this.gradableSubjects.filter(s => poleOf(s) === this.selectedPole);
+            const pool = this.classroomSubjects;
+            if (!this.selectedPole) return pool;
+            return pool.filter(s => poleOf(s) === this.selectedPole);
+        },
+
+        /** Changer de classe ne doit jamais laisser une matière d'un autre niveau sélectionnée. */
+        onClassroomChange() {
+            const stillVisible = this.visibleSubjects.some(s => s.id === this.selectedSubjectId);
+            if (!stillVisible) this.selectedSubjectId = '';
+            return this.reload();
         },
 
         get selectedSubject() {
@@ -209,9 +239,16 @@ document.addEventListener('alpine:init', () => {
          *  à l'identique dans la liste, une par domaine qui en porte une. */
         subjectLabel(subject) {
             const arabic = this.hasPoles && subject.nameAr ? ` — ${subject.nameAr}` : '';
-            if (!subject.parentSubjectId) return subject.name + arabic;
+            // Niveau en suffixe dès que la liste mélange plusieurs niveaux (aucune classe choisie, ou
+            // repli sur toute la liste) : c'est ce qui distingue deux « Mathématiques ».
+            const level = subject.level && this.listSpansLevels ? ` (${subject.level})` : '';
+            if (!subject.parentSubjectId) return subject.name + arabic + level;
             const domain = this.subjects.find(s => s.id === subject.parentSubjectId);
-            return (domain ? `${domain.name} › ${subject.name}` : subject.name) + arabic;
+            return (domain ? `${domain.name} › ${subject.name}` : subject.name) + arabic + level;
+        },
+
+        get listSpansLevels() {
+            return new Set(this.visibleSubjects.map(s => normalizeLevel(s.level))).size > 1;
         },
 
         async init() {
