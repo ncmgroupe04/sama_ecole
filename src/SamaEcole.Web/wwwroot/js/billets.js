@@ -82,6 +82,7 @@ document.addEventListener('alpine:init', () => {
         // ---------------------------------------------------------------- Billets d'absence (plage de jours)
         absences: [],
         isLoadingAbsences: true,
+        printingAbsenceId: null,
         isCreateAbsenceOpen: false,
         isCreatingAbsence: false,
         createAbsenceErrors: {},
@@ -510,6 +511,24 @@ document.addEventListener('alpine:init', () => {
                 this.createAbsenceErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreatingAbsence = false;
+            }
+        },
+
+        /** Billet d'absence A5 en PDF — même mécanique que printExitBillet (modale d'aperçu partagée). */
+        async printAbsenceBillet(absenceId) {
+            if (!absenceId || absenceId === 'undefined') {
+                console.error("Identifiant de billet d'absence invalide ou indéfini", absenceId);
+                return;
+            }
+            this.printingAbsenceId = absenceId;
+            try {
+                await this.openPdfPreview(
+                    `/api/v1/billets/absence/${absenceId}/pdf`,
+                    "Billet d'absence",
+                    `Billet-Absence-${absenceId}.pdf`
+                );
+            } finally {
+                this.printingAbsenceId = null;
             }
         },
 

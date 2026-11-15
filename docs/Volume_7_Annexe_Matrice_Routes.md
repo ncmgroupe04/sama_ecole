@@ -97,6 +97,7 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 
 | Méthode | Route | Rôles | Condition |
 |---|---|---|---|
+| GET | `/api/v1/billets/absence/{absenceJustificationId:guid}/pdf` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/early-departure/{earlyDepartureId:guid}` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/early-departure/{earlyDepartureId:guid}/pdf` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/late-arrival/{lateArrivalId:guid}` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |

@@ -2965,7 +2965,7 @@
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
                         "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur.",
                         "ABSENCE DE PLUSIEURS JOURS : onglet « Billets d'absence » › « Enregistrer une absence ». Choisissez l'élève, le premier et le dernier jour (vide = un seul jour, 60 jours au plus), le motif et, si besoin, la date de retour autorisée. Deux billets actifs d'un même élève ne peuvent pas se chevaucher.",
-                        "Un billet d'absence s'annule (bouton « Annuler », avec confirmation) : les lignes d'appel qu'il avait justifiées reprennent leur statut d'avant et les jours redeviennent libres. Il n'est jamais supprimé physiquement."
+                        "Le bouton « Imprimer le billet » ouvre le billet d'absence A5 (élève, classe, période, durée, motif, retour autorisé, signature du Surveillant) à remettre à la famille ou à verser au dossier. Un billet d'absence s'annule (bouton « Annuler », avec confirmation) : les lignes d'appel qu'il avait justifiées reprennent leur statut d'avant et les jours redeviennent libres. Il n'est jamais supprimé physiquement."
                     ],
                     impacts: [
                         "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours en cours que vise son billet ; les cours entièrement manqués avant son arrivée passent de « Absent (non justifié) » à « Absent (justifié) ». Les lignes sont mises à jour dès l'émission du billet, même si l'appel de ces cours est déjà fait ; un « Présent » n'est jamais modifié.",

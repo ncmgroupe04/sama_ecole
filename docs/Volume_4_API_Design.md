@@ -565,6 +565,8 @@ Huit documents officiels PDF, générés côté serveur avec QuestPDF (mise en p
 | 7 | Attestation de travail | `GET /api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Paie |
 | 8 | Fiche de suivi des heures | `GET /api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Paie |
 
+**Billet d'absence** (A5, ajouté avec le billet d'absence par plage) : `GET /api/v1/billets/absence/{id}/pdf` (SuperAdmin, Directeur, Secrétariat, Surveillant ; module Pédagogie). Numéro `ABSENCE-XXXXXXXX`, période, durée, motif, retour autorisé, signature du Surveillant, QR de vérification. Pas de route JSON dédiée : la liste `GET /absences/justifications` porte les mêmes données.
+
 Chaque document expose en plus une route **sans** `/pdf` renvoyant les mêmes données en JSON, utilisée par l'aperçu à l'écran avant impression.
 
 **Documents officiels antérieurs, hors de ce module mais de même facture :** reçu d'inscription (`/enrollments/{id}/receipt/pdf`), reçu de paiement (`/finance/payments/{id}/receipt/pdf`), certificat de scolarité (`/enrollments/{id}/certificate/pdf`), billet d'entrée (`/billets/late-arrival/{id}/pdf`), cartes scolaires d'une classe (`/classrooms/{id}/school-cards`), bulletin de notes et PV de délibération (Chapitre 9), journal de caisse (§13), déclaration fiscale (§15), bulletin de salaire (§12).

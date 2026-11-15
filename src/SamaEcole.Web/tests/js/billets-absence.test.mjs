@@ -103,3 +103,14 @@ test('fermer la modale de création remet le formulaire à zéro', async () => {
     assert.equal(view.absenceForm.studentId, '');
     assert.equal(view.absenceForm.reason, '');
 });
+
+test('« Imprimer le billet » ouvre l\'aperçu PDF du billet d\'absence', async () => {
+    const { view } = await boot();
+    const opened = [];
+    view.openPdfPreview = async (url, title, filename) => { opened.push({ url, title, filename }); };
+
+    await view.printAbsenceBillet('j1');
+
+    assert.deepEqual(opened, [{ url: '/api/v1/billets/absence/j1/pdf', title: "Billet d'absence", filename: 'Billet-Absence-j1.pdf' }]);
+    assert.equal(view.printingAbsenceId, null);
+});
