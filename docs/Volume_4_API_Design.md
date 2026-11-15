@@ -348,7 +348,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` / `PUT` | `/api/v1/settings/school` | Paramètres établissement (logo, cachet, signature, format de date) |
 | `GET` / `PUT` | `/api/v1/settings/grading` | Système de notation par niveau/classe |
 | `GET` / `PUT` | `/api/v1/settings/registration-numbers` | Format des matricules |
-| ~~`GET`~~ | ~~`/api/v1/exports/school-data`~~ | **Reporté après la V1** — voir la note ci-dessous |
+| `POST` | `/api/v1/exports/school-data` | **Exporter mes données** (Directeur seul) — archive ZIP de toutes les données de l'établissement ; corps `{ "password": "…" }`, voir la note ci-dessous |
 | `GET` | `/api/v1/schools/current/mode` | Régime de l'établissement : `isLive`, `wentLiveAt`, `revertToTestAvailable` (drapeau d'environnement) |
 | `POST` | `/api/v1/schools/current/go-live` | Bascule en mode réel (Directeur, mot « CONFIRMER » ou nom de l'école) — définitive |
 | `POST` | `/api/v1/schools/current/reset-data` | « Zone de danger » : remise à neuf en mode test (Directeur, mot « PURGER » ou nom de l'école) |
@@ -374,7 +374,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 > l'écran affiche malgré tout son bouton, désactivé, pour que l'absence s'explique. Périmètre exact de
 > la purge et arbitrages : `ACTIVE_CONTEXT.md` §2.
 
-> **Export global « Exporter mes données » — reporté.** Cette route était spécifiée mais n'a jamais été implémentée ; elle est actée pour la **version suivante** (Volume 1.5 §8). En V1, un Directeur qui doit sortir ses données dispose des exports **par domaine** déjà livrés, qui couvrent les besoins réels de reporting et d'archivage : rapport financier consolidé `.xlsx` (§14), export des présences (`GET /api/v1/reports/attendance/export`), import/export Excel des notes, et l'ensemble des PDF officiels du §18. La sauvegarde intégrale de la base reste, elle, une responsabilité d'infrastructure (Volume 9) — jamais une action utilisateur.
+> **Export global « Exporter mes données » — livré (15/11/2026).** `POST /api/v1/exports/school-data`, **Directeur seul**, répond une archive `application/zip` nommée `export-<ecole>-<date>.zip`. Corps : `{ "password": "…" }` — la confirmation par mot de passe est exigée comme pour l'activation d'une année (`422` sur le champ `Password` si absente ou refusée, jamais `401`). Limité à **3 exports par heure et par utilisateur** (`429` au-delà), journalisé dans le journal d'audit (jamais le mot de passe). Contenu : `donnees/<table>.csv` pour chaque table d'établissement non vide (UTF-8 avec BOM, séparateur `;`, nombres au point décimal, dates ISO 8601), `manifest.json` (tables, nombre de lignes) et `LISEZMOI.txt`. **Jamais** dans l'archive : hachages de mots de passe, jetons, état de verrouillage des comptes, éléments supprimés logiquement, fichiers binaires, données d'une autre école. Les cellules commençant par `=`, `+`, `@` ou `-` (hors nombres) sont préfixées d'une apostrophe (protection contre l'injection de formule). Les exports **par domaine** (rapport financier `.xlsx` §14, présences `GET /api/v1/reports/attendance/export`, notes Excel, PDF officiels §18) restent disponibles. La sauvegarde intégrale de la base reste une responsabilité d'infrastructure (Volume 9).
 
 ---
 

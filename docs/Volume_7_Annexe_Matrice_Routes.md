@@ -295,6 +295,12 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 | GET | `/api/v1/exams/sessions/{id:guid}/pv/pdf` | Directeur, Secretariat, Enseignant ∩ Directeur, Secretariat | module Pédagogie |
 | GET | `/api/v1/exams/statistics` | Directeur, Secretariat, Enseignant ∩ Directeur, Secretariat | module Pédagogie |
 
+## Exports
+
+| Méthode | Route | Rôles | Condition |
+|---|---|---|---|
+| POST | `/api/v1/exports/school-data` | Directeur |  |
+
 ## Features
 
 | Méthode | Route | Rôles | Condition |

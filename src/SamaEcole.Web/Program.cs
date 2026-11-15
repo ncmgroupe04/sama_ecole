@@ -329,6 +329,18 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
+    options.AddPolicy(SensitiveEndpointRateLimiting.SchoolDataExportPolicyName, httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst("sub")?.Value ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 3,
+            Window = TimeSpan.FromHours(1),
+            QueueLimit = 0
+        });
+    });
+
     options.AddPolicy(SensitiveEndpointRateLimiting.WebhookInboundPolicyName, httpContext =>
     {
         // Par IP : l'émetteur est un service tiers sans identité JWT. Derrière le proxy, l'IP réelle

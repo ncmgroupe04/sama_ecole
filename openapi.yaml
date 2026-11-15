@@ -1270,6 +1270,35 @@ paths:
         '403': { description: Rôle non autorisé (écriture réservée au Directeur) }
         '422': { description: Données invalides (nom manquant, URL de logo invalide…) }
 
+  /exports/school-data:
+    post:
+      tags: [Schools]
+      summary: Exporter mes données (Directeur uniquement)
+      description: >-
+        Archive ZIP de toutes les données de l'établissement courant : un fichier CSV (UTF-8 avec BOM, séparateur `;`) par table non vide
+        dans `donnees/`, plus `manifest.json` et `LISEZMOI.txt`. Jamais de mot de passe, de jeton, d'élément supprimé ni de donnée d'un
+        autre établissement. Le mot de passe du Directeur est exigé dans le corps (422 sur `password` si absent ou refusé). Limité à
+        3 exports par heure et par utilisateur (429). Journalisé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, description: Mot de passe actuel du Directeur }
+      responses:
+        '200':
+          description: Archive ZIP (`Content-Disposition: attachment; filename=export-<ecole>-<date>.zip`)
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { description: Non authentifié }
+        '403': { description: Rôle non autorisé (Directeur seul) }
+        '422': { description: Mot de passe absent ou incorrect }
+        '429': { description: Plus de 3 exports dans l'heure }
+
   /schools/current/reset-data:
     post:
       tags: [Schools]

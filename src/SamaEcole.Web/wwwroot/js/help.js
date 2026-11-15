@@ -112,7 +112,7 @@
                         "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
                         "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
                         "Facturation & historique : statut, formule et échéance de l'abonnement Unikol, puis historique des paiements avec leur période couverte, mensuelle ou annuelle (Directeur). Voir la fiche « Comprendre votre abonnement ».",
-                        "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
+                        "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), la carte « Exporter mes données » (archive complète, Directeur) et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
                         "Utilisateurs & rôles : création des comptes du personnel et attribution des rôles (Directeur).",
                         "Journal d'audit : registre consultable de toutes les opérations sensibles — auteur, date, valeur antérieure (Directeur).",
                         "Notifications SMS : expéditeur, gabarits et suivi des envois — section de la formule Premium, visible hors formule avec un badge (Directeur)."
@@ -129,6 +129,46 @@
                         "N'accordez une délégation (notation, frais) que lorsqu'elle est réellement nécessaire, et retirez-la quand elle ne l'est plus : chaque interrupteur activé élargit ce qu'un rôle peut faire sans contrôle.",
                         "Le type d'établissement (Privé / Public) n'est pas un réglage anodin : il masque des modules entiers. Ne le changez qu'en connaissance de cause.",
                         "Après tout incident, ouvrez le Journal d'audit plutôt que d'interroger les agents : il rétablit la chronologie exacte sans mettre personne en cause."
+                    ]
+                },
+                {
+                    id: 'exporter-mes-donnees',
+                    title: 'Exporter mes données — archive complète de l\'établissement',
+                    location: 'Paramètres › Paramètres système › Exporter mes données',
+                    href: '/parametres?tab=securite',
+                    roles: ['Directeur'],
+                    definition:
+                        "« Exporter mes données » télécharge, en un clic, une archive (.zip) de TOUTES les données de " +
+                        "l'établissement : élèves, inscriptions, paiements, notes, enseignants, personnel, présences, " +
+                        "inventaire, examens, etc. Elle contient un fichier CSV par table (lisible dans Excel), un fichier " +
+                        "manifest.json (liste des tables et nombre de lignes) et un LISEZMOI.txt qui explique le format.",
+                    objectif:
+                        "Garder une copie complète et exploitable de ses données : pour archiver en fin d'année, changer de " +
+                        "prestataire, répondre à un contrôle, ou simplement être rassuré. Les données restent la propriété " +
+                        "de l'établissement et peuvent en sortir à tout moment.",
+                    probleme:
+                        "Sans export complet, récupérer ses données obligeait à enchaîner de nombreux exports partiels " +
+                        "(rapport financier, présences, notes, PDF) sans jamais avoir la certitude de n'avoir rien oublié.",
+                    procedure: [
+                        "Ouvrez Paramètres › Paramètres système (Directeur seul) et repérez la carte « Exporter mes données », juste au-dessus de la Zone de danger.",
+                        "Saisissez VOTRE mot de passe : il confirme que c'est bien vous qui demandez l'archive (un poste laissé ouvert ne suffit pas).",
+                        "Cliquez sur « Exporter mes données ». La préparation peut prendre un moment sur un grand établissement : ne fermez pas la page.",
+                        "Le fichier « export-<nom de l'école>-<date>.zip » se télécharge. Un message vert confirme la fin de l'export.",
+                        "Décompressez l'archive : lisez LISEZMOI.txt, puis ouvrez les CSV du dossier « donnees ». Dans Excel : Données › À partir d'un fichier texte/CSV, encodage UTF-8, délimiteur point-virgule.",
+                        "Si le mot de passe est refusé, le message apparaît sous le champ : saisissez-le de nouveau, rien n'a été exporté."
+                    ],
+                    impacts: [
+                        "Sécurité : l'archive contient des données personnelles d'élèves et de familles. Conservez-la en lieu sûr, ne l'envoyez pas par messagerie ordinaire.",
+                        "Jamais dans l'archive : les mots de passe et jetons, les éléments supprimés (ils restent dans leur corbeille), les photos et fichiers binaires (seules leurs adresses figurent), et toute donnée d'un autre établissement.",
+                        "Limite : 3 exports par heure. Au-delà, un message l'indique ; réessayez plus tard.",
+                        "Audit : chaque export (réussi ou refusé) est enregistré dans le Journal d'audit, avec son auteur et sa date — jamais le mot de passe.",
+                        "Une valeur qui commence par = + - @ est précédée d'une apostrophe dans le CSV : c'est volontaire, cela empêche Excel d'exécuter une formule piégée.",
+                        "Cet export complète, sans les remplacer, les exports par domaine (rapport financier .xlsx, présences, notes, PDF officiels) et la sauvegarde automatique de la base, assurée par l'infrastructure."
+                    ],
+                    recommandations: [
+                        "Faites un export à chaque clôture d'année scolaire et rangez-le avec vos archives.",
+                        "Supprimez le fichier téléchargé des postes partagés une fois copié en lieu sûr.",
+                        "Un export n'est pas une sauvegarde de restauration : il ne permet pas de remettre l'application en l'état, il sert à consulter et réutiliser les données."
                     ]
                 },
                 {

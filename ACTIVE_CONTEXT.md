@@ -94,6 +94,16 @@ Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bu
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
 
+### Export global « Exporter mes données » (15/11/2026) — livré
+
+`POST /api/v1/exports/school-data` (Directeur seul, mot de passe exigé, 3 par heure, audité) : archive ZIP d'un CSV par table
+d'établissement + `manifest.json` + `LISEZMOI.txt`. Construit depuis le **modèle EF** (`SchoolDataExporter`, Persistence) : une table de
+plus dans le modèle est exportée sans toucher le code. Garde-fous testés (`SchoolDataExportTests`, `SchoolDataExportEndpointTests`) :
+aucune donnée d'une autre école — dont la table des établissements, **non filtrée globalement** (annuaire public), bornée
+explicitement —, aucun hachage ni jeton, aucune ligne supprimée, protection contre l'injection de formule CSV, toute table exportée
+filtrée globalement ou explicitement. Carte « Exporter mes données » dans Paramètres › Paramètres système. Arbitrage du propriétaire
+du 15/11/2026 : cet export, jusque-là reporté, est désormais dans le périmètre.
+
 ### Notes — fenêtre de correction, Secrétariat et fiche papier (24/09/2026) — livré (Évolution N°1)
 
 Trois changements sur `/grades` et l'écran `/notes`. Spécification : `docs/Volume_7_Security.md` « Notes »,

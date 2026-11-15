@@ -637,8 +637,8 @@ Super Admin, Directeur, Secrétariat.
 - La colonne « Convoquer » n'apparaît qu'à l'intersection des deux permissions (lecture du rapport +
   droit sur les convocations) — le Secrétariat voit le rapport, mais pas le bouton, puisqu'il n'a pas
   accès au module Convocations.
-- Export des présences disponible depuis cet écran, l'un des exports par domaine qui couvre le besoin
-  de reporting en l'absence d'un export global (§11 API Paramètres).
+- Export des présences disponible depuis cet écran, l'un des exports par domaine (l'export global de toutes
+  les données se trouve dans Paramètres › Paramètres système, §26).
 
 ### Flux d'utilisation typique
 1. Le Directeur consulte le bilan d'assiduité sur la période de son choix.
@@ -1147,8 +1147,8 @@ Tous les rôles connectés.
 
 ### Fonctionnalités clés & règles métier
 - Contenu organisé par module, reflétant la navigation elle-même.
-- Les fonctionnalités hors périmètre V1 (portail Parents/Élèves, export global de données) y sont
-  documentées comme telles, jamais présentées comme disponibles.
+- Les fonctionnalités hors périmètre (portail Parents/Élèves) y sont documentées comme telles, jamais
+  présentées comme disponibles.
 
 ### Flux d'utilisation typique
 1. Un utilisateur bloqué sur un écran ouvre l'Aide.
@@ -1195,6 +1195,15 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
 - **Profil « Daara — Mémorisation »** : le lien « Classes » est masqué (confort d'affichage ; l'API reste
   ouverte car inscriptions, frais et paie en dépendent).
 - Le lit actuel d'un élève est proposé dans « Affecter / Changer / Libérer ».
+
+### Paramètres : Exporter mes données (section 26)
+- **Paramètres › Paramètres système › « Exporter mes données »** (Directeur seul) : télécharge une archive `.zip` de **toutes les
+  données de l'établissement** — un fichier CSV par table (élèves, inscriptions, paiements, notes, enseignants, personnel,
+  présences, inventaire, etc.), un `manifest.json` et un `LISEZMOI.txt`. Le Directeur confirme par son **mot de passe** ; **3 exports
+  par heure** au plus ; chaque export est **journalisé**.
+- **Jamais dans l'archive** : mots de passe et jetons, éléments supprimés, photos et fichiers binaires (seules leurs adresses
+  figurent), données d'un autre établissement. Les CSV s'ouvrent dans Excel (Données › À partir d'un fichier texte, UTF-8,
+  séparateur point-virgule).
 
 ### Coran (module Coran)
 - **Écran `/coran`** (Gestion Scolaire › Coran) : suivi de mémorisation (Juz, Hizb, sourate, statut En cours / Mémorisé /

@@ -54,4 +54,11 @@ public static class SensitiveEndpointRateLimiting
     /// trafic normal. Le corps non signé est rejeté avant toute recherche en base, de toute façon.
     /// </summary>
     public const string WebhookInboundPolicyName = "webhooks-inbound";
+
+    /// <summary>
+    /// POST /exports/school-data — archive de TOUTES les données de l'établissement. Coûteuse (lecture de chaque table) et sensible :
+    /// plafonnée à 3 exports par heure et par utilisateur, largement assez pour un usage légitime (sauvegarde, changement de
+    /// prestataire) et un frein net à l'aspiration répétée depuis un compte compromis.
+    /// </summary>
+    public const string SchoolDataExportPolicyName = "school-data-export";
 }
