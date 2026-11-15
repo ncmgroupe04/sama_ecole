@@ -57,6 +57,7 @@ public class TieredRegistrationEndpointsTests(AuthApiFactory factory) : IClassFi
             ["directorEmail"] = email,
             ["directorPhone"] = "+221771119988",
             ["directorPassword"] = DirectorPassword,
+            ["acceptedTerms"] = true,
             ["schoolName"] = "École " + email,
             ["ownership"] = "Private"
         }.Concat(ToDictionary(offer)).ToDictionary(kv => kv.Key, kv => kv.Value));
