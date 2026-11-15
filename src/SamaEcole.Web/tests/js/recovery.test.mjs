@@ -58,6 +58,7 @@ test('total du lot et élèves sans numéro de tuteur', () => {
 
     assert.equal(view.batchTotal(BATCH), 40000);
     assert.equal(view.withoutPhone(BATCH), 2);
+    assert.equal(view.recipients(BATCH), 1);
     assert.equal(view.phoneLabel(BATCH.items[1]), 'Aucun numéro');
     assert.equal(view.phoneLabel(BATCH.items[0]), '770000000');
 });
