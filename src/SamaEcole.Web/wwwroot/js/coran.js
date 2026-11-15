@@ -61,6 +61,8 @@ document.addEventListener('alpine:init', () => {
         activeTab: 'progress',
         statusOptions: STATUS_OPTIONS,
 
+        // Consommé par le partiel _ErrorBanner partagé (x-show="error") : échec du chargement de la liste des classes.
+        error: null,
         isLoadingContext: true,
         isLoadingRows: false,
         // Les deux lectures sont indépendantes : l'échec de l'une n'efface pas l'autre onglet.
@@ -83,7 +85,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.classrooms = await window.api.get('/classrooms');
             } catch (err) {
-                this.progressError = window.api.toMessage(err, 'Impossible de charger les classes.');
+                this.error = window.api.toMessage(err, 'Impossible de charger les classes.');
             } finally {
                 this.isLoadingContext = false;
             }

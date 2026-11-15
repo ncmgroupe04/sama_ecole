@@ -200,3 +200,16 @@ test('changer de classe vide les données précédentes et l\'historique dépli�
     same(view.progressRows, []);
     same(view.expanded, {});
 });
+
+test('l\'échec du chargement des classes alimente le bandeau d\'erreur partagé (propriété `error`)', async () => {
+    const view = makeView({ api: { get: async () => { throw new Error('Classes indisponibles'); } } });
+    await view.init();
+
+    assert.equal(view.error, 'Classes indisponibles');
+    assert.equal(view.isLoadingContext, false);
+});
+
+test('le composant déclare `error` : le partiel _ErrorBanner la lit dès le premier rendu', () => {
+    const view = makeView();
+    assert.ok('error' in view);
+});
