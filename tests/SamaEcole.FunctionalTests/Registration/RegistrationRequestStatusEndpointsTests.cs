@@ -33,7 +33,7 @@ public class RegistrationRequestStatusEndpointsTests(AuthApiFactory factory) : I
             directorFullName = "Fatou Sarr",
             directorEmail = DirectorEmail,
             directorPhone = DirectorPhone,
-            directorPassword = "Correct-Horse-9",
+            acceptedTerms = true, directorPassword = "Correct-Horse-9",
             schoolName,
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });

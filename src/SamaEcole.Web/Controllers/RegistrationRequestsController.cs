@@ -57,7 +57,8 @@ public class RegistrationRequestsController(
         bool HasBoarding = false,
         IReadOnlyList<CycleType>? Cycles = null,
         StudentQuotaTier? Tier = null,
-        string? TurnstileToken = null);
+        string? TurnstileToken = null,
+        bool? AcceptedTerms = null);
 
     [HttpPost]
     [EnableRateLimiting(RegistrationRateLimiting.PolicyName)]
@@ -121,7 +122,10 @@ public class RegistrationRequestsController(
                 Profile = request.Profile,
                 HasBoarding = request.HasBoarding,
                 Cycles = request.Cycles,
-                Tier = request.Tier
+                Tier = request.Tier,
+                AcceptedTerms = request.AcceptedTerms == true,
+                // L'IP est celle que le SERVEUR voit, jamais une valeur envoyée par le client.
+                TermsAcceptedIp = HttpContext.Connection.RemoteIpAddress?.ToString()
             },
             cancellationToken);
 

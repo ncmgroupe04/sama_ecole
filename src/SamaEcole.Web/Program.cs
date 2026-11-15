@@ -250,6 +250,11 @@ var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:Repor
 var webhookPermitLimit = builder.Configuration.GetValue("RateLimiting:Webhooks:PermitLimit", 120);
 var webhookWindowMinutes = builder.Configuration.GetValue("RateLimiting:Webhooks:WindowMinutes", 1);
 
+// Identité de l'éditeur des pages juridiques (mentions légales, conditions, confidentialité) : section « Legal »,
+// jamais inventée — une valeur absente s'affiche « à compléter ».
+builder.Services.Configure<SamaEcole.Web.Security.LegalOptions>(
+    builder.Configuration.GetSection(SamaEcole.Web.Security.LegalOptions.SectionName));
+
 // Cloudflare Turnstile (anti-robot du formulaire public d'inscription) : inactif tant que Turnstile:SiteKey et
 // Turnstile:SecretKey ne sont pas tous deux renseignés. La clé secrète vient de l'environnement, jamais du dépôt.
 builder.Services.Configure<SamaEcole.Web.Security.TurnstileOptions>(

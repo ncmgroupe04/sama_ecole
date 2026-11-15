@@ -8615,6 +8615,7 @@ components:
         tier: { type: string, enum: [Tier_100, Tier1_150, Tier_250, Tier2_400], nullable: true, description: "Tranche d'effectif choisie. Doit couvrir `estimatedStudentCount` (obligatoire avec une tranche) ; au-delà de 400 élèves : offre Grand Groupe, sur devis (422)." }
         sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true, description: "Palier de taille du forfait PRIVÉ (obligatoire pour un privé, ignoré pour un public). Seuils : bicycle 400 / 800 élèves, grand complexe 500 / 1 000 ; monocycles petit / moyen / grand sans seuil chiffré." }
         website: { type: string, description: "Honeypot anti-spam : champ leurre, DOIT rester vide. Rempli, la soumission est ignorée sans être enregistrée." }
+        acceptedTerms: { type: boolean, nullable: true, description: "Acceptation des conditions d'utilisation et de la politique de confidentialité : OBLIGATOIRE à true (422 sur AcceptedTerms sinon). Le serveur enregistre la version des textes, la date et l'IP vue par le serveur comme preuve." }
         turnstileToken: { type: string, nullable: true, description: "Jeton Cloudflare Turnstile produit par le widget (usage unique). OBLIGATOIRE si Turnstile est configuré côté serveur (422 sur TurnstileToken sinon) ; ignoré sans clés." }
 
     RegistrationRequestCreated:

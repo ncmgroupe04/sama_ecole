@@ -360,6 +360,20 @@
  </div>
  </fieldset>
 
+ @* Acceptation OBLIGATOIRE des conditions d'utilisation et de la politique de confidentialité : le serveur refuse la demande sans elle
+    et garde la preuve (version des textes, date, IP). Les liens s'ouvrent dans un nouvel onglet pour ne pas perdre la saisie. *@
+ <div>
+ <label class="flex items-start gap-3 text-sm text-slate-700">
+ <input id="acceptedTerms" type="checkbox" x-model="acceptedTerms" class="checkbox-field mt-0.5"
+ :aria-invalid="errors.acceptedterms ? 'true' : 'false'" aria-describedby="acceptedTermsError" />
+ <span>J'ai lu et j'accepte les
+ <a href="/conditions-utilisation" target="_blank" rel="noopener" class="text-primary-700 underline">conditions d'utilisation</a>
+ et la
+ <a href="/politique-confidentialite" target="_blank" rel="noopener" class="text-primary-700 underline">politique de confidentialité</a>.</span>
+ </label>
+ <p id="acceptedTermsError" x-show="errors.acceptedterms" x-cloak x-text="errors.acceptedterms" class="field-error mt-1"></p>
+ </div>
+
  @* Cloudflare Turnstile — rendu seulement si les deux clés sont configurées (voir TurnstileOptions). Le jeton est lu par
     registration.js au moment de l'envoi et vérifié côté serveur ; la clé de SITE est publique, la clé secrète ne l'est jamais. *@
  @if (Turnstile.Value.IsEnabled)

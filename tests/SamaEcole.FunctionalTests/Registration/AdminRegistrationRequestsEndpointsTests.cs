@@ -46,7 +46,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
             directorFullName = "Fatou Sarr",
             directorEmail,
             directorPhone = "+221771119988",
-            directorPassword = DirectorPassword,
+            acceptedTerms = true, directorPassword = DirectorPassword,
             schoolName,
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
@@ -334,7 +334,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
             directorFullName = "Fatou Sarr",
             directorEmail = "motifpublic@revue.sn",
             directorPhone = "+221771119988",
-            directorPassword = DirectorPassword,
+            acceptedTerms = true, directorPassword = DirectorPassword,
             schoolName = "École Motif Public",
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });

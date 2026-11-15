@@ -190,6 +190,10 @@ document.addEventListener('alpine:init', () => {
         // Honeypot : DOIT rester vide. Lié au champ leurre `website`.
         website: '',
 
+        // Acceptation des conditions d'utilisation et de la politique de confidentialité : OBLIGATOIRE (le serveur refuse sans, et garde
+        // la preuve — version des textes, date, IP). Jamais pré-cochée.
+        acceptedTerms: false,
+
         isSubmitting: false,
         error: null,
         errors: {},
@@ -472,6 +476,11 @@ document.addEventListener('alpine:init', () => {
                 this.validatePrivateOffer(errors);
             }
 
+            // Même règle que SubmitRegistrationRequestValidator : sans acceptation, le serveur refuse la demande.
+            if (!this.acceptedTerms) {
+                errors.acceptedterms = "Vous devez accepter les conditions d'utilisation et la politique de confidentialité.";
+            }
+
             this.errors = errors;
             return Object.keys(errors).length === 0;
         },
@@ -530,6 +539,7 @@ document.addEventListener('alpine:init', () => {
                 estimatedStudentCount: this.estimatedStudentCount === '' ? null : Number(this.estimatedStudentCount),
                 ownership: this.ownership,
                 website: this.website,
+                acceptedTerms: this.acceptedTerms,
                 // Jeton Cloudflare Turnstile (absent si le contrôle n'est pas configuré : le serveur ne l'exige alors pas).
                 turnstileToken: window.registrationTurnstile.token || null
             };

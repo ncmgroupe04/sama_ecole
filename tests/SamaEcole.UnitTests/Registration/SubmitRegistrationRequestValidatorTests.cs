@@ -14,7 +14,7 @@ public class SubmitRegistrationRequestValidatorTests
         DirectorFullName = "Awa Ndiaye",
         DirectorEmail = "awa@filaos.sn",
         DirectorPhone = "+221771234567",
-        DirectorPassword = "Correct-Horse-9",
+        AcceptedTerms = true, DirectorPassword = "Correct-Horse-9",
         SchoolName = "Complexe Les Baobabs",
         Ownership = SchoolOwnership.Private,
         CycleProfile = SchoolCycleProfile.Primaire,
@@ -27,6 +27,17 @@ public class SubmitRegistrationRequestValidatorTests
         var result = _validator.Validate(ValidCommand());
 
         result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Should_Fail_When_The_Terms_Are_Not_Accepted()
+    {
+        var command = ValidCommand() with { AcceptedTerms = false };
+
+        var errors = _validator.Validate(command).Errors;
+
+        errors.Should().Contain(e => e.PropertyName == nameof(command.AcceptedTerms)
+            && e.ErrorMessage.Contains("conditions d'utilisation"));
     }
 
     [Fact]
@@ -103,7 +114,7 @@ public class SubmitRegistrationRequestValidatorTests
         // La politique partagée (PasswordPolicy) est déléguée : un seul cas suffit à prouver le
         // branchement, sa couverture complète (majuscule/chiffre/suite évidente/nom personnel…) est
         // déjà testée par PasswordPolicyTests.
-        var command = ValidCommand() with { DirectorPassword = "Ab1!ab1" };
+        var command = ValidCommand() with { AcceptedTerms = true, DirectorPassword = "Ab1!ab1" };
 
         var result = _validator.Validate(command);
 
@@ -115,7 +126,7 @@ public class SubmitRegistrationRequestValidatorTests
     {
         // Preuve que PasswordPolicy.Validate reçoit bien DirectorFullName ET SchoolName comme termes
         // personnels — pas seulement le premier.
-        var command = ValidCommand() with { DirectorPassword = "AwaNdiaye-2026!" };
+        var command = ValidCommand() with { AcceptedTerms = true, DirectorPassword = "AwaNdiaye-2026!" };
 
         var result = _validator.Validate(command);
 

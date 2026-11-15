@@ -67,7 +67,7 @@ public class RegistrationTurnstileTests(AuthApiFactory factory) : IClassFixture<
         directorFullName = "Awa Ndiaye",
         directorEmail = email,
         directorPhone = "+221771234567",
-        directorPassword = "Correct-Horse-9",
+        acceptedTerms = true, directorPassword = "Correct-Horse-9",
         schoolName = "École Turnstile",
         schoolAddress = "Rue 12, Médina, Dakar",
         city = "Dakar",

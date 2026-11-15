@@ -236,7 +236,7 @@ public class TieredRegistrationEndpointsTests(AuthApiFactory factory) : IClassFi
         var submit = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
         {
             directorFullName = "Fatou Sarr", directorEmail = "historique@tranche.sn", directorPhone = "+221771119988",
-            directorPassword = DirectorPassword, schoolName = "École historique",
+            acceptedTerms = true, directorPassword = DirectorPassword, schoolName = "École historique",
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;

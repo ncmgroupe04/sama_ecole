@@ -28,6 +28,14 @@
 <body class="bg-stone-50 text-slate-900 font-sans antialiased min-h-screen overflow-x-hidden">
  @await Html.PartialAsync("_IconSprite")
  @RenderBody()
+ <footer class="py-4 px-4 text-center text-xs text-slate-500">
+ <nav aria-label="Informations légales" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+ <a href="/conditions-utilisation" class="hover:text-primary-700 hover:underline">Conditions d'utilisation</a>
+ <a href="/politique-confidentialite" class="hover:text-primary-700 hover:underline">Confidentialité</a>
+ <a href="/mentions-legales" class="hover:text-primary-700 hover:underline">Mentions légales</a>
+ <a href="/cookies" class="hover:text-primary-700 hover:underline">Cookies</a>
+ </nav>
+ </footer>
  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

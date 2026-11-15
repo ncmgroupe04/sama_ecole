@@ -19,7 +19,7 @@ public class SubmitRegistrationTieredOfferValidatorTests
         DirectorFullName = "Awa Ndiaye",
         DirectorEmail = "awa@filaos.sn",
         DirectorPhone = "+221771234567",
-        DirectorPassword = "Correct-Horse-9",
+        AcceptedTerms = true, DirectorPassword = "Correct-Horse-9",
         SchoolName = "Complexe Les Baobabs",
         Ownership = SchoolOwnership.Private,
         Profile = ProfileType.EnseignementGeneral,
@@ -161,7 +161,7 @@ public class SubmitRegistrationTieredOfferValidatorTests
         var command = new SubmitRegistrationRequestCommand
         {
             DirectorFullName = "Awa Ndiaye", DirectorEmail = "awa@filaos.sn", DirectorPhone = "+221771234567",
-            DirectorPassword = "Correct-Horse-9", SchoolName = "Complexe Les Baobabs",
+            AcceptedTerms = true, DirectorPassword = "Correct-Horse-9", SchoolName = "Complexe Les Baobabs",
             Ownership = SchoolOwnership.Private, CycleProfile = null, SizeTier = null
         };
 

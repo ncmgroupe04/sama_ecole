@@ -473,6 +473,15 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 | POST | `/api/v1/inventory/movements` | Directeur, Secretariat, Surveillant |  |
 | GET | `/api/v1/inventory/reports/global/pdf` | Directeur, Secretariat |  |
 
+## Legal
+
+| Méthode | Route | Rôles | Condition |
+|---|---|---|---|
+| GET | `/conditions-utilisation` | _anonyme_ |  |
+| GET | `/cookies` | _anonyme_ |  |
+| GET | `/mentions-legales` | _anonyme_ |  |
+| GET | `/politique-confidentialite` | _anonyme_ |  |
+
 ## Onboarding
 
 | Méthode | Route | Rôles | Condition |

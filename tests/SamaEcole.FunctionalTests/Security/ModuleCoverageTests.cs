@@ -44,7 +44,9 @@ public class ModuleCoverageTests
         nameof(AdminOverQuotaSchoolsController), nameof(AdminPricingGridController), nameof(AdminSubscriptionChangeRequestsController),
         nameof(PublicPricingGridController),
         // Gabarits Razor (PageModule côté page, API gardée ailleurs)
-        nameof(PagesController)
+        nameof(PagesController),
+        // Pages juridiques publiques (conditions, confidentialité, mentions légales, cookies) : anonymes, sans module ni donnée d'école
+        nameof(LegalController)
     ];
 
     private static IEnumerable<Type> WebControllers() =>

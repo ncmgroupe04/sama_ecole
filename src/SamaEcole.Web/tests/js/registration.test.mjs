@@ -78,6 +78,7 @@ async function mountValidForm(fetchStub) {
     form.directorEmail = 'nguirane600@gmail.com';
     form.directorPhone = '763545916';
     form.directorPassword = 'TestPassw0rd!2026';
+    form.acceptedTerms = true;
 
     return { ctx, form };
 }
@@ -603,3 +604,27 @@ test('Turnstile : un jeton est à usage unique, il est oublié après l\'envoi e
     assert.equal(widgetResets, 1);
     assert.equal(form.buildPayload().turnstileToken, null);
 });
+
+// ---------------------------------------------------------------- Conditions d'utilisation et confidentialité
+
+test('l\'acceptation des conditions est obligatoire et jamais pré-cochée', async () => {
+    const { form } = await mountValidForm();
+    assert.equal(ctxFresh().component('registrationForm').acceptedTerms, false, 'jamais pré-cochée');
+
+    form.acceptedTerms = false;
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.acceptedterms, /conditions d'utilisation/);
+
+    form.acceptedTerms = true;
+    assert.equal(form.validate(), true);
+});
+
+test('la demande envoie l\'acceptation au serveur', async () => {
+    const { form } = await mountValidForm();
+
+    assert.equal(form.buildPayload().acceptedTerms, true);
+});
+
+function ctxFresh() {
+    return boot();
+}

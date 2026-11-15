@@ -1,0 +1,104 @@
+@{
+    ViewData["Title"] = "Politique de confidentialité";
+    ViewData["Summary"] = "Quelles données personnelles sont traitées, pourquoi, par qui, combien de temps, et comment exercer vos droits.";
+    ViewData["Active"] = "privacy";
+    ViewData["Description"] = "Politique de confidentialité de la plateforme Unikol : données traitées, finalités, conservation, sous-traitants, droits (loi sénégalaise n° 2008-12).";
+    var contact = string.IsNullOrWhiteSpace(Legal.Value.ContactEmail) ? "l'adresse indiquée dans les mentions légales" : Legal.Value.ContactEmail;
+    var publisher = string.IsNullOrWhiteSpace(Legal.Value.PublisherName) ? "l'éditeur de la plateforme" : Legal.Value.PublisherName;
+    var publisherStart = char.ToUpperInvariant(publisher[0]) + publisher[1..]; // début de phrase
+}
+
+<p>
+    Cette politique explique comment les données personnelles sont traitées sur la plateforme <strong>Unikol</strong>, conformément à la loi sénégalaise
+    n° 2008-12 du 25 janvier 2008 sur la protection des données à caractère personnel. Elle distingue deux situations, car le rôle de l'éditeur n'est pas le même.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">1. Qui est responsable de quoi</h2>
+<div class="overflow-x-auto rounded-lg border border-slate-200">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600"><tr><th class="p-3">Données</th><th class="p-3">Responsable du traitement</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            <tr><td class="p-3">Données <strong>de l'établissement</strong> : élèves, familles, enseignants, personnel, notes, présences, finances…</td>
+                <td class="p-3"><strong>L'établissement</strong>. @publisherStart agit comme <strong>sous-traitant</strong> : il traite ces données uniquement pour fournir le service, sur instructions de l'établissement.</td></tr>
+            <tr><td class="p-3">Données <strong>du compte et de la demande d'inscription</strong> : directeur, personnel connecté, établissement, abonnement et paiements, journaux de sécurité.</td>
+                <td class="p-3"><strong>@publisherStart</strong>, pour gérer le contrat, la sécurité et la facturation.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">2. Données traitées</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li><strong>Demande d'inscription et compte</strong> : nom, e-mail et téléphone du Directeur, nom et adresse de l'établissement, effectif, mot de passe (conservé uniquement sous forme chiffrée irréversible).</li>
+    <li><strong>Preuve d'acceptation</strong> : version des conditions acceptée, date et heure, adresse IP vue par le serveur.</li>
+    <li><strong>Données scolaires saisies par l'établissement</strong> : identité et scolarité des élèves (matricule, naissance, classe, notes, présences, discipline), coordonnées des
+        familles, identité et contrats du personnel, opérations financières (frais, paiements, paie).</li>
+    <li><strong>Données techniques</strong> : adresse IP, date et heure, identifiant de compte et actions effectuées (journal d'audit), nécessaires à la sécurité.</li>
+</ul>
+<p>
+    Des données concernant des <strong>mineurs</strong> sont traitées pour le compte de l'établissement, qui doit disposer du fondement et de l'information nécessaires auprès des parents ou tuteurs.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">3. Finalités et fondements</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>Fournir le service et gérer l'abonnement (exécution du contrat).</li>
+    <li>Assurer la sécurité de la plateforme, prévenir la fraude et les abus, notamment par une limitation du nombre de demandes et une vérification anti-robot (intérêt légitime).</li>
+    <li>Envoyer les messages liés au service : confirmation de demande, réinitialisation de mot de passe, et — à la demande de l'établissement — alertes d'absence, rappels
+        d'échéance ou reçus par SMS, WhatsApp ou e-mail.</li>
+    <li>Respecter les obligations légales (conservation des pièces comptables, réponse aux autorités compétentes).</li>
+</ul>
+<p>Les données ne sont ni vendues ni utilisées à des fins publicitaires, et il n'y a aucune décision automatisée produisant des effets juridiques sur une personne.</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">4. Destinataires et sous-traitants</h2>
+<p>Seuls y accèdent les utilisateurs habilités de l'établissement concerné (selon leur rôle) et, pour l'exploitation et le support, l'éditeur. Les données de chaque établissement sont isolées de celles des autres. L'éditeur fait appel à des prestataires techniques :</p>
+<ul class="list-disc pl-6 space-y-1">
+    <li><strong>Hébergement</strong> : Google Cloud Platform, région europe-west1 (Belgique).</li>
+    <li><strong>Paiement</strong> : agrégateurs de paiement mobile et service Wave, pour les abonnements — ils reçoivent les données nécessaires au paiement, jamais les données scolaires.</li>
+    <li><strong>Messages</strong> : prestataires d'envoi d'e-mails et de SMS (et WhatsApp, selon la formule), pour les seuls messages demandés.</li>
+    <li><strong>Vérification anti-robot</strong> : Cloudflare Turnstile, sur le formulaire d'inscription, lorsqu'il est activé.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">5. Transferts hors du Sénégal</h2>
+<p>
+    Les données sont hébergées en Belgique et certains prestataires sont établis hors du Sénégal. L'éditeur veille à ce que ces transferts soient limités à ce qui est nécessaire au service et
+    encadrés contractuellement, dans le respect de la réglementation applicable en matière de transfert de données.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">6. Durée de conservation</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li><strong>Pendant l'abonnement</strong> : les données de l'établissement sont conservées. Ce que l'utilisateur « supprime » est archivé (suppression logique) et peut être restauré par le Directeur.</li>
+    <li><strong>À l'expiration ou à la résiliation</strong> : les données sont conservées pour permettre à l'établissement de les récupérer (export global) et de reprendre son abonnement ; la suppression
+        définitive peut être demandée par écrit par le Directeur.</li>
+    <li><strong>Demandes d'inscription refusées</strong> : conservées pour la traçabilité de l'examen, puis supprimées sur demande.</li>
+    <li><strong>Journaux de sécurité et d'audit</strong> : conservés le temps nécessaire à la sécurité et à la preuve des actions.</li>
+    <li><strong>Pièces comptables</strong> : conservées pendant la durée légale applicable à l'établissement.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">7. Sécurité</h2>
+<p>
+    Chiffrement des échanges (HTTPS), mots de passe chiffrés de façon irréversible, droits d'accès par rôle, isolation des données de chaque établissement au niveau de la base de données,
+    journal d'audit, sauvegardes, et limitation des tentatives de connexion et d'inscription. Aucun système n'est infaillible : en cas d'incident touchant des données personnelles,
+    l'éditeur informe l'établissement concerné et, lorsque la loi l'exige, l'autorité de protection des données.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">8. Vos droits</h2>
+<p>
+    Toute personne concernée dispose d'un droit d'<strong>accès</strong>, de <strong>rectification</strong>, de <strong>suppression</strong> et d'<strong>opposition</strong> pour des motifs légitimes.
+</p>
+<ul class="list-disc pl-6 space-y-1">
+    <li><strong>Élève, parent, enseignant ou membre du personnel</strong> : adressez-vous d'abord à <strong>votre établissement</strong>, responsable du traitement. L'éditeur l'aide à répondre.</li>
+    <li><strong>Directeur ou demandeur d'inscription</strong> : écrivez à @contact. Une réponse est apportée dans un délai raisonnable, au plus tard dans le mois.</li>
+</ul>
+<p>
+    Si votre demande n'aboutit pas, vous pouvez saisir la <strong>Commission de Protection des Données Personnelles (CDP)</strong> du Sénégal.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">9. Cookies</h2>
+<p>
+    La plateforme n'utilise aucun traceur publicitaire. Détail : <a href="/cookies" class="text-primary-700 underline">cookies et stockage local</a>.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">10. Modification</h2>
+<p>
+    Cette politique est datée (voir « Version en vigueur »). Toute modification substantielle est portée à la connaissance des établissements. Voir aussi les
+    <a href="/conditions-utilisation" class="text-primary-700 underline">conditions d'utilisation</a> et les <a href="/mentions-legales" class="text-primary-700 underline">mentions légales</a>.
+</p>
