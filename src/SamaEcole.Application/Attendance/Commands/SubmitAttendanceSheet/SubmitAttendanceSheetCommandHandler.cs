@@ -81,6 +81,15 @@ public class SubmitAttendanceSheetCommandHandler(
                 .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Missed).First().Id);
         }
 
+        // Billets d'absence actifs couvrant la date : une absence saisie pour un de ces élèves est JUSTIFIÉE et
+        // rattachée au billet (le statut d'avant est gardé pour l'annulation). Présent / Retard : le constat prime.
+        var justificationByStudent = (await dbContext.AbsenceJustifications.AsNoTracking()
+                .Where(a => a.StartDate <= request.Date && a.EndDate >= request.Date)
+                .Select(a => new { a.StudentId, a.Id })
+                .ToListAsync(cancellationToken))
+            .GroupBy(a => a.StudentId)
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
         // Tous les élèves de l'appel doivent appartenir à CETTE classe : un statut posé sur un élève
         // d'une autre classe (ou d'une autre école, déjà masqué par la RLS) est une erreur de saisie.
         var classStudentIds = await dbContext.Students.AsNoTracking()
@@ -130,12 +139,18 @@ public class SubmitAttendanceSheetCommandHandler(
 
             foreach (var entry in request.Entries)
             {
+                var absent = entry.Status is AttendanceStatus.UnjustifiedAbsence or AttendanceStatus.JustifiedAbsence;
+                Guid? justificationId = absent && justificationByStudent.TryGetValue(entry.StudentId, out var jId) ? jId : null;
+                var effectiveStatus = justificationId is null ? entry.Status : AttendanceStatus.JustifiedAbsence;
+
                 dbContext.StudentAttendances.Add(new StudentAttendance
                 {
                     SchoolId = schoolId,
                     AttendanceSheetId = sheet.Id,
                     StudentId = entry.StudentId,
-                    Status = entry.Status,
+                    Status = effectiveStatus,
+                    AbsenceJustificationId = justificationId,
+                    PreviousStatus = justificationId is null ? null : AttendanceStatus.UnjustifiedAbsence,
                     // Invariant : les minutes de retard n'ont de sens que pour Late (validé en amont,
                     // reforcé ici pour que la donnée en base ne puisse pas être incohérente).
                     LateMinutes = entry.Status == AttendanceStatus.Late ? entry.LateMinutes : 0,
@@ -145,8 +160,12 @@ public class SubmitAttendanceSheetCommandHandler(
 
             await dbContext.SaveChangesAsync(ct);
 
-            // Notification pour les retards et absences
-            foreach (var entry in request.Entries.Where(e => e.Status is AttendanceStatus.Late or AttendanceStatus.UnjustifiedAbsence or AttendanceStatus.JustifiedAbsence))
+            // Notification pour les retards et absences — sauf une absence couverte par un billet d'absence : la
+            // famille l'a elle-même justifiée, un SMS « absent » serait faux.
+            foreach (var entry in request.Entries.Where(e =>
+                         (e.Status == AttendanceStatus.Late)
+                         || (e.Status is AttendanceStatus.UnjustifiedAbsence or AttendanceStatus.JustifiedAbsence
+                             && !justificationByStudent.ContainsKey(e.StudentId))))
             {
                 await publisher.Publish(new SamaEcole.Application.Attendance.Events.AttendanceRecordedEvent(
                     schoolId,

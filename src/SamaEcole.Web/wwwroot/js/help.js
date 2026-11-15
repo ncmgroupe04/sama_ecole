@@ -112,7 +112,7 @@
                         "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
                         "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
                         "Facturation & historique : statut, formule et échéance de l'abonnement Unikol, puis historique des paiements avec leur période couverte, mensuelle ou annuelle (Directeur). Voir la fiche « Comprendre votre abonnement ».",
-                        "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
+                        "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), la carte « Exporter mes données » (archive complète, Directeur) et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
                         "Utilisateurs & rôles : création des comptes du personnel et attribution des rôles (Directeur).",
                         "Journal d'audit : registre consultable de toutes les opérations sensibles — auteur, date, valeur antérieure (Directeur).",
                         "Notifications SMS : expéditeur, gabarits et suivi des envois — section de la formule Premium, visible hors formule avec un badge (Directeur)."
@@ -129,6 +129,46 @@
                         "N'accordez une délégation (notation, frais) que lorsqu'elle est réellement nécessaire, et retirez-la quand elle ne l'est plus : chaque interrupteur activé élargit ce qu'un rôle peut faire sans contrôle.",
                         "Le type d'établissement (Privé / Public) n'est pas un réglage anodin : il masque des modules entiers. Ne le changez qu'en connaissance de cause.",
                         "Après tout incident, ouvrez le Journal d'audit plutôt que d'interroger les agents : il rétablit la chronologie exacte sans mettre personne en cause."
+                    ]
+                },
+                {
+                    id: 'exporter-mes-donnees',
+                    title: 'Exporter mes données — archive complète de l\'établissement',
+                    location: 'Paramètres › Paramètres système › Exporter mes données',
+                    href: '/parametres?tab=securite',
+                    roles: ['Directeur'],
+                    definition:
+                        "« Exporter mes données » télécharge, en un clic, une archive (.zip) de TOUTES les données de " +
+                        "l'établissement : élèves, inscriptions, paiements, notes, enseignants, personnel, présences, " +
+                        "inventaire, examens, etc. Elle contient un fichier CSV par table (lisible dans Excel), un fichier " +
+                        "manifest.json (liste des tables et nombre de lignes) et un LISEZMOI.txt qui explique le format.",
+                    objectif:
+                        "Garder une copie complète et exploitable de ses données : pour archiver en fin d'année, changer de " +
+                        "prestataire, répondre à un contrôle, ou simplement être rassuré. Les données restent la propriété " +
+                        "de l'établissement et peuvent en sortir à tout moment.",
+                    probleme:
+                        "Sans export complet, récupérer ses données obligeait à enchaîner de nombreux exports partiels " +
+                        "(rapport financier, présences, notes, PDF) sans jamais avoir la certitude de n'avoir rien oublié.",
+                    procedure: [
+                        "Ouvrez Paramètres › Paramètres système (Directeur seul) et repérez la carte « Exporter mes données », juste au-dessus de la Zone de danger.",
+                        "Saisissez VOTRE mot de passe : il confirme que c'est bien vous qui demandez l'archive (un poste laissé ouvert ne suffit pas).",
+                        "Cliquez sur « Exporter mes données ». La préparation peut prendre un moment sur un grand établissement : ne fermez pas la page.",
+                        "Le fichier « export-<nom de l'école>-<date>.zip » se télécharge. Un message vert confirme la fin de l'export.",
+                        "Décompressez l'archive : lisez LISEZMOI.txt, puis ouvrez les CSV du dossier « donnees ». Dans Excel : Données › À partir d'un fichier texte/CSV, encodage UTF-8, délimiteur point-virgule.",
+                        "Si le mot de passe est refusé, le message apparaît sous le champ : saisissez-le de nouveau, rien n'a été exporté."
+                    ],
+                    impacts: [
+                        "Sécurité : l'archive contient des données personnelles d'élèves et de familles. Conservez-la en lieu sûr, ne l'envoyez pas par messagerie ordinaire.",
+                        "Jamais dans l'archive : les mots de passe et jetons, les éléments supprimés (ils restent dans leur corbeille), les photos et fichiers binaires (seules leurs adresses figurent), et toute donnée d'un autre établissement.",
+                        "Limite : 3 exports par heure. Au-delà, un message l'indique ; réessayez plus tard.",
+                        "Audit : chaque export (réussi ou refusé) est enregistré dans le Journal d'audit, avec son auteur et sa date — jamais le mot de passe.",
+                        "Une valeur qui commence par = + - @ est précédée d'une apostrophe dans le CSV : c'est volontaire, cela empêche Excel d'exécuter une formule piégée.",
+                        "Cet export complète, sans les remplacer, les exports par domaine (rapport financier .xlsx, présences, notes, PDF officiels) et la sauvegarde automatique de la base, assurée par l'infrastructure."
+                    ],
+                    recommandations: [
+                        "Faites un export à chaque clôture d'année scolaire et rangez-le avec vos archives.",
+                        "Supprimez le fichier téléchargé des postes partagés une fois copié en lieu sûr.",
+                        "Un export n'est pas une sauvegarde de restauration : il ne permet pas de remettre l'application en l'état, il sert à consulter et réutiliser les données."
                     ]
                 },
                 {
@@ -202,8 +242,7 @@
                         "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
                         "Notes et bulletins : les périodes de l'année alimentent directement les écrans de saisie et l'en-tête des bulletins.",
                         "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
-                        "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application (pastille « 2026-2027 », toujours sur une seule ligne, masquée sur un écran étroit), afin que nul ne travaille par inadvertance sur le mauvais exercice. Pour le Directeur, un clic sur la pastille ouvre la gestion des années ; pour les autres rôles, elle est informative.",
-                        "Date et heure : sur grand écran, la barre supérieure affiche aussi la date du jour et l'heure, mise à jour en continu, avec l'heure en gras et les mois longs abrégés (« Vendredi 25 sept. 2026 • 01:44 »). C'est l'horloge de votre appareil, pas une donnée de l'établissement."
+                        "Où lire l'année active : sur le Tableau de bord (« Exercice actif ») et dans Paramètres › Années scolaires (statut « Année active »). La barre supérieure ne l'affiche plus : vérifiez-la avant toute saisie importante."
                     ],
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
@@ -2371,7 +2410,7 @@
             number: 10,
             title: 'Résilience réseau — travailler sur une connexion instable',
             icon: 'globe',
-            summary: "Ce que l'application fait, et ne fait pas, quand la connexion se coupe pendant une saisie — badge de connectivité, brouillons et reprise automatique.",
+            summary: "Ce que l'application fait, et ne fait pas, quand la connexion se coupe pendant une saisie — pastille d’état, brouillons et reprise automatique.",
             concept:
                 "Unikol est une application 100 % en ligne : aucune donnée n'est jamais enregistrée localement à titre " +
                 "définitif, il n'existe ni mode hors ligne ni file d'attente de synchronisation entre plusieurs postes. Ce " +
@@ -2383,14 +2422,15 @@
             articles: [
                 {
                     id: 'etat-connexion-brouillons',
-                    title: 'Bandeau de connexion, badge de connectivité et brouillons de formulaire',
-                    location: 'Barre supérieure — présente sur toutes les pages',
+                    title: 'Bandeau de connexion, pastille d\'état et brouillons de formulaire',
+                    location: 'Barre d\'état en bas d\'écran et bandeau en haut de page — présents sur toutes les pages',
                     href: '/tableau-de-bord',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "Trois indicateurs se distinguent, et non un simple point vert/rouge : CONNECTÉ (le serveur a " +
-                        "répondu), VÉRIFICATION EN COURS (état transitoire, quelques centaines de millisecondes), et HORS " +
-                        "LIGNE (coupure confirmée). Un BROUILLON, lui, est la saisie d'un formulaire en cours — pas encore " +
+                        "Trois signaux préviennent d'une coupure : la PASTILLE D'ÉTAT, en bas à gauche de chaque écran (« Connecté » " +
+                        "en vert, « Hors ligne — vérifiez votre réseau » en rouge), un BANDEAU PLEIN CADRE en haut de page " +
+                        "pendant la coupure (« Connexion perdue : aucun enregistrement n'est possible… »), puis un message " +
+                        "bref de reconnexion. Un BROUILLON, lui, est la saisie d'un formulaire en cours — pas encore " +
                         "envoyée — conservée sur CE poste, dans le navigateur, jamais sur le serveur.",
                     objectif:
                         "Dire honnêtement à l'utilisateur ce qui est enregistré et ce qui ne l'est pas encore, sans jamais " +
@@ -2402,22 +2442,22 @@
                         "plus tard — parfois après avoir fermé l'onglet — qu'une saisie entière n'a jamais atteint le " +
                         "serveur.",
                     procedure: [
-                        "Observez le badge de la barre supérieure : « Connecté », « Vérification… » ou « Hors ligne — n saisie(s) conservée(s) ».",
+                        "Observez la pastille d'état en bas à gauche de l'écran : « Connecté » (point vert) ou « Hors ligne — vérifiez votre réseau » (point rouge). Elle suit l'état du réseau seul : elle n'affiche pas de compteur de brouillons.",
                         "En cas de coupure confirmée, un bandeau plein cadre apparaît ; il disparaît dès que la connexion est vérifiée comme rétablie, avec une confirmation brève.",
-                        "Cliquez sur le badge pour forcer une nouvelle vérification plutôt que d'attendre le retour automatique de la connexion.",
-                        "Pendant une coupure, certains formulaires (caisse, entre autres) conservent votre saisie en mémoire locale : à la reconnexion, un bandeau propose de la restaurer.",
+                        "Le retour de la connexion est détecté automatiquement : le bandeau disparaît tout seul, sans action de votre part (la pastille n'est pas cliquable).",
+                        "Pendant une coupure, certains formulaires (Caisse et Inscriptions, entre autres) conservent votre saisie en mémoire locale : en revenant sur l'écran, un bandeau « Saisie en attente » propose de la « Restaurer ».",
                         "Un brouillon disparaît de lui-même après 24 heures, ou dès que la saisie correspondante est effectivement validée.",
                         "Ne comptez jamais sur un brouillon au-delà de la session en cours : fermer l'onglet avant validation reste une perte de saisie assumée."
                     ],
                     impacts: [
                         "Aucune donnée métier : un brouillon ne modifie jamais rien côté serveur ; il ne fait que restaurer les CHAMPS d'un formulaire.",
                         "Multi-établissement : les brouillons d'un compte rattaché à plusieurs écoles sont cloisonnés par établissement, un brouillon de l'école A ne réapparaît jamais dans l'école B.",
-                        "Compteur du badge : il reflète exactement le nombre de brouillons non expirés conservés sur ce poste, pas une file d'écritures en attente d'envoi."
+                        "Aucune file d'envoi : rien n'est mis en attente pour être expédié plus tard. Un brouillon ne restaure que les champs d'un formulaire ; l'enregistrement reste un acte volontaire une fois la connexion revenue."
                     ],
                     recommandations: [
                         "Ne considérez jamais un brouillon comme un enregistrement : tant que le bandeau de confirmation n'est pas apparu, rien n'est acquis côté serveur.",
                         "Sur une connexion notoirement instable, terminez une saisie en une seule session plutôt que de compter sur le brouillon d'un jour à l'autre.",
-                        "Le badge « Vérification… » n'est pas une alerte : c'est un état normal de quelques centaines de millisecondes à chaque sonde."
+                        "Un bandeau « Connexion perdue » signifie qu'aucun enregistrement n'est possible : attendez son retour avant de valider, au lieu de recliquer."
                     ]
                 },
                 {
@@ -2444,7 +2484,7 @@
                     procedure: [
                         "Validez l'encaissement ou l'appel normalement : rien ne change tant que le réseau répond.",
                         "Si une coupure survient PENDANT l'envoi, le bouton affiche « En attente d'envoi… » et un bandeau ambré confirme qu'une nouvelle tentative est en cours.",
-                        "Ne cliquez pas une seconde fois et ne rechargez pas la page : l'application rejoue la même opération, avec la même clé, jusqu'à cinq tentatives sur environ trente secondes.",
+                        "Ne cliquez pas une seconde fois et ne rechargez pas la page : l'application rejoue la même opération, avec la même clé, jusqu'à cinq tentatives, espacées de 1, 2, 4 puis 8 secondes (une quinzaine de secondes d'attente cumulée).",
                         "Dès que le réseau répond, l'opération se conclut normalement — pour la caisse, le reçu s'affiche ; pour l'appel, la fiche est marquée enregistrée.",
                         "Si toutes les tentatives échouent (coupure prolongée), l'application vous en informe explicitement : rien n'a été enregistré, et la reprise redevient manuelle.",
                         "Pour l'appel en classe spécifiquement, si la feuille apparaît déjà enregistrée après une coupure, c'est que la première tentative a bien abouti — sa réponse s'était simplement perdue en route ; ce n'est jamais traité comme une erreur à l'écran."
@@ -2923,10 +2963,13 @@
                         "Un billet En attente peut être annulé (bouton « Annuler ») par la Vie Scolaire ou le Directeur, tant que l'enseignant ne l'a pas accepté ; l'appel reprend alors son état d'avant. Un billet accepté ne s'annule plus.",
                         "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
-                        "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
+                        "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur.",
+                        "ABSENCE DE PLUSIEURS JOURS : onglet « Billets d'absence » › « Enregistrer une absence ». Choisissez l'élève, le premier et le dernier jour (vide = un seul jour, 60 jours au plus), le motif et, si besoin, la date de retour autorisée. Deux billets actifs d'un même élève ne peuvent pas se chevaucher.",
+                        "Un billet d'absence s'annule (bouton « Annuler », avec confirmation) : les lignes d'appel qu'il avait justifiées reprennent leur statut d'avant et les jours redeviennent libres. Il n'est jamais supprimé physiquement."
                     ],
                     impacts: [
                         "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours en cours que vise son billet ; les cours entièrement manqués avant son arrivée passent de « Absent (non justifié) » à « Absent (justifié) ». Les lignes sont mises à jour dès l'émission du billet, même si l'appel de ces cours est déjà fait ; un « Présent » n'est jamais modifié.",
+                        "Billet d'absence : l'appel d'un jour couvert présélectionne « Absent (justifié) » ; une absence déjà saisie « non justifiée » devient justifiée ; un élève marqué Présent ou en Retard le reste (le constat en classe prime). Aucun SMS « absent » n'est envoyé à la famille pour une absence couverte par un billet.",
                         "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
                         "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
                     ],
@@ -3391,12 +3434,12 @@
                 {
                     id: 'filtres-annee-active-et-selecteurs',
                     title: "Filtre par année active, états vides et sélecteurs dynamiques",
-                    location: 'En-tête de l\'application, listes Élèves / Classes / Notes, et tous les menus déroulants',
+                    location: 'Tableau de bord, listes Élèves / Classes / Notes, et tous les menus déroulants',
                     href: '/eleves',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "L'ANNÉE ACTIVE est le contexte implicite de tout le travail quotidien : elle est rappelée en permanence " +
-                        "dans l'en-tête, et la plupart des listes s'y bornent d'office. La liste Élèves l'expose par un " +
+                        "L'ANNÉE ACTIVE est le contexte implicite de tout le travail quotidien : elle se lit sur le Tableau de bord " +
+                        "(« Exercice actif ») et dans Paramètres › Années scolaires, et la plupart des listes s'y bornent d'office. La liste Élèves l'expose par un " +
                         "interrupteur à trois positions — « Inscrits cette année » (défaut), « Non inscrits », « Tous les " +
                         "élèves ». Les MENUS DÉROULANTS (classe, matière, trimestre, enseignant…) sont DYNAMIQUES : ils ne " +
                         "listent que ce qui a déjà été saisi, et se referment collés au champ lorsqu'ils s'ouvrent vers le " +
@@ -3411,7 +3454,7 @@
                         "apercevoir. Et une liste qui affiche « Aucun résultat » sans explication laisse croire à une panne " +
                         "alors qu'il ne manque qu'un filtre à ajuster ou une donnée à créer en amont.",
                     procedure: [
-                        "Vérifiez l'année active dans l'en-tête avant toute saisie : c'est elle qui recevra ce que vous enregistrez.",
+                        "Vérifiez l'année active (Tableau de bord › « Exercice actif ») avant toute saisie : c'est elle qui recevra ce que vous enregistrez.",
                         "Liste Élèves : « Inscrits cette année » ne montre que l'effectif inscrit pour l'année active ; « Non inscrits » isole les élèves de l'annuaire sans inscription vivante ; « Tous les élèves » rebascule sur l'annuaire complet.",
                         "Si une liste semble vide, lisez le message d'état : il indique le filtre à changer (« Essayez Non inscrits ou Tous les élèves »), la donnée à créer, ou le rôle requis.",
                         "Menu déroulant vide ou trop court : c'est que la donnée n'existe pas encore — créez d'abord vos classes, vos matières ou vos enseignants, puis rouvrez le sélecteur.",
@@ -3421,7 +3464,7 @@
                     impacts: [
                         "Tableaux de bord et rapports : tous les indicateurs se rapportent à l'année active ; changer d'année change la lecture.",
                         "Effectifs, frais, présences : un élève non inscrit pour l'année active en est absent tant qu'il n'est pas inscrit (voir « Inscription différée »).",
-                        "Sélecteurs : un enseignant ne voit dans les menus que ses propres affectations ; une liste courte peut donc être normale selon le rôle.",
+                        "Sélecteurs : seules quelques listes se restreignent aux affectations de l'enseignant (par exemple l'Appel en classe) ; la saisie des notes propose toutes les classes et matières. Une liste courte peut donc être normale selon le rôle et l'écran.",
                         "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Fiches de Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
                         "États vides : ils sont dérivés des données déjà chargées et se mettent à jour sans rechargement dès que la cause disparaît."
                     ],

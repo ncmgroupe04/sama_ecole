@@ -72,36 +72,34 @@ utilisateurs cibles, fonctionnalités clés & règles métier, flux d'utilisatio
 **Présente sur :** tous les écrans authentifiés (spécification visuelle : `docs/Volume_5_UIUX_Design.md` §3.1).
 
 ### Objectif / Rôle principal
-Rappeler en permanence, sans rien saisir, **où l'on se trouve et dans quel régime l'on travaille** : écran
-courant, exercice actif, mode test ou réel, avancement du paramétrage. Aucune de ces pastilles n'est un
-module : ce sont des indicateurs, dont deux mènent à l'écran qui permet d'agir.
+Donner, sans rien saisir, **un accès direct aux modules et le régime dans lequel l'on travaille** : navigation rapide
+entre modules, mode test ou réel, avancement du paramétrage, aide. Aucune de ces pastilles n'est un module : ce sont des
+raccourcis et des indicateurs, dont certains mènent à l'écran qui permet d'agir.
 
 ### Utilisateurs cibles
 Tous les rôles connectés ; certaines pastilles sont réservées (voir ci-dessous).
 
 ### Fonctionnalités clés & règles métier
-- **Titre de l'écran** : `shrink-0 whitespace-nowrap`, il ne rétrécit ni ne passe sous l'horloge. Lorsque
-  la place manque, c'est le groupe de droite (`min-w-0`) qui s'adapte, pas le titre.
-- **Horodateur dynamique** (visible dès `lg`) : `Vendredi 25 sept. 2026 • 01:44`. Mois **abrégé** quand
-  il est long (« sept. », « janv. » ; mai, juin, août restent entiers), heure **en gras**, mise à jour
-  chaque seconde. Il lit l'horloge de l'appareil, pas une donnée de l'établissement.
-- **Badge « MODE TEST »** : badge orange **compact**, visible tant que l'établissement est en mode test.
-  Sur grand écran il ajoute « : Cliquez ici pour passer en Mode Réel » (Directeur, cliquable vers
-  Paramètres › Paramètres système, ancre `#mode-reel`) ou « : données d'essai uniquement » (autres rôles,
-  non cliquable). En mode réel, il devient une pastille grise « Mode réel », masquée sous `sm`. Il n'active
-  rien : la bascule elle-même se confirme dans Paramètres (§26).
-- **Année scolaire active** (dès `sm`) : pastille `2026-2027` **toujours sur une seule ligne**
-  (`whitespace-nowrap shrink-0`). Cliquable pour le Directeur (vers la gestion des années), informative
-  pour les autres rôles.
-- **Assistant « Démarrage »** (Directeur et Secrétariat) : pastille avec pourcentage d'avancement du
-  paramétrage de l'établissement. **À 100 %, le bouton disparaît** de la barre, sans laisser d'espace
-  résiduel ; il réapparaît si une étape redevient « à faire » (par exemple après une réinitialisation
-  en mode test). Le pourcentage exclut les étapes « non applicables » (la grille tarifaire d'un
-  établissement public). L'assistant ne configure rien lui-même : il lit l'état réel et renvoie vers
-  les écrans existants.
-- **Sélecteur d'établissement** (groupe scolaire uniquement) et **salutation** selon l'heure complètent
-  la barre. La recherche globale n'est pas livrée ; le raccourci « Aide » et la déconnexion ne sont plus
-  dans la barre supérieure (Aide : menu latéral ; déconnexion : carte de profil du menu latéral).
+La barre est **blanche, sur une seule rangée de 64 px**. À gauche : le bouton de menu (mobile) puis la **navigation rapide**
+entre modules (Élèves, Inscription, Classes, Enseignants, Notes et bulletins, Caisse, Internat — selon rôle, formule et
+modules activés ; sous 1024 px, le bouton « Saut rapide »). À droite, dans l'ordre :
+- **Sélecteur d'établissement** (groupe scolaire uniquement).
+- **Badge « MODE TEST »** : badge orange **compact**, visible tant que l'établissement est en mode test. Au-dessus de
+  1650 px il ajoute « : Cliquez ici pour passer en Mode Réel » (Directeur, cliquable vers Paramètres › Paramètres système,
+  ancre `#mode-reel`) ou « : données d'essai uniquement » (autres rôles, non cliquable) ; en dessous, le libellé court
+  suffit (l'infobulle redit l'explication). En mode réel, il devient une pastille « Mode réel », masquée sous `sm`. Il
+  n'active rien : la bascule se confirme dans Paramètres (§26).
+- **Assistant « Démarrage »** (Directeur et Secrétariat) : pastille avec pourcentage d'avancement du paramétrage
+  (année scolaire, pédagogie, frais, enseignants, première inscription, SIMEN). Sous 1500 px elle se réduit à l'icône et au
+  pourcentage. **À 100 %, le bouton disparaît** de la barre ; il réapparaît si une étape redevient « à faire » (par exemple
+  après une réinitialisation en mode test). Le pourcentage exclut les étapes « non applicables ». L'assistant s'ouvre
+  seul à la première connexion, ne configure rien lui-même et renvoie vers les écrans existants.
+- **Salutation** selon l'heure (masquée sous `sm` et sous 1500 px).
+- **Bouton jaune « Comment faire ? »** (dès `lg`) : ouvre l'aide contextuelle de l'écran.
+
+L'**année scolaire active** et l'**horloge** ne figurent plus dans la barre (retirées par la refonte du 12/11/2026) : l'année
+active se lit sur le tableau de bord (« Exercice actif ») et dans Paramètres › Années scolaires. La recherche globale n'est
+pas livrée ; le raccourci « Aide » est dans le menu latéral et la déconnexion dans la carte de profil du menu latéral.
 
 ### Flux d'utilisation typique
 1. À la première connexion d'un Directeur ou d'un Secrétariat, l'assistant « Démarrage » s'ouvre une seule
@@ -639,8 +637,8 @@ Super Admin, Directeur, Secrétariat.
 - La colonne « Convoquer » n'apparaît qu'à l'intersection des deux permissions (lecture du rapport +
   droit sur les convocations) — le Secrétariat voit le rapport, mais pas le bouton, puisqu'il n'a pas
   accès au module Convocations.
-- Export des présences disponible depuis cet écran, l'un des exports par domaine qui couvre le besoin
-  de reporting en l'absence d'un export global (§11 API Paramètres).
+- Export des présences disponible depuis cet écran, l'un des exports par domaine (l'export global de toutes
+  les données se trouve dans Paramètres › Paramètres système, §26).
 
 ### Flux d'utilisation typique
 1. Le Directeur consulte le bilan d'assiduité sur la période de son choix.
@@ -1149,8 +1147,8 @@ Tous les rôles connectés.
 
 ### Fonctionnalités clés & règles métier
 - Contenu organisé par module, reflétant la navigation elle-même.
-- Les fonctionnalités hors périmètre V1 (portail Parents/Élèves, export global de données) y sont
-  documentées comme telles, jamais présentées comme disponibles.
+- Les fonctionnalités hors périmètre (portail Parents/Élèves) y sont documentées comme telles, jamais
+  présentées comme disponibles.
 
 ### Flux d'utilisation typique
 1. Un utilisateur bloqué sur un écran ouvre l'Aide.
@@ -1197,6 +1195,15 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
 - **Profil « Daara — Mémorisation »** : le lien « Classes » est masqué (confort d'affichage ; l'API reste
   ouverte car inscriptions, frais et paie en dépendent).
 - Le lit actuel d'un élève est proposé dans « Affecter / Changer / Libérer ».
+
+### Paramètres : Exporter mes données (section 26)
+- **Paramètres › Paramètres système › « Exporter mes données »** (Directeur seul) : télécharge une archive `.zip` de **toutes les
+  données de l'établissement** — un fichier CSV par table (élèves, inscriptions, paiements, notes, enseignants, personnel,
+  présences, inventaire, etc.), un `manifest.json` et un `LISEZMOI.txt`. Le Directeur confirme par son **mot de passe** ; **3 exports
+  par heure** au plus ; chaque export est **journalisé**.
+- **Jamais dans l'archive** : mots de passe et jetons, éléments supprimés, photos et fichiers binaires (seules leurs adresses
+  figurent), données d'un autre établissement. Les CSV s'ouvrent dans Excel (Données › À partir d'un fichier texte, UTF-8,
+  séparateur point-virgule).
 
 ### Coran (module Coran)
 - **Écran `/coran`** (Gestion Scolaire › Coran) : suivi de mémorisation (Juz, Hizb, sourate, statut En cours / Mémorisé /

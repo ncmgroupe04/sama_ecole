@@ -113,18 +113,18 @@ Bibliothèque unique (Material Symbols ou Fluent UI System Icons) — pas de mé
 
 ### 3.1 Barre supérieure
 
-Bandeau bleu (`bg-primary-600`, 64 px) en deux groupes. **Groupe gauche** : bouton d'ouverture du menu (mobile) ou de réduction de la barre latérale (bureau), puis le titre de l'écran (masqué sous `sm`). Le titre est en `shrink-0 whitespace-nowrap` : il ne se tronque ni ne passe sous l'horloge ; c'est le groupe de droite (`min-w-0`) qui absorbe le manque de place. **Groupe droit**, dans l'ordre :
+Barre **blanche** (`bg-white`, filet bas), **une seule rangée de 64 px** (refonte du 12/11/2026). **Groupe gauche** : bouton d'ouverture du menu (mobile uniquement — le bouton de réduction de la barre latérale vit dans l'en-tête du menu), puis, dès `lg`, la navigation rapide entre modules (`_QuickNav`, onglets marine soulignés, sans icône sous 1750 px, texte réduit sous 1500 puis 1320 px). Le titre de l'écran n'est plus affiché (il reste dans le titre accessible `sr-only`). **Groupe droit** (`shrink-0`), dans l'ordre :
 
 | Élément | Comportement |
 |---|---|
 | Sélecteur d'établissement | Uniquement pour un compte rattaché à plusieurs écoles (groupe scolaire) ; masqué sous `sm`. |
-| Horodateur | Masqué sous `lg`. Affiche `Vendredi 25 sept. 2026 • 01:44` : date en `weekday long`, **mois abrégé** (`sept.`, `janv.` — les mois courts comme mai, juin, août restent entiers), heure **en gras** dans une balise distincte. Alimenté par l'horloge de l'appareil (`digitalClock()`, `ui-components.js`, mise à jour chaque seconde), il expose `currentDate` et `currentHour`. |
-| Pastille de régime | **Mode test** : badge orange **compact** (`px-2.5 py-1.5 text-xs`, icône 14 px), libellé « MODE TEST » ; le complément (« : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) n'apparaît que sous `lg`. Cliquable pour le seul Directeur (ancre `#mode-reel` de Paramètres › Paramètres système). **Mode réel** : pastille grise « Mode réel », masquée sous `sm`. |
-| Année scolaire active | Pastille `2026-2027`, `whitespace-nowrap shrink-0` : elle **ne passe jamais sur deux lignes**. Masquée sous `sm`. Cliquable pour le Directeur (`/annees-scolaires`), informative pour les autres rôles. |
-| Assistant « Démarrage » | Directeur et Secrétariat seulement. Pastille avec pourcentage d'avancement ; le libellé est masqué sous `sm`. **À 100 % (`allDone`), le bouton disparaît** (`x-show="!allDone"`) et le conteneur passe en `contents`, sans boîte ni espacement résiduel ; la modale, descendante du conteneur, reste dans le DOM. Il réapparaît si une étape redevient « à faire ». |
-| Salutation | Selon l'heure (matin, après-midi, soir, nuit), sans donnée personnelle ; masquée sous `sm`. |
+| Pastille de régime | **Mode test** : badge orange **compact** (`px-2.5 py-1.5 text-xs`), libellé « MODE TEST » ; le complément (« : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) n'apparaît qu'au-dessus de 2000 px (`.sandbox-suffix`). Cliquable pour le seul Directeur (Paramètres système, ancre `#mode-reel`). **Mode réel** : pastille « Mode réel », masquée sous `sm`. |
+| Assistant « Démarrage » | Directeur et Secrétariat seulement. Pastille avec pourcentage d'avancement, icône + pourcentage sous 1500 px (`.setup-assistant-label` masqué). **À 100 % (`allDone`), le bouton disparaît** (`x-show="!allDone"`) ; la modale reste dans le DOM. S'ouvre seul à la première connexion. |
+| Année scolaire active | Rétablie le 15/11/2026 (JGK-C01) : pastille grise avec le millésime (« 2026-2027 »), visible sur chaque écran dès `sm`. Cliquable pour le seul Directeur (vers `/annees-scolaires`, Paramètres › Années), informative pour les autres rôles. Sous 1500 px, l'icône est masquée et le remplissage réduit. |
+| Salutation | Selon l'heure, sans donnée personnelle ; masquée sous `sm` et sous 2100 px (elle cède sa place à l'année active). |
+| « Comment faire ? » | Bouton jaune (`.btn-help`), visible dès `lg` : ouvre l'aide contextuelle de l'écran. |
 
-La recherche globale n'est pas livrée. Le badge de connectivité, le raccourci « Aide » et le bouton de déconnexion, prévus ici dans une version antérieure de ce document, ont été retirés de la barre supérieure le 26/08/2026 à la demande du client : ils faisaient doublon avec, respectivement, la pastille de la barre d'état (§9), l'entrée « Aide & Documentation » du menu latéral, et la carte de profil en bas du menu latéral (§3.2) qui porte désormais la déconnexion.
+Retirés de la barre : l'**horodateur** (refonte du 12/11/2026 ; la pastille d'année scolaire active, retirée à cette occasion, a été **rétablie** le 15/11/2026), ainsi que, depuis le 26/08/2026, le badge de connectivité (la barre d'état en bas d'écran porte seule cette information, §9), le raccourci « Aide » (menu latéral) et le bouton de déconnexion (carte de profil du menu latéral). La recherche globale n'est pas livrée.
 
 ### 3.2 Menu latéral
 

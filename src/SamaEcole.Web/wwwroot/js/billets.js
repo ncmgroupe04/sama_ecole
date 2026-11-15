@@ -79,7 +79,25 @@ document.addEventListener('alpine:init', () => {
             pickedUpBy: ''
         },
 
+        // ---------------------------------------------------------------- Billets d'absence (plage de jours)
+        absences: [],
+        isLoadingAbsences: true,
+        isCreateAbsenceOpen: false,
+        isCreatingAbsence: false,
+        createAbsenceErrors: {},
+        absenceToCancel: null,
+        isCancellingAbsence: false,
+        cancelAbsenceError: '',
+        absenceForm: {
+            studentId: '',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: '',
+            reason: '',
+            authorizedReturnDate: ''
+        },
+
         init() {
+            this.loadAbsences();
             this.loadLateArrivals();
             this.loadEarlyDepartures();
             this.loadStudents();
@@ -424,6 +442,103 @@ document.addEventListener('alpine:init', () => {
                 pickedUpBy: ''
             };
             this.createExitErrors = {};
+        },
+
+        // ---------------------------------------------------------------- Billets d'absence (plage de jours)
+
+        async loadAbsences() {
+            this.isLoadingAbsences = true;
+            try {
+                this.absences = await api.get('/absences/justifications');
+            } catch (error) {
+                console.error('Absence justifications fetch error:', error);
+                toast.error(window.api.toMessage(error, "Erreur lors du chargement des billets d'absence."));
+            } finally {
+                this.isLoadingAbsences = false;
+            }
+        },
+
+        openCreateAbsence() {
+            this.isCreateAbsenceOpen = true;
+        },
+
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro. */
+        closeCreateAbsence() {
+            this.isCreateAbsenceOpen = false;
+            this.resetAbsenceForm();
+        },
+
+        resetAbsenceForm() {
+            this.absenceForm = {
+                studentId: '',
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: '',
+                reason: '',
+                authorizedReturnDate: ''
+            };
+            this.createAbsenceErrors = {};
+        },
+
+        /** « Du 12 au 14 octobre 2026 » / « Le 12 octobre 2026 » : la période telle que le serveur la porte. */
+        absencePeriod(item) {
+            if (!item.endDate || item.endDate === item.startDate) return `Le ${this.formatDate(item.startDate)}`;
+            return `Du ${this.formatDate(item.startDate)} au ${this.formatDate(item.endDate)}`;
+        },
+
+        absenceDaysLabel(item) {
+            return item.days > 1 ? `${item.days} jours` : '1 jour';
+        },
+
+        async submitCreateAbsence() {
+            this.isCreatingAbsence = true;
+            this.createAbsenceErrors = {};
+            try {
+                await api.post('/absences/justifications', {
+                    studentId: this.absenceForm.studentId,
+                    startDate: this.absenceForm.startDate,
+                    endDate: this.absenceForm.endDate || null,
+                    reason: this.absenceForm.reason,
+                    authorizedReturnDate: this.absenceForm.authorizedReturnDate || null
+                });
+
+                this.isCreateAbsenceOpen = false;
+                this.resetAbsenceForm();
+                await this.loadAbsences();
+                window.toast?.success("Billet d'absence enregistré.");
+            } catch (error) {
+                console.error('Absence justification create error:', error);
+                this.createAbsenceErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
+            } finally {
+                this.isCreatingAbsence = false;
+            }
+        },
+
+        askCancelAbsence(item) {
+            this.cancelAbsenceError = '';
+            this.absenceToCancel = item;
+        },
+
+        closeCancelAbsence() {
+            this.absenceToCancel = null;
+            this.cancelAbsenceError = '';
+        },
+
+        async confirmCancelAbsence() {
+            if (!this.absenceToCancel) return;
+
+            this.isCancellingAbsence = true;
+            this.cancelAbsenceError = '';
+            try {
+                await api.delete(`/absences/justifications/${this.absenceToCancel.id}`);
+                this.absenceToCancel = null;
+                await this.loadAbsences();
+                toast.success("Billet d'absence annulé.");
+            } catch (error) {
+                console.error('Absence justification cancel error:', error);
+                this.cancelAbsenceError = window.api.toMessage(error, "Erreur lors de l'annulation du billet.");
+            } finally {
+                this.isCancellingAbsence = false;
+            }
         },
 
         formatDate(dateStr) {

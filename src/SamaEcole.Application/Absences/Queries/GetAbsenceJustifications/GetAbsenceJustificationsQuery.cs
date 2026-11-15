@@ -8,9 +8,11 @@ public record AbsenceJustificationDto
     public Guid StudentId { get; init; }
     public string StudentFullName { get; init; } = null!;
     public string StudentMatricule { get; init; } = null!;
-    public DateTime Date { get; init; }
+    public DateOnly StartDate { get; init; }
+    public DateOnly EndDate { get; init; }
+    public int Days { get; init; }
     public string Reason { get; init; } = null!;
-    public DateTime? AuthorizedReturnDate { get; init; }
+    public DateOnly? AuthorizedReturnDate { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
 }
 

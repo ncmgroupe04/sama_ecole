@@ -784,6 +784,26 @@
  complet), devenue redondante avec la carte de profil de la barre latérale — laquelle porte
  déjà le nom, le rôle et la déconnexion. Purement décorative, aucune donnée personnelle : une
  touche chaleureuse qui accompagne l'horloge (voir greeting() dans ui-components.js). *@
+ @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de travail courant,
+ dont dépendent inscriptions, frais, notes et finances (résolu serveur via SchoolYear.IsActive, voir
+ activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers Paramètres › Années où la bascule se confirme par
+ mot de passe (Volume_7_Security §16) ; informatif pour les autres rôles. Masqué sous `sm`, et sous 1500 px il ne
+ garde que son icône + son libellé compact (voir input.css) pour ne jamais déborder de la barre. *@
+ <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block shrink-0">
+ <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
+ title="Année scolaire active — gérer dans Paramètres › Années"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl whitespace-nowrap bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+ <icon name="calendar" class="w-4 h-4" />
+ <span x-text="label"></span>
+ </a>
+ <span x-show="!isDirecteur" x-cloak
+ title="Année scolaire active de l'établissement"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl whitespace-nowrap bg-slate-100 text-slate-700 text-sm font-medium">
+ <icon name="calendar" class="w-4 h-4" />
+ <span x-text="label"></span>
+ </span>
+ </div>
+
  <div x-data="greeting()" x-cloak class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary-50 text-primary-700 text-sm font-medium shrink-0 whitespace-nowrap">
  <span x-text="emoji" aria-hidden="true"></span>
  <span class="greeting-label" x-text="label"></span>

@@ -21,6 +21,7 @@
  <script src="~/js/school-closures.js" asp-append-version="true"></script>
  <script src="~/js/users.js" asp-append-version="true"></script>
  <script src="~/js/audit-log.js" asp-append-version="true"></script>
+ <script src="~/js/school-data-export.js" asp-append-version="true"></script>
  <script src="~/js/subscription-payments-history.js" asp-append-version="true"></script>
  <script src="~/js/sms-settings.js" asp-append-version="true"></script>
 }
@@ -1355,6 +1356,39 @@
  </button>
  </div>
  </form>
+ </div>
+
+ <!-- ============================= EXPORTER MES DONNÉES ============================= -->
+ @* Directeur seul (POST /exports/school-data, [Authorize(Roles = Directeur)]). Mot de passe exigé par le serveur, 3 exports par heure
+ au plus, chaque export journalisé. Aucune action destructive : placé AVANT la zone de danger, c'est une lecture. *@
+ <div x-data="schoolDataExport()" x-show="canExport" x-cloak class="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+ <div class="flex items-center gap-2">
+ <icon name="download" class="w-5 h-5 text-primary-600" />
+ <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-700">Exporter mes données</h2>
+ </div>
+ <p class="mt-2 text-sm text-slate-600">
+ Téléchargez une archive (.zip) de <strong>toutes les données de votre établissement</strong> : élèves, inscriptions, paiements,
+ notes, enseignants, personnel, présences, inventaire, etc. — un fichier CSV par table, lisible dans Excel, avec un fichier d'explications.
+ Les mots de passe, les photos et les éléments supprimés n'y figurent pas.
+ </p>
+ <p class="mt-2 text-xs text-amber-700">
+ L'archive contient des données personnelles d'élèves et de familles : gardez-la en lieu sûr et ne la partagez pas. Chaque export est
+ enregistré dans le journal d'audit.
+ </p>
+ <form x-on:submit.prevent="startExport()" novalidate class="mt-4 flex flex-wrap items-end gap-3">
+ <div class="w-full sm:w-72">
+ <label for="export-password" class="form-label">Votre mot de passe</label>
+ <input id="export-password" type="password" autocomplete="current-password" x-model="password" :disabled="isExporting"
+ class="input-field" :class="passwordError && 'input-field-error'" />
+ <p x-show="passwordError" x-cloak x-text="passwordError" class="field-error"></p>
+ </div>
+ <button type="submit" :disabled="isExporting" class="btn-modal-primary group">
+ <icon name="download" class="w-4 h-4" />
+ <span x-text="isExporting ? 'Préparation de l\'archive…' : 'Exporter mes données'"></span>
+ </button>
+ </form>
+ <p x-show="error" x-cloak role="alert" class="form-error-banner mt-3" x-text="error"></p>
+ <p x-show="notice" x-cloak role="status" class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" x-text="notice"></p>
  </div>
 
  <!-- ============================= ZONE DE DANGER ============================= -->

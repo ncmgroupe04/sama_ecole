@@ -806,7 +806,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'établissement crée une **convocation** du parent ou du tuteur : motif, date et heure du rendez-vous, élève concerné.
 - Un **avis de convocation** (PDF officiel) est édité pour remise en main propre à l'élève, ou envoi.
 - **Une convocation n'est pas un portail parent** (§13) : elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne constitue pas une amorce du chapitre 13. C'est un registre interne de la Vie scolaire.
-- La convocation se crée aussi **depuis le bilan d'assiduité** (`/reports/attendance`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
+- La convocation se crée aussi **depuis le bilan d'assiduité** (`/rapports/assiduite`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
 
 ### 18.3 Suite donnée à une convocation
 
@@ -920,6 +920,17 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - **Cours manqués justifiés.** À l'émission, la ligne d'un cours manqué déjà appelé passe de « Absent (non justifié) » à « **Absent (justifié)** » ; jamais depuis Présent ou Retard, jamais dans l'autre sens, et aucune ligne n'est créée pour un élève absent de la fiche. Si la fiche n'existe pas encore, la feuille de l'enseignant présélectionne l'absence justifiée. **Annuler** un billet non accepté restaure chaque ligne à son statut d'avant. Le passage « non justifié → justifié » **n'envoie aucun message** à la famille ; seul le retard du cours en cours en envoie un.
 - Un cours **déjà couvert** par un billet actif du même élève le même jour n'est ni re-justifié ni re-visé. Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le billet reste possible **sans heure d'arrivée** : minutes saisies à la main, comme avant.
 - Le billet imprimé porte l'heure d'arrivée, la durée régularisée et le cours manqué (nommé s'il est seul, résumé sinon) — toujours **une seule page A5**.
+
+#### Billet d'absence (plusieurs jours)
+
+L'écran **Billets** a un troisième onglet, **Billets d'absence**, qui justifie l'absence d'un élève sur une plage de jours (maladie, deuil, voyage…) en une seule saisie.
+
+- Saisie : élève, **premier jour**, **dernier jour** (vide = un seul jour ; 60 jours au plus), **motif** obligatoire (1 000 caractères), date de **retour autorisé** facultative (postérieure au dernier jour). Réservé au Directeur, au Surveillant et au Super Admin (comme les autres billets) ; module Pédagogie.
+- **Deux billets actifs d'un même élève ne se chevauchent pas** (422) ; un billet annulé libère ses jours.
+- **Effet sur l'appel** : à la création, chaque ligne d'appel de l'élève dans la plage qui est « Absent (non justifié) » passe à « Absent (justifié) » ; le statut d'avant est conservé sur la ligne. Une ligne « Présent » ou « Retard » n'est jamais touchée (le constat en classe prime). Pour un appel qui n'est pas encore fait, la feuille **présélectionne** « Absent (justifié) » et, à l'enregistrement, toute absence saisie pour cet élève est justifiée et rattachée au billet. Un billet d'entrée visant le même cours est plus précis et passe avant.
+- **Aucun SMS « absent »** n'est envoyé à la famille pour une absence couverte par un billet : elle l'a elle-même justifiée.
+- **Annulation** : le billet est mis de côté (soft delete, jamais supprimé) et chaque ligne qu'il avait justifiée retrouve son statut d'avant.
+- Routes : `GET/POST /api/v1/absences/justifications`, `DELETE /api/v1/absences/justifications/{id}` (Volume 4 §12).
 
 ### 21.5 Alternance français / arabe (module Franco-Arabe, bloc 4)
 

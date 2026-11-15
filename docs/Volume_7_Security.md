@@ -138,6 +138,10 @@ Format : `Module.Action` — ex. `Students.Read`, `Students.Create`, `Finance.Ex
 
 ## 15. Matrice détaillée par module
 
+> **Source de vérité par route :** [`Volume_7_Annexe_Matrice_Routes.md`](Volume_7_Annexe_Matrice_Routes.md) liste, pour **chaque** route de l'API, les rôles
+> autorisés et les conditions (module, formule, délégation). Elle est générée depuis les contrôleurs et vérifiée par un test : en cas de
+> divergence avec les tableaux ci-dessous, l'annexe prévaut.
+
 **Tableau de bord**
 
 | Permission | Super Admin | Directeur | Secrétariat | Finance | Enseignant |

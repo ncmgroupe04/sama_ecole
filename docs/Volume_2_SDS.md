@@ -60,15 +60,18 @@ Développeurs, architectes logiciels, testeurs, intégrateurs, futurs mainteneur
 
 | Bibliothèque | Usage |
 |---|---|
-| Entity Framework Core (Npgsql) | Accès aux données |
-| ASP.NET Core Identity | Authentification |
-| QuestPDF | Génération de documents PDF |
-| Chart.js | Graphiques côté client |
+| Entity Framework Core (Npgsql) | Accès aux données (PostgreSQL uniquement) |
+| MediatR | CQRS : commandes (écriture) et requêtes (lecture), un handler par cas d'usage |
+| FluentValidation | Validation des commandes et requêtes entrantes |
+| ASP.NET Core Identity (hachage) + JWT Bearer | Authentification : mots de passe hachés, jetons `sub`/`schoolId`/`role` |
+| QuestPDF | Génération de documents PDF (reçus, bulletins, états officiels) |
+| QRCoder | QR code de vérification du certificat de mutation |
 | ClosedXML | Import/export Excel |
 | Serilog | Journalisation structurée |
-| AutoMapper | Mapping Entité ↔ DTO |
-| FluentValidation | Validation des DTO entrants |
-| Hangfire ou équivalent | Tâches asynchrones (imports de masse, envoi d'emails) |
+| Swashbuckle (OpenAPI) | Documentation de l'API (développement) |
+| Tailwind CSS 3, Alpine.js | Interface : styles et composants réactifs |
+| Chart.js (embarqué) | Graphiques de la console Super Admin seulement ; les écrans d'établissement tracent leurs graphiques en SVG inline |
+| `IHostedService` / `BackgroundService` (.NET) | Tâches de fond (par exemple le calcul nocturne des lots de relance) ; ni Hangfire ni file externe |
 
 Toute bibliothèque additionnelle doit être validée par l'équipe technique avant intégration.
 

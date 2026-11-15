@@ -1,3 +1,4 @@
+using SamaEcole.Application.Absences.Commands.CancelAbsenceJustification;
 using SamaEcole.Application.Absences.Commands.CreateAbsenceJustification;
 using SamaEcole.Application.Absences.Commands.CreateEarlyDeparture;
 using SamaEcole.Application.Absences.Commands.CreateLateArrival;
@@ -31,6 +32,14 @@ public class AbsenceController(IMediator _mediator) : ControllerBase
     {
         var id = await _mediator.Send(command);
         return Ok(id);
+    }
+
+    /// <summary>Annule un billet d'absence (soft delete) ; les lignes d'appel qu'il justifiait retrouvent leur statut.</summary>
+    [HttpDelete("justifications/{id:guid}")]
+    public async Task<ActionResult> CancelAbsenceJustification(Guid id)
+    {
+        var restored = await _mediator.Send(new CancelAbsenceJustificationCommand(id));
+        return Ok(new { restoredLines = restored });
     }
 
     [HttpGet("late-arrivals")]
