@@ -18,7 +18,7 @@ namespace SamaEcole.FunctionalTests.Pages;
 ///
 /// DÉCISION G-D1 : les quatre écrans Internat/Daara relèvent du module INTERNAT, pas Coran. Ils appellent
 /// <c>/api/v1/internat/*</c> (<c>InternatController</c>, <c>[RequireModule(Internat)]</c>) ; <c>/api/v1/quran</c> (module
-/// Coran) n'a aucun consommateur dans le front. La spec §8.1 disait l'inverse : elle est corrigée.
+/// Coran) n'est consommé que par l'écran <c>/coran</c> (lot Coran, 14/11/2026), seul à déclarer ce module. La spec §8.1 disait l'inverse : elle est corrigée.
 /// </summary>
 public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>
 {
@@ -117,7 +117,7 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
             action.Should().NotBeNull($"PagesController.{name} doit exister");
             PageModuleOf(action!).Should().Be(
                 SchoolModule.Internat,
-                $"{name} appelle /api/v1/internat/* (module Internat), pas /api/v1/quran (module Coran, sans consommateur) — décision G-D1");
+                $"{name} appelle /api/v1/internat/* (module Internat), pas /api/v1/quran (module Coran, consommé seulement par /coran) — décision G-D1");
         }
     }
 
@@ -134,7 +134,7 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
     }
 
     [Fact]
-    public void No_Other_Page_Action_Declares_A_Module_And_None_Declares_Coran()
+    public void No_Other_Page_Action_Declares_A_Module_And_Only_The_Coran_Page_Declares_Coran()
     {
         var declared = typeof(PagesController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Select(m => (m.Name, Module: PageModuleOf(m)))
@@ -142,9 +142,11 @@ public class PageModuleTests(AuthApiFactory factory) : IClassFixture<AuthApiFact
             .ToList();
 
         declared.Select(x => x.Name).Should().BeEquivalentTo(
-            InternatPageActions.Concat(PedagogyPageActions),
-            "seules les pages Internat/Daara et les pages pédagogiques déclarent un module (Élèves, Classes, Caisse, Intégration étatique : aucun)");
-        declared.Should().NotContain(x => x.Module == SchoolModule.Coran, "aucun écran ne consomme encore /api/v1/quran");
+            InternatPageActions.Concat(PedagogyPageActions).Append(nameof(PagesController.Coran)),
+            "seules les pages Internat/Daara, les pages pédagogiques et l'écran Coran déclarent un module (Élèves, Classes, Caisse, Intégration étatique : aucun)");
+        declared.Where(x => x.Module == SchoolModule.Coran).Select(x => x.Name).Should().Equal(
+            [nameof(PagesController.Coran)],
+            "l'écran /coran est le seul consommateur de /api/v1/quran ; les écrans Halqa/Oustaz/Suivi coranique relèvent du module Internat (G-D1)");
     }
 
     [Fact]
