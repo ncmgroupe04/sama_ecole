@@ -202,8 +202,7 @@
                         "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
                         "Notes et bulletins : les périodes de l'année alimentent directement les écrans de saisie et l'en-tête des bulletins.",
                         "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
-                        "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application (pastille « 2026-2027 », toujours sur une seule ligne, masquée sur un écran étroit), afin que nul ne travaille par inadvertance sur le mauvais exercice. Pour le Directeur, un clic sur la pastille ouvre la gestion des années ; pour les autres rôles, elle est informative.",
-                        "Date et heure : sur grand écran, la barre supérieure affiche aussi la date du jour et l'heure, mise à jour en continu, avec l'heure en gras et les mois longs abrégés (« Vendredi 25 sept. 2026 • 01:44 »). C'est l'horloge de votre appareil, pas une donnée de l'établissement."
+                        "Où lire l'année active : sur le Tableau de bord (« Exercice actif ») et dans Paramètres › Années scolaires (statut « Année active »). La barre supérieure ne l'affiche plus : vérifiez-la avant toute saisie importante."
                     ],
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
@@ -2371,7 +2370,7 @@
             number: 10,
             title: 'Résilience réseau — travailler sur une connexion instable',
             icon: 'globe',
-            summary: "Ce que l'application fait, et ne fait pas, quand la connexion se coupe pendant une saisie — badge de connectivité, brouillons et reprise automatique.",
+            summary: "Ce que l'application fait, et ne fait pas, quand la connexion se coupe pendant une saisie — pastille d’état, brouillons et reprise automatique.",
             concept:
                 "Unikol est une application 100 % en ligne : aucune donnée n'est jamais enregistrée localement à titre " +
                 "définitif, il n'existe ni mode hors ligne ni file d'attente de synchronisation entre plusieurs postes. Ce " +
@@ -2383,14 +2382,15 @@
             articles: [
                 {
                     id: 'etat-connexion-brouillons',
-                    title: 'Bandeau de connexion, badge de connectivité et brouillons de formulaire',
-                    location: 'Barre supérieure — présente sur toutes les pages',
+                    title: 'Bandeau de connexion, pastille d\'état et brouillons de formulaire',
+                    location: 'Barre d\'état en bas d\'écran et bandeau en haut de page — présents sur toutes les pages',
                     href: '/tableau-de-bord',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "Trois indicateurs se distinguent, et non un simple point vert/rouge : CONNECTÉ (le serveur a " +
-                        "répondu), VÉRIFICATION EN COURS (état transitoire, quelques centaines de millisecondes), et HORS " +
-                        "LIGNE (coupure confirmée). Un BROUILLON, lui, est la saisie d'un formulaire en cours — pas encore " +
+                        "Trois signaux préviennent d'une coupure : la PASTILLE D'ÉTAT, en bas à gauche de chaque écran (« Connecté » " +
+                        "en vert, « Hors ligne — vérifiez votre réseau » en rouge), un BANDEAU PLEIN CADRE en haut de page " +
+                        "pendant la coupure (« Connexion perdue : aucun enregistrement n'est possible… »), puis un message " +
+                        "bref de reconnexion. Un BROUILLON, lui, est la saisie d'un formulaire en cours — pas encore " +
                         "envoyée — conservée sur CE poste, dans le navigateur, jamais sur le serveur.",
                     objectif:
                         "Dire honnêtement à l'utilisateur ce qui est enregistré et ce qui ne l'est pas encore, sans jamais " +
@@ -2402,22 +2402,22 @@
                         "plus tard — parfois après avoir fermé l'onglet — qu'une saisie entière n'a jamais atteint le " +
                         "serveur.",
                     procedure: [
-                        "Observez le badge de la barre supérieure : « Connecté », « Vérification… » ou « Hors ligne — n saisie(s) conservée(s) ».",
+                        "Observez la pastille d'état en bas à gauche de l'écran : « Connecté » (point vert) ou « Hors ligne — vérifiez votre réseau » (point rouge). Elle suit l'état du réseau seul : elle n'affiche pas de compteur de brouillons.",
                         "En cas de coupure confirmée, un bandeau plein cadre apparaît ; il disparaît dès que la connexion est vérifiée comme rétablie, avec une confirmation brève.",
-                        "Cliquez sur le badge pour forcer une nouvelle vérification plutôt que d'attendre le retour automatique de la connexion.",
-                        "Pendant une coupure, certains formulaires (caisse, entre autres) conservent votre saisie en mémoire locale : à la reconnexion, un bandeau propose de la restaurer.",
+                        "Le retour de la connexion est détecté automatiquement : le bandeau disparaît tout seul, sans action de votre part (la pastille n'est pas cliquable).",
+                        "Pendant une coupure, certains formulaires (Caisse et Inscriptions, entre autres) conservent votre saisie en mémoire locale : en revenant sur l'écran, un bandeau « Saisie en attente » propose de la « Restaurer ».",
                         "Un brouillon disparaît de lui-même après 24 heures, ou dès que la saisie correspondante est effectivement validée.",
                         "Ne comptez jamais sur un brouillon au-delà de la session en cours : fermer l'onglet avant validation reste une perte de saisie assumée."
                     ],
                     impacts: [
                         "Aucune donnée métier : un brouillon ne modifie jamais rien côté serveur ; il ne fait que restaurer les CHAMPS d'un formulaire.",
                         "Multi-établissement : les brouillons d'un compte rattaché à plusieurs écoles sont cloisonnés par établissement, un brouillon de l'école A ne réapparaît jamais dans l'école B.",
-                        "Compteur du badge : il reflète exactement le nombre de brouillons non expirés conservés sur ce poste, pas une file d'écritures en attente d'envoi."
+                        "Aucune file d'envoi : rien n'est mis en attente pour être expédié plus tard. Un brouillon ne restaure que les champs d'un formulaire ; l'enregistrement reste un acte volontaire une fois la connexion revenue."
                     ],
                     recommandations: [
                         "Ne considérez jamais un brouillon comme un enregistrement : tant que le bandeau de confirmation n'est pas apparu, rien n'est acquis côté serveur.",
                         "Sur une connexion notoirement instable, terminez une saisie en une seule session plutôt que de compter sur le brouillon d'un jour à l'autre.",
-                        "Le badge « Vérification… » n'est pas une alerte : c'est un état normal de quelques centaines de millisecondes à chaque sonde."
+                        "Un bandeau « Connexion perdue » signifie qu'aucun enregistrement n'est possible : attendez son retour avant de valider, au lieu de recliquer."
                     ]
                 },
                 {
@@ -2444,7 +2444,7 @@
                     procedure: [
                         "Validez l'encaissement ou l'appel normalement : rien ne change tant que le réseau répond.",
                         "Si une coupure survient PENDANT l'envoi, le bouton affiche « En attente d'envoi… » et un bandeau ambré confirme qu'une nouvelle tentative est en cours.",
-                        "Ne cliquez pas une seconde fois et ne rechargez pas la page : l'application rejoue la même opération, avec la même clé, jusqu'à cinq tentatives sur environ trente secondes.",
+                        "Ne cliquez pas une seconde fois et ne rechargez pas la page : l'application rejoue la même opération, avec la même clé, jusqu'à cinq tentatives, espacées de 1, 2, 4 puis 8 secondes (une quinzaine de secondes d'attente cumulée).",
                         "Dès que le réseau répond, l'opération se conclut normalement — pour la caisse, le reçu s'affiche ; pour l'appel, la fiche est marquée enregistrée.",
                         "Si toutes les tentatives échouent (coupure prolongée), l'application vous en informe explicitement : rien n'a été enregistré, et la reprise redevient manuelle.",
                         "Pour l'appel en classe spécifiquement, si la feuille apparaît déjà enregistrée après une coupure, c'est que la première tentative a bien abouti — sa réponse s'était simplement perdue en route ; ce n'est jamais traité comme une erreur à l'écran."
@@ -3391,12 +3391,12 @@
                 {
                     id: 'filtres-annee-active-et-selecteurs',
                     title: "Filtre par année active, états vides et sélecteurs dynamiques",
-                    location: 'En-tête de l\'application, listes Élèves / Classes / Notes, et tous les menus déroulants',
+                    location: 'Tableau de bord, listes Élèves / Classes / Notes, et tous les menus déroulants',
                     href: '/eleves',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "L'ANNÉE ACTIVE est le contexte implicite de tout le travail quotidien : elle est rappelée en permanence " +
-                        "dans l'en-tête, et la plupart des listes s'y bornent d'office. La liste Élèves l'expose par un " +
+                        "L'ANNÉE ACTIVE est le contexte implicite de tout le travail quotidien : elle se lit sur le Tableau de bord " +
+                        "(« Exercice actif ») et dans Paramètres › Années scolaires, et la plupart des listes s'y bornent d'office. La liste Élèves l'expose par un " +
                         "interrupteur à trois positions — « Inscrits cette année » (défaut), « Non inscrits », « Tous les " +
                         "élèves ». Les MENUS DÉROULANTS (classe, matière, trimestre, enseignant…) sont DYNAMIQUES : ils ne " +
                         "listent que ce qui a déjà été saisi, et se referment collés au champ lorsqu'ils s'ouvrent vers le " +
@@ -3411,7 +3411,7 @@
                         "apercevoir. Et une liste qui affiche « Aucun résultat » sans explication laisse croire à une panne " +
                         "alors qu'il ne manque qu'un filtre à ajuster ou une donnée à créer en amont.",
                     procedure: [
-                        "Vérifiez l'année active dans l'en-tête avant toute saisie : c'est elle qui recevra ce que vous enregistrez.",
+                        "Vérifiez l'année active (Tableau de bord › « Exercice actif ») avant toute saisie : c'est elle qui recevra ce que vous enregistrez.",
                         "Liste Élèves : « Inscrits cette année » ne montre que l'effectif inscrit pour l'année active ; « Non inscrits » isole les élèves de l'annuaire sans inscription vivante ; « Tous les élèves » rebascule sur l'annuaire complet.",
                         "Si une liste semble vide, lisez le message d'état : il indique le filtre à changer (« Essayez Non inscrits ou Tous les élèves »), la donnée à créer, ou le rôle requis.",
                         "Menu déroulant vide ou trop court : c'est que la donnée n'existe pas encore — créez d'abord vos classes, vos matières ou vos enseignants, puis rouvrez le sélecteur.",
@@ -3421,7 +3421,7 @@
                     impacts: [
                         "Tableaux de bord et rapports : tous les indicateurs se rapportent à l'année active ; changer d'année change la lecture.",
                         "Effectifs, frais, présences : un élève non inscrit pour l'année active en est absent tant qu'il n'est pas inscrit (voir « Inscription différée »).",
-                        "Sélecteurs : un enseignant ne voit dans les menus que ses propres affectations ; une liste courte peut donc être normale selon le rôle.",
+                        "Sélecteurs : seules quelques listes se restreignent aux affectations de l'enseignant (par exemple l'Appel en classe) ; la saisie des notes propose toutes les classes et matières. Une liste courte peut donc être normale selon le rôle et l'écran.",
                         "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Fiches de Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
                         "États vides : ils sont dérivés des données déjà chargées et se mettent à jour sans rechargement dès que la cause disparaît."
                     ],

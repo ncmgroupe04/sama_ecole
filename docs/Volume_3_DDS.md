@@ -207,7 +207,7 @@ Les FK composites, la RLS et le Global Query Filter des trois tables sont inchan
 
 `FeeCategories`, `SchoolFees`, `FeeChangeHistory`, `Payments`, `PaymentDetails`, `Receipts`, `ExpenseCategories`, `Expenses`, `ExpenseAttachments`, `FinancialReports`, `EmployeeContracts`, `EmployeeContractHistories`, `FichePaies`, `TeacherHourRecords` (contrats, paie et vacations, Volume 1 §14 — *ajout au catalogue, gap corrigé ici : ces tables existent en base depuis les migrations `AddEmployeeContractLifecycle`/`AddPayrollAndTax`/`AddDocumentsModuleEntities` mais n'y figuraient pas*).
 
-> **Casse réelle en base, ici corrigée en documentation seulement.** Les tables listées ci-dessus en §4.4/§4.5 respectent la convention PascalCase de §1.4 à l'exception de `schedule_slots`, `employee_contracts`, `employee_contract_histories` et `fiche_paies`, créées en snake_case (mêmes migrations que ci-dessus, plus `AddScheduleAndDisbursements`) — `TeacherAttendances` et `TeacherHourRecords`, elles, sont bien en PascalCase. Ce mélange est un fait acquis du schéma : renommer une table déjà appliquée en production est interdit (AGENTS.md, « Ne jamais faire »). Le nom réel en base fait foi pour toute migration ou requête SQL ; ne pas supposer la casse à partir de §1.4 seul.
+> **Casse réelle en base, ici corrigée en documentation seulement.** Les tables listées ci-dessus en §4.4/§4.5 respectent la convention PascalCase de §1.4 à l'exception de `ScheduleSlots`, `employee_contracts`, `employee_contract_histories` et `fiche_paies`, créées en snake_case (mêmes migrations que ci-dessus, plus `AddScheduleAndDisbursements`) — `TeacherAttendances` et `TeacherHourRecords`, elles, sont bien en PascalCase. Ce mélange est un fait acquis du schéma : renommer une table déjà appliquée en production est interdit (AGENTS.md, « Ne jamais faire »). Le nom réel en base fait foi pour toute migration ou requête SQL ; ne pas supposer la casse à partir de §1.4 seul.
 
 `employee_contracts` porte, depuis la migration `AddEmployeeContractPayoutMethod` (ticket JGK-K02), deux colonnes supplémentaires : `PayoutMethod` (`varchar(20)`, CHECK IN `Cash`/`BankTransfer`/`Wave`/`OrangeMoney`, NOT NULL, DEFAULT `Cash`) et `PayoutAccountReference` (`varchar(50)`, NULL — RIB/IBAN ou numéro mobile money, texte libre). Distinct de la colonne `PaymentMethod` du domaine Finance élèves (§5.5) : deux domaines qui ne partagent jamais une énumération, même si Wave/Orange Money s'y retrouvent conceptuellement des deux côtés.
 
@@ -625,6 +625,522 @@ tranche ou cycles de l'école ont changé depuis la demande), `TARGET_TIER_TOO_S
 La facturation suit alors la tranche COURANTE de la souscription (`SubscriptionAmountResolver`), tant que l'école est facturée par
 tranche (inscrite avec une tranche, ou demande validée). La migration `AddSubscriptionChangeRequests` élargit les droits de chaque
 école existante à ses réglages actuels (jamais l'inverse), pour ne rien retirer à ce qu'elle utilise déjà.
+
+### 5.18 Tables complémentaires (généré depuis le schéma réel)
+
+Les tables ci-dessous existent dans le schéma mais n'étaient détaillées nulle part dans ce volume (catalogue §4 conceptuel
+seulement). Les colonnes d'audit et de suppression logique communes à toute table métier (`CreatedAt`, `CreatedBy`,
+`UpdatedAt`, `UpdatedBy`, `IsDeleted`, `DeletedAt`, `DeletedBy`, voir §3) sont omises. Le jeton de concurrence `xmin` est une
+colonne système PostgreSQL, absente des listes. Source : `information_schema` d'une base migrée au 14/11/2026.
+
+#### `attendance_sessions` — entité `AttendanceSession`
+
+Session de pointage configurée par la Direction : « Appel de nuit », « Déjeuner », « Appel de la Halqa »… Rien n'est imposé hors la session « Appel de nuit » reprise par la migration pour les écoles qui pointaient déjà.
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `Name` | varchar(60) | non |  |
+| `Audience` | varchar(20) | non |  |
+| `Days` | int | non |  |
+| `TimeLabel` | varchar(40) | oui |  |
+| `IsActive` | bool | non |  |
+| `SortOrder` | int | non |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_attendance_sessions`, `AK_attendance_sessions_SchoolId_Id`, `UX_attendance_sessions_name`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `buildings` — entité `Building`
+
+Bâtiment physique de l'établissement (module Infrastructures).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `Name` | varchar(100) | non |  |
+| `Description` | varchar(500) | oui |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_buildings`, `IX_buildings_SchoolId_Name`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `cashier_sessions` — entité `CashierSession`
+
+Session de caisse d'un caissier (JGK-F02/F09) : fonds initial à l'ouverture, espèces attendues, montant compté et écart (motif obligatoire) à la clôture ; une session close ne se rouvre jamais.
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `CashierId` | uuid | non |  |
+| `OpenedAt` | timestamptz | non |  |
+| `ClosedAt` | timestamptz | oui |  |
+| `OpeningBalance` | numeric(12,2) | non |  |
+| `ClosingBalance` | numeric(12,2) | oui |  |
+| `Status` | varchar(20) | non |  |
+| `ActualCashAmount` | numeric(12,2) | oui |  |
+| `DiscrepancyAmount` | numeric(12,2) | oui |  |
+| `DiscrepancyReason` | varchar(500) | oui |  |
+| `ExpectedCashAmount` | numeric(12,2) | oui |  |
+
+Clés étrangères : `CashierId` → `users.Id`.
+
+Index uniques : `PK_cashier_sessions`, `AK_cashier_sessions_SchoolId_Id`, `UX_cashier_sessions_SchoolId_CashierId_Open`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `class_fees` — entité `ClassFee`
+
+Montant d'une catégorie de frais pour UNE classe (ticket JGK-F01) — l'intersection (catégorie × classe).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `FeeCategoryId` | uuid | non |  |
+| `ClassroomId` | uuid | non |  |
+| `Amount` | numeric(12,2) | non |  |
+
+Clés étrangères : `ClassroomId` → `classrooms.Id`, `ClassroomId` → `classrooms.SchoolId`, `FeeCategoryId` → `fee_categories.SchoolId`, `FeeCategoryId` → `fee_categories.Id`, `SchoolId` → `classrooms.SchoolId`, `SchoolId` → `schools.Id`, `SchoolId` → `classrooms.Id`, `SchoolId` → `fee_categories.SchoolId`, `SchoolId` → `fee_categories.Id`.
+
+Index uniques : `PK_class_fees`, `IX_class_fees_SchoolId_FeeCategoryId_ClassroomId`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `debtor_reminder_batch_items` — entité `DebtorReminderBatchItem`
+
+Un débiteur d'un lot de relance : instantané (reliquat, jours de retard, téléphone du tuteur, message SMS associé) pris à la génération du lot.
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `DebtorReminderBatchId` | uuid | non |  |
+| `EnrollmentId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `GuardianPhone` | varchar(20) | oui |  |
+| `RemainingBalance` | numeric(12,2) | non |  |
+| `DaysOverdue` | int | non |  |
+| `SmsMessageId` | uuid | oui |  |
+
+Clés étrangères : `DebtorReminderBatchId` → `debtor_reminder_batches.Id`, `DebtorReminderBatchId` → `debtor_reminder_batches.SchoolId`, `EnrollmentId` → `enrollments.SchoolId`, `EnrollmentId` → `enrollments.Id`, `SchoolId` → `debtor_reminder_batches.SchoolId`, `SchoolId` → `schools.Id`, `SchoolId` → `debtor_reminder_batches.Id`, `SchoolId` → `enrollments.SchoolId`, `SchoolId` → `enrollments.Id`.
+
+Index uniques : `PK_debtor_reminder_batch_items`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `debtor_reminder_batches` — entité `DebtorReminderBatch`
+
+Lot de relance de débiteurs, généré chaque nuit par DebtorAgingHostedService pour UNE classe (Étape 5 — recouvrement semi-automatique).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `ClassroomId` | uuid | non |  |
+| `ThresholdDays` | int | non |  |
+| `GeneratedAt` | timestamptz | non |  |
+| `Status` | varchar(20) | non |  |
+| `SentByUserId` | uuid | oui |  |
+| `SentAt` | timestamptz | oui |  |
+
+Clés étrangères : `ClassroomId` → `classrooms.SchoolId`, `ClassroomId` → `classrooms.Id`, `SchoolId` → `classrooms.SchoolId`, `SchoolId` → `classrooms.Id`, `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_debtor_reminder_batches`, `AK_debtor_reminder_batches_SchoolId_Id`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `enrollment_fee_lines` — entité `EnrollmentFeeLine`
+
+Une ligne du détail des frais d'une inscription (ticket JGK-E01) — le « compte financier » initialisé à l'inscription.
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `EnrollmentId` | uuid | non |  |
+| `FeeCategoryId` | uuid | non |  |
+| `Designation` | varchar(60) | non |  |
+| `IsRecurring` | bool | non |  |
+| `UnitAmount` | numeric(12,2) | non |  |
+| `Months` | int | non |  |
+| `LineTotal` | numeric(12,2) | non |  |
+| `AmountCollected` | numeric(12,2) | non | `0.0` |
+| `MonthsCollected` | int | non | `0` |
+
+Clés étrangères : `EnrollmentId` → `enrollments.Id`, `EnrollmentId` → `enrollments.SchoolId`, `FeeCategoryId` → `fee_categories.SchoolId`, `FeeCategoryId` → `fee_categories.Id`, `SchoolId` → `enrollments.SchoolId`, `SchoolId` → `schools.Id`, `SchoolId` → `enrollments.Id`, `SchoolId` → `fee_categories.SchoolId`, `SchoolId` → `fee_categories.Id`.
+
+Index uniques : `PK_enrollment_fee_lines`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `fee_installment_plans` — entité `FeeInstallmentPlan`
+
+Plan d'échéances d'une inscription, librement négocié (date et montant de chaque échéance) en remplacement de la synthèse mensuelle uniforme ; un plan renégocié est annulé et conservé. Exposé par l'API (`POST /finance/enrollments/{id}/installment-plan`, `…/classrooms/{id}/installment-plan`) ; aucun écran ne le saisit à ce jour.
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `EnrollmentId` | uuid | non |  |
+| `Status` | varchar(20) | non |  |
+| `Reason` | varchar(500) | oui |  |
+| `CreatedFromClassroomTemplate` | bool | non |  |
+
+Clés étrangères : `EnrollmentId` → `enrollments.SchoolId`, `EnrollmentId` → `enrollments.Id`, `SchoolId` → `enrollments.SchoolId`, `SchoolId` → `enrollments.Id`, `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_fee_installment_plans`, `AK_fee_installment_plans_SchoolId_Id`, `UX_fee_installment_plans_single_active_per_enrollment`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `fee_installments` — entité `FeeInstallment`
+
+Une échéance d'un plan d'échéances : un montant, une date d'exigibilité et un état de règlement.
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `FeeInstallmentPlanId` | uuid | non |  |
+| `SequenceNo` | int | non |  |
+| `Label` | varchar(120) | non |  |
+| `Amount` | numeric(12,2) | non |  |
+| `DueDate` | date | non |  |
+
+Clés étrangères : `FeeInstallmentPlanId` → `fee_installment_plans.SchoolId`, `FeeInstallmentPlanId` → `fee_installment_plans.Id`, `SchoolId` → `fee_installment_plans.SchoolId`, `SchoolId` → `fee_installment_plans.Id`, `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_fee_installments`, `IX_fee_installments_SchoolId_FeeInstallmentPlanId_SequenceNo`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `instructors` — entité `Instructor`
+
+Oustaz (maître coranique) d'un daara : le responsable d'une Halqa, son cercle d'étude.
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `FullName` | varchar(200) | non |  |
+| `FullNameAr` | varchar(200) | oui |  |
+| `Phone` | varchar(30) | oui |  |
+| `Status` | varchar(20) | non | `'Active'::character varying` |
+| `UserId` | uuid | oui |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`, `UserId` → `users.Id`.
+
+Index uniques : `PK_instructors`, `AK_instructors_SchoolId_Id`, `UX_instructors_UserId`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `mentions` — entité `Mention`
+
+Mention personnalisable, dérivée automatiquement de la moyenne générale d'un élève (ticket JGK-G02, Volume 1 §8.4).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `Label` | varchar(40) | non |  |
+| `MinAverage` | numeric(5,2) | non |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_mentions`, `IX_mentions_SchoolId_Label`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `password_reset_tokens` — entité `PasswordResetToken`
+
+Jeton à usage unique de réinitialisation de mot de passe self-service (`POST /auth/forgot-password` puis `/auth/reset-password`).
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `UserId` | uuid | non |  |
+| `TokenHash` | varchar(64) | non |  |
+| `ExpiresAt` | timestamptz | non |  |
+| `UsedAt` | timestamptz | oui |  |
+| `RevokedAt` | timestamptz | oui |  |
+
+Clés étrangères : `UserId` → `users.Id`.
+
+Index uniques : `PK_password_reset_tokens`, `IX_password_reset_tokens_TokenHash`.
+
+RLS : non (table hors périmètre tenant) ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `payment_breakdowns` — entité `PaymentBreakdown`
+
+Ventilation d'un paiement par catégorie de frais (et mois) : permet le reçu ventilé, une ligne par poste réglé.
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `PaymentId` | uuid | non |  |
+| `FeeCategoryId` | uuid | non |  |
+| `AmountAllocated` | numeric(12,2) | non |  |
+| `Label` | varchar(60) | oui |  |
+| `Month` | int | oui |  |
+
+Clés étrangères : `FeeCategoryId` → `fee_categories.Id`, `PaymentId` → `payments.Id`.
+
+Index uniques : `PK_payment_breakdowns`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `quran_evaluations` — entité `QuranEvaluation`
+
+Note d'examen oral de récitation coranique (module Coran/Franco-Arabe, docs/superpowers/specs/ 2026-09-20-franco-arabic-core-design.md §3.4).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `EvaluationDate` | date | non |  |
+| `MemoryMistakes` | int | non |  |
+| `TajwidMistakes` | int | non |  |
+| `Hesitations` | int | non |  |
+| `FinalScore` | numeric(5,2) | non |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `students.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_quran_evaluations`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `quran_progress` — entité `QuranProgress`
+
+Suivi individuel de mémorisation coranique (module Coran/Franco-Arabe, docs/superpowers/specs/ 2026-09-20-franco-arabic-core-design.md §3.3).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `JuzNumber` | int | non |  |
+| `HizbNumber` | int | non |  |
+| `SurahNumber` | int | non |  |
+| `Status` | varchar(20) | non | `'InProcess'::character varying` |
+| `EvaluationDate` | date | oui |  |
+| `Notes` | varchar(2000) | oui |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `students.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_quran_progress`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `refresh_tokens` — entité `RefreshToken`
+
+Jeton de rafraîchissement d'authentification (JGK-A04) : révoqué à la déconnexion ou à la rotation.
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `UserId` | uuid | non |  |
+| `TokenHash` | varchar(64) | non |  |
+| `ExpiresAt` | timestamptz | non |  |
+| `RevokedAt` | timestamptz | oui |  |
+
+Clés étrangères : `UserId` → `users.Id`.
+
+Index uniques : `PK_refresh_tokens`, `IX_refresh_tokens_TokenHash`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `report_card_remarks` — entité `ReportCardRemark`
+
+Ce que le conseil des professeurs ajoute à la main sur le bulletin d'un élève, pour un trimestre donné : la distinction cochée (Blâme… Félicitations) et le texte d'observations.
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `TermId` | uuid | non |  |
+| `DisciplinaryMention` | varchar(30) | oui |  |
+| `Observations` | varchar(300) | oui |  |
+| `CouncilDecision` | varchar(30) | oui |  |
+
+Clés étrangères : `SchoolId` → `terms.SchoolId`, `SchoolId` → `terms.Id`, `SchoolId` → `students.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `schools.Id`, `StudentId` → `students.Id`, `StudentId` → `students.SchoolId`, `TermId` → `terms.SchoolId`, `TermId` → `terms.Id`.
+
+Index uniques : `PK_report_card_remarks`, `UX_report_card_remarks_single_entry`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `roll_book_entries` — entité `RollBookEntry`
+
+Saisie directe du cahier de roulement : le statut d'UN élève pour UNE demi-journée (Franco-Arabe Bloc 5, docs/superpowers/specs/2026-10-14-franco-arabe-cahier-de-roulement-design.md §2.2).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `SchoolYearId` | uuid | non |  |
+| `ClassroomId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `Date` | date | non |  |
+| `HalfDay` | varchar(10) | non |  |
+| `Status` | varchar(20) | non |  |
+| `LateMinutes` | int | non |  |
+| `Reason` | varchar(300) | oui |  |
+| `RecordedByUserId` | uuid | non |  |
+
+Clés étrangères : `ClassroomId` → `classrooms.Id`, `ClassroomId` → `classrooms.SchoolId`, `SchoolId` → `school_years.SchoolId`, `SchoolId` → `school_years.Id`, `SchoolId` → `classrooms.SchoolId`, `SchoolId` → `classrooms.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `schools.Id`, `SchoolId` → `students.Id`, `SchoolYearId` → `school_years.SchoolId`, `SchoolYearId` → `school_years.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_roll_book_entries`, `IX_roll_book_entries_SchoolId_StudentId_Date_HalfDay`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `school_closures` — entité `SchoolClosure`
+
+Période de fermeture du calendrier scolaire (jour férié, vacances), avec libellé arabe facultatif ; grisée dans le cahier de roulement.
+
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `SchoolYearId` | uuid | non |  |
+| `StartDate` | date | non |  |
+| `EndDate` | date | non |  |
+| `Kind` | varchar(20) | non |  |
+| `Label` | varchar(120) | non |  |
+| `LabelAr` | varchar(120) | oui |  |
+
+Clés étrangères : `SchoolId` → `school_years.SchoolId`, `SchoolId` → `school_years.Id`, `SchoolId` → `schools.Id`, `SchoolYearId` → `school_years.SchoolId`, `SchoolYearId` → `school_years.Id`.
+
+Index uniques : `PK_school_closures`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `sms_messages` — entité `SmsMessage`
+
+Historique des SMS envoyés par un établissement (offre Premium).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `Recipient` | varchar(20) | non |  |
+| `Body` | varchar(1000) | non |  |
+| `Trigger` | varchar(30) | non |  |
+| `Status` | varchar(20) | non |  |
+| `ProviderMessageId` | varchar(120) | oui |  |
+| `FailureReason` | varchar(500) | oui |  |
+| `SegmentCount` | int | non |  |
+| `StudentId` | uuid | oui |  |
+| `SentAt` | timestamptz | non |  |
+| `AttemptCount` | int | non | `0` |
+| `DeliveredAt` | timestamptz | oui |  |
+| `DispatchedAt` | timestamptz | oui |  |
+| `NextAttemptAt` | timestamptz | oui |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `students.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_sms_messages`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `student_hizb_evaluations` — entité `StudentHizbEvaluation`
+
+Journal des évaluations Hizb d'un élève : UNE ligne par saisie de l'Oustaz qui change quelque chose (quarts ou note).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `HizbNumber` | int | non |  |
+| `QuartersBefore` | int | non |  |
+| `QuartersAfter` | int | non |  |
+| `Rating` | int | oui |  |
+| `TotalQuartersAfter` | int | non |  |
+| `EvaluatedAt` | timestamptz | non |  |
+| `EvaluatedByUserId` | uuid | oui |  |
+| `InstructorId` | uuid | oui |  |
+| `IsBaseline` | bool | non |  |
+
+Clés étrangères : `InstructorId` → `instructors.Id`, `InstructorId` → `instructors.SchoolId`, `SchoolId` → `schools.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `students.Id`, `SchoolId` → `instructors.SchoolId`, `SchoolId` → `instructors.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_student_hizb_evaluations`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `student_hizb_statuses` — entité `StudentHizbStatus`
+
+Suivi coranique d'un élève, par Hizb : où il en est sur chacun des 60 Hizb.
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `StudentId` | uuid | non |  |
+| `HizbNumber` | int | non |  |
+| `CompletedQuarters` | int | non |  |
+| `State` | varchar(20) | non | `'NotStarted'::character varying` |
+| `LastEvaluatedAt` | timestamptz | oui |  |
+| `Rating` | int | oui |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`, `SchoolId` → `students.SchoolId`, `SchoolId` → `students.Id`, `StudentId` → `students.SchoolId`, `StudentId` → `students.Id`.
+
+Index uniques : `PK_student_hizb_statuses`, `UX_student_hizb_statuses_key`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `taxe_declarations` — entité `TaxeDeclaration`
+
+Déclaration fiscale mensuelle consolidée (IPRES, CSS, VRS, BRS, TVA collectée, déductible et nette, total dû à l'État), générée depuis les fiches de paie du mois.
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `Month` | int | non |  |
+| `Year` | int | non |  |
+| `TotalIpres` | numeric | non |  |
+| `TotalCss` | numeric | non |  |
+| `TotalVrs` | numeric | non |  |
+| `TotalBrs` | numeric | non |  |
+| `TvaCollected` | numeric | non |  |
+| `TvaDeductible` | numeric | non |  |
+| `NetTva` | numeric | non |  |
+| `TotalDueToState` | numeric | non |  |
+
+Clés étrangères : `SchoolId` → `schools.Id`.
+
+Index uniques : `PK_taxe_declarations`, `IX_taxe_declarations_SchoolId_Month_Year`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
+#### `teacher_subjects` — entité `TeacherSubject`
+
+Matière qu'un enseignant est qualifié à enseigner (ticket JGK-D03, openapi.yaml TeacherCreateRequest.subjectIds).
+
+| Colonne | Type | Null | Défaut |
+|---|---|---|---|
+| `Id` | uuid | non |  |
+| `SchoolId` | uuid | non |  |
+| `TeacherId` | uuid | non |  |
+| `SubjectId` | uuid | non |  |
+
+Clés étrangères : `SchoolId` → `teachers.SchoolId`, `SchoolId` → `teachers.Id`, `SchoolId` → `subjects.Id`, `SchoolId` → `subjects.SchoolId`, `SchoolId` → `schools.Id`, `SubjectId` → `subjects.Id`, `SubjectId` → `subjects.SchoolId`, `TeacherId` → `teachers.SchoolId`, `TeacherId` → `teachers.Id`.
+
+Index uniques : `PK_teacher_subjects`, `IX_teacher_subjects_TeacherId_SubjectId`.
+
+RLS : activée ; filtre global EF Core associé quand la table porte `SchoolId`.
+
 
 ## 6. Dictionnaire des énumérations
 

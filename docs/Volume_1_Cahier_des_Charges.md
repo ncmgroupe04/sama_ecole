@@ -806,7 +806,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'établissement crée une **convocation** du parent ou du tuteur : motif, date et heure du rendez-vous, élève concerné.
 - Un **avis de convocation** (PDF officiel) est édité pour remise en main propre à l'élève, ou envoi.
 - **Une convocation n'est pas un portail parent** (§13) : elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne constitue pas une amorce du chapitre 13. C'est un registre interne de la Vie scolaire.
-- La convocation se crée aussi **depuis le bilan d'assiduité** (`/reports/attendance`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
+- La convocation se crée aussi **depuis le bilan d'assiduité** (`/rapports/assiduite`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
 
 ### 18.3 Suite donnée à une convocation
 

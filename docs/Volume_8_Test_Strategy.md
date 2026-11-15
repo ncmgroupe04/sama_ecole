@@ -60,6 +60,26 @@ Pour **chaque** entité portant `SchoolId`, un test d'intégration automatisé v
 
 Ce test est exécuté à **chaque** pipeline CI/CD, pas seulement en recette manuelle, et bloque le merge en cas d'échec.
 
+### 5.1 Garde-fous automatiques en place (état au 14/11/2026)
+
+Quatre suites tournent à chaque pipeline (`dotnet test` pour les trois premières, `npm test` pour la dernière) :
+
+| Suite | Volume | Rôle |
+|---|---|---|
+| Unitaires (`SamaEcole.UnitTests`) | ≈ 2 550 tests | Règles pures : validateurs, calculs (notes, coefficients, barèmes), politiques, formats |
+| Intégration (`SamaEcole.IntegrationTests`, PostgreSQL via Testcontainers) | ≈ 1 370 tests | Handlers réels sur une base réelle, RLS, migrations, purges, isolation multi-tenant (`Category=MultiTenant`) |
+| Fonctionnels (`SamaEcole.FunctionalTests`) | ≈ 1 170 tests | API de bout en bout (HTTP, JWT, rôles, modules, format d'erreur normalisé) |
+| JS (`src/SamaEcole.Web/tests/js`, `node --test`) | ≈ 1 190 tests | Composants Alpine, aide, garde-fous de navigation et de balisage |
+
+Garde-fous qui empêchent la documentation et le code de diverger :
+- `RlsCoverageTests` : toute table portant `SchoolId` a sa policy RLS (règle #2 d'`AGENTS.md`).
+- `PermissionMatrixTests` : l'annexe `Volume_7_Annexe_Matrice_Routes.md` (rôles, modules, formules de **chaque** route) est générée depuis les
+  contrôleurs ; un changement de droits sans régénération fait échouer le test. Il refuse aussi toute route sans `[Authorize]` ni
+  `[AllowAnonymous]` explicite.
+- `ModuleCoverageTests` et `PageModuleTests` : chaque contrôleur et chaque page déclare son module ; seul l'écran Coran déclare le module Coran.
+- Tests JS : `help.test.mjs` et `how-to.test.mjs` (chaque bouton « Comment faire ? » pointe vers un article d'aide existant),
+  `regression-guards.test.mjs` (navigation, modules), `views-markup.test.mjs` (balisage Razor).
+
 ## 6. Tests End-to-End (E2E)
 
 Simulent un parcours utilisateur réel, de bout en bout, sur un environnement proche de la production.
