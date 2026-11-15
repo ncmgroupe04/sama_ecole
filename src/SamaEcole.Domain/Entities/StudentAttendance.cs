@@ -29,6 +29,12 @@ public class StudentAttendance : AuditableEntity, ITenantEntity
     public Guid? EntryTicketId { get; set; }
 
     /// <summary>
+    /// Billet d'absence (<see cref="AbsenceJustification"/>) qui a justifié cette ligne : le statut d'avant est dans
+    /// <see cref="PreviousStatus"/>, ce qui permet à l'annulation du billet de restaurer la ligne. Null sinon.
+    /// </summary>
+    public Guid? AbsenceJustificationId { get; set; }
+
+    /// <summary>
     /// Statut et minutes de cette ligne AVANT qu'un billet d'entrée ne la modifie (Complément N°5 bis) — pour un
     /// cours MANQUÉ que le billet passe en absence justifiée. C'est ce qui rend l'annulation possible ligne par
     /// ligne, sans table de journal : une ligne ↔ un billet. Null si aucun billet ne l'a touchée.

@@ -12,7 +12,7 @@ public class GetAbsenceJustificationsQueryHandler(IApplicationDbContext _context
         return await _context.AbsenceJustifications
             .AsNoTracking()
             .Include(a => a.Student)
-            .OrderByDescending(a => a.Date)
+            .OrderByDescending(a => a.StartDate)
             .ThenByDescending(a => a.CreatedAt)
             .Select(a => new AbsenceJustificationDto
             {
@@ -20,7 +20,9 @@ public class GetAbsenceJustificationsQueryHandler(IApplicationDbContext _context
                 StudentId = a.StudentId,
                 StudentFullName = a.Student.FullName,
                 StudentMatricule = a.Student.Matricule,
-                Date = a.Date,
+                StartDate = a.StartDate,
+                EndDate = a.EndDate,
+                Days = a.EndDate.DayNumber - a.StartDate.DayNumber + 1,
                 Reason = a.Reason,
                 AuthorizedReturnDate = a.AuthorizedReturnDate,
                 CreatedAt = a.CreatedAt

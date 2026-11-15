@@ -112,6 +112,14 @@ public class InitializeAttendanceSheetQueryHandler(
                 });
         }
 
+        // Billets d'absence actifs couvrant cette date : l'élève est présélectionné « Absent (justifié) » tant que
+        // l'appel n'est pas fait (un billet d'entrée sur ce cours, plus précis, passe avant).
+        var justifiedStudentIds = (await dbContext.AbsenceJustifications.AsNoTracking()
+                .Where(a => a.StartDate <= request.Date && a.EndDate >= request.Date)
+                .Select(a => a.StudentId)
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+
         var rows = students
             .Select(s =>
             {
@@ -126,6 +134,11 @@ public class InitializeAttendanceSheetQueryHandler(
                     preselected = ticket.Missed
                         ? nameof(AttendanceStatus.JustifiedAbsence)
                         : ticket.Minutes > 0 ? nameof(AttendanceStatus.Late) : null;
+                }
+
+                if (preselected is null && !hasTicket && justifiedStudentIds.Contains(s.Id))
+                {
+                    preselected = nameof(AttendanceStatus.JustifiedAbsence);
                 }
 
                 var status = recorded?.Status.ToString() ?? preselected;

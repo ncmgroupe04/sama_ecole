@@ -921,6 +921,17 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - Un cours **déjà couvert** par un billet actif du même élève le même jour n'est ni re-justifié ni re-visé. Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le billet reste possible **sans heure d'arrivée** : minutes saisies à la main, comme avant.
 - Le billet imprimé porte l'heure d'arrivée, la durée régularisée et le cours manqué (nommé s'il est seul, résumé sinon) — toujours **une seule page A5**.
 
+#### Billet d'absence (plusieurs jours)
+
+L'écran **Billets** a un troisième onglet, **Billets d'absence**, qui justifie l'absence d'un élève sur une plage de jours (maladie, deuil, voyage…) en une seule saisie.
+
+- Saisie : élève, **premier jour**, **dernier jour** (vide = un seul jour ; 60 jours au plus), **motif** obligatoire (1 000 caractères), date de **retour autorisé** facultative (postérieure au dernier jour). Réservé au Directeur, au Surveillant et au Super Admin (comme les autres billets) ; module Pédagogie.
+- **Deux billets actifs d'un même élève ne se chevauchent pas** (422) ; un billet annulé libère ses jours.
+- **Effet sur l'appel** : à la création, chaque ligne d'appel de l'élève dans la plage qui est « Absent (non justifié) » passe à « Absent (justifié) » ; le statut d'avant est conservé sur la ligne. Une ligne « Présent » ou « Retard » n'est jamais touchée (le constat en classe prime). Pour un appel qui n'est pas encore fait, la feuille **présélectionne** « Absent (justifié) » et, à l'enregistrement, toute absence saisie pour cet élève est justifiée et rattachée au billet. Un billet d'entrée visant le même cours est plus précis et passe avant.
+- **Aucun SMS « absent »** n'est envoyé à la famille pour une absence couverte par un billet : elle l'a elle-même justifiée.
+- **Annulation** : le billet est mis de côté (soft delete, jamais supprimé) et chaque ligne qu'il avait justifiée retrouve son statut d'avant.
+- Routes : `GET/POST /api/v1/absences/justifications`, `DELETE /api/v1/absences/justifications/{id}` (Volume 4 §12).
+
 ### 21.5 Alternance français / arabe (module Franco-Arabe, bloc 4)
 
 **Statut : livré (API en lecture seule).** Pour un établissement franco-arabe, `GET /api/v1/schedules/classroom/{id}/sections` et `GET /api/v1/schedules/teacher/{id}/sections` décrivent la répartition des deux sections dans la semaine d'une classe ou d'un enseignant.

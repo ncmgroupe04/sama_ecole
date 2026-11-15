@@ -24,6 +24,10 @@ public class AbsenceJustificationConfiguration : IEntityTypeConfiguration<Absenc
     {
         builder.HasIndex(e => new { e.SchoolId, e.StudentId });
         builder.Property(e => e.Reason).HasMaxLength(1000);
+        builder.Property(e => e.StartDate).HasColumnType("date");
+        builder.Property(e => e.EndDate).HasColumnType("date");
+        builder.Property(e => e.AuthorizedReturnDate).HasColumnType("date");
+        builder.HasIndex(e => new { e.SchoolId, e.StartDate, e.EndDate });
     }
 }
 

@@ -2963,10 +2963,13 @@
                         "Un billet En attente peut être annulé (bouton « Annuler ») par la Vie Scolaire ou le Directeur, tant que l'enseignant ne l'a pas accepté ; l'appel reprend alors son état d'avant. Un billet accepté ne s'annule plus.",
                         "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
-                        "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
+                        "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur.",
+                        "ABSENCE DE PLUSIEURS JOURS : onglet « Billets d'absence » › « Enregistrer une absence ». Choisissez l'élève, le premier et le dernier jour (vide = un seul jour, 60 jours au plus), le motif et, si besoin, la date de retour autorisée. Deux billets actifs d'un même élève ne peuvent pas se chevaucher.",
+                        "Un billet d'absence s'annule (bouton « Annuler », avec confirmation) : les lignes d'appel qu'il avait justifiées reprennent leur statut d'avant et les jours redeviennent libres. Il n'est jamais supprimé physiquement."
                     ],
                     impacts: [
                         "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours en cours que vise son billet ; les cours entièrement manqués avant son arrivée passent de « Absent (non justifié) » à « Absent (justifié) ». Les lignes sont mises à jour dès l'émission du billet, même si l'appel de ces cours est déjà fait ; un « Présent » n'est jamais modifié.",
+                        "Billet d'absence : l'appel d'un jour couvert présélectionne « Absent (justifié) » ; une absence déjà saisie « non justifiée » devient justifiée ; un élève marqué Présent ou en Retard le reste (le constat en classe prime). Aucun SMS « absent » n'est envoyé à la famille pour une absence couverte par un billet.",
                         "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
                         "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
                     ],

@@ -19,6 +19,7 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 | POST | `/api/v1/absences/early-departures` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
 | GET | `/api/v1/absences/justifications` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
 | POST | `/api/v1/absences/justifications` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
+| DELETE | `/api/v1/absences/justifications/{id:guid}` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
 | GET | `/api/v1/absences/late-arrivals` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
 | POST | `/api/v1/absences/late-arrivals` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
 | GET | `/api/v1/absences/today-slots` | SuperAdmin, Directeur, Surveillant | module Pédagogie |
