@@ -118,12 +118,13 @@ Barre **blanche** (`bg-white`, filet bas), **une seule rangée de 64 px** (refon
 | Élément | Comportement |
 |---|---|
 | Sélecteur d'établissement | Uniquement pour un compte rattaché à plusieurs écoles (groupe scolaire) ; masqué sous `sm`. |
-| Pastille de régime | **Mode test** : badge orange **compact** (`px-2.5 py-1.5 text-xs`), libellé « MODE TEST » ; le complément (« : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) n'apparaît qu'au-dessus de 1650 px (`.sandbox-suffix`). Cliquable pour le seul Directeur (Paramètres système, ancre `#mode-reel`). **Mode réel** : pastille « Mode réel », masquée sous `sm`. |
+| Pastille de régime | **Mode test** : badge orange **compact** (`px-2.5 py-1.5 text-xs`), libellé « MODE TEST » ; le complément (« : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) n'apparaît qu'au-dessus de 2000 px (`.sandbox-suffix`). Cliquable pour le seul Directeur (Paramètres système, ancre `#mode-reel`). **Mode réel** : pastille « Mode réel », masquée sous `sm`. |
 | Assistant « Démarrage » | Directeur et Secrétariat seulement. Pastille avec pourcentage d'avancement, icône + pourcentage sous 1500 px (`.setup-assistant-label` masqué). **À 100 % (`allDone`), le bouton disparaît** (`x-show="!allDone"`) ; la modale reste dans le DOM. S'ouvre seul à la première connexion. |
-| Salutation | Selon l'heure, sans donnée personnelle ; masquée sous `sm` et sous 1500 px. |
+| Année scolaire active | Rétablie le 15/11/2026 (JGK-C01) : pastille grise avec le millésime (« 2026-2027 »), visible sur chaque écran dès `sm`. Cliquable pour le seul Directeur (vers `/annees-scolaires`, Paramètres › Années), informative pour les autres rôles. Sous 1500 px, l'icône est masquée et le remplissage réduit. |
+| Salutation | Selon l'heure, sans donnée personnelle ; masquée sous `sm` et sous 2100 px (elle cède sa place à l'année active). |
 | « Comment faire ? » | Bouton jaune (`.btn-help`), visible dès `lg` : ouvre l'aide contextuelle de l'écran. |
 
-Retirés de la barre : l'**horodateur** et la **pastille d'année scolaire active** (refonte du 12/11/2026 ; l'année active se lit sur le tableau de bord et dans Paramètres › Années scolaires), ainsi que, depuis le 26/08/2026, le badge de connectivité (la barre d'état en bas d'écran porte seule cette information, §9), le raccourci « Aide » (menu latéral) et le bouton de déconnexion (carte de profil du menu latéral). La recherche globale n'est pas livrée.
+Retirés de la barre : l'**horodateur** (refonte du 12/11/2026 ; la pastille d'année scolaire active, retirée à cette occasion, a été **rétablie** le 15/11/2026), ainsi que, depuis le 26/08/2026, le badge de connectivité (la barre d'état en bas d'écran porte seule cette information, §9), le raccourci « Aide » (menu latéral) et le bouton de déconnexion (carte de profil du menu latéral). La recherche globale n'est pas livrée.
 
 ### 3.2 Menu latéral
 
