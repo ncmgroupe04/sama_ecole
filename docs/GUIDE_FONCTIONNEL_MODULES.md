@@ -1198,6 +1198,16 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   ouverte car inscriptions, frais et paie en dépendent).
 - Le lit actuel d'un élève est proposé dans « Affecter / Changer / Libérer ».
 
+### Coran (module Coran)
+- **Écran `/coran`** (Gestion Scolaire › Coran) : suivi de mémorisation (Juz, Hizb, sourate, statut En cours / Mémorisé /
+  Révisé, date et notes) et évaluations orales (erreurs de mémoire, erreurs de tajwid, hésitations, note finale), classe par
+  classe. Une ligne par élève avec sa dernière observation et un historique dépliable ; saisie et correction par fenêtre.
+- **Droits** : écriture Directeur et Enseignant, lecture + Secrétariat (comme les notes, sans garde par affectation). Le lien
+  n'apparaît que si le Directeur a activé le module Coran (Paramètres › Modules & fonctionnalités).
+- **Règles** : Juz, Hizb et sourate sont immuables en correction ; les bornes (Juz 1–30, Hizb 1–60, sourate 1–114) sont
+  contrôlées par le serveur ; un conflit de modification (`409`) est signalé sans écraser. Distinct de l'Internat (Halqa, Oustaz,
+  Suivi coranique, qui relèvent du module Internat). N'entre ni dans les moyennes ni dans les bulletins.
+
 ### Comptabilité : Caisse, Frais, Paie (sections 21 et 22)
 - **Annulation d'un paiement** (Directeur et Finance, 48 h, motif obligatoire, destination de l'argent) et
   **contre-passation** au-delà (Directeur seul) ; droit d'annulation de la Finance réglable ; export d'année

@@ -90,6 +90,11 @@ document.addEventListener('alpine:init', () => {
             return (batch.items || []).filter((item) => !item.guardianPhone || !String(item.guardianPhone).trim()).length;
         },
 
+        /** Tuteurs qui recevront réellement un SMS : élèves du lot moins ceux sans numéro (écartés à l'envoi). */
+        recipients(batch) {
+            return (batch.items || []).length - this.withoutPhone(batch);
+        },
+
         phoneLabel(item) {
             if (!item.guardianPhone || !String(item.guardianPhone).trim()) return 'Aucun numéro';
             return typeof window.formatSenegalPhoneOr === 'function'

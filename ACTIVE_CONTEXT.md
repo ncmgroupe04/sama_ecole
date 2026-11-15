@@ -160,8 +160,10 @@ Routes : `openapi.yaml` (préfixe `/api/v1/quran`). **Aucun écran ni JavaScript
 l'oral coranique) ; `Juz`/`Hizb`/`Sourate`/`Élève` immuables en correction ; **`SchoolType` est purement
 informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `ModuleAuthorizationHandler`.
 
-**Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
-(aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
+**Écran livré (14/11/2026) :** `/coran` (`Views/Coran/Index.cshtml`, `wwwroot/js/coran.js`), suivi de mémorisation et
+évaluations orales par classe, conditionné par `coranEnabled` (spec `docs/superpowers/specs/2026-09-29-coran-screen-design.md`).
+L'intégration de `Subject.SectionType` au bulletin était déjà livrée (bulletin bilingue) ; `SectionType` reste sans effet sur
+`Coefficient` ni sur les moyennes.
 
 ### Périodes d'évaluation dynamiques (24/09/2026) — livré (Évolution N°2)
 
@@ -861,7 +863,9 @@ Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.
   d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
   état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
 - **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
-  `LegacyBoardingColumnsGuardTests`).
+  `LegacyBoardingColumnsGuardTests`) — **REPORTÉ (décision du 14/11/2026)** : conditions de lancement, porte de sécurité et
+  déroulé dans `docs/runbooks/internat-lot-f2-drop-legacy-columns.md`. La migration sera codée sur une PR dédiée, après une
+  livraison stable de F1 en production.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 

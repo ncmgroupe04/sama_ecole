@@ -1284,6 +1284,15 @@
     }
   }
 
+  /* Le menu latéral occupe ~270 px : la place réellement disponible pour la barre est celle de la fenêtre moins 270 px.
+     Sous 1650 px, la pastille « MODE TEST » ne garde que son libellé court (l'infobulle explique la bascule) afin que les
+     modules de la navigation rapide ne défilent pas, bouton « Démarrage » compris. */
+  @media (max-width: 1650px) {
+    header [x-data="sandboxModeBadge()"] .sandbox-suffix {
+      display: none !important;
+    }
+  }
+
   @media (max-width: 1320px) {
     .quick-nav-link {
       padding-left: 0.35rem;
