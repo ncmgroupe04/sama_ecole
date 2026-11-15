@@ -390,6 +390,7 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | Méthode | Route | Description |
 |---|---|---|
 | `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
+| `GET` | `/api/v1/finance/employee-contracts/teacher-options` | Enseignants proposables dans le sélecteur d'un contrat (`id`, `matricule`, `fullName` **seulement**) — Directeur, Finance. Route dédiée : `GET /teachers` reste fermé à la Finance (données personnelles, Volume 7). Ajoutée à la suite de la recette du 15/11/2026 : la Finance ne pouvait pas créer de contrat d'enseignant |
 | `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) pour un enseignant (`teacherId`), un utilisateur (`userId`) **ou** une personne sans compte (`externalFullName`, `externalJobTitle?`, `externalPhone?` — §14.7) : exactement l'un des trois |
 | `PATCH` | `/api/v1/finance/employee-contracts/{id}` | Réviser un contrat actif (salaire, taux, prime, moyen de paiement) |
 | `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |
@@ -428,6 +429,8 @@ Ouverture/fermeture de la caisse de guichet, journal des encaissements de la jou
 | `GET` | `/api/v1/finance/sessions/{id}/closing-report` | Rapport de clôture (PDF) — ventilation par mode de paiement et par catégorie de frais, détail des transactions |
 | `GET` | `/api/v1/finance/daily-cash-register/pdf` | Journal de caisse du jour (PDF, bordereau) |
 | `GET` | `/api/v1/finance/dashboard` | Tableau de bord financier (encaissé jour/mois/année, recouvrement) |
+| `POST` | `/api/v1/finance/enrollments/{enrollmentId}/installment-plan` | Échéancier personnalisé (Directeur, Finance) : `{ reason?, installments: [{ label, amount, dueDate }] }`, 24 échéances au plus ; **la somme doit égaler exactement `TotalDue`** (`422` sinon) ; remplace le plan actif (passé à `Cancelled`, jamais supprimé) ; `404` inscription introuvable ou annulée. Écran : Caisse › « Personnaliser l'échéancier » |
+| `POST` | `/api/v1/finance/classrooms/{classroomId}/installment-plan` | Échéancier par classe (Directeur, Finance) : `{ reason?, template: [{ label, percentage, offsetDays }] }` ; pourcentages (fractions) totalisant exactement 1 ; un plan par inscription active, calculé sur son `TotalDue` ; renvoie `{ appliedCount, skippedCount }`. Écran : Frais scolaires › « Échelonner une classe » |
 | `GET` | `/api/v1/finance/dues-reminder-batches` | Lots de relance SMS des débiteurs (`?status=Draft\|Sent\|Dismissed`), avec leurs destinataires — Directeur, Finance ; écran `/recouvrement` |
 | `POST` | `/api/v1/finance/dues-reminder-batches/recompute` | Recalcule les brouillons sans attendre le calcul nocturne ; renvoie le nombre de lots préparés |
 | `POST` | `/api/v1/finance/dues-reminder-batches/{id}/send` | Envoie un lot brouillon (`{ queuedCount, skippedCount, firstSkipReason }`) ; `409` si déjà envoyé ou écarté |
@@ -564,6 +567,8 @@ Huit documents officiels PDF, générés côté serveur avec QuestPDF (mise en p
 | 6 | Engagement financier | `GET /api/v1/finance/commitments/{id}/pdf` | Finance |
 | 7 | Attestation de travail | `GET /api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Paie |
 | 8 | Fiche de suivi des heures | `GET /api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Paie |
+
+**Billet d'absence** (A5, ajouté avec le billet d'absence par plage) : `GET /api/v1/billets/absence/{id}/pdf` (SuperAdmin, Directeur, Secrétariat, Surveillant ; module Pédagogie). Numéro `ABSENCE-XXXXXXXX`, période, durée, motif, retour autorisé, signature du Surveillant, QR de vérification. Pas de route JSON dédiée : la liste `GET /absences/justifications` porte les mêmes données.
 
 Chaque document expose en plus une route **sans** `/pdf` renvoyant les mêmes données en JSON, utilisée par l'aperçu à l'écran avant impression.
 

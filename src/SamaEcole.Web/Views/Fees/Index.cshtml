@@ -37,7 +37,12 @@
         <div>
             <h2 class="text-lg font-bold text-slate-900">Paramétrage des frais</h2>
         </div>
-        <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
+        <div class="flex items-center gap-2" x-show="canModifyFees || canPlanInstallments" x-cloak>
+        <button x-show="canPlanInstallments" x-cloak x-on:click="openClassPlan()" class="btn-modal-secondary group">
+        <icon name="calendar" class="w-5 h-5" />
+        Échelonner une classe
+        </button>
+        <template x-if="canModifyFees"><span class="contents">
         <button x-on:click="openCreateCategory()" class="btn-modal-secondary group">
         <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
         Catégorie
@@ -46,6 +51,7 @@
         <icon name="wallet" class="w-5 h-5" />
         Appliquer un montant standard
         </button>
+        </span></template>
         </div>
     </div>
 
@@ -222,6 +228,66 @@
  new-action="showCategoryAddedDialog = false; openCreateCategory()" new-label="Nouvelle catégorie">
  La catégorie <span class="font-medium text-slate-900" x-text="addedCategoryName"></span> a bien été ajoutée et est désormais disponible dans la grille.
  </confirm-dialog-body>
+ </modal-shell>
+
+
+ <!-- Modale : échéancier par classe (un même modèle pour chaque inscription active de la classe) -->
+ <modal-shell open="classPlan.open" size="2xl" dismissible="false" on-close="closeClassPlan()" title="Échelonner une classe">
+ <div class="space-y-4">
+ <p class="text-sm text-slate-600">
+ Le même modèle s'applique à chaque inscription active de la classe, calculé sur SON montant dû : aucun montant ne change,
+ il est seulement étalé. Les décalages se comptent en jours à partir d'aujourd'hui. Un plan déjà actif est remplacé (il reste consultable, annulé).
+ </p>
+
+ <div x-show="classPlan.errors.global || classPlan.errors.template" x-cloak class="form-error-banner" x-text="classPlan.errors.template || classPlan.errors.global"></div>
+
+ <div>
+ <label class="form-label form-label-required">Classe</label>
+ <select-field model="classPlan.classroomId" required="true" aria-label="Classe" placeholder="Sélectionnez une classe..."
+ options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
+ <p x-show="classPlan.errors.classroomid" x-cloak x-text="classPlan.errors.classroomid" class="field-error"></p>
+ </div>
+
+ <div class="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+ <div>
+ <label class="form-label">Répartir en parts égales</label>
+ <input type="number" min="1" max="24" x-model="classPlan.splitCount" class="input-field w-24" aria-label="Nombre de versements" />
+ </div>
+ <button type="button" x-on:click="splitClassPlanEvenly()" class="btn-modal-secondary">Répartir (un versement tous les 30 jours)</button>
+ </div>
+
+ <div class="space-y-2">
+ <template x-for="(line, index) in classPlan.lines" :key="index">
+ <div class="grid grid-cols-12 gap-2 items-center">
+ <input type="text" x-model="line.label" maxlength="120" placeholder="Désignation" aria-label="Désignation" class="input-field col-span-12 sm:col-span-4" />
+ <input type="number" min="0.01" max="100" step="0.01" x-model.number="line.percent" placeholder="% du montant dû" aria-label="Pourcentage" class="input-field col-span-6 sm:col-span-3 text-right" />
+ <input type="number" min="0" step="1" x-model.number="line.offsetDays" placeholder="Jours" aria-label="Décalage en jours" class="input-field col-span-6 sm:col-span-3 text-right" />
+ <button type="button" x-on:click="removeClassPlanLine(index)" :disabled="classPlan.lines.length <= 1"
+ class="col-span-12 sm:col-span-2 text-sm text-danger disabled:opacity-40" aria-label="Retirer le versement">Retirer</button>
+ </div>
+ </template>
+ <button type="button" x-on:click="addClassPlanLine()" :disabled="classPlan.lines.length >= 24" class="btn-modal-secondary text-xs disabled:opacity-50">+ Ajouter un versement</button>
+ </div>
+
+ <div class="rounded-lg border px-4 py-3 text-sm flex flex-wrap justify-between gap-2"
+ :class="classPlanTotalPercent() === 100 ? 'border-success bg-success-bg text-success' : 'border-amber-300 bg-amber-50 text-amber-800'">
+ <span>Total des pourcentages : <strong x-text="classPlanTotalPercent() + ' %'"></strong></span>
+ <span x-show="classPlanTotalPercent() !== 100" x-cloak>Le total doit être exactement 100 %</span>
+ <span x-show="classPlanTotalPercent() === 100" x-cloak>Modèle équilibré</span>
+ </div>
+
+ <div>
+ <label class="form-label">Motif (facultatif)</label>
+ <textarea x-model="classPlan.reason" rows="2" maxlength="500" placeholder="Ex. : étalement décidé par la direction pour la rentrée" class="input-field"></textarea>
+ </div>
+
+ <div class="flex justify-end gap-3 pt-2">
+ <button type="button" x-on:click="closeClassPlan()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" x-on:click="submitClassPlan()" :disabled="!classPlanCanSubmit()" class="btn-modal-primary disabled:opacity-50">
+ <span x-text="classPlan.isSaving ? 'Application...' : 'Appliquer à la classe'"></span>
+ </button>
+ </div>
+ </div>
  </modal-shell>
 
  <!-- Modale : appliquer un montant standard -->

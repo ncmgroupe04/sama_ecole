@@ -130,13 +130,10 @@ document.addEventListener('alpine:init', () => {
 
         async loadTeachers() {
             try {
-                // pageSize plafonné à 100 côté serveur (GetTeachersQueryValidator.MaxPageSize) : au-delà,
-                // la requête est rejetée en 422 et le sélecteur reste vide sans qu'aucune erreur ne
-                // s'affiche à l'écran (bug réel constaté le 27/08/2026 — pageSize=1000 échouait toujours).
-                // 100 reste une limite pour un établissement à très gros effectif enseignant ; passer par
-                // une recherche serveur comme students.js le fait serait la vraie solution si ça arrive.
-                const data = await api.get('/teachers?page=1&pageSize=100');
-                this.teachers = data.items || [];
+                // Route DÉDIÉE à la Paie (id, matricule, nom) : GET /teachers est fermé à la Finance — elle voyait
+                // à chaque ouverture de l'écran un bandeau « Vous n'avez pas les droits nécessaires » et un sélecteur
+                // vide, donc ne pouvait créer aucun contrat d'enseignant (constaté en recette du 15/11/2026).
+                this.teachers = await api.get('/finance/employee-contracts/teacher-options');
             } catch (err) {
                 console.error('Erreur chargement enseignants:', err);
                 this.teachers = [];

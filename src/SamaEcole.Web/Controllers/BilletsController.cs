@@ -1,3 +1,4 @@
+using SamaEcole.Application.Absences.Queries.GetAbsenceTicketPdf;
 using SamaEcole.Application.Absences.Queries.GetEntryTicket;
 using SamaEcole.Application.Absences.Queries.GetEntryTicketPdf;
 using SamaEcole.Application.Absences.Queries.GetExitTicket;
@@ -94,6 +95,36 @@ public class BilletsController(ISender mediator, ILogger<BilletsController> logg
         {
             logger.LogError(ex, "Erreur lors de la génération du billet de sortie PDF pour la sortie {EarlyDepartureId}", earlyDepartureId);
             return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du billet de sortie PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    /// <summary>Billet d'absence A5 en PDF (absence de plusieurs jours), rendu inline pour impression directe.</summary>
+    [HttpGet("absence/{absenceJustificationId:guid}/pdf")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAbsenceTicketPdf(Guid absenceJustificationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetAbsenceTicketPdfQuery(absenceJustificationId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le billet d'absence PDF généré est vide pour le billet {AbsenceJustificationId}", absenceJustificationId);
+                return NotFound(new { message = "Le billet d'absence PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Billet-Absence-{result.TicketNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du billet d'absence PDF pour le billet {AbsenceJustificationId}", absenceJustificationId);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du billet d'absence PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

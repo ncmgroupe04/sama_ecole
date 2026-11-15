@@ -1290,7 +1290,7 @@ paths:
                 password: { type: string, description: Mot de passe actuel du Directeur }
       responses:
         '200':
-          description: Archive ZIP (`Content-Disposition: attachment; filename=export-<ecole>-<date>.zip`)
+          description: 'Archive ZIP (en-tête `Content-Disposition` en pièce jointe, nom `export-<ecole>-<date>.zip`)'
           content:
             application/zip:
               schema: { type: string, format: binary }
@@ -3571,6 +3571,24 @@ paths:
         '404': { description: Élève introuvable dans l'établissement }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /billets/absence/{id}/pdf:
+    get:
+      tags: [Attendance]
+      summary: Billet d'absence A5 en PDF (absence de plusieurs jours)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF inline
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement }
+
   /absences/justifications:
     get:
       tags: [Attendance]
@@ -4281,6 +4299,109 @@ paths:
               schema: { $ref: '#/components/schemas/CouncilRules' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /finance/employee-contracts/teacher-options:
+    get:
+      tags: [Finance]
+      summary: Enseignants proposables dans le sélecteur d'un contrat du personnel (Directeur, Finance)
+      description: >-
+        Identifiant, matricule et nom SEULEMENT. Route dédiée à la Paie : `GET /teachers` reste fermé à la Finance
+        (il porte des données personnelles).
+      responses:
+        '200':
+          description: Enseignants de l'école, triés par nom
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    matricule: { type: string }
+                    fullName: { type: string }
+        '403': { description: Rôle non autorisé }
+
+  /finance/enrollments/{enrollmentId}/installment-plan:
+    post:
+      tags: [Finance]
+      summary: Échéancier personnalisé d'une inscription (Directeur, Finance)
+      description: >-
+        Remplace le plan actif (passé à `Cancelled`, jamais supprimé). 24 échéances au plus ; la SOMME doit égaler
+        exactement le montant dû de l'inscription — un échéancier étale, il ne modifie jamais un montant.
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [installments]
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+                installments:
+                  type: array
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [label, amount, dueDate]
+                    properties:
+                      label: { type: string, maxLength: 120 }
+                      amount: { type: number }
+                      dueDate: { type: string, format: date }
+      responses:
+        '201': { description: Identifiant du plan créé }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Inscription introuvable ou annulée }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/classrooms/{classroomId}/installment-plan:
+    post:
+      tags: [Finance]
+      summary: Échéancier par classe — un même modèle pour chaque inscription active (Directeur, Finance)
+      description: >-
+        Chaque inscription reçoit son PROPRE plan, calculé sur son propre montant dû. Les pourcentages sont des
+        fractions dont la somme vaut exactement 1 ; `offsetDays` est le décalage en jours depuis aujourd'hui.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [template]
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+                template:
+                  type: array
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [label, percentage, offsetDays]
+                    properties:
+                      label: { type: string, maxLength: 120 }
+                      percentage: { type: number, minimum: 0, maximum: 1 }
+                      offsetDays: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Compte rendu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appliedCount: { type: integer }
+                  skippedCount: { type: integer }
+        '403': { description: Rôle non autorisé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /finance/fee-categories:
     get:
       tags: [Finance]

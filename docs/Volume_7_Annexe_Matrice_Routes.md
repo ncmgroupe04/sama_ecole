@@ -97,6 +97,7 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 
 | Méthode | Route | Rôles | Condition |
 |---|---|---|---|
+| GET | `/api/v1/billets/absence/{absenceJustificationId:guid}/pdf` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/early-departure/{earlyDepartureId:guid}` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/early-departure/{earlyDepartureId:guid}/pdf` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
 | GET | `/api/v1/billets/late-arrival/{lateArrivalId:guid}` | SuperAdmin, Directeur, Secretariat, Surveillant | module Pédagogie |
@@ -324,6 +325,7 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 | POST | `/api/v1/finance/dues-reminder-batches/{id:guid}/send` | Directeur, Finance | module Finance |
 | GET | `/api/v1/finance/employee-contracts` | Directeur, Finance | module Finance |
 | POST | `/api/v1/finance/employee-contracts` | Directeur, Finance | module Finance |
+| GET | `/api/v1/finance/employee-contracts/teacher-options` | Directeur, Finance | module Finance |
 | GET | `/api/v1/finance/employee-contracts/{contractId:guid}/hour-records` | Directeur, Finance | module Finance |
 | POST | `/api/v1/finance/employee-contracts/{contractId:guid}/hour-records` | Directeur, Finance | module Finance |
 | GET | `/api/v1/finance/employee-contracts/{contractId:guid}/hour-records/sheet` | Directeur, Finance | module Finance |

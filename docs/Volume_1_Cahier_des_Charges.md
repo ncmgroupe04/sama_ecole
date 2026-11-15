@@ -861,6 +861,8 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ### 20.3 Règles de fond
 
+- **Échéancier personnalisé** (Directeur, Finance) : depuis la Caisse, « Personnaliser l'échéancier » remplace le calendrier d'une inscription par des échéances saisies (désignation, montant, date ; 24 au plus). **La somme doit égaler exactement le montant dû** : l'échéancier étale, il ne modifie jamais un montant (règle §7.2). L'ancien plan passe à « Annulé » et reste consultable. Un éditeur offre la répartition en parts égales et l'écart en direct.
+- **Échéancier par classe** (Directeur, Finance) : sur l'écran Frais scolaires, « Échelonner une classe » applique un même modèle (pourcentages totalisant exactement 100 % + décalages en jours) à chaque inscription active de la classe, sur le montant dû de chacune ; les inscriptions sans montant sont ignorées et comptées.
 - Un **engagement financier** ne modifie jamais, à lui seul, le montant dû d'une inscription : c'est une reconnaissance de dette et un échéancier, pas une écriture financière (règle §7.2).
 - Un **avis d'échéance** ne peut être émis que s'il existe effectivement un impayé — une sommation pour une dette inexistante est refusée par le système, pas seulement déconseillée.
 - Tout document est émis **dans le périmètre de l'établissement courant**. Une fuite d'en-tête ou de données entre établissements est traitée comme un défaut de sécurité, pas comme un défaut d'affichage.
@@ -930,7 +932,8 @@ L'écran **Billets** a un troisième onglet, **Billets d'absence**, qui justifie
 - **Effet sur l'appel** : à la création, chaque ligne d'appel de l'élève dans la plage qui est « Absent (non justifié) » passe à « Absent (justifié) » ; le statut d'avant est conservé sur la ligne. Une ligne « Présent » ou « Retard » n'est jamais touchée (le constat en classe prime). Pour un appel qui n'est pas encore fait, la feuille **présélectionne** « Absent (justifié) » et, à l'enregistrement, toute absence saisie pour cet élève est justifiée et rattachée au billet. Un billet d'entrée visant le même cours est plus précis et passe avant.
 - **Aucun SMS « absent »** n'est envoyé à la famille pour une absence couverte par un billet : elle l'a elle-même justifiée.
 - **Annulation** : le billet est mis de côté (soft delete, jamais supprimé) et chaque ligne qu'il avait justifiée retrouve son statut d'avant.
-- Routes : `GET/POST /api/v1/absences/justifications`, `DELETE /api/v1/absences/justifications/{id}` (Volume 4 §12).
+- **Impression** : bouton « Imprimer le billet » (aperçu PDF A5 : élève, classe, période, durée, motif, retour autorisé, signature du Surveillant, QR de vérification), accessible aussi au Secrétariat côté route.
+- Routes : `GET/POST /api/v1/absences/justifications`, `GET /api/v1/billets/absence/{id}/pdf`, `DELETE /api/v1/absences/justifications/{id}` (Volume 4 §12).
 
 ### 21.5 Alternance français / arabe (module Franco-Arabe, bloc 4)
 

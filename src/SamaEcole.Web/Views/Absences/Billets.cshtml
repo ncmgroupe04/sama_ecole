@@ -11,7 +11,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
             <h1 class="page-title">Billets</h1>
-            <p class="page-subtitle">Retards, sorties anticipées et absences de plusieurs jours, avec impression du billet A5 pour les retards et les sorties.</p>
+            <p class="page-subtitle">Retards, sorties anticipées et absences de plusieurs jours, avec impression du billet A5 correspondant.</p>
             <div class="mt-3"><how-to-button article="billets-entree-sortie" label="Comment délivrer un billet d'entrée ou de sortie ?" /></div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -304,7 +304,7 @@
                         <tr>
                             <td colspan="6">
                                 <empty-state icon="calendar" title="Aucun billet d'absence enregistré."
-                                    hint="Un billet d'absence justifie plusieurs jours d'un coup : l'appel de ces jours présélectionne « Absent (justifié) »." />
+                                    hint="Un billet d'absence (imprimable en A5) justifie plusieurs jours d'un coup : l'appel de ces jours présélectionne « Absent (justifié) »." />
                             </td>
                         </tr>
                     </template>
@@ -321,6 +321,12 @@
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="item.authorizedReturnDate ? formatDate(item.authorizedReturnDate) : '—'"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
+                                <button type="button" @@click="printAbsenceBillet(item.id)" :disabled="printingAbsenceId === item.id"
+                                        class="btn-modal-secondary mr-2 inline-flex items-center gap-2 disabled:opacity-60 group">
+                                    <icon name="print" class="w-4 h-4" x-show="printingAbsenceId !== item.id" />
+                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingAbsenceId === item.id" x-cloak />
+                                    <span x-text="printingAbsenceId === item.id ? 'Génération...' : 'Imprimer le billet'"></span>
+                                </button>
                                 <button x-show="canManageBillets" x-cloak type="button" @@click="askCancelAbsence(item)"
                                         class="btn-modal-secondary text-danger">Annuler</button>
                             </td>

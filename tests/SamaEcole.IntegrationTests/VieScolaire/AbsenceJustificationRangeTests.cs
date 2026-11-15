@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Absences.Commands.CancelAbsenceJustification;
 using SamaEcole.Application.Absences.Commands.CreateAbsenceJustification;
 using SamaEcole.Application.Absences.Queries.GetAbsenceJustifications;
+using SamaEcole.Application.Absences.Queries.GetAbsenceTicket;
 using SamaEcole.Application.Attendance;
 using SamaEcole.Application.Attendance.Commands.SubmitAttendanceSheet;
 using SamaEcole.Application.Attendance.Queries.InitializeAttendanceSheet;
@@ -215,6 +216,27 @@ public class AbsenceJustificationRangeTests : IAsyncLifetime
 
         await using var other = _db.NewAppContext(EcoleB);
         (await other.AbsenceJustifications.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task The_Printable_Ticket_Carries_The_Range_The_Student_And_Is_Not_Readable_From_Another_School()
+    {
+        var id = await CreateAsync(Awa, Samedi, Samedi.AddDays(2));
+
+        await using (var db = _db.NewAppContext(EcoleA))
+        {
+            var ticket = await new GetAbsenceTicketQueryHandler(db).Handle(new GetAbsenceTicketQuery(id), default);
+            ticket.TicketNumber.Should().StartWith("ABSENCE-");
+            ticket.StudentFullName.Should().Be("Awa Fall");
+            ticket.StartDate.Should().Be(Samedi);
+            ticket.EndDate.Should().Be(Samedi.AddDays(2));
+            ticket.Days.Should().Be(3);
+            ticket.ClassroomName.Should().Be("CM2 A");
+        }
+
+        await using var other = _db.NewAppContext(EcoleB);
+        var act = () => new GetAbsenceTicketQueryHandler(other).Handle(new GetAbsenceTicketQuery(id), default);
+        await act.Should().ThrowAsync<KeyNotFoundException>("la RLS masque le billet d'une autre école");
     }
 
     [Theory]
