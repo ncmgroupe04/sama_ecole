@@ -390,6 +390,7 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | Méthode | Route | Description |
 |---|---|---|
 | `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
+| `GET` | `/api/v1/finance/employee-contracts/teacher-options` | Enseignants proposables dans le sélecteur d'un contrat (`id`, `matricule`, `fullName` **seulement**) — Directeur, Finance. Route dédiée : `GET /teachers` reste fermé à la Finance (données personnelles, Volume 7). Ajoutée à la suite de la recette du 15/11/2026 : la Finance ne pouvait pas créer de contrat d'enseignant |
 | `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) pour un enseignant (`teacherId`), un utilisateur (`userId`) **ou** une personne sans compte (`externalFullName`, `externalJobTitle?`, `externalPhone?` — §14.7) : exactement l'un des trois |
 | `PATCH` | `/api/v1/finance/employee-contracts/{id}` | Réviser un contrat actif (salaire, taux, prime, moyen de paiement) |
 | `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |

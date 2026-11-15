@@ -4299,6 +4299,28 @@ paths:
               schema: { $ref: '#/components/schemas/CouncilRules' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /finance/employee-contracts/teacher-options:
+    get:
+      tags: [Finance]
+      summary: Enseignants proposables dans le sélecteur d'un contrat du personnel (Directeur, Finance)
+      description: >-
+        Identifiant, matricule et nom SEULEMENT. Route dédiée à la Paie : `GET /teachers` reste fermé à la Finance
+        (il porte des données personnelles).
+      responses:
+        '200':
+          description: Enseignants de l'école, triés par nom
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    matricule: { type: string }
+                    fullName: { type: string }
+        '403': { description: Rôle non autorisé }
+
   /finance/enrollments/{enrollmentId}/installment-plan:
     post:
       tags: [Finance]

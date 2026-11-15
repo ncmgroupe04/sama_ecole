@@ -56,6 +56,7 @@ using SamaEcole.Application.Finance.Queries.GetHourRecordSheet;
 using SamaEcole.Application.Finance.Queries.GetHourRecordSheetPdf;
 using SamaEcole.Application.Finance.Queries.GetSuggestedPayrollHours;
 using SamaEcole.Application.Finance.Commands.CreateFeeInstallmentPlan;
+using SamaEcole.Application.Finance.Queries.GetPayrollTeacherOptions;
 using SamaEcole.Application.Finance.Commands.ApplyFeeInstallmentPlanToClassroom;
 using SamaEcole.Application.Finance.Commands.SendDebtorReminderBatch;
 using SamaEcole.Application.Finance.Commands.DismissDebtorReminderBatch;
@@ -566,6 +567,16 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     public async Task<IActionResult> TreasuryDashboard(
         [FromQuery] DateOnly? startDate, [FromQuery] DateOnly? endDate, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetTreasuryDashboardQuery(startDate, endDate), cancellationToken));
+
+    /// <summary>
+    /// Enseignants proposables dans le sélecteur d'un contrat (id, matricule, nom seulement). Route dédiée : la liste
+    /// générique <c>GET /teachers</c> reste fermée à la Finance (données personnelles).
+    /// </summary>
+    [HttpGet("employee-contracts/teacher-options")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<IReadOnlyList<PayrollTeacherOptionDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPayrollTeacherOptions(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetPayrollTeacherOptionsQuery(), cancellationToken));
 
     [HttpGet("employee-contracts")]
     [Authorize(Roles = "Directeur,Finance")]
