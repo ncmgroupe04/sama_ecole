@@ -181,7 +181,7 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 | `PATCH` | `/api/v1/admin/schools/{id}/activate` | Réactiver un établissement |
 | `POST` | `/api/v1/admin/subscriptions` | Créer/renouveler un abonnement |
 | `GET` | `/api/v1/admin/subscriptions/expiring` | Lister les abonnements arrivant à expiration (30/15/7 jours) |
-| `GET` | `/api/v1/admin/registration-requests` | Lister les demandes d'inscription (filtrable par statut) |
+| `GET` | `/api/v1/admin/registration-requests` | Lister les demandes d'inscription (filtrable par statut) Chaque élément porte `termsVersion` et `termsAcceptedAt` (preuve d'acceptation des textes juridiques ; null avant le 15/11/2026). |
 | `POST` | `/api/v1/admin/registration-requests/{id}/approve` | Approuver → crée établissement + Directeur + abonnement `AwaitingPayment` (Volume 1 §11.5) |
 | `POST` | `/api/v1/admin/registration-requests/{id}/reject` | Rejeter (motif obligatoire) |
 
@@ -189,7 +189,7 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/registration-requests` | **Aucune** (public) | Soumettre le formulaire d'inscription (Volume 1 §11.5). Anti-spam obligatoire (captcha/honeypot). |
+| `POST` | `/api/v1/registration-requests` | **Aucune** (public) | Soumettre le formulaire d'inscription (Volume 1 §11.5). Anti-spam : rate limiting par IP, honeypot (`website`) et **Cloudflare Turnstile** : champ `acceptedTerms` **obligatoire à `true`** (`422` sur `AcceptedTerms` sinon ; le serveur garde version, date et IP comme preuve) ; champ `turnstileToken` **obligatoire si Turnstile est configuré** (`422` sur le champ `TurnstileToken` s'il est absent, refusé ou si Cloudflare est injoignable ; sans clés configurées, le champ est ignoré). |
 | `GET` | `/api/v1/registration-requests/{trackingReference}/status` | **Aucune** (public, via référence) | Suivre l'état d'une demande sans authentification |
 | `POST` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Initier un paiement (Mobile Money, virement, carte) — retourne l'URL de redirection agrégateur. Corps : `method`, `billingPeriod` (`Monthly`/`Yearly`), `promoCode?`. Le montant est résolu côté serveur (Volume 1 §11.6) : forfait de la grille en annuel, forfait ÷ 12 arrondi aux 100 FCFA supérieurs en mensuel ; `422` pour un établissement public (sur devis) |
 | `GET` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Historique des paiements de l'établissement |

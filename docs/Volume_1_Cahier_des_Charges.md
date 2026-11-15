@@ -506,6 +506,9 @@ Un Directeur intéressé accède, via le site public, à un formulaire détaill�
 - Le plan souhaité (§11.1).
 - Le moyen de paiement prévu (§11.6) — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation.
 
+- **L'acceptation des conditions d'utilisation et de la politique de confidentialité** (case à cocher, jamais pré-cochée, liens vers les pages publiques `/conditions-utilisation` et `/politique-confidentialite`). Sans elle, la demande est refusée. Le serveur garde la **preuve** sur la demande : version des textes acceptée, date et heure, adresse IP vue par le serveur ; le Super Admin voit version et date dans la liste des demandes. Quatre pages juridiques publiques existent : conditions d'utilisation, politique de confidentialité, mentions légales, cookies et stockage local ; elles sont liées depuis les pieds de page de la vitrine, de la connexion et de l'inscription. L'identité de l'éditeur s'y affiche depuis la configuration (`Legal__*`) et n'est jamais inventée (« à compléter » tant qu'elle manque).
+- Une **vérification anti-robot** Cloudflare Turnstile, si elle est configurée (Volume 7).
+
 À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est affichée au Directeur à l'écran **et lui est envoyée par e-mail** (pour qu'il ne la perde pas). Le **Super Admin** est alerté par un e-mail distinct (adresse `Registration__AdminNotificationEmail`, avec le détail de la demande et un lien vers le tableau de bord de revue). Aucun e-mail n'est jamais adressé au personnel d'un établissement existant. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
 
 **Étape 2 — Revue par le Super Admin**

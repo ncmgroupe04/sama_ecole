@@ -78,6 +78,7 @@ async function mountValidForm(fetchStub) {
     form.directorEmail = 'nguirane600@gmail.com';
     form.directorPhone = '763545916';
     form.directorPassword = 'TestPassw0rd!2026';
+    form.acceptedTerms = true;
 
     return { ctx, form };
 }
@@ -576,3 +577,54 @@ test('un lien de vitrine inconnu ou incohérent ne préremplit rien de faux', as
     assert.equal(unknownTier.tier, '');
     assert.equal(unknownTier.profile, '');
 });
+
+// ---------------------------------------------------------------- Cloudflare Turnstile (anti-robot)
+
+test('Turnstile : le jeton du widget part avec la demande (null sans widget)', async () => {
+    const { ctx, form } = await mountValidForm();
+
+    assert.equal(form.buildPayload().turnstileToken, null, 'sans widget configuré, aucun jeton n\'est envoyé');
+
+    ctx.window.onTurnstileSuccess('jeton-du-widget');
+    assert.equal(form.buildPayload().turnstileToken, 'jeton-du-widget');
+
+    ctx.window.onTurnstileReset();
+    assert.equal(form.buildPayload().turnstileToken, null, 'un jeton expiré ou en erreur est oublié');
+});
+
+test('Turnstile : un jeton est à usage unique, il est oublié après l\'envoi et le widget est relancé', async () => {
+    const { ctx, form } = await mountValidForm();
+    let widgetResets = 0;
+    ctx.window.turnstile = { reset: () => { widgetResets += 1; } };
+    ctx.window.onTurnstileSuccess('jeton');
+
+    ctx.window.registrationTurnstile.reset();
+
+    assert.equal(ctx.window.registrationTurnstile.token, '');
+    assert.equal(widgetResets, 1);
+    assert.equal(form.buildPayload().turnstileToken, null);
+});
+
+// ---------------------------------------------------------------- Conditions d'utilisation et confidentialité
+
+test('l\'acceptation des conditions est obligatoire et jamais pré-cochée', async () => {
+    const { form } = await mountValidForm();
+    assert.equal(ctxFresh().component('registrationForm').acceptedTerms, false, 'jamais pré-cochée');
+
+    form.acceptedTerms = false;
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.acceptedterms, /conditions d'utilisation/);
+
+    form.acceptedTerms = true;
+    assert.equal(form.validate(), true);
+});
+
+test('la demande envoie l\'acceptation au serveur', async () => {
+    const { form } = await mountValidForm();
+
+    assert.equal(form.buildPayload().acceptedTerms, true);
+});
+
+function ctxFresh() {
+    return boot();
+}

@@ -90,7 +90,21 @@ function passwordPolicyErrors(password, personalTerms) {
         return fallback;
     }
 
-    window.registration = {
+    // Pont avec le widget Cloudflare Turnstile (rendu par Register.cshtml quand il est configuré). Les trois rappels sont
+// GLOBAUX car le widget les appelle par leur nom (attributs data-callback…). Sans widget, le jeton reste vide.
+window.registrationTurnstile = {
+    token: '',
+    reset() {
+        this.token = '';
+        if (window.turnstile && typeof window.turnstile.reset === 'function') {
+            try { window.turnstile.reset(); } catch { /* widget absent : rien à réinitialiser */ }
+        }
+    }
+};
+window.onTurnstileSuccess = (token) => { window.registrationTurnstile.token = token; };
+window.onTurnstileReset = () => { window.registrationTurnstile.token = ''; };
+
+window.registration = {
         async submit(payload) {
             const response = await fetch(`${API_BASE}/registration-requests`, {
                 method: 'POST',
@@ -175,6 +189,10 @@ document.addEventListener('alpine:init', () => {
 
         // Honeypot : DOIT rester vide. Lié au champ leurre `website`.
         website: '',
+
+        // Acceptation des conditions d'utilisation et de la politique de confidentialité : OBLIGATOIRE (le serveur refuse sans, et garde
+        // la preuve — version des textes, date, IP). Jamais pré-cochée.
+        acceptedTerms: false,
 
         isSubmitting: false,
         error: null,
@@ -458,6 +476,11 @@ document.addEventListener('alpine:init', () => {
                 this.validatePrivateOffer(errors);
             }
 
+            // Même règle que SubmitRegistrationRequestValidator : sans acceptation, le serveur refuse la demande.
+            if (!this.acceptedTerms) {
+                errors.acceptedterms = "Vous devez accepter les conditions d'utilisation et la politique de confidentialité.";
+            }
+
             this.errors = errors;
             return Object.keys(errors).length === 0;
         },
@@ -515,7 +538,10 @@ document.addEventListener('alpine:init', () => {
                 // Facultatif pour un public (chaîne vide -> null), obligatoire pour un privé (validé plus haut).
                 estimatedStudentCount: this.estimatedStudentCount === '' ? null : Number(this.estimatedStudentCount),
                 ownership: this.ownership,
-                website: this.website
+                website: this.website,
+                acceptedTerms: this.acceptedTerms,
+                // Jeton Cloudflare Turnstile (absent si le contrôle n'est pas configuré : le serveur ne l'exige alors pas).
+                turnstileToken: window.registrationTurnstile.token || null
             };
 
             if (this.isPrivate) {
@@ -558,7 +584,11 @@ document.addEventListener('alpine:init', () => {
                 // Succès : on n'affiche plus le formulaire, seulement la référence à conserver. Le mot de
                 // passe saisi est abandonné avec le composant — jamais restocké.
                 this.trackingReference = result.trackingReference;
+                window.registrationTurnstile.reset();
             } catch (err) {
+                // Un jeton Turnstile est À USAGE UNIQUE : après tout échec il faut un nouveau défi.
+                window.registrationTurnstile.reset();
+
                 if (err.status === 429) {
                     this.error = 'Trop de demandes envoyées depuis votre connexion. Réessayez dans quelques minutes.';
                 } else {

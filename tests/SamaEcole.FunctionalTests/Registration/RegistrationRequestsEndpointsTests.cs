@@ -26,7 +26,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
         directorFullName = "Awa Ndiaye",
         directorEmail,
         directorPhone = "+221771234567",
-        directorPassword = "Correct-Horse-9",
+        acceptedTerms = true, directorPassword = "Correct-Horse-9",
         schoolName,
         schoolAddress = "Rue 12, Médina, Dakar",
         city = "Dakar",
@@ -54,7 +54,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
         var response = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
         {
             directorFullName = "Awa Ndiaye", directorEmail = "sans-type@baobabs.sn", directorPhone = "+221771234567",
-            directorPassword = "Correct-Horse-9", schoolName = "École Sans Type"
+            acceptedTerms = true, directorPassword = "Correct-Horse-9", schoolName = "École Sans Type"
         });
 
         response.StatusCode.Should().Be((HttpStatusCode)422);
@@ -69,7 +69,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
         var response = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
         {
             directorFullName = "Awa Ndiaye", directorEmail = $"hors-grille-{ownership}-{cycleProfile}@baobabs.sn".ToLowerInvariant(),
-            directorPhone = "+221771234567", directorPassword = "Correct-Horse-9", schoolName = "École Hors Grille",
+            directorPhone = "+221771234567", acceptedTerms = true, directorPassword = "Correct-Horse-9", schoolName = "École Hors Grille",
             ownership, cycleProfile, sizeTier
         });
 
@@ -96,7 +96,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
             directorFullName = "Awa Ndiaye",
             directorEmail = "directeur@confidentielle.sn",
             directorPhone = "+221771234567",
-            directorPassword = password,
+            acceptedTerms = true, directorPassword = password,
             schoolName = "École Confidentielle",
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
@@ -190,7 +190,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
                 directorFullName = "Awa Ndiaye",
                 directorEmail = "faible@baobabs.sn",
                 directorPhone = "+221771234567",
-                directorPassword = "1234",
+                acceptedTerms = true, directorPassword = "1234",
                 schoolName = "École Faible",
                 ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
             });

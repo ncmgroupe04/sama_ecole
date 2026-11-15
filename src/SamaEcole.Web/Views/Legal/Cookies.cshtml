@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Cookies et stockage local";
+    ViewData["Summary"] = "Ce que la plateforme enregistre dans votre navigateur, et pourquoi. Aucun traceur publicitaire.";
+    ViewData["Active"] = "cookies";
+    ViewData["Description"] = "Cookies et stockage local utilisés par la plateforme Unikol : session et préférences, aucun traceur publicitaire.";
+}
+
+<p>
+    Unikol n'utilise <strong>aucun cookie publicitaire ni outil de mesure d'audience tiers</strong>. Seuls sont enregistrés dans votre
+    navigateur les éléments nécessaires au fonctionnement du service et à vos préférences d'affichage. Ces éléments étant
+    strictement nécessaires, aucun bandeau de consentement n'est affiché.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">Cookie</h2>
+<div class="overflow-x-auto rounded-lg border border-slate-200">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600"><tr><th class="p-3">Nom</th><th class="p-3">Rôle</th><th class="p-3">Durée</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            <tr>
+                <td class="p-3 font-mono text-xs">sama_ecole_refresh_token</td>
+                <td class="p-3">Maintient votre session ouverte (renouvellement du jeton de connexion). Inaccessible aux scripts (HttpOnly), transmis
+                    uniquement en HTTPS (Secure), jamais vers un autre site (SameSite=Strict), limité aux routes d'authentification.</td>
+                <td class="p-3">14 jours au plus (renouvelés à chaque connexion) ; supprimé à la déconnexion.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">Stockage local du navigateur</h2>
+<div class="overflow-x-auto rounded-lg border border-slate-200">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-slate-600"><tr><th class="p-3">Clé</th><th class="p-3">Rôle</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            <tr><td class="p-3 font-mono text-xs">sama_ecole.access_token, sama_ecole.access_token_expires_at</td><td class="p-3">Jeton de connexion de courte durée (15 minutes) et son échéance. Effacés à la déconnexion.</td></tr>
+            <tr><td class="p-3 font-mono text-xs">sama_ecole.email</td><td class="p-3">Pré-remplit votre adresse e-mail à la connexion suivante. Effacé à la déconnexion.</td></tr>
+            <tr><td class="p-3 font-mono text-xs">sama_ecole.profile_type</td><td class="p-3">Profil de l'établissement, pour ouvrir la bonne page d'accueil. Effacé à la déconnexion.</td></tr>
+            <tr><td class="p-3 font-mono text-xs">sama-theme, sidebarCollapsed, rollbook.lang, classrooms_lastLevel</td><td class="p-3">Préférences d'affichage : thème clair/sombre, menu réduit, langue du cahier de roulement, dernier niveau consulté.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">Vérification anti-robot (formulaire d'inscription)</h2>
+<p>
+    Lorsqu'il est activé, le formulaire public d'inscription affiche un contrôle <strong>Cloudflare Turnstile</strong>, qui sert uniquement à
+    distinguer un humain d'un robot. Cloudflare y traite des informations techniques (adresse IP, caractéristiques du navigateur) selon sa
+    propre politique de confidentialité. Ce contrôle n'apparaît que sur la page d'inscription.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">Les gérer</h2>
+<p>
+    Vous pouvez supprimer le cookie et le stockage local depuis les réglages de votre navigateur ; vous serez simplement déconnecté et vos
+    préférences d'affichage seront réinitialisées. Pour en savoir plus sur vos données, voir la
+    <a href="/politique-confidentialite" class="text-primary-700 underline">politique de confidentialité</a>.
+</p>

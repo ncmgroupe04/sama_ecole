@@ -47,7 +47,7 @@ public class SubscriptionAwaitingPaymentMiddlewareTests(AuthApiFactory factory) 
             directorFullName = "Fatou Sarr",
             directorEmail,
             directorPhone = "+221771119988",
-            directorPassword = DirectorPassword,
+            acceptedTerms = true, directorPassword = DirectorPassword,
             schoolName,
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });

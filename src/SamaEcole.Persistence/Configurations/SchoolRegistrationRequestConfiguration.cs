@@ -31,6 +31,10 @@ public class SchoolRegistrationRequestConfiguration : IEntityTypeConfiguration<S
         builder.Property(r => r.DirectorPhone).IsRequired().HasMaxLength(30);
         builder.Property(r => r.DirectorPasswordHash).IsRequired().HasMaxLength(500);
 
+        // Preuve d'acceptation des textes juridiques (nullable : les demandes antérieures n'en ont pas). 45 = IPv6 la plus longue.
+        builder.Property(r => r.TermsVersion).HasMaxLength(20);
+        builder.Property(r => r.TermsAcceptedIp).HasMaxLength(45);
+
         builder.Property(r => r.SchoolName).IsRequired().HasMaxLength(200);
         builder.Property(r => r.SchoolAddress).HasMaxLength(300);
         builder.Property(r => r.City).HasMaxLength(100);

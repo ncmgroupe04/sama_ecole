@@ -45,7 +45,7 @@ public class GrantComplimentaryAccessEndpointsTests(AuthApiFactory factory) : IC
             directorFullName = "Fatou Sarr",
             directorEmail,
             directorPhone = "+221771119988",
-            directorPassword = "Correct-Horse-9",
+            acceptedTerms = true, directorPassword = "Correct-Horse-9",
             schoolName,
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });

@@ -37,6 +37,15 @@ public class SchoolRegistrationRequest : AuditableEntity
     /// <summary>Haché dès la soumission (Identity), jamais en clair. Voir remarque de classe.</summary>
     public required string DirectorPasswordHash { get; set; }
 
+    /// <summary>
+    /// PREUVE d'acceptation des conditions d'utilisation et de la politique de confidentialité à l'envoi de la demande :
+    /// version des textes acceptée (<c>LegalDocuments.CurrentVersion</c>), horodatage serveur et adresse IP vue par le
+    /// serveur (jamais lue du corps de la requête). NULL pour une demande antérieure à cette obligation (15/11/2026).
+    /// </summary>
+    public string? TermsVersion { get; set; }
+    public DateTimeOffset? TermsAcceptedAt { get; set; }
+    public string? TermsAcceptedIp { get; set; }
+
     public required string SchoolName { get; set; }
     public string? SchoolAddress { get; set; }
     public string? City { get; set; }

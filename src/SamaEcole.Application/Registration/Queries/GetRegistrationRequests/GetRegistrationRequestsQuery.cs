@@ -40,4 +40,7 @@ public record RegistrationRequestListItem(
     DateTimeOffset SubmittedAt,
     DateTimeOffset? ReviewedAt,
     string? RejectionReason,
-    Guid? CreatedSchoolId);
+    Guid? CreatedSchoolId,
+    // Preuve d'acceptation des textes juridiques (null pour une demande antérieure à l'obligation). L'IP reste en base, non exposée.
+    string? TermsVersion = null,
+    DateTimeOffset? TermsAcceptedAt = null);

@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "Conditions d'utilisation";
+    ViewData["Summary"] = "Les règles qui s'appliquent à l'usage de la plateforme Unikol par un établissement et ses utilisateurs.";
+    ViewData["Active"] = "terms";
+    ViewData["Description"] = "Conditions d'utilisation de la plateforme Unikol de gestion scolaire : accès, abonnement, responsabilités, données, résiliation.";
+    var publisher = string.IsNullOrWhiteSpace(Legal.Value.PublisherName) ? "l'éditeur de la plateforme" : Legal.Value.PublisherName;
+}
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">1. Objet</h2>
+<p>
+    Les présentes conditions encadrent l'accès et l'usage de la plateforme <strong>Unikol</strong> (« la plateforme »), service en ligne de
+    gestion scolaire édité par @publisher (« l'éditeur »). Elles s'appliquent à tout établissement qui demande l'ouverture d'un
+    compte (« l'établissement ») et à toute personne qui utilise la plateforme en son nom (« l'utilisateur »). Envoyer une demande
+    d'inscription en cochant la case prévue vaut acceptation de ces conditions et de la
+    <a href="/politique-confidentialite" class="text-primary-700 underline">politique de confidentialité</a>.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">2. Le service</h2>
+<p>
+    La plateforme est accessible uniquement en ligne. Selon la formule de l'établissement, elle permet notamment la gestion des élèves
+    et des inscriptions, des notes et bulletins, des présences, des finances (frais, caisse, paie), de la vie scolaire et, le cas échéant,
+    de l'internat. Les modules disponibles dépendent de la formule et des réglages choisis par le Directeur.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">3. Demande d'inscription et ouverture du compte</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>La demande est examinée par l'éditeur, qui peut l'approuver ou la refuser. Aucun compte n'est créé automatiquement.</li>
+    <li>Le demandeur déclare être habilité à engager l'établissement et fournit des informations exactes et à jour.</li>
+    <li>Le Directeur est responsable des comptes qu'il crée pour son personnel et des droits qu'il leur attribue.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">4. Obligations de l'établissement et des utilisateurs</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>Garder confidentiels ses identifiants, ne pas les partager, et prévenir l'éditeur sans délai en cas de perte ou d'usage suspect.</li>
+    <li>Utiliser la plateforme conformément à la loi et à sa finalité : gestion de l'établissement. Sont interdits l'accès aux données d'un autre établissement, la
+        tentative de contourner les protections, l'envoi massif de messages non sollicités et toute atteinte au fonctionnement du service.</li>
+    <li>Être le seul responsable de l'exactitude et de la légalité des données qu'il saisit (élèves, notes, montants, reçus…), et d'informer les familles et
+        le personnel du traitement de leurs données (voir article 8).</li>
+    <li>Respecter les règles de l'enseignement et de la comptabilité qui lui sont applicables : la plateforme est un outil, elle ne remplace pas ces obligations.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">5. Mode test et mode réel</h2>
+<p>
+    Un établissement démarre en <strong>mode test</strong> : les données qu'il y saisit sont des données d'essai et peuvent être effacées. Le passage en
+    <strong>mode réel</strong> est une décision du Directeur. Ne saisissez pas de données réelles en mode test.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">6. Abonnement, prix et paiement</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>L'accès est soumis à un abonnement dont le prix et la formule sont ceux de la grille tarifaire affichée sur le site au moment de la demande ou convenus par devis
+        pour un établissement public. Les prix sont en francs CFA (XOF).</li>
+    <li>Le paiement se fait par les moyens proposés dans la plateforme (agrégateurs de paiement mobile, ou lien marchand Wave pour lequel la confirmation est
+        manuelle après rapprochement). Un abonnement n'est confirmé qu'après réception effective du paiement.</li>
+    <li>Tant qu'un abonnement est en attente de paiement, l'accès est limité au seul paiement. À l'expiration, après la période de grâce prévue, l'accès passe en
+        mode restreint puis peut être bloqué ; <strong>les données de l'établissement sont conservées</strong> et redeviennent accessibles à la régularisation.</li>
+    <li>Les messages SMS sont facturés sur un crédit propre à l'établissement, alimenté sur demande ; sans crédit, ils ne sont pas envoyés.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">7. Disponibilité et support</h2>
+<p>
+    L'éditeur met en œuvre des moyens raisonnables pour assurer la disponibilité et la sécurité du service (sauvegardes, isolation des données de chaque
+    établissement, journal d'audit), sans pouvoir garantir une disponibilité ininterrompue : maintenances, incidents de réseau ou de prestataires peuvent
+    l'interrompre. Les maintenances prévisibles sont annoncées lorsque c'est possible.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">8. Données de l'établissement</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>Les données saisies par l'établissement lui appartiennent. Pour les données des élèves, des familles et du personnel, <strong>l'établissement est le
+        responsable du traitement</strong> et l'éditeur agit comme son sous-traitant : il ne les traite que pour fournir le service, sur ses instructions.</li>
+    <li>Le Directeur peut exporter l'ensemble des données de son établissement depuis « Exporter mes données » (archive protégée par son mot de passe).</li>
+    <li>Les données ne sont pas supprimées définitivement par les actions courantes : elles sont archivées. Les modalités de conservation et de suppression sont
+        décrites dans la <a href="/politique-confidentialite" class="text-primary-700 underline">politique de confidentialité</a>.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">9. Responsabilité</h2>
+<p>
+    L'éditeur répond des dommages directs causés par un manquement à ses obligations, dans la limite des sommes versées par l'établissement au titre des
+    douze derniers mois d'abonnement, sauf faute lourde ou dolosive. Il n'est pas responsable des dommages indirects, de l'exactitude des données saisies par
+    l'établissement, ni d'une indisponibilité due à un cas de force majeure ou à un prestataire tiers (opérateur mobile, agrégateur de paiement, hébergeur).
+    Rien dans ces conditions ne limite une responsabilité que la loi ne permet pas de limiter.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">10. Suspension et résiliation</h2>
+<ul class="list-disc pl-6 space-y-1">
+    <li>L'établissement peut cesser d'utiliser le service à tout moment et demander la fermeture de son compte ; il récupère ses données par l'export global.</li>
+    <li>L'éditeur peut suspendre l'accès en cas de non-paiement, d'usage contraire aux présentes conditions ou de risque pour la sécurité du service, en prévenant
+        l'établissement dès que possible.</li>
+</ul>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">11. Modification des conditions</h2>
+<p>
+    L'éditeur peut modifier ces conditions. Chaque version est datée (voir « Version en vigueur » ci-dessus) ; une modification substantielle est
+    portée à la connaissance des établissements avant son entrée en vigueur. Les conditions acceptées lors d'une demande d'inscription sont celles de la
+    version enregistrée avec cette demande.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">12. Droit applicable et litiges</h2>
+<p>
+    Ces conditions sont régies par le droit sénégalais. En cas de difficulté, les parties recherchent d'abord une solution amiable ; à défaut, les
+    juridictions sénégalaises compétentes seront saisies.
+</p>
+
+<h2 class="text-xl font-semibold text-slate-900 mt-8">13. Contact</h2>
+<p>
+    Pour toute question : voir les <a href="/mentions-legales" class="text-primary-700 underline">mentions légales</a>.
+</p>

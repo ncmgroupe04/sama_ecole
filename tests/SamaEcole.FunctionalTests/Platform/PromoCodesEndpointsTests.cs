@@ -51,7 +51,7 @@ public class PromoCodesEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
             directorFullName = "Fatou Sarr",
             directorEmail,
             directorPhone = "+221771119988",
-            directorPassword = DirectorPassword,
+            acceptedTerms = true, directorPassword = DirectorPassword,
             schoolName,
             ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });

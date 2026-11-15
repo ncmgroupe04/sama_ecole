@@ -36,6 +36,18 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         "form-action 'self'; " +
         "frame-ancestors 'none';";
 
+    /// <summary>
+    /// Politique de la SEULE page d'inscription quand Cloudflare Turnstile est configuré : le widget charge un script,
+    /// ouvre un cadre et appelle l'API de Cloudflare. L'allocation est limitée à cette page et à cette origine — le reste
+    /// du site garde la politique stricte ci-dessus, sans aucune origine tierce en script.
+    /// </summary>
+    private const string TurnstileOrigin = "https://challenges.cloudflare.com";
+
+    private static readonly string ContentSecurityPolicyWithTurnstile = ContentSecurityPolicy
+        .Replace("script-src 'self' 'unsafe-eval';", $"script-src 'self' 'unsafe-eval' {TurnstileOrigin};")
+        .Replace("connect-src 'self';", $"connect-src 'self' {TurnstileOrigin};")
+        .Replace("frame-src 'self' blob:;", $"frame-src 'self' blob: {TurnstileOrigin};");
+
     public async Task InvokeAsync(HttpContext context)
     {
         var headers = context.Response.Headers;
@@ -70,7 +82,10 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         // CSP seule est levée — en production, /swagger n'est pas mappé, l'exemption est donc inerte.
         if (!context.Request.Path.StartsWithSegments("/swagger"))
         {
-            headers["Content-Security-Policy"] = ContentSecurityPolicy;
+            var allowTurnstile = context.Request.Path.Equals("/inscription", StringComparison.OrdinalIgnoreCase)
+                && context.RequestServices.GetService<Microsoft.Extensions.Options.IOptions<Security.TurnstileOptions>>()?.Value.IsEnabled == true;
+
+            headers["Content-Security-Policy"] = allowTurnstile ? ContentSecurityPolicyWithTurnstile : ContentSecurityPolicy;
         }
 
         await next(context);

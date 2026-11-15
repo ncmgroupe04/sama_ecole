@@ -136,7 +136,7 @@ Modules affichés selon les permissions de l'utilisateur (jamais tous les module
 
 ### 3.3 Barre d'état
 
-Affiche : état de la connexion réseau (voir §9), statut de l'abonnement de l'école, version de l'application, utilisateur, heure locale.
+Affiche uniquement ce que le navigateur peut réellement observer : à gauche l'**état du réseau** (point vert « Connecté » / rouge « Hors ligne — vérifiez votre réseau », voir §9), à droite le nom du produit « Unikol ». Le statut d'abonnement, la version, l'utilisateur et l'heure n'y figurent pas : l'utilisateur est dans la carte de profil du menu latéral, et un voyant d'abonnement qui ne mesurerait rien serait trompeur (il resterait vert le jour où l'abonnement expire) — il reviendra quand une route l'exposera (JGK-B02 / JGK-I04).
 
 > La mention « connexion à la base de données » et « sauvegarde automatique » affichée en barre d'état dans une version antérieure de ce document n'a plus de sens côté client : ce sont des préoccupations serveur (Volume 9), invisibles et non pertinentes pour l'utilisateur final d'une plateforme en ligne.
 
@@ -144,13 +144,16 @@ Affiche : état de la connexion réseau (voir §9), statut de l'abonnement de l'
 
 ## 4. Tableau de bord par rôle
 
-| Rôle | Indicateurs affichés |
-|---|---|
-| **Directeur** | Effectifs élèves/enseignants, recettes du mois, dépenses, impayés, évolution financière, taux de réussite, alertes, statut de l'abonnement |
-| **Secrétariat** | Nouvelles inscriptions, réinscriptions, dossiers incomplets, classes complètes/liste d'attente |
-| **Finance** | Recettes, dépenses, impayés, paiements du jour, taux de recouvrement |
-| **Enseignant** | Classes et matières assignées, évaluations à saisir, bulletins à préparer, statistiques de présence |
-| **Super Admin** | Écoles actives/suspendues, abonnements arrivant à expiration, indicateurs de santé plateforme |
+| Rôle | Tableau de bord | Indicateurs affichés / page d'arrivée |
+|---|---|---|
+| **Directeur** | oui (`/tableau-de-bord`) | Effectifs élèves/enseignants, recettes du mois, dépenses, impayés, évolution financière, taux de réussite, alertes, statut de l'abonnement. Un Directeur de profil Internat / Daara — Mémorisation arrive sur `/suivi-coranique` |
+| **Finance** | oui (`/tableau-de-bord`) | Recettes, dépenses, impayés, paiements du jour, taux de recouvrement (sans les indicateurs pédagogiques) |
+| **Secrétariat** | **non** | Pas de tableau de bord : arrivée sur `/eleves`. Menu : Élèves, Caisse, Présences, Cahier de roulement, Paramètres (lecture seule), Aide |
+| **Enseignant** | **non** | Pas de tableau de bord : arrivée sur `/eleves`. Menu : Élèves, Présences, Cahier de roulement, Aide |
+| **Surveillant** | **non** | Pas de tableau de bord : arrivée sur `/eleves`. Menu : Élèves, Cahier de roulement, Billets, Registre de discipline, Convocations parent, Aide |
+| **Super Admin** | oui (`/admin`) | Écoles actives/suspendues, abonnements arrivant à expiration, indicateurs de santé plateforme |
+
+*Constaté en recette sur l'application (15/11/2026, école de démonstration, modules Pédagogie / Finance actifs). Le menu varie avec les modules et la formule de l'école (§2.1 ter). Les indicateurs « nouvelles inscriptions / dossiers incomplets » (Secrétariat) et « évaluations à saisir » (Enseignant) d'une version antérieure de ce tableau ne sont pas livrés : ils relèvent d'un chantier distinct.*
 
 ---
 
