@@ -1,3 +1,6 @@
+@using Microsoft.Extensions.Options
+@using SamaEcole.Web.Security
+@inject IOptions<TurnstileOptions> Turnstile
 @{
  ViewData["Title"] = "Inscription de votre établissement";
  Layout = "_AuthLayout";
@@ -357,6 +360,17 @@
  </div>
  </fieldset>
 
+ @* Cloudflare Turnstile — rendu seulement si les deux clés sont configurées (voir TurnstileOptions). Le jeton est lu par
+    registration.js au moment de l'envoi et vérifié côté serveur ; la clé de SITE est publique, la clé secrète ne l'est jamais. *@
+ @if (Turnstile.Value.IsEnabled)
+ {
+ <div class="space-y-2">
+ <div class="cf-turnstile" data-sitekey="@Turnstile.Value.SiteKey" data-language="fr"
+ data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileReset" data-error-callback="onTurnstileReset"></div>
+ <p x-show="errors.turnstiletoken" x-cloak x-text="errors.turnstiletoken" class="field-error"></p>
+ </div>
+ }
+
  <button type="submit"
  x-bind:disabled="isSubmitting || Object.keys(errors).length > 0"
  x-bind:aria-busy="isSubmitting.toString()"
@@ -378,6 +392,10 @@
 </div>
 
 @section Scripts {
+ @if (Turnstile.Value.IsEnabled)
+ {
+ <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+ }
  @* Script CLASSIQUE placé en fin de corps : il s'exécute pendant l'analyse, donc AVANT le script
  Alpine différé du layout. Son écouteur alpine:init est ainsi enregistré à temps (même mécanisme
  que auth.js). *@

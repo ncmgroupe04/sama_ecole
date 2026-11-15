@@ -116,7 +116,9 @@ Le contrôle de licence est désormais **une vérification serveur systématique
 
 **Déduplication** : `SubscriptionPayments.ProviderTransactionRef` est unique — un webhook reçu deux fois (retry de l'agrégateur) ne doit jamais produire une double confirmation ni une double extension de la date d'expiration.
 
-**Protection du formulaire public d'inscription** (`POST /registration-requests`) : rate limiting par IP, captcha ou honeypot obligatoire, et le mot de passe soumis est haché immédiatement côté serveur — jamais transmis en clair au-delà de la requête HTTPS initiale, jamais journalisé (y compris dans les logs d'erreur).
+**Protection du formulaire public d'inscription** (`POST /registration-requests`) : rate limiting par IP, honeypot **et Cloudflare Turnstile** (voir ci-dessous), et le mot de passe soumis est haché immédiatement côté serveur — jamais transmis en clair au-delà de la requête HTTPS initiale, jamais journalisé (y compris dans les logs d'erreur).
+
+**Cloudflare Turnstile (15/11/2026).** Défi anti-robot, sans casse-tête pour l'utilisateur, sur le seul formulaire public d'inscription. Fonctionnement : le widget (rendu par `Register.cshtml`) produit un jeton à usage unique, envoyé dans le champ `turnstileToken` ; le serveur le vérifie auprès de `siteverify` de Cloudflare AVANT tout traitement (après le honeypot, qui répond toujours silencieusement). Jeton absent ou refusé → `422` (champ `TurnstileToken`) ; Cloudflare injoignable → `422` aussi : **échec fermé**, un robot ne profite pas d'une panne, l'utilisateur réessaie. **Inactif tant que `Turnstile__SiteKey` ET `Turnstile__SecretKey` ne sont pas tous deux posés** (développement, tests, premiers déploiements) ; une demi-configuration ne bloque personne. La clé secrète n'est ni dans le dépôt ni dans la page ni dans les journaux. La politique de sécurité des scripts (CSP) n'autorise `https://challenges.cloudflare.com` (script, cadre, connexion) que sur `/inscription` et seulement si Turnstile est actif ; le reste du site garde la politique stricte. Étendre Turnstile à la connexion et au mot de passe oublié est possible (même mécanisme) mais non livré.
 
 ---
 

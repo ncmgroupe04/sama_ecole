@@ -3,6 +3,10 @@ using SamaEcole.Application.Registration.Commands.SubmitRegistrationRequest;
 using SamaEcole.Application.Registration.Queries.GetRegistrationRequestStatus;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.RateLimiting;
+using SamaEcole.Web.Security;
+using FluentValidation.Results;
+using Microsoft.Extensions.Options;
+using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationException;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +29,8 @@ namespace SamaEcole.Web.Controllers;
 [AllowAnonymous]
 public class RegistrationRequestsController(
     ISender mediator,
+    ITurnstileVerifier turnstileVerifier,
+    IOptions<TurnstileOptions> turnstileOptions,
     IRegistrationReferenceGenerator referenceGenerator,
     ILogger<RegistrationRequestsController> logger) : ControllerBase
 {
@@ -50,7 +56,8 @@ public class RegistrationRequestsController(
         ProfileType? Profile = null,
         bool HasBoarding = false,
         IReadOnlyList<CycleType>? Cycles = null,
-        StudentQuotaTier? Tier = null);
+        StudentQuotaTier? Tier = null,
+        string? TurnstileToken = null);
 
     [HttpPost]
     [EnableRateLimiting(RegistrationRateLimiting.PolicyName)]
@@ -70,6 +77,30 @@ public class RegistrationRequestsController(
                 HttpContext.Connection.RemoteIpAddress);
 
             return Ok(new SubmitRegistrationRequestResult(referenceGenerator.Generate()));
+        }
+
+        // Cloudflare Turnstile (si configuré) : le jeton du widget est vérifié AVANT tout traitement. Un jeton absent ou
+        // refusé -> 422 ; Cloudflare injoignable -> 422 aussi (échec fermé, l'utilisateur réessaie). Sans clés
+        // configurées, ce contrôle est inactif (développement, tests). Le honeypot ci-dessus reste actif dans tous les cas.
+        if (turnstileOptions.Value.IsEnabled)
+        {
+            var verdict = await turnstileVerifier.VerifyAsync(
+                request.TurnstileToken, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+
+            if (verdict != TurnstileVerdict.Valid)
+            {
+                logger.LogWarning(
+                    "Demande d'inscription refusée (Turnstile : {Verdict}) depuis {IpAddress}.",
+                    verdict, HttpContext.Connection.RemoteIpAddress);
+
+                throw new ValidationException([
+                    new ValidationFailure(
+                        nameof(SubmitRegistrationRequest.TurnstileToken),
+                        verdict == TurnstileVerdict.Unavailable
+                            ? "La vérification de sécurité est momentanément indisponible. Réessayez dans un instant."
+                            : "La vérification de sécurité a échoué. Rechargez la page et réessayez.")
+                ]);
+            }
         }
 
         var result = await mediator.Send(

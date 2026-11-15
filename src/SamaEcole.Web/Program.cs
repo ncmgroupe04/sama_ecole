@@ -250,6 +250,13 @@ var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:Repor
 var webhookPermitLimit = builder.Configuration.GetValue("RateLimiting:Webhooks:PermitLimit", 120);
 var webhookWindowMinutes = builder.Configuration.GetValue("RateLimiting:Webhooks:WindowMinutes", 1);
 
+// Cloudflare Turnstile (anti-robot du formulaire public d'inscription) : inactif tant que Turnstile:SiteKey et
+// Turnstile:SecretKey ne sont pas tous deux renseignés. La clé secrète vient de l'environnement, jamais du dépôt.
+builder.Services.Configure<SamaEcole.Web.Security.TurnstileOptions>(
+    builder.Configuration.GetSection(SamaEcole.Web.Security.TurnstileOptions.SectionName));
+builder.Services.AddHttpClient<SamaEcole.Web.Security.ITurnstileVerifier, SamaEcole.Web.Security.CloudflareTurnstileVerifier>(
+    client => client.Timeout = TimeSpan.FromSeconds(5));
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy(RegistrationRateLimiting.PolicyName, httpContext =>

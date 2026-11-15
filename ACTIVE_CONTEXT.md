@@ -1309,3 +1309,7 @@ references/README.md` §1 : « le secrétariat n'encaisse aucun fonds »). Sépa
 - **F2 de l'Internat (suppression des colonnes héritées)** : reporté, coupé en deux — F2a (retrait des propriétés fantômes, sans
   changement de schéma) puis F2b (migration destructive). Attention : la CI applique les migrations au déploiement sur `main` ;
   la F2b ne doit partir qu'après F2a déployé. Runbook : `docs/runbooks/internat-lot-f2-drop-legacy-columns.md`.
+- **Cloudflare Turnstile sur l'inscription publique** (15/11/2026) : code livré, **inactif tant que `Turnstile__SiteKey` et
+  `Turnstile__SecretKey` ne sont pas posés** (clés à créer dans Cloudflare, secret dans Secret Manager). Détails : `docs/Volume_7_Security.md`.
+  Reste à faire côté exploitation : créer le widget, poser les deux variables sur Cloud Run, vérifier une inscription réelle.
+  Le pare-feu Cloudflare devant le site (WAF) est un choix d'infrastructure distinct, non traité.
