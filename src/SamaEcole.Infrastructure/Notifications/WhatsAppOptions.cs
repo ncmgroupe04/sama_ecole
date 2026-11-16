@@ -46,6 +46,16 @@ public class WhatsAppOptions
     /// </summary>
     public string TemplateLanguageCode { get; set; } = "fr";
 
+    /// <summary>
+    /// Modèle Meta (catégorie Utility) approuvé pour la relance d'un impayé. Sans pièce jointe, deux
+    /// variables de corps : {{1}} = nom de l'élève, {{2}} = montant en retard en FCFA. Vide (défaut) :
+    /// les relances ne partent PAS par WhatsApp (une relance est toujours un contact « à froid », le
+    /// texte libre serait refusé par Meta) et retombent sur le SMS.
+    /// </summary>
+    public string DuesReminderTemplateName { get; set; } = string.Empty;
+
+    public bool IsDuesReminderTemplateConfigured => IsConfigured && IsValueConfigured(DuesReminderTemplateName);
+
     public bool IsConfigured => IsValueConfigured(BaseUrl) && IsValueConfigured(AccessToken);
 
     /// <summary>Les pièces jointes exigent l'endpoint /media EN PLUS de la configuration d'envoi.</summary>

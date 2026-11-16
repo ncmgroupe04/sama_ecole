@@ -41,9 +41,23 @@ public record WhatsAppAttachment(string Filename, byte[] Content, string Content
 /// </summary>
 /// <param name="BodyParameters">Paramètres positionnels {{1}}, {{2}}… du corps du modèle.</param>
 /// <param name="HeaderDocument">Document joint en en-tête du modèle (le bulletin PDF).</param>
+/// <param name="Kind">
+/// Quel modèle Meta utiliser (l'expéditeur en lit le nom dans sa configuration). Défaut : le bulletin,
+/// pour ne rien changer aux appelants existants.
+/// </param>
 public record WhatsAppTemplateContent(
     IReadOnlyList<string> BodyParameters,
-    WhatsAppAttachment? HeaderDocument = null);
+    WhatsAppAttachment? HeaderDocument = null,
+    WhatsAppTemplateKind Kind = WhatsAppTemplateKind.ReportCard);
+
+public enum WhatsAppTemplateKind
+{
+    /// <summary>Bulletin PDF en en-tête ; {{1}} = élève, {{2}} = période.</summary>
+    ReportCard,
+
+    /// <summary>Relance d'impayé, sans pièce jointe ; {{1}} = élève, {{2}} = montant en retard (FCFA).</summary>
+    DuesReminder,
+}
 
 public enum WhatsAppSendStatus
 {
