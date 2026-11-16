@@ -78,6 +78,9 @@ public static class DependencyInjection
         // historique) — voir SmsDispatcher. Scoped : il écrit sous la RLS de la requête courante.
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
 
+        // Relance d'impayé : WhatsApp d'abord, SMS en repli (voir DuesReminderDispatcher).
+        services.AddScoped<IDuesReminderDispatcher, DuesReminderDispatcher>();
+
         // Dépilage de la file (voir SmsQueueProcessor). Scoped comme le store dont il dépend : le
         // service hébergé ouvre une portée par tour plutôt que de retenir un DbContext à vie.
         services.AddScoped<ISmsQueueProcessor, SmsQueueProcessor>();

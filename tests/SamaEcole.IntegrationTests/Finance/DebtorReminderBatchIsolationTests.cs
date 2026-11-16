@@ -208,7 +208,12 @@ public class DebtorReminderBatchIsolationTests : IAsyncLifetime
             contextA,
             new FixedTenantProvider(EcoleA),
             new FixedCurrentUser(Guid.NewGuid()),
-            new SmsDispatcher(contextA, TimeProvider.System, NullLogger<SmsDispatcher>.Instance),
+            new DuesReminderDispatcher(
+                contextA,
+                new SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender(
+                    NullLogger<SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender>.Instance),
+                new SmsDispatcher(contextA, TimeProvider.System, NullLogger<SmsDispatcher>.Instance),
+                NullLogger<DuesReminderDispatcher>.Instance),
             TimeProvider.System,
             NullLogger<SendDebtorReminderBatchCommandHandler>.Instance);
 
@@ -244,7 +249,12 @@ public class DebtorReminderBatchIsolationTests : IAsyncLifetime
 
         var sendHandler = new SendDebtorReminderBatchCommandHandler(
             contextA, new FixedTenantProvider(EcoleA), new FixedCurrentUser(Guid.NewGuid()),
-            new SmsDispatcher(contextA, TimeProvider.System, NullLogger<SmsDispatcher>.Instance),
+            new DuesReminderDispatcher(
+                contextA,
+                new SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender(
+                    NullLogger<SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender>.Instance),
+                new SmsDispatcher(contextA, TimeProvider.System, NullLogger<SmsDispatcher>.Instance),
+                NullLogger<DuesReminderDispatcher>.Instance),
             TimeProvider.System, NullLogger<SendDebtorReminderBatchCommandHandler>.Instance);
 
         var sendAct = () => sendHandler.Handle(new SendDebtorReminderBatchCommand(batchIdB), CancellationToken.None);

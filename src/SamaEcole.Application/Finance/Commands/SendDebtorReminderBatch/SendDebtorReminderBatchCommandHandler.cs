@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Notifications;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ public class SendDebtorReminderBatchCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
-    ISmsDispatcher smsDispatcher,
+    IDuesReminderDispatcher reminderDispatcher,
     TimeProvider timeProvider,
     ILogger<SendDebtorReminderBatchCommandHandler> logger)
     : IRequestHandler<SendDebtorReminderBatchCommand, SendDebtorReminderBatchResult>
@@ -45,6 +46,7 @@ public class SendDebtorReminderBatchCommandHandler(
             .ToListAsync(cancellationToken);
 
         var queuedCount = 0;
+        var whatsAppCount = 0;
         var skippedCount = 0;
         string? firstSkipReason = null;
 
@@ -55,20 +57,26 @@ public class SendDebtorReminderBatchCommandHandler(
                 + $"{row.Item.RemainingBalance:N0} FCFA, en retard de {row.Item.DaysOverdue} jour(s). "
                 + "Merci de régulariser auprès de l'établissement.";
 
-            var outcome = await smsDispatcher.DispatchAsync(
-                new SmsDispatchRequest(schoolId, row.Item.GuardianPhone, body, SmsTrigger.DuesReminder, row.Item.StudentId),
+            var outcome = await reminderDispatcher.DispatchAsync(
+                new DuesReminderRequest(
+                    schoolId, row.Item.GuardianPhone, row.Item.StudentId, row.FullName,
+                    row.Item.RemainingBalance, body),
                 cancellationToken);
 
-            row.Item.SmsMessageId = outcome.MessageId;
+            row.Item.SmsMessageId = outcome.SmsMessageId;
 
-            if (outcome.IsQueued)
+            switch (outcome.Channel)
             {
-                queuedCount++;
-            }
-            else
-            {
-                skippedCount++;
-                firstSkipReason ??= outcome.Reason;
+                case DuesReminderChannel.WhatsApp:
+                    whatsAppCount++;
+                    break;
+                case DuesReminderChannel.Sms:
+                    queuedCount++;
+                    break;
+                default:
+                    skippedCount++;
+                    firstSkipReason ??= outcome.Reason;
+                    break;
             }
         }
 
@@ -79,9 +87,9 @@ public class SendDebtorReminderBatchCommandHandler(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Lot de relance {BatchId} envoyé pour l'établissement {SchoolId} : {Queued} mis en file, {Skipped} écarté(s).",
-            batch.Id, schoolId, queuedCount, skippedCount);
+            "Lot de relance {BatchId} envoyé pour l'établissement {SchoolId} : {Queued} SMS mis en file, {WhatsApp} WhatsApp, {Skipped} écarté(s).",
+            batch.Id, schoolId, queuedCount, whatsAppCount, skippedCount);
 
-        return new SendDebtorReminderBatchResult(queuedCount, skippedCount, firstSkipReason);
+        return new SendDebtorReminderBatchResult(queuedCount, skippedCount, firstSkipReason, whatsAppCount);
     }
 }

@@ -154,7 +154,11 @@ document.addEventListener('alpine:init', () => {
                 const skipped = result.skippedCount > 0
                     ? ` ${result.skippedCount} écarté(s)${result.firstSkipReason ? ` (${result.firstSkipReason})` : ''}.`
                     : '';
-                this.notice = `Lot « ${this.sendTarget.classroomName} » : ${result.queuedCount} SMS mis en file d'envoi.${skipped}`;
+                const parts = [];
+                if (result.whatsAppCount > 0) parts.push(`${result.whatsAppCount} relance(s) envoyée(s) par WhatsApp`);
+                if (result.queuedCount > 0) parts.push(`${result.queuedCount} SMS mis en file d'envoi`);
+                const sent = parts.length > 0 ? parts.join(', ') : 'Aucune relance envoyée';
+                this.notice = `Lot « ${this.sendTarget.classroomName} » : ${sent}.${skipped}`;
                 this.sendTarget = null;
                 this.expandedId = null;
                 await this.load();
