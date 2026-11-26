@@ -34,12 +34,13 @@ public record SendDuesReminderSmsCommand : IRequest<DuesReminderSmsResult>
 /// compteur « Sent » afficherait à la Finance un nombre d'envois réussis que personne n'a encore
 /// constaté. L'issue réelle se consulte dans l'historique.
 /// </summary>
-public record DuesReminderSmsResult(int QueuedCount, int SkippedCount, string? FirstSkipReason);
+public record DuesReminderSmsResult(
+    int QueuedCount, int SkippedCount, string? FirstSkipReason, int WhatsAppCount = 0);
 
 public class SendDuesReminderSmsCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    ISmsDispatcher smsDispatcher,
+    IDuesReminderDispatcher reminderDispatcher,
     TimeProvider timeProvider,
     ILogger<SendDuesReminderSmsCommandHandler> logger)
     : IRequestHandler<SendDuesReminderSmsCommand, DuesReminderSmsResult>
@@ -114,6 +115,7 @@ public class SendDuesReminderSmsCommandHandler(
             .ToList();
 
         var queuedCount = 0;
+        var whatsAppCount = 0;
         var skippedCount = 0;
         string? firstSkipReason = null;
 
@@ -123,25 +125,30 @@ public class SendDuesReminderSmsCommandHandler(
                 $"Rappel : la scolarité de {debtor.FullName} présente un retard de "
                 + $"{debtor.Overdue:N0} FCFA. Merci de régulariser auprès de l'établissement.";
 
-            var outcome = await smsDispatcher.DispatchAsync(
-                new SmsDispatchRequest(schoolId, debtor.GuardianPhone, body, SmsTrigger.DuesReminder, debtor.Id),
+            var outcome = await reminderDispatcher.DispatchAsync(
+                new DuesReminderRequest(
+                    schoolId, debtor.GuardianPhone, debtor.Id, debtor.FullName, debtor.Overdue, body),
                 cancellationToken);
 
-            if (outcome.IsQueued)
+            switch (outcome.Channel)
             {
-                queuedCount++;
-            }
-            else
-            {
-                skippedCount++;
-                firstSkipReason ??= outcome.Reason;
+                case DuesReminderChannel.WhatsApp:
+                    whatsAppCount++;
+                    break;
+                case DuesReminderChannel.Sms:
+                    queuedCount++;
+                    break;
+                default:
+                    skippedCount++;
+                    firstSkipReason ??= outcome.Reason;
+                    break;
             }
         }
 
         logger.LogInformation(
-            "Relance d'impayés par SMS pour l'établissement {SchoolId} : {Queued} mis en file, {Skipped} écarté(s).",
-            schoolId, queuedCount, skippedCount);
+            "Relance d'impayés par SMS pour l'établissement {SchoolId} : {Queued} SMS mis en file, {WhatsApp} WhatsApp, {Skipped} écarté(s).",
+            schoolId, queuedCount, whatsAppCount, skippedCount);
 
-        return new DuesReminderSmsResult(queuedCount, skippedCount, firstSkipReason);
+        return new DuesReminderSmsResult(queuedCount, skippedCount, firstSkipReason, whatsAppCount);
     }
 }

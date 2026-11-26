@@ -47,6 +47,14 @@ public class SubscriptionPaymentConfiguration : IEntityTypeConfiguration<Subscri
             .HasFilter("\"ProviderTransactionRef\" IS NOT NULL")
             .HasDatabaseName("UX_subscription_payments_provider_transaction_ref");
 
+        // Une transaction Wave (saisie par le Super Admin à la validation) ne sert qu'UNE fois : sans cet index, un seul
+        // règlement pourrait activer l'abonnement de deux écoles (le lien marchand ne porte aucune référence).
+        builder.Property(p => p.ExternalTransactionRef).HasMaxLength(64);
+        builder.HasIndex(p => p.ExternalTransactionRef)
+            .IsUnique()
+            .HasFilter("\"ExternalTransactionRef\" IS NOT NULL")
+            .HasDatabaseName("UX_subscription_payments_external_transaction_ref");
+
         builder.HasIndex(p => new { p.SchoolId, p.InitiatedAt })
             .HasDatabaseName("IX_subscription_payments_SchoolId_InitiatedAt");
 

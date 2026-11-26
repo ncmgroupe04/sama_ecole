@@ -70,10 +70,12 @@ La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 pro
   La communication vers les parents en V1 est **sortante uniquement** : SMS et WhatsApp (formule
   Premium, `Feature.SmsNotifications`), e-mail, et documents remis en main propre. Une convocation de
   parent (§18) n'est pas un portail.
-- **Hors périmètre V1 — acté pour la version suivante :** l'export **global** « Exporter mes données »
-  du Directeur (`GET /api/v1/exports/school-data`, jamais implémenté). Ne pas le construire sans
-  arbitrage. Les exports **par domaine** existent et couvrent les besoins réels : rapport financier
-  `.xlsx`, export des présences, import/export Excel des notes, PDF officiels. → `docs/Volume_4_API_Design.md` §11.
+- **Livré le 15/11/2026 (arbitrage du propriétaire) :** l'export **global** « Exporter mes données » du Directeur
+  (`POST /api/v1/exports/school-data`, archive ZIP d'un CSV par table, mot de passe exigé, 3 par heure, audité ; carte dans
+  Paramètres › Paramètres système). Invariants : l'archive ne contient **jamais** de secret (`SensitiveColumnRules`) ni de donnée
+  d'une autre école ; toute table portant des données d'école doit avoir un Global Query Filter **ou** un filtre explicite dans
+  `SchoolDataExporter.Query`. Les exports **par domaine** (rapport financier `.xlsx`, présences, notes, PDF officiels)
+  restent. → `docs/Volume_4_API_Design.md` §11.
 - **Livrés et intégrés :** Paie, Trésorerie, Caisse, TVA/Fiscalité, Discipline & Convocations,
   Infrastructures (Bâtiments & Salles), Documents administratifs (8 PDF), Emploi du temps &
   Pointage enseignants, et Rapports financiers (écran `/rapports/financiers` + export `.xlsx`).

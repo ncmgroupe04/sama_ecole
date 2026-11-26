@@ -85,6 +85,12 @@ document.addEventListener('alpine:init', () => {
 
         // Application d'un montant standard (modale). `level` = périmètre : chaîne vide = toutes les
         // classes, sinon le seul niveau ciblé (le serveur ne touche alors pas aux autres cycles).
+        // Échéancier par classe (recouvrement) : un même modèle (pourcentages + décalages en jours depuis aujourd'hui)
+        // appliqué à chaque inscription active de la classe. Directeur et Finance (l'API garde, sans le réglage
+        // « Finance modifie les frais » : un échéancier ne change aucun montant, il l'étale).
+        canPlanInstallments: ['Directeur', 'Finance'].includes(window.auth.role),
+        classPlan: { open: false, classroomId: '', reason: '', lines: [], splitCount: 3, isSaving: false, errors: {} },
+
         isApplyOpen: false,
         isApplying: false,
         applyForm: { amount: null, level: '', overwriteExisting: false },
@@ -252,6 +258,94 @@ document.addEventListener('alpine:init', () => {
             window.softDeleteTrash.notifyChanged('fee-categories');
             await this.loadAll();
             this.showCategoryDeletedDialog = true;
+        },
+
+        // ------------------------------------------------- Échéancier par classe
+
+        /** Pourcentage saisi (40 ou 33,33) → points de base entiers : la somme se vérifie sans erreur de flottant. */
+        planBasisPoints(line) {
+            return Math.round((Number(line.percent) || 0) * 100);
+        },
+
+        classPlanTotalPercent() {
+            return this.classPlan.lines.reduce((sum, l) => sum + this.planBasisPoints(l), 0) / 100;
+        },
+
+        classPlanCanSubmit() {
+            const p = this.classPlan;
+            return !p.isSaving && !!p.classroomId && p.lines.length > 0
+                && p.lines.reduce((sum, l) => sum + this.planBasisPoints(l), 0) === 10000
+                && p.lines.every(l => l.label.trim() && this.planBasisPoints(l) > 0 && Number(l.offsetDays) >= 0);
+        },
+
+        openClassPlan() {
+            this.classPlan = {
+                open: true,
+                classroomId: '',
+                reason: '',
+                lines: [
+                    { label: 'Versement 1', percent: 50, offsetDays: 0 },
+                    { label: 'Versement 2', percent: 50, offsetDays: 30 }
+                ],
+                splitCount: 3,
+                isSaving: false,
+                errors: {}
+            };
+        },
+
+        closeClassPlan() {
+            this.classPlan = { open: false, classroomId: '', reason: '', lines: [], splitCount: 3, isSaving: false, errors: {} };
+        },
+
+        addClassPlanLine() {
+            if (this.classPlan.lines.length >= 24) return;
+            const last = this.classPlan.lines[this.classPlan.lines.length - 1];
+            this.classPlan.lines.push({
+                label: `Versement ${this.classPlan.lines.length + 1}`,
+                percent: 0,
+                offsetDays: last ? Number(last.offsetDays) + 30 : 0
+            });
+        },
+
+        removeClassPlanLine(index) {
+            this.classPlan.lines.splice(index, 1);
+        },
+
+        /** N parts égales, une tous les 30 jours ; le reliquat de centièmes va à la première part (somme = 100 %). */
+        splitClassPlanEvenly() {
+            const count = Math.min(Math.max(parseInt(this.classPlan.splitCount, 10) || 1, 1), 24);
+            const base = Math.floor(10000 / count);
+            const remainder = 10000 - base * count;
+            this.classPlan.lines = Array.from({ length: count }, (_, i) => ({
+                label: `Versement ${i + 1}`,
+                percent: (base + (i === 0 ? remainder : 0)) / 100,
+                offsetDays: i * 30
+            }));
+        },
+
+        async submitClassPlan() {
+            if (!this.classPlanCanSubmit()) return;
+            const p = this.classPlan;
+            p.isSaving = true;
+            p.errors = {};
+            try {
+                const result = await window.api.post(`/finance/classrooms/${p.classroomId}/installment-plan`, {
+                    reason: p.reason.trim() || null,
+                    template: p.lines.map(l => ({
+                        label: l.label.trim(),
+                        percentage: this.planBasisPoints(l) / 10000,
+                        offsetDays: Number(l.offsetDays)
+                    }))
+                });
+                this.closeClassPlan();
+                const skipped = result.skippedCount > 0
+                    ? `, ${result.skippedCount} ignorée${result.skippedCount > 1 ? 's' : ''} (rien à échelonner)` : '';
+                toast.success(`Échéancier appliqué à ${result.appliedCount} inscription${result.appliedCount > 1 ? 's' : ''}${skipped}.`);
+            } catch (err) {
+                p.errors = window.api.toFieldErrors(err, "Erreur lors de l'application de l'échéancier.");
+            } finally {
+                p.isSaving = false;
+            }
         },
 
         // ------------------------------------------------- Montant standard (Option 1)

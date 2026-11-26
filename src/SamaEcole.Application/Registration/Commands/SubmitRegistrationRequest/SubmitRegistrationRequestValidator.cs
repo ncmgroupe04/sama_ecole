@@ -18,6 +18,11 @@ public class SubmitRegistrationRequestValidator : AbstractValidator<SubmitRegist
 {
     public SubmitRegistrationRequestValidator()
     {
+        // Conditions d'utilisation et politique de confidentialité : acceptation OBLIGATOIRE, preuve gardée sur la demande.
+        RuleFor(v => v.AcceptedTerms)
+            .Equal(true)
+            .WithMessage("Vous devez accepter les conditions d'utilisation et la politique de confidentialité pour envoyer votre demande.");
+
         RuleFor(x => x.DirectorFullName).NotEmpty().MaximumLength(200).NoHtml();
         RuleFor(x => x.DirectorEmail).NotEmpty().EmailAddress().MaximumLength(200).NoHtml();
         RuleFor(x => x.DirectorPhone).NotEmpty().MaximumLength(30).NoHtml().MustBeValidSenegalPhone();

@@ -77,6 +77,10 @@ public class SubmitRegistrationRequestHandler(
             DirectorEmail = email,
             DirectorPhone = request.DirectorPhone.Trim(),
             DirectorPasswordHash = passwordHash,
+            // Preuve d'acceptation : la version des textes affichés, l'instant et l'IP vus par le serveur.
+            TermsVersion = LegalDocuments.CurrentVersion,
+            TermsAcceptedAt = DateTimeOffset.UtcNow,
+            TermsAcceptedIp = string.IsNullOrWhiteSpace(request.TermsAcceptedIp) ? null : request.TermsAcceptedIp.Trim(),
             SchoolName = request.SchoolName.Trim(),
             SchoolAddress = string.IsNullOrWhiteSpace(request.SchoolAddress) ? null : request.SchoolAddress.Trim(),
             City = string.IsNullOrWhiteSpace(request.City) ? null : request.City.Trim(),

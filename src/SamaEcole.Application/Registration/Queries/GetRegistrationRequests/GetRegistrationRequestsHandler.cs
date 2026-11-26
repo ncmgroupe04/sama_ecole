@@ -47,7 +47,9 @@ public class GetRegistrationRequestsHandler(IApplicationDbContext dbContext)
                 r.CreatedAt,
                 r.ReviewedAt,
                 r.RejectionReason,
-                r.CreatedSchoolId))
+                r.CreatedSchoolId,
+                r.TermsVersion,
+                r.TermsAcceptedAt))
             .ToListAsync(cancellationToken);
     }
 }

@@ -181,7 +181,7 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 | `PATCH` | `/api/v1/admin/schools/{id}/activate` | Réactiver un établissement |
 | `POST` | `/api/v1/admin/subscriptions` | Créer/renouveler un abonnement |
 | `GET` | `/api/v1/admin/subscriptions/expiring` | Lister les abonnements arrivant à expiration (30/15/7 jours) |
-| `GET` | `/api/v1/admin/registration-requests` | Lister les demandes d'inscription (filtrable par statut) |
+| `GET` | `/api/v1/admin/registration-requests` | Lister les demandes d'inscription (filtrable par statut) Chaque élément porte `termsVersion` et `termsAcceptedAt` (preuve d'acceptation des textes juridiques ; null avant le 15/11/2026). |
 | `POST` | `/api/v1/admin/registration-requests/{id}/approve` | Approuver → crée établissement + Directeur + abonnement `AwaitingPayment` (Volume 1 §11.5) |
 | `POST` | `/api/v1/admin/registration-requests/{id}/reject` | Rejeter (motif obligatoire) |
 
@@ -189,7 +189,7 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/registration-requests` | **Aucune** (public) | Soumettre le formulaire d'inscription (Volume 1 §11.5). Anti-spam obligatoire (captcha/honeypot). |
+| `POST` | `/api/v1/registration-requests` | **Aucune** (public) | Soumettre le formulaire d'inscription (Volume 1 §11.5). Anti-spam : rate limiting par IP, honeypot (`website`) et **Cloudflare Turnstile** : champ `acceptedTerms` **obligatoire à `true`** (`422` sur `AcceptedTerms` sinon ; le serveur garde version, date et IP comme preuve) ; champ `turnstileToken` **obligatoire si Turnstile est configuré** (`422` sur le champ `TurnstileToken` s'il est absent, refusé ou si Cloudflare est injoignable ; sans clés configurées, le champ est ignoré). |
 | `GET` | `/api/v1/registration-requests/{trackingReference}/status` | **Aucune** (public, via référence) | Suivre l'état d'une demande sans authentification |
 | `POST` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Initier un paiement (Mobile Money, virement, carte) — retourne l'URL de redirection agrégateur. Corps : `method`, `billingPeriod` (`Monthly`/`Yearly`), `promoCode?`. Le montant est résolu côté serveur (Volume 1 §11.6) : forfait de la grille en annuel, forfait ÷ 12 arrondi aux 100 FCFA supérieurs en mensuel ; `422` pour un établissement public (sur devis) |
 | `GET` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Historique des paiements de l'établissement |
@@ -328,6 +328,9 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` | `/api/v1/absences/today-slots?studentId&date` | Cours du jour de la classe d'un élève, cours en cours / suivant signalés — sélecteur du cours visé par un billet d'entrée (SuperAdmin, Directeur, Surveillant) |
 | `GET` | `/api/v1/absences/arrival-preview?studentId&date&arrivalTime` | Aperçu d'un billet par **heure d'arrivée** (Complément N°5 bis) : cours manqués, retard sur le cours en cours, cours visé, durée totale — le calcul de l'émission, pour l'écran. `422` : jour de repos, aucun cours, arrivée avant le premier cours, rien à régulariser (SuperAdmin, Directeur, Surveillant) |
 | `POST` | `/api/v1/absences/late-arrivals` | Retard. **`arrivalTime` facultatif** (Complément N°5 bis) : le serveur déduit cours manqués (→ `JustifiedAbsence`), retard, cours visé et durée ; `minutes`/`targetScheduleSlotId` du client ignorés. Sinon `targetScheduleSlotId` facultatif : émet un billet d'entrée visant ce cours (`Issued`). `409` si un billet actif existe déjà pour (élève, cours, jour) ; minutes ≤ 240 avec un cours visé |
+| `GET` | `/api/v1/absences/justifications` | Billets d'absence actifs (`startDate`, `endDate`, `days`, `reason`, `authorizedReturnDate`), du plus récent au plus ancien (SuperAdmin, Directeur, Surveillant ; module Pédagogie) |
+| `POST` | `/api/v1/absences/justifications` | Billet d'absence **par plage** : `studentId`, `startDate`, `endDate?` (vide = un jour ; 60 jours au plus), `reason`, `authorizedReturnDate?`. Les lignes d'appel « Absent (non justifié) » de la plage passent à « Absent (justifié) » (statut d'avant conservé). `422` : fin avant début, plage > 60 jours, retour non postérieur à la fin, **chevauchement** avec un billet actif du même élève ; `404` élève inconnu |
+| `DELETE` | `/api/v1/absences/justifications/{id}` | Annule le billet (soft delete) ; les lignes qu'il justifiait retrouvent leur statut d'avant. Renvoie `{ restoredLines }` ; `404` inconnu |
 | `POST` | `/api/v1/billets/{id}/accept` | L'enseignant **titulaire** du cours visé, ou le Directeur, accepte l'élève en classe. Idempotent ; `403` autre enseignant ; `422` billet annulé ou sans cours visé |
 | `POST` | `/api/v1/billets/{id}/cancel` | Surveillant ou Directeur annule un billet non accepté ; la ligne d'appel retrouve son statut d'avant. `422` si déjà accepté |
 | `GET` | `/api/v1/reports/attendance/by-subject` | Rapport d'assiduité par matière : séances appelées et répartition des statuts (Directeur, Secrétariat, SuperAdmin) |
@@ -348,7 +351,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` / `PUT` | `/api/v1/settings/school` | Paramètres établissement (logo, cachet, signature, format de date) |
 | `GET` / `PUT` | `/api/v1/settings/grading` | Système de notation par niveau/classe |
 | `GET` / `PUT` | `/api/v1/settings/registration-numbers` | Format des matricules |
-| ~~`GET`~~ | ~~`/api/v1/exports/school-data`~~ | **Reporté après la V1** — voir la note ci-dessous |
+| `POST` | `/api/v1/exports/school-data` | **Exporter mes données** (Directeur seul) — archive ZIP de toutes les données de l'établissement ; corps `{ "password": "…" }`, voir la note ci-dessous |
 | `GET` | `/api/v1/schools/current/mode` | Régime de l'établissement : `isLive`, `wentLiveAt`, `revertToTestAvailable` (drapeau d'environnement) |
 | `POST` | `/api/v1/schools/current/go-live` | Bascule en mode réel (Directeur, mot « CONFIRMER » ou nom de l'école) — définitive |
 | `POST` | `/api/v1/schools/current/reset-data` | « Zone de danger » : remise à neuf en mode test (Directeur, mot « PURGER » ou nom de l'école) |
@@ -374,7 +377,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 > l'écran affiche malgré tout son bouton, désactivé, pour que l'absence s'explique. Périmètre exact de
 > la purge et arbitrages : `ACTIVE_CONTEXT.md` §2.
 
-> **Export global « Exporter mes données » — reporté.** Cette route était spécifiée mais n'a jamais été implémentée ; elle est actée pour la **version suivante** (Volume 1.5 §8). En V1, un Directeur qui doit sortir ses données dispose des exports **par domaine** déjà livrés, qui couvrent les besoins réels de reporting et d'archivage : rapport financier consolidé `.xlsx` (§14), export des présences (`GET /api/v1/reports/attendance/export`), import/export Excel des notes, et l'ensemble des PDF officiels du §18. La sauvegarde intégrale de la base reste, elle, une responsabilité d'infrastructure (Volume 9) — jamais une action utilisateur.
+> **Export global « Exporter mes données » — livré (15/11/2026).** `POST /api/v1/exports/school-data`, **Directeur seul**, répond une archive `application/zip` nommée `export-<ecole>-<date>.zip`. Corps : `{ "password": "…" }` — la confirmation par mot de passe est exigée comme pour l'activation d'une année (`422` sur le champ `Password` si absente ou refusée, jamais `401`). Limité à **3 exports par heure et par utilisateur** (`429` au-delà), journalisé dans le journal d'audit (jamais le mot de passe). Contenu : `donnees/<table>.csv` pour chaque table d'établissement non vide (UTF-8 avec BOM, séparateur `;`, nombres au point décimal, dates ISO 8601), `manifest.json` (tables, nombre de lignes) et `LISEZMOI.txt`. **Jamais** dans l'archive : hachages de mots de passe, jetons, état de verrouillage des comptes, éléments supprimés logiquement, fichiers binaires, données d'une autre école. Les cellules commençant par `=`, `+`, `@` ou `-` (hors nombres) sont préfixées d'une apostrophe (protection contre l'injection de formule). Les exports **par domaine** (rapport financier `.xlsx` §14, présences `GET /api/v1/reports/attendance/export`, notes Excel, PDF officiels §18) restent disponibles. La sauvegarde intégrale de la base reste une responsabilité d'infrastructure (Volume 9).
 
 ---
 
@@ -387,6 +390,7 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | Méthode | Route | Description |
 |---|---|---|
 | `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
+| `GET` | `/api/v1/finance/employee-contracts/teacher-options` | Enseignants proposables dans le sélecteur d'un contrat (`id`, `matricule`, `fullName` **seulement**) — Directeur, Finance. Route dédiée : `GET /teachers` reste fermé à la Finance (données personnelles, Volume 7). Ajoutée à la suite de la recette du 15/11/2026 : la Finance ne pouvait pas créer de contrat d'enseignant |
 | `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) pour un enseignant (`teacherId`), un utilisateur (`userId`) **ou** une personne sans compte (`externalFullName`, `externalJobTitle?`, `externalPhone?` — §14.7) : exactement l'un des trois |
 | `PATCH` | `/api/v1/finance/employee-contracts/{id}` | Réviser un contrat actif (salaire, taux, prime, moyen de paiement) |
 | `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |
@@ -425,6 +429,12 @@ Ouverture/fermeture de la caisse de guichet, journal des encaissements de la jou
 | `GET` | `/api/v1/finance/sessions/{id}/closing-report` | Rapport de clôture (PDF) — ventilation par mode de paiement et par catégorie de frais, détail des transactions |
 | `GET` | `/api/v1/finance/daily-cash-register/pdf` | Journal de caisse du jour (PDF, bordereau) |
 | `GET` | `/api/v1/finance/dashboard` | Tableau de bord financier (encaissé jour/mois/année, recouvrement) |
+| `POST` | `/api/v1/finance/enrollments/{enrollmentId}/installment-plan` | Échéancier personnalisé (Directeur, Finance) : `{ reason?, installments: [{ label, amount, dueDate }] }`, 24 échéances au plus ; **la somme doit égaler exactement `TotalDue`** (`422` sinon) ; remplace le plan actif (passé à `Cancelled`, jamais supprimé) ; `404` inscription introuvable ou annulée. Écran : Caisse › « Personnaliser l'échéancier » |
+| `POST` | `/api/v1/finance/classrooms/{classroomId}/installment-plan` | Échéancier par classe (Directeur, Finance) : `{ reason?, template: [{ label, percentage, offsetDays }] }` ; pourcentages (fractions) totalisant exactement 1 ; un plan par inscription active, calculé sur son `TotalDue` ; renvoie `{ appliedCount, skippedCount }`. Écran : Frais scolaires › « Échelonner une classe » |
+| `GET` | `/api/v1/finance/dues-reminder-batches` | Lots de relance SMS des débiteurs (`?status=Draft\|Sent\|Dismissed`), avec leurs destinataires — Directeur, Finance ; écran `/recouvrement` |
+| `POST` | `/api/v1/finance/dues-reminder-batches/recompute` | Recalcule les brouillons sans attendre le calcul nocturne ; renvoie le nombre de lots préparés |
+| `POST` | `/api/v1/finance/dues-reminder-batches/{id}/send` | Envoie un lot brouillon (`{ queuedCount, skippedCount, firstSkipReason }`) ; `409` si déjà envoyé ou écarté |
+| `POST` | `/api/v1/finance/dues-reminder-batches/{id}/dismiss` | Écarte un lot brouillon (`204`) ; `409` si déjà envoyé ou écarté |
 
 **Règles :**
 - La clôture **calcule** le solde de fermeture : `fonds d'ouverture + somme des paiements non annulés de la session`. Elle ne prend **aucun montant en paramètre**.
@@ -557,6 +567,8 @@ Huit documents officiels PDF, générés côté serveur avec QuestPDF (mise en p
 | 6 | Engagement financier | `GET /api/v1/finance/commitments/{id}/pdf` | Finance |
 | 7 | Attestation de travail | `GET /api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Paie |
 | 8 | Fiche de suivi des heures | `GET /api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Paie |
+
+**Billet d'absence** (A5, ajouté avec le billet d'absence par plage) : `GET /api/v1/billets/absence/{id}/pdf` (SuperAdmin, Directeur, Secrétariat, Surveillant ; module Pédagogie). Numéro `ABSENCE-XXXXXXXX`, période, durée, motif, retour autorisé, signature du Surveillant, QR de vérification. Pas de route JSON dédiée : la liste `GET /absences/justifications` porte les mêmes données.
 
 Chaque document expose en plus une route **sans** `/pdf` renvoyant les mêmes données en JSON, utilisée par l'aperçu à l'écran avant impression.
 

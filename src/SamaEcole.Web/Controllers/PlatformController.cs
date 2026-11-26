@@ -32,6 +32,9 @@ namespace SamaEcole.Web.Controllers;
 [Authorize(Roles = nameof(Role.SuperAdmin))]
 public class PlatformController(ISender mediator) : ControllerBase
 {
+    /// <summary>Corps de la validation d'un paiement Wave : l'identifiant de la transaction retrouvée sur le relevé marchand.</summary>
+    public record ApproveWavePaymentRequest(string? TransactionRef);
+
     [HttpGet("dashboard")]
     [ProducesResponseType<PlatformDashboardStatsDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -83,9 +86,12 @@ public class PlatformController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> ApproveWavePayment(Guid paymentId, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApproveWavePayment(
+        Guid paymentId, [FromBody] ApproveWavePaymentRequest request, CancellationToken cancellationToken)
     {
-        await mediator.Send(new ReviewWavePaymentCommand(paymentId, Approve: true), cancellationToken);
+        await mediator.Send(
+            new ReviewWavePaymentCommand(paymentId, Approve: true, request.TransactionRef), cancellationToken);
         return NoContent();
     }
 

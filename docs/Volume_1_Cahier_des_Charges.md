@@ -229,6 +229,12 @@ Détail par classe et par niveau : total payé, solde restant, pourcentage de pa
 
 Liste automatique des élèves débiteurs : montant dû, nombre de jours de retard.
 
+**Recouvrement (écran `/recouvrement`, Directeur et Finance).** Les élèves débiteurs sont regroupés en **lots de relance SMS
+brouillon, un par classe**, préparés chaque nuit lorsque « Relances d'impayés » est activé (seuil de retard en jours, Paramètres ›
+Notifications SMS). L'écran présente les lots par statut (À valider, Envoyés, Écartés), les destinataires (montant dû, jours de
+retard, téléphone du tuteur) et trois actions : recalculer, écarter, envoyer. L'envoi suit une **confirmation explicite**, ne se
+fait qu'**une seule fois** par lot (rejet en `409` ensuite) et n'a jamais lieu automatiquement.
+
 Simulation de revenus prévisionnels : `Nombre d'élèves × frais configurés`, avec comparaison revenus attendus / encaissés / restants.
 
 Graphiques : évolution mensuelle des recettes, répartition par classe, répartition des dépenses par catégorie, comparaison annuelle, taux de recouvrement mensuel.
@@ -250,7 +256,7 @@ Suivi des dépenses par catégorie, avec justificatif attaché (upload de docume
 - **Référence exacte à reproduire** : `docs/design-references/bulletin-reference.png` (description détaillée dans `docs/design-references/README.md` §2) — colonnes, en-têtes, blocs de synthèse et mentions dans l'ordre exact de cette référence.
 - Format **A5 Portrait**, avec ajustement automatique des largeurs de colonnes pour éviter tout débordement sur une seconde page.
 - Colonnes Matière / Moyenne / Mention optimisées pour l'impression.
-- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Pédagogie
+- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Notation & mentions
   le découpage de l'année — trimestriel (défaut, 3 trimestres), semestriel (2 semestres) ou personnalisé
   (2 à 6 périodes réparties à parts égales). Il s'applique aux années créées ensuite ; sur l'année en cours
   il se rejoue à la demande, et **seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie**.
@@ -304,6 +310,22 @@ l'ordre de priorité :
   le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
 - **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
   les classes concernées ; l'écran l'annonce dès que des notes existent.
+
+### 8.9 Saisie des notes : matières proposées selon le niveau de la classe
+
+L'écran de saisie (`/notes`) ne propose, une fois la classe choisie, que les matières de **son niveau** : un
+même nom de matière (« Mathématiques ») existe au primaire, au collège et au lycée avec des coefficients
+différents, et les mélanger conduisait à noter la mauvaise matière.
+
+- **Rapprochement** : niveau de la matière = niveau de la classe, casse et accents ignorés, avec les mêmes
+  synonymes que l'écran Matières et le serveur (Élémentaire = Primaire ; Moyen, CEM = Collège ; Secondaire =
+  Lycée ; Crèche, Maternelle, Préscolaire = Préscolaire). Un niveau hors nomenclature ne se rapproche que d'un
+  niveau écrit pareil.
+- **Sans classe choisie**, ou si **aucune matière** ne porte le niveau de la classe, toute la liste reste
+  proposée et chaque libellé porte son niveau entre parenthèses.
+- **Changer de classe** efface la matière sélectionnée si elle n'appartient pas au nouveau niveau.
+- Filtre d'**affichage** uniquement : aucune règle serveur, aucun droit et aucun calcul ne change. Le filtre
+  « Pôle » (Franco-Arabe) s'applique en plus.
 
 ### 8.8 Séries du Baccalauréat, matières par classe et options (Évolution N°6)
 
@@ -483,6 +505,9 @@ Un Directeur intéressé accède, via le site public, à un formulaire détaill�
 - Les informations de son établissement : nom, adresse, ville/région, type d'établissement, effectif approximatif d'élèves.
 - Le plan souhaité (§11.1).
 - Le moyen de paiement prévu (§11.6) — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation.
+
+- **L'acceptation des conditions d'utilisation et de la politique de confidentialité** (case à cocher, jamais pré-cochée, liens vers les pages publiques `/conditions-utilisation` et `/politique-confidentialite`). Sans elle, la demande est refusée. Le serveur garde la **preuve** sur la demande : version des textes acceptée, date et heure, adresse IP vue par le serveur ; le Super Admin voit version et date dans la liste des demandes. Quatre pages juridiques publiques existent : conditions d'utilisation, politique de confidentialité, mentions légales, cookies et stockage local ; elles sont liées depuis les pieds de page de la vitrine, de la connexion et de l'inscription. L'identité de l'éditeur s'y affiche depuis la configuration (`Legal__*`) et n'est jamais inventée (« à compléter » tant qu'elle manque).
+- Une **vérification anti-robot** Cloudflare Turnstile, si elle est configurée (Volume 7).
 
 À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est affichée au Directeur à l'écran **et lui est envoyée par e-mail** (pour qu'il ne la perde pas). Le **Super Admin** est alerté par un e-mail distinct (adresse `Registration__AdminNotificationEmail`, avec le détail de la demande et un lien vers le tableau de bord de revue). Aucun e-mail n'est jamais adressé au personnel d'un établissement existant. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
 
@@ -784,7 +809,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'établissement crée une **convocation** du parent ou du tuteur : motif, date et heure du rendez-vous, élève concerné.
 - Un **avis de convocation** (PDF officiel) est édité pour remise en main propre à l'élève, ou envoi.
 - **Une convocation n'est pas un portail parent** (§13) : elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne constitue pas une amorce du chapitre 13. C'est un registre interne de la Vie scolaire.
-- La convocation se crée aussi **depuis le bilan d'assiduité** (`/reports/attendance`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
+- La convocation se crée aussi **depuis le bilan d'assiduité** (`/rapports/assiduite`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
 
 ### 18.3 Suite donnée à une convocation
 
@@ -839,6 +864,8 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ### 20.3 Règles de fond
 
+- **Échéancier personnalisé** (Directeur, Finance) : depuis la Caisse, « Personnaliser l'échéancier » remplace le calendrier d'une inscription par des échéances saisies (désignation, montant, date ; 24 au plus). **La somme doit égaler exactement le montant dû** : l'échéancier étale, il ne modifie jamais un montant (règle §7.2). L'ancien plan passe à « Annulé » et reste consultable. Un éditeur offre la répartition en parts égales et l'écart en direct.
+- **Échéancier par classe** (Directeur, Finance) : sur l'écran Frais scolaires, « Échelonner une classe » applique un même modèle (pourcentages totalisant exactement 100 % + décalages en jours) à chaque inscription active de la classe, sur le montant dû de chacune ; les inscriptions sans montant sont ignorées et comptées.
 - Un **engagement financier** ne modifie jamais, à lui seul, le montant dû d'une inscription : c'est une reconnaissance de dette et un échéancier, pas une écriture financière (règle §7.2).
 - Un **avis d'échéance** ne peut être émis que s'il existe effectivement un impayé — une sommation pour une dette inexistante est refusée par le système, pas seulement déconseillée.
 - Tout document est émis **dans le périmètre de l'établissement courant**. Une fuite d'en-tête ou de données entre établissements est traitée comme un défaut de sécurité, pas comme un défaut d'affichage.
@@ -898,6 +925,18 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - **Cours manqués justifiés.** À l'émission, la ligne d'un cours manqué déjà appelé passe de « Absent (non justifié) » à « **Absent (justifié)** » ; jamais depuis Présent ou Retard, jamais dans l'autre sens, et aucune ligne n'est créée pour un élève absent de la fiche. Si la fiche n'existe pas encore, la feuille de l'enseignant présélectionne l'absence justifiée. **Annuler** un billet non accepté restaure chaque ligne à son statut d'avant. Le passage « non justifié → justifié » **n'envoie aucun message** à la famille ; seul le retard du cours en cours en envoie un.
 - Un cours **déjà couvert** par un billet actif du même élève le même jour n'est ni re-justifié ni re-visé. Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le billet reste possible **sans heure d'arrivée** : minutes saisies à la main, comme avant.
 - Le billet imprimé porte l'heure d'arrivée, la durée régularisée et le cours manqué (nommé s'il est seul, résumé sinon) — toujours **une seule page A5**.
+
+#### Billet d'absence (plusieurs jours)
+
+L'écran **Billets** a un troisième onglet, **Billets d'absence**, qui justifie l'absence d'un élève sur une plage de jours (maladie, deuil, voyage…) en une seule saisie.
+
+- Saisie : élève, **premier jour**, **dernier jour** (vide = un seul jour ; 60 jours au plus), **motif** obligatoire (1 000 caractères), date de **retour autorisé** facultative (postérieure au dernier jour). Réservé au Directeur, au Surveillant et au Super Admin (comme les autres billets) ; module Pédagogie.
+- **Deux billets actifs d'un même élève ne se chevauchent pas** (422) ; un billet annulé libère ses jours.
+- **Effet sur l'appel** : à la création, chaque ligne d'appel de l'élève dans la plage qui est « Absent (non justifié) » passe à « Absent (justifié) » ; le statut d'avant est conservé sur la ligne. Une ligne « Présent » ou « Retard » n'est jamais touchée (le constat en classe prime). Pour un appel qui n'est pas encore fait, la feuille **présélectionne** « Absent (justifié) » et, à l'enregistrement, toute absence saisie pour cet élève est justifiée et rattachée au billet. Un billet d'entrée visant le même cours est plus précis et passe avant.
+- **Aucun SMS « absent »** n'est envoyé à la famille pour une absence couverte par un billet : elle l'a elle-même justifiée.
+- **Annulation** : le billet est mis de côté (soft delete, jamais supprimé) et chaque ligne qu'il avait justifiée retrouve son statut d'avant.
+- **Impression** : bouton « Imprimer le billet » (aperçu PDF A5 : élève, classe, période, durée, motif, retour autorisé, signature du Surveillant, QR de vérification), accessible aussi au Secrétariat côté route.
+- Routes : `GET/POST /api/v1/absences/justifications`, `GET /api/v1/billets/absence/{id}/pdf`, `DELETE /api/v1/absences/justifications/{id}` (Volume 4 §12).
 
 ### 21.5 Alternance français / arabe (module Franco-Arabe, bloc 4)
 

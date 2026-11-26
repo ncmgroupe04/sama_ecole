@@ -54,6 +54,15 @@ public record SubmitRegistrationRequestCommand : IRequest<SubmitRegistrationRequ
     public IReadOnlyList<CycleType>? Cycles { get; init; }
 
     public StudentQuotaTier? Tier { get; init; }
+
+    /// <summary>
+    /// Le demandeur a coché l'acceptation des conditions d'utilisation et de la politique de confidentialité.
+    /// OBLIGATOIRE (validé) : sans elle, la demande n'est pas enregistrée.
+    /// </summary>
+    public bool AcceptedTerms { get; init; }
+
+    /// <summary>Adresse IP vue par le SERVEUR (posée par le contrôleur depuis la connexion, jamais lue du corps de la requête) : preuve d'acceptation.</summary>
+    public string? TermsAcceptedIp { get; init; }
 }
 
 /// <summary>

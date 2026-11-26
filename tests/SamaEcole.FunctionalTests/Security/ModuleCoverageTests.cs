@@ -33,6 +33,8 @@ public class ModuleCoverageTests
         nameof(StudentsController), nameof(EnrollmentsController), nameof(ClassroomsController), nameof(TeachersController),
         nameof(SchoolYearsController), nameof(SchoolSettingsController), nameof(CurrentSchoolController),
         nameof(BuildingsController), nameof(RoomsController), nameof(InventoryController), nameof(UsersController),
+        // « Exporter mes données » (Directeur) : archive de TOUTES les données de l'école, tous modules confondus — par nature transverse.
+        nameof(ExportsController),
         nameof(AuditLogsController), nameof(FeaturesController), nameof(OnboardingController), nameof(SubscriptionsController), nameof(TenantSubscriptionController),
         // Authentification, compte, inscription publique
         nameof(AuthController), nameof(AccountController), nameof(RegistrationRequestsController), nameof(PublicDirectoryController),
@@ -42,7 +44,9 @@ public class ModuleCoverageTests
         nameof(AdminOverQuotaSchoolsController), nameof(AdminPricingGridController), nameof(AdminSubscriptionChangeRequestsController),
         nameof(PublicPricingGridController),
         // Gabarits Razor (PageModule côté page, API gardée ailleurs)
-        nameof(PagesController)
+        nameof(PagesController),
+        // Pages juridiques publiques (conditions, confidentialité, mentions légales, cookies) : anonymes, sans module ni donnée d'école
+        nameof(LegalController)
     ];
 
     private static IEnumerable<Type> WebControllers() =>

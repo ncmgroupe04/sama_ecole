@@ -10,5 +10,10 @@ namespace SamaEcole.Application.Finance.Commands.SendDebtorReminderBatch;
 /// </summary>
 public record SendDebtorReminderBatchCommand(Guid BatchId) : IRequest<SendDebtorReminderBatchResult>;
 
-/// <summary>Mêmes conventions de comptage que SendDuesReminderSmsCommand : "mis en file", pas "envoyé".</summary>
-public record SendDebtorReminderBatchResult(int QueuedCount, int SkippedCount, string? FirstSkipReason);
+/// <summary>
+/// Mêmes conventions de comptage que SendDuesReminderSmsCommand : <paramref name="QueuedCount"/> = SMS "mis en
+/// file", pas "envoyé". <paramref name="WhatsAppCount"/> = relances ACCEPTÉES par Meta (WhatsApp d'abord,
+/// SMS en repli).
+/// </summary>
+public record SendDebtorReminderBatchResult(
+    int QueuedCount, int SkippedCount, string? FirstSkipReason, int WhatsAppCount = 0);

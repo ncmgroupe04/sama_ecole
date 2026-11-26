@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { loadScripts } from './harness.mjs';
 
 function caisseView(askMonth) {
-    const ctx = loadScripts(['payment-cancel.js', 'caisse.js'], {
+    const ctx = loadScripts(['payment-cancel.js', 'installment-plan.js', 'caisse.js'], {
         preload: {
             auth: { role: 'Directeur' },
             pdfPreview: { state: () => ({}) },

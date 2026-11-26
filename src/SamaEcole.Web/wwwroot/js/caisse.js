@@ -22,6 +22,9 @@ document.addEventListener('alpine:init', () => {
         // (payment-cancel.js). Le modal est Views/Shared/_CancelPaymentModal.cshtml.
         ...window.paymentCancel.mixin(),
 
+        // Échéancier personnalisé (recouvrement) : état et méthodes de wwwroot/js/installment-plan.js.
+        ...window.installmentPlan.mixin(),
+
         /** Appelé par le mixin une fois le paiement annulé : le solde et l'historique ont changé. */
         async afterPaymentCancelled() {
             await this.reloadBalance();

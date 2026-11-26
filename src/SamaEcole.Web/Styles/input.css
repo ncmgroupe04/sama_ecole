@@ -1266,9 +1266,51 @@
     header [x-data="sandboxModeBadge()"] > a,
     header [x-data="sandboxModeBadge()"] > span,
     header [x-data="greeting()"],
+    header [x-data="activeSchoolYearBadge()"] > a,
+    header [x-data="activeSchoolYearBadge()"] > span,
+    header [x-data="setupAssistant()"] > button,
     header .btn-help {
       padding-left: 0.65rem !important;
       padding-right: 0.65rem !important;
+    }
+
+    /* Bouton « Démarrage » compact : icône + pourcentage seulement (le libellé revient au-dessus de 1500 px, son
+       titre au survol le redit). La salutation, purement décorative, cède sa place pour que les sept modules de la
+       navigation rapide tiennent sans défilement dès 1320 px, comme avant l'arrivée du bouton. */
+    header [x-data="setupAssistant()"] .setup-assistant-label {
+      display: none !important;
+    }
+
+    header [x-data="greeting()"] {
+      display: none !important;
+    }
+
+    /* Pastille d'année active compacte : l'icône cède sa place au millésime, qui reste affiché sur tous les écrans. */
+    header [x-data="activeSchoolYearBadge()"] svg {
+      display: none !important;
+    }
+
+    header [x-data="activeSchoolYearBadge()"] > a,
+    header [x-data="activeSchoolYearBadge()"] > span {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+  }
+
+  /* La salutation, décorative, cède sa place à l'indicateur d'année active (information de travail) tant que la
+     barre n'a pas la largeur de tout porter : elle ne revient que sur très grand écran. */
+  @media (max-width: 2100px) {
+    header [x-data="greeting()"] {
+      display: none !important;
+    }
+  }
+
+  /* Le menu latéral occupe ~270 px : la place réellement disponible pour la barre est celle de la fenêtre moins 270 px.
+     Sous 1650 px, la pastille « MODE TEST » ne garde que son libellé court (l'infobulle explique la bascule) afin que les
+     modules de la navigation rapide ne défilent pas, bouton « Démarrage » compris. */
+  @media (max-width: 2000px) {
+    header [x-data="sandboxModeBadge()"] .sandbox-suffix {
+      display: none !important;
     }
   }
 

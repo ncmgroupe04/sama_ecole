@@ -972,16 +972,33 @@ paths:
         l'abonnement et le prolonge (même fonction `confirm_subscription_payment` que le webhook), journalise l'acte
         sur l'école ciblée et prévient le Directeur par e-mail. Seules les demandes de GET /admin/platform/wave-payments
         sont éligibles : un paiement d'agrégateur ne peut JAMAIS être validé ainsi (AGENTS.md règle #11).
+        Le corps porte l'identifiant de la transaction Wave retrouvée sur le relevé (`transactionRef`, obligatoire) :
+        il est normalisé en majuscules et UNIQUE — un même règlement ne peut activer qu'un seul abonnement.
       parameters:
         - name: paymentId
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactionRef]
+              properties:
+                transactionRef:
+                  type: string
+                  minLength: 6
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9_-]+$'
+                  description: Identifiant de la transaction Wave (relevé du compte marchand), ex. T_AB12CD34EF
       responses:
         '204': { description: Paiement validé, abonnement activé }
         '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
         '404': { description: Aucune demande Wave en attente ne correspond (inconnue, déjà traitée ou paiement d'agrégateur) }
-        '409': { description: Demande traitée entre-temps par un appel concurrent (WAVE_PAYMENT_ALREADY_REVIEWED) }
+        '409': { description: Demande traitée entre-temps (WAVE_PAYMENT_ALREADY_REVIEWED) ou identifiant de transaction déjà utilisé pour un autre paiement (WAVE_TRANSACTION_ALREADY_USED) }
+        '422': { description: Identifiant de transaction absent ou mal formé (VALIDATION_ERROR) }
 
   /admin/platform/wave-payments/{paymentId}/reject:
     post:
@@ -1252,6 +1269,35 @@ paths:
               schema: { $ref: '#/components/schemas/SchoolProfile' }
         '403': { description: Rôle non autorisé (écriture réservée au Directeur) }
         '422': { description: Données invalides (nom manquant, URL de logo invalide…) }
+
+  /exports/school-data:
+    post:
+      tags: [Schools]
+      summary: Exporter mes données (Directeur uniquement)
+      description: >-
+        Archive ZIP de toutes les données de l'établissement courant : un fichier CSV (UTF-8 avec BOM, séparateur `;`) par table non vide
+        dans `donnees/`, plus `manifest.json` et `LISEZMOI.txt`. Jamais de mot de passe, de jeton, d'élément supprimé ni de donnée d'un
+        autre établissement. Le mot de passe du Directeur est exigé dans le corps (422 sur `password` si absent ou refusé). Limité à
+        3 exports par heure et par utilisateur (429). Journalisé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, description: Mot de passe actuel du Directeur }
+      responses:
+        '200':
+          description: 'Archive ZIP (en-tête `Content-Disposition` en pièce jointe, nom `export-<ecole>-<date>.zip`)'
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { description: Non authentifié }
+        '403': { description: Rôle non autorisé (Directeur seul) }
+        '422': { description: Mot de passe absent ou incorrect }
+        '429': { description: Plus de 3 exports dans l'heure }
 
   /schools/current/reset-data:
     post:
@@ -3525,6 +3571,95 @@ paths:
         '404': { description: Élève introuvable dans l'établissement }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /billets/absence/{id}/pdf:
+    get:
+      tags: [Attendance]
+      summary: Billet d'absence A5 en PDF (absence de plusieurs jours)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF inline
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement }
+
+  /absences/justifications:
+    get:
+      tags: [Attendance]
+      summary: Billets d'absence actifs (plages de jours justifiées)
+      responses:
+        '200':
+          description: Liste des billets d'absence
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    studentId: { type: string, format: uuid }
+                    studentFullName: { type: string }
+                    studentMatricule: { type: string }
+                    startDate: { type: string, format: date }
+                    endDate: { type: string, format: date }
+                    days: { type: integer }
+                    reason: { type: string }
+                    authorizedReturnDate: { type: string, format: date, nullable: true }
+        '403': { description: Rôle non autorisé }
+    post:
+      tags: [Attendance]
+      summary: Enregistrer un billet d'absence par plage
+      description: >-
+        Justifie l'absence d'un élève de `startDate` à `endDate` inclus (vide = un jour, 60 jours au plus). Les lignes
+        d'appel « Absent (non justifié) » de la plage passent à « Absent (justifié) » ; Présent / Retard ne sont jamais
+        touchés. 422 si la plage est incohérente ou chevauche un billet actif du même élève.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, startDate, reason]
+              properties:
+                studentId: { type: string, format: uuid }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date, nullable: true }
+                reason: { type: string, maxLength: 1000 }
+                authorizedReturnDate: { type: string, format: date, nullable: true }
+      responses:
+        '200': { description: Identifiant du billet créé }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Élève introuvable dans l'établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /absences/justifications/{id}:
+    delete:
+      tags: [Attendance]
+      summary: Annuler un billet d'absence (soft delete) — les lignes d'appel justifiées retrouvent leur statut d'avant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billet annulé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restoredLines: { type: integer }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Billet introuvable }
+
   /absences/late-arrivals:
     post:
       tags: [Attendance]
@@ -4164,6 +4299,109 @@ paths:
               schema: { $ref: '#/components/schemas/CouncilRules' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /finance/employee-contracts/teacher-options:
+    get:
+      tags: [Finance]
+      summary: Enseignants proposables dans le sélecteur d'un contrat du personnel (Directeur, Finance)
+      description: >-
+        Identifiant, matricule et nom SEULEMENT. Route dédiée à la Paie : `GET /teachers` reste fermé à la Finance
+        (il porte des données personnelles).
+      responses:
+        '200':
+          description: Enseignants de l'école, triés par nom
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    matricule: { type: string }
+                    fullName: { type: string }
+        '403': { description: Rôle non autorisé }
+
+  /finance/enrollments/{enrollmentId}/installment-plan:
+    post:
+      tags: [Finance]
+      summary: Échéancier personnalisé d'une inscription (Directeur, Finance)
+      description: >-
+        Remplace le plan actif (passé à `Cancelled`, jamais supprimé). 24 échéances au plus ; la SOMME doit égaler
+        exactement le montant dû de l'inscription — un échéancier étale, il ne modifie jamais un montant.
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [installments]
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+                installments:
+                  type: array
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [label, amount, dueDate]
+                    properties:
+                      label: { type: string, maxLength: 120 }
+                      amount: { type: number }
+                      dueDate: { type: string, format: date }
+      responses:
+        '201': { description: Identifiant du plan créé }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Inscription introuvable ou annulée }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/classrooms/{classroomId}/installment-plan:
+    post:
+      tags: [Finance]
+      summary: Échéancier par classe — un même modèle pour chaque inscription active (Directeur, Finance)
+      description: >-
+        Chaque inscription reçoit son PROPRE plan, calculé sur son propre montant dû. Les pourcentages sont des
+        fractions dont la somme vaut exactement 1 ; `offsetDays` est le décalage en jours depuis aujourd'hui.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [template]
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+                template:
+                  type: array
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [label, percentage, offsetDays]
+                    properties:
+                      label: { type: string, maxLength: 120 }
+                      percentage: { type: number, minimum: 0, maximum: 1 }
+                      offsetDays: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Compte rendu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appliedCount: { type: integer }
+                  skippedCount: { type: integer }
+        '403': { description: Rôle non autorisé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /finance/fee-categories:
     get:
       tags: [Finance]
@@ -8377,6 +8615,8 @@ components:
         tier: { type: string, enum: [Tier_100, Tier1_150, Tier_250, Tier2_400], nullable: true, description: "Tranche d'effectif choisie. Doit couvrir `estimatedStudentCount` (obligatoire avec une tranche) ; au-delà de 400 élèves : offre Grand Groupe, sur devis (422)." }
         sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true, description: "Palier de taille du forfait PRIVÉ (obligatoire pour un privé, ignoré pour un public). Seuils : bicycle 400 / 800 élèves, grand complexe 500 / 1 000 ; monocycles petit / moyen / grand sans seuil chiffré." }
         website: { type: string, description: "Honeypot anti-spam : champ leurre, DOIT rester vide. Rempli, la soumission est ignorée sans être enregistrée." }
+        acceptedTerms: { type: boolean, nullable: true, description: "Acceptation des conditions d'utilisation et de la politique de confidentialité : OBLIGATOIRE à true (422 sur AcceptedTerms sinon). Le serveur enregistre la version des textes, la date et l'IP vue par le serveur comme preuve." }
+        turnstileToken: { type: string, nullable: true, description: "Jeton Cloudflare Turnstile produit par le widget (usage unique). OBLIGATOIRE si Turnstile est configuré côté serveur (422 sur TurnstileToken sinon) ; ignoré sans clés." }
 
     RegistrationRequestCreated:
       type: object

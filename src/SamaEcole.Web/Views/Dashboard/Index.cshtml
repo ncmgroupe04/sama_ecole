@@ -377,7 +377,7 @@
                                         <li class="flex items-center justify-between text-[11px] bg-white px-2 py-1.5 rounded shadow-sm border border-slate-100">
                                           <div class="flex items-center gap-1.5 min-w-0">
                                             <span class="w-2 h-2 rounded-full shrink-0" :style="'background-color: ' + getCategoryColor(idx)"></span>
-                                            <span class="text-slate-600 font-medium truncate" x-text="cat.category"></span>
+                                            <span class="text-slate-600 font-medium truncate" x-text="disbursementCategoryLabel(cat.category)"></span>
                                           </div>
                                           <span class="font-bold text-slate-900 ml-2 shrink-0" x-text="pct(cat.amount, financeData.totalDisbursements)"></span>
                                         </li>

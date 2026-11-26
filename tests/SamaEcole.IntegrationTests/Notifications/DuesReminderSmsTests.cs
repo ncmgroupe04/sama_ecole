@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Notifications;
 using SamaEcole.Application.Notifications.Commands.SendDuesReminderSms;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -104,8 +105,13 @@ public class DuesReminderSmsTests : IAsyncLifetime
     {
         var dispatcher = new CapturingDispatcher();
         await using var db = _db.NewAppContext(Ecole);
+        // Aucun abonnement semé ici : DuesReminderDispatcher ne tente pas WhatsApp et délègue au SMS.
+        var reminders = new DuesReminderDispatcher(
+            db, new SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender(
+                NullLogger<SamaEcole.Infrastructure.Notifications.LoggingWhatsAppSender>.Instance),
+            dispatcher, NullLogger<DuesReminderDispatcher>.Instance);
         var handler = new SendDuesReminderSmsCommandHandler(
-            db, new FixedTenantProvider(Ecole), dispatcher, new FixedTime(Now),
+            db, new FixedTenantProvider(Ecole), reminders, new FixedTime(Now),
             NullLogger<SendDuesReminderSmsCommandHandler>.Instance);
 
         var result = await handler.Handle(new SendDuesReminderSmsCommand(), CancellationToken.None);

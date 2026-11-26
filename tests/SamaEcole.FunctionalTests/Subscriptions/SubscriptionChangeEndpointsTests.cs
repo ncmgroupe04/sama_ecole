@@ -90,7 +90,7 @@ public class SubscriptionChangeEndpointsTests(AuthApiFactory factory) : IClassFi
             directorFullName = "Fatou Sarr",
             directorEmail = email,
             directorPhone = "+221771119988",
-            directorPassword = DirectorPassword,
+            acceptedTerms = true, directorPassword = DirectorPassword,
             schoolName = "École " + email,
             ownership = "Private",
             profile,

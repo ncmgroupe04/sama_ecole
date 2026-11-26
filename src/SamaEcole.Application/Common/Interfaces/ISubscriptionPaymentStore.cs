@@ -31,6 +31,18 @@ public interface ISubscriptionPaymentStore
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Validation d'un paiement Wave marchand : enregistre <paramref name="transactionRef"/> (identifiant de la
+    /// transaction sur le relevé Wave) puis confirme, dans la MÊME transaction côté PostgreSQL. L'identifiant est unique :
+    /// s'il a déjà servi, lève <c>BusinessRuleException</c> (WAVE_TRANSACTION_ALREADY_USED) sans rien confirmer. Renvoie
+    /// null si la demande n'est plus en attente ou n'est pas un paiement Wave (même signal d'idempotence que ConfirmAsync).
+    /// </summary>
+    Task<SubscriptionPaymentConfirmation?> ConfirmWavePaymentAsync(
+        Guid internalPaymentId,
+        string transactionRef,
+        string reviewPayloadJson,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Console Super Admin — paiements d'abonnement par Wave marchand (Provider = WaveMerchant) encore au
     /// statut Initiated, toutes écoles confondues, du plus ancien au plus récent. Lecture inter-écoles : passe
     /// par la fonction SECURITY DEFINER list_pending_wave_payments, jamais une requête EF (RLS).

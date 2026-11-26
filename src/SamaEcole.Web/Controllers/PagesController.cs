@@ -87,6 +87,12 @@ public class PagesController : Controller
     [PageModule(SchoolModule.Internat)]
     public IActionResult QuranProgress() => View("~/Views/Internat/Progress.cshtml");
 
+    // Module Coran : suivi de mémorisation et évaluations orales d'une classe. QuranController garde l'accès
+    // ([RequireModule(SchoolModule.Coran)] + rôles Directeur/Enseignant en écriture, + Secrétariat en lecture) et la RLS isole.
+    [HttpGet("/coran")]
+    [PageModule(SchoolModule.Coran)]
+    public IActionResult Coran() => View("~/Views/Coran/Index.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
@@ -257,6 +263,11 @@ public class PagesController : Controller
 
     [HttpGet("/tresorerie")]
     public IActionResult Treasury() => View("~/Views/Treasury/Index.cshtml");
+
+    // Recouvrement : lots de relance SMS des débiteurs. Page nue comme les autres — ce sont les appels
+    // d'API (FinanceController, Directeur/Finance) qui sont protégés.
+    [HttpGet("/recouvrement")]
+    public IActionResult Recovery() => View("~/Views/Recovery/Index.cshtml");
 
     [HttpGet("/paie")]
     public IActionResult Payroll() => View("~/Views/Payroll/Index.cshtml");

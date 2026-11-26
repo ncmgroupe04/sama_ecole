@@ -596,10 +596,9 @@ document.addEventListener('alpine:init', () => {
         internatEnabled: false,
 
         /**
-         * Module Coran (Paramètres › Modules) — même logique « sûr par défaut = caché » qu'internatEnabled. Aujourd'hui
-         * AUCUN écran ne consomme /api/v1/quran (module Coran) : les écrans Halqa/Oustaz/Suivi coranique appellent
+         * Module Coran (Paramètres › Modules) — même logique « sûr par défaut = caché » qu'internatEnabled. Seul l'écran
+         * /coran consomme /api/v1/quran (module Coran) ; les écrans Halqa/Oustaz/Suivi coranique appellent
          * /api/v1/internat/*, gardé par le module INTERNAT et donc conditionné par internatEnabled (lot G, décision G-D1).
-         * Le champ est prêt pour le jour où un écran consommera /api/v1/quran.
          */
         coranEnabled: false,
 
@@ -754,6 +753,7 @@ document.addEventListener('alpine:init', () => {
                 || (this.role === 'Finance' && Alpine.store('schoolConfig').financeMayViewMonthlyStatus);
         },
         get internatEnabled() { return Alpine.store('schoolConfig').internatEnabled; },
+        get coranEnabled() { return Alpine.store('schoolConfig').coranEnabled; },
 
         // Profil d'Onboarding (Ticket 3, voir ApplyEstablishmentProfileCommand) — même délégation au
         // store partagé que les getters ci-dessus.

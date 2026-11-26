@@ -96,7 +96,7 @@ document.addEventListener('alpine:init', () => {
         
         /**
          * Colonnes de la grille : les jours OUVRÉS de l'établissement (ordre calculé par le serveur,
-         * Paramètres › Pédagogie), plus toute colonne portant encore un créneau hérité d'un jour devenu
+         * Paramètres › Notation & mentions), plus toute colonne portant encore un créneau hérité d'un jour devenu
          * repos — marquée `isRest` : on peut la lire et supprimer ses créneaux, pas en créer (arbitrage D3).
          */
         get daysOfWeek() {

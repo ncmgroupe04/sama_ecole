@@ -5,7 +5,9 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 26/09/2026** (Grille tarifaire de la vitrine, formulaire d'inscription public / privé et
+**Dernière mise à jour : 15/11/2026** (Billet d'absence par plage de jours (liste, création, annulation, PDF A5), pastille d'année scolaire active
+rétablie dans la barre du haut, échéanciers personnalisés (par élève depuis la Caisse, par classe depuis Frais scolaires), voir le dernier encadré du §2 ; avant :
+26/09/2026 : Grille tarifaire de la vitrine, formulaire d'inscription public / privé et
 facturation alignée sur la grille, voir §2 ; Conformité pédagogique et institutionnelle — Évolution N°7 : PV du conseil,
 cartographie IEF, programmes et volumes horaires, voir §2 ; Séries du Baccalauréat, matières par classe et options — Évolution N°6,
 voir §2 ; Appel par cours de l'emploi du temps et billets d'entrée visant
@@ -94,6 +96,16 @@ Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bu
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
 
+### Export global « Exporter mes données » (15/11/2026) — livré
+
+`POST /api/v1/exports/school-data` (Directeur seul, mot de passe exigé, 3 par heure, audité) : archive ZIP d'un CSV par table
+d'établissement + `manifest.json` + `LISEZMOI.txt`. Construit depuis le **modèle EF** (`SchoolDataExporter`, Persistence) : une table de
+plus dans le modèle est exportée sans toucher le code. Garde-fous testés (`SchoolDataExportTests`, `SchoolDataExportEndpointTests`) :
+aucune donnée d'une autre école — dont la table des établissements, **non filtrée globalement** (annuaire public), bornée
+explicitement —, aucun hachage ni jeton, aucune ligne supprimée, protection contre l'injection de formule CSV, toute table exportée
+filtrée globalement ou explicitement. Carte « Exporter mes données » dans Paramètres › Paramètres système. Arbitrage du propriétaire
+du 15/11/2026 : cet export, jusque-là reporté, est désormais dans le périmètre.
+
 ### Notes — fenêtre de correction, Secrétariat et fiche papier (24/09/2026) — livré (Évolution N°1)
 
 Trois changements sur `/grades` et l'écran `/notes`. Spécification : `docs/Volume_7_Security.md` « Notes »,
@@ -160,8 +172,10 @@ Routes : `openapi.yaml` (préfixe `/api/v1/quran`). **Aucun écran ni JavaScript
 l'oral coranique) ; `Juz`/`Hizb`/`Sourate`/`Élève` immuables en correction ; **`SchoolType` est purement
 informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `ModuleAuthorizationHandler`.
 
-**Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
-(aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
+**Écran livré (14/11/2026) :** `/coran` (`Views/Coran/Index.cshtml`, `wwwroot/js/coran.js`), suivi de mémorisation et
+évaluations orales par classe, conditionné par `coranEnabled` (spec `docs/superpowers/specs/2026-09-29-coran-screen-design.md`).
+L'intégration de `Subject.SectionType` au bulletin était déjà livrée (bulletin bilingue) ; `SectionType` reste sans effet sur
+`Coefficient` ni sur les moyennes.
 
 ### Périodes d'évaluation dynamiques (24/09/2026) — livré (Évolution N°2)
 
@@ -382,9 +396,7 @@ montants FCFA (elle n'en affichait aucun jusque-là).
 3. Un public n'a aucun paiement en ligne tant que le tarif par élève (fourchette 500 à 1 000 FCFA pour l'élémentaire) n'est pas fixé.
 4. Le tarif **mensuel n'est pas publié** sur la vitrine : il se déduit du forfait (÷ 12, arrondi), sans majoration. Si un tarif
    mensuel commercial distinct est décidé, il se règle dans `ConfiguredSubscriptionPricingProvider` sans toucher l'appelant.
-5. **Billets d'absence par plage et appel à trois statuts : NON livrés sur cette branche.** Ils vivent sur
-   `origin/feature/attendance-arrival-time` (billet par heure d'arrivée, migration `AddArrivalTimeToEntryTickets`, 5 commits du
-   25/09/2026), à fusionner séparément. Une première implémentation « absence sur plage » a été écartée au profit de celle-ci.
+5. ~~Billets d'absence par plage : non livrés sur cette branche~~ — **LIVRÉ le 15/11/2026** (voir l'encadré « 15/11/2026 » en fin de §2).
 
 ### Conformité pédagogique et institutionnelle (25/09/2026) — livré (Évolution N°7)
 
@@ -585,7 +597,7 @@ que dans la liste « Élèves à relancer » — un élève à jour de ses éval
 maintenant aussi (1) sur `/suivi-coranique`, dans chaque Halqa dépliable de la synthèse (« Voir les élèves », liste complète
 via `GET instructors/{id}/students`), et (2) sur `/halqa`, sur la fiche d'un élève (« كشف الحفظ (PDF) »). Aucun changement de
 back-end : les routes et la portée (un Oustaz ne tire que le bulletin de SES élèves) existaient déjà. Reste sans accès : un
-élève sans Oustaz (aucune Halqa à déplier). Suite prévue : écran d'affectation des élèves à un Oustaz (aujourd'hui API seule).
+élève sans Oustaz (aucune Halqa à déplier). (L'écran d'affectation des élèves à un Oustaz existe depuis : fenêtre « Élèves » d'un Oustaz, `instructors.js`.)
 
 **Arbitrages actés, à ne pas rouvrir sans raison :**
 
@@ -861,7 +873,9 @@ Plan validé : `docs/superpowers/plans/2026-10-07-internat-lot-f-legacy-cleanup.
   d'intégration lève déjà `PendingModelChangesWarning` à la moindre dérive du modèle (inutile d'ajouter un test de non-dérive) ; (2) les tests qui amorcent l'ancien
   état posent les colonnes par `Entry(e).Property("BoardingStatus").CurrentValue` et les lisent par `EF.Property<string>(e, "BoardingStatus")`.
 - **Reste après F1 :** F2 (migration `DropLegacyBoardingColumns`, toutes instances en F1 ou plus ; suppression des propriétés fantômes et de
-  `LegacyBoardingColumnsGuardTests`).
+  `LegacyBoardingColumnsGuardTests`) — **REPORTÉ (décision du 14/11/2026)** : conditions de lancement, porte de sécurité et
+  déroulé dans `docs/runbooks/internat-lot-f2-drop-legacy-columns.md`. La migration sera codée sur une PR dédiée, après une
+  livraison stable de F1 en production.
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
@@ -1278,3 +1292,29 @@ references/README.md` §1 : « le secrétariat n'encaisse aucun fonds »). Sépa
   renseigne encore à la relecture d'un reçu historique. Tests :
   `EnrollmentTests.A_New_Enrollment_Freezes_The_Debt_But_Records_No_Payment`,
   `EnrollmentsEndpointsTests.An_Enrollment_Never_Records_A_Payment_And_Leaves_The_Whole_Balance_Due`.
+
+### 15/11/2026 — billet d'absence, pastille d'année, échéanciers (livré)
+
+- **Billet d'absence par plage** : `GET/POST /api/v1/absences/justifications`, `DELETE …/{id}`, `GET /api/v1/billets/absence/{id}/pdf`.
+  Les lignes d'appel « Absent (non justifié) » de la plage passent à « justifié » (statut d'avant conservé sur la ligne,
+  `student_attendances.AbsenceJustificationId`), la feuille d'appel présélectionne, l'annulation (soft delete) restaure ; pas de
+  chevauchement par élève ; aucun SMS « absent » pour une absence couverte. Migration `AbsenceJustificationDateRange`
+  (`Date` → `StartDate`/`EndDate`, anciens justificatifs convertis en billets d'un jour). Onglet « Billets d'absence » de `/billets`.
+- **Pastille d'année scolaire active** rétablie dans la barre du haut (JGK-C01). La salutation s'efface sous 2100 px et le
+  complément de « MODE TEST » sous 2000 px pour que la barre ne déborde jamais.
+- **Échéanciers personnalisés** : l'API existait (Étape 5) sans écran. Caisse › « Personnaliser l'échéancier » (par élève,
+  `installment-plan.js`) et Frais scolaires › « Échelonner une classe » (modèle en % + jours). Directeur et Finance.
+  La somme doit égaler le montant dû (jamais de modification d'un montant, règle §7.2).
+- **Export global « Exporter mes données »** : voir le chapitre dédié ci-dessus (PR #136).
+- **F2 de l'Internat (suppression des colonnes héritées)** : reporté, coupé en deux — F2a (retrait des propriétés fantômes, sans
+  changement de schéma) puis F2b (migration destructive). Attention : la CI applique les migrations au déploiement sur `main` ;
+  la F2b ne doit partir qu'après F2a déployé. Runbook : `docs/runbooks/internat-lot-f2-drop-legacy-columns.md`.
+- **Cloudflare Turnstile sur l'inscription publique** (15/11/2026) : code livré, **inactif tant que `Turnstile__SiteKey` et
+  `Turnstile__SecretKey` ne sont pas posés** (clés à créer dans Cloudflare, secret dans Secret Manager). Détails : `docs/Volume_7_Security.md`.
+  Reste à faire côté exploitation : créer le widget, poser les deux variables sur Cloud Run, vérifier une inscription réelle.
+  Le pare-feu Cloudflare devant le site (WAF) est un choix d'infrastructure distinct, non traité.
+- **Pages juridiques et acceptation à l'inscription** (15/11/2026) : `/conditions-utilisation`, `/politique-confidentialite`,
+  `/mentions-legales`, `/cookies` (publiques) ; case d'acceptation obligatoire à l'inscription avec preuve gardée (`TermsVersion`,
+  `TermsAcceptedAt`, `TermsAcceptedIp` — migration `AddRegistrationTermsAcceptance`). Identité de l'éditeur : `Legal__*`
+  (`.env.example`), « à compléter » tant qu'elle manque. **À faire avant l'ouverture au public** : renseigner `Legal__*` et faire
+  valider les textes par un conseil juridique (voir `docs/Volume_7_Security.md`). Version des textes : `LegalDocuments.CurrentVersion`.

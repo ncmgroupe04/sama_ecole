@@ -36,11 +36,32 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         "form-action 'self'; " +
         "frame-ancestors 'none';";
 
+    /// <summary>
+    /// Politique de la SEULE page d'inscription quand Cloudflare Turnstile est configuré : le widget charge un script,
+    /// ouvre un cadre et appelle l'API de Cloudflare. L'allocation est limitée à cette page et à cette origine — le reste
+    /// du site garde la politique stricte ci-dessus, sans aucune origine tierce en script.
+    /// </summary>
+    private const string TurnstileOrigin = "https://challenges.cloudflare.com";
+
+    private static readonly string ContentSecurityPolicyWithTurnstile = ContentSecurityPolicy
+        .Replace("script-src 'self' 'unsafe-eval';", $"script-src 'self' 'unsafe-eval' {TurnstileOrigin};")
+        .Replace("connect-src 'self';", $"connect-src 'self' {TurnstileOrigin};")
+        .Replace("frame-src 'self' blob:;", $"frame-src 'self' blob: {TurnstileOrigin};");
+
     public async Task InvokeAsync(HttpContext context)
     {
         var headers = context.Response.Headers;
 
-        // Empêche le navigateur de « deviner » un type MIME (une réponse JSON reinterprétée en HTML
+        // Canonical host redirect: forwarded headers are processed earlier in Program.cs, and this
+        // middleware runs before the remaining application pipeline. Keep both path and query string.
+        if (string.Equals(context.Request.Host.Host, "www.unikol.net", StringComparison.OrdinalIgnoreCase))
+        {
+            var target = $"https://unikol.net{context.Request.Path}{context.Request.QueryString}";
+            context.Response.Redirect(target, permanent: true);
+            return;
+        }
+
+        // Empêche le navigateur de « deviner » un type MIME (une réponse JSON réinterprétée en HTML
         // deviendrait un vecteur XSS).
         headers["X-Content-Type-Options"] = "nosniff";
 
@@ -70,7 +91,10 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         // CSP seule est levée — en production, /swagger n'est pas mappé, l'exemption est donc inerte.
         if (!context.Request.Path.StartsWithSegments("/swagger"))
         {
-            headers["Content-Security-Policy"] = ContentSecurityPolicy;
+            var allowTurnstile = context.Request.Path.Equals("/inscription", StringComparison.OrdinalIgnoreCase)
+                && context.RequestServices.GetService<Microsoft.Extensions.Options.IOptions<Security.TurnstileOptions>>()?.Value.IsEnabled == true;
+
+            headers["Content-Security-Policy"] = allowTurnstile ? ContentSecurityPolicyWithTurnstile : ContentSecurityPolicy;
         }
 
         await next(context);

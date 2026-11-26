@@ -43,8 +43,19 @@ public class HttpWhatsAppSender(
 
         try
         {
-            return message.Template is { } template && _options.IsReportCardTemplateConfigured
-                ? await SendTemplateAsync(message.To, template, cancellationToken)
+            // Une relance d'impayé est TOUJOURS un contact « à froid » : sans modèle approuvé, le texte
+            // libre serait refusé par Meta. On échoue tout de suite (l'appelant retombe sur le SMS)
+            // plutôt que d'attendre ce refus.
+            if (message.Template is { Kind: WhatsAppTemplateKind.DuesReminder } && !_options.IsDuesReminderTemplateConfigured)
+            {
+                return WhatsAppSendResult.Failed(
+                    "Aucun modèle WhatsApp de relance configuré (WhatsApp__DuesReminderTemplateName).");
+            }
+
+            var templateName = message.Template is { } t ? TemplateNameFor(t.Kind) : null;
+
+            return message.Template is { } template && templateName is not null
+                ? await SendTemplateAsync(message.To, template, templateName, cancellationToken)
                 : await SendFreeFormAsync(message, cancellationToken);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
@@ -122,8 +133,16 @@ public class HttpWhatsAppSender(
     /// moyen d'atteindre un tuteur qui n'a pas écrit au numéro dans les 24 h. En-tête = bulletin PDF,
     /// corps = paramètres positionnels ({{1}} nom de l'élève, {{2}} période).
     /// </summary>
+    /// <summary>Nom du modèle configuré pour ce type de message, ou null s'il n'est pas configuré.</summary>
+    private string? TemplateNameFor(WhatsAppTemplateKind kind) => kind switch
+    {
+        WhatsAppTemplateKind.DuesReminder => _options.IsDuesReminderTemplateConfigured
+            ? _options.DuesReminderTemplateName : null,
+        _ => _options.IsReportCardTemplateConfigured ? _options.ReportCardTemplateName : null,
+    };
+
     private async Task<WhatsAppSendResult> SendTemplateAsync(
-        string to, WhatsAppTemplateContent template, CancellationToken cancellationToken)
+        string to, WhatsAppTemplateContent template, string templateName, CancellationToken cancellationToken)
     {
         var components = new List<object>();
 
@@ -133,7 +152,7 @@ public class HttpWhatsAppSender(
             {
                 logger.LogError(
                     "WhatsApp : modèle {Template} vers {To} sans WhatsApp__MediaUrl — le bulletin ne peut pas être joint.",
-                    _options.ReportCardTemplateName, to);
+                    templateName, to);
                 return WhatsAppSendResult.Failed(
                     "Le modèle WhatsApp exige WhatsApp__MediaUrl pour joindre le bulletin en en-tête du message.");
             }
@@ -172,13 +191,13 @@ public class HttpWhatsAppSender(
             type = "template",
             template = new
             {
-                name = _options.ReportCardTemplateName,
+                name = templateName,
                 language = new { code = _options.TemplateLanguageCode },
                 components = components.ToArray()
             }
         };
 
-        return await PostMessageAsync(payload, $"modèle « {_options.ReportCardTemplateName} »", cancellationToken);
+        return await PostMessageAsync(payload, $"modèle « {templateName} »", cancellationToken);
     }
 
     private async Task<WhatsAppSendResult> PostMessageAsync(

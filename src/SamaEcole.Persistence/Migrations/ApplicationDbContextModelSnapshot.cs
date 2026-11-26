@@ -29,8 +29,8 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("AuthorizedReturnDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly?>("AuthorizedReturnDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -38,14 +38,14 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -57,6 +57,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid");
@@ -72,6 +75,8 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("StudentId");
 
                     b.HasIndex("SchoolId", "StudentId");
+
+                    b.HasIndex("SchoolId", "StartDate", "EndDate");
 
                     b.ToTable("AbsenceJustifications");
                 });
@@ -4633,6 +4638,17 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTimeOffset?>("TermsAcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TermsAcceptedIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("TermsVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Tier")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -5252,6 +5268,9 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AbsenceJustificationId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("AttendanceSheetId")
                         .HasColumnType("uuid");
 
@@ -5301,6 +5320,8 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AbsenceJustificationId");
 
                     b.HasIndex("EntryTicketId");
 
@@ -6134,6 +6155,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
+                    b.Property<string>("ExternalTransactionRef")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTimeOffset>("InitiatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -6175,6 +6200,11 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("jsonb");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExternalTransactionRef")
+                        .IsUnique()
+                        .HasDatabaseName("UX_subscription_payments_external_transaction_ref")
+                        .HasFilter("\"ExternalTransactionRef\" IS NOT NULL");
 
                     b.HasIndex("ProviderTransactionRef")
                         .IsUnique()
@@ -8179,6 +8209,11 @@ namespace SamaEcole.Persistence.Migrations
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.StudentAttendance", b =>
                 {
+                    b.HasOne("SamaEcole.Domain.Entities.AbsenceJustification", null)
+                        .WithMany()
+                        .HasForeignKey("AbsenceJustificationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SamaEcole.Domain.Entities.LateArrival", null)
                         .WithMany()
                         .HasForeignKey("EntryTicketId")

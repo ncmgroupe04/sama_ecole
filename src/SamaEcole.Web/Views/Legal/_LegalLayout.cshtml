@@ -1,0 +1,47 @@
+@*
+    Cadre commun des pages juridiques (gabarit imbriqué dans _LayoutPublic) : titre, version en vigueur, navigation entre
+    les quatre documents et — seulement si l'identité de l'éditeur n'est pas encore renseignée — un bandeau qui le dit
+    franchement. Aucune valeur fictive. Chaque page pose ViewData["Title"], ["Summary"] et ["Active"].
+*@
+@using Microsoft.Extensions.Options
+@using SamaEcole.Application.Registration
+@using SamaEcole.Web.Security
+@inject IOptions<LegalOptions> Legal
+@{
+    Layout = "~/Views/Shared/_LayoutPublic.cshtml";
+    var active = ViewData["Active"] as string;
+    var docs = new (string Key, string Href, string Label)[]
+    {
+        ("terms", "/conditions-utilisation", "Conditions d'utilisation"),
+        ("privacy", "/politique-confidentialite", "Politique de confidentialité"),
+        ("notice", "/mentions-legales", "Mentions légales"),
+        ("cookies", "/cookies", "Cookies et stockage local"),
+    };
+}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+    <nav aria-label="Documents juridiques" class="flex flex-wrap gap-2 mb-8">
+        @foreach (var d in docs)
+        {
+            var isActive = d.Key == active;
+            <a href="@d.Href" aria-current="@(isActive ? "page" : null)"
+               class="text-sm px-3 py-1.5 rounded-full border @(isActive ? "bg-primary-600 text-white border-primary-600" : "bg-white text-slate-700 border-slate-200 hover:border-primary-300")">@d.Label</a>
+        }
+    </nav>
+
+    <h1 class="text-3xl font-bold text-slate-900">@ViewData["Title"]</h1>
+    <p class="mt-3 text-slate-600">@ViewData["Summary"]</p>
+    <p class="mt-2 text-xs text-slate-500">Version en vigueur : <strong>@LegalDocuments.CurrentVersion</strong> (date de mise en vigueur).</p>
+
+    @if (!Legal.Value.IsPublisherComplete)
+    {
+        <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="note">
+            <strong>Informations de l'éditeur à compléter.</strong>
+            La dénomination, le siège social et l'adresse de contact de l'éditeur ne sont pas encore renseignés sur cette plateforme.
+            Ils doivent l'être avant toute ouverture au public.
+        </div>
+    }
+
+    <article class="mt-8 space-y-4 text-slate-700 leading-relaxed">
+        @RenderBody()
+    </article>
+</div>

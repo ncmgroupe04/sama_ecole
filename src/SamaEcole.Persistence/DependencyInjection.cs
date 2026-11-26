@@ -1,4 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exports;
+using SamaEcole.Persistence.Exports;
 using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.AuditLogs;
 using SamaEcole.Persistence.Interceptors;
@@ -64,6 +66,9 @@ public static class DependencyInjection
         // Journal d'audit (ticket JGK-H01) : même contournement RLS, pour les connexions (avant tenant)
         // et les actions Super Admin (aucun SchoolId propre).
         services.AddScoped<IAuditLogStore, AuditLogStore>();
+
+        // Export global « Exporter mes données » : lit le modèle EF (donc l'isolation tenant) et écrit une archive ZIP de CSV.
+        services.AddScoped<ISchoolDataExporter, SchoolDataExporter>();
 
         // Traitement du webhook de paiement (ticket JGK-I06) : acteur anonyme, même contournement RLS
         // que ci-dessus pour lire/écrire subscription_payments et subscriptions.

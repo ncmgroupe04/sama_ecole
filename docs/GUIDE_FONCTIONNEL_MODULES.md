@@ -2,7 +2,7 @@
 
 **Version :** 1.3.0
 **Date de rédaction :** 20/09/2026
-**Dernière mise à jour :** 11/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
+**Dernière mise à jour :** 14/11/2026 — évolutions depuis le 26/09/2026 regroupées en section 29 (coefficients, Daara, internat, abonnement, annulations, paie, mensualités, Franco-Arabe, interface)
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.
 
 Ce guide documente **chaque écran de la navigation principale**, un par un — pas de regroupement
@@ -72,36 +72,34 @@ utilisateurs cibles, fonctionnalités clés & règles métier, flux d'utilisatio
 **Présente sur :** tous les écrans authentifiés (spécification visuelle : `docs/Volume_5_UIUX_Design.md` §3.1).
 
 ### Objectif / Rôle principal
-Rappeler en permanence, sans rien saisir, **où l'on se trouve et dans quel régime l'on travaille** : écran
-courant, exercice actif, mode test ou réel, avancement du paramétrage. Aucune de ces pastilles n'est un
-module : ce sont des indicateurs, dont deux mènent à l'écran qui permet d'agir.
+Donner, sans rien saisir, **un accès direct aux modules et le régime dans lequel l'on travaille** : navigation rapide
+entre modules, mode test ou réel, avancement du paramétrage, aide. Aucune de ces pastilles n'est un module : ce sont des
+raccourcis et des indicateurs, dont certains mènent à l'écran qui permet d'agir.
 
 ### Utilisateurs cibles
 Tous les rôles connectés ; certaines pastilles sont réservées (voir ci-dessous).
 
 ### Fonctionnalités clés & règles métier
-- **Titre de l'écran** : `shrink-0 whitespace-nowrap`, il ne rétrécit ni ne passe sous l'horloge. Lorsque
-  la place manque, c'est le groupe de droite (`min-w-0`) qui s'adapte, pas le titre.
-- **Horodateur dynamique** (visible dès `lg`) : `Vendredi 25 sept. 2026 • 01:44`. Mois **abrégé** quand
-  il est long (« sept. », « janv. » ; mai, juin, août restent entiers), heure **en gras**, mise à jour
-  chaque seconde. Il lit l'horloge de l'appareil, pas une donnée de l'établissement.
-- **Badge « MODE TEST »** : badge orange **compact**, visible tant que l'établissement est en mode test.
-  Sur grand écran il ajoute « : Cliquez ici pour passer en Mode Réel » (Directeur, cliquable vers
-  Paramètres › Paramètres système, ancre `#mode-reel`) ou « : données d'essai uniquement » (autres rôles,
-  non cliquable). En mode réel, il devient une pastille grise « Mode réel », masquée sous `sm`. Il n'active
-  rien : la bascule elle-même se confirme dans Paramètres (§26).
-- **Année scolaire active** (dès `sm`) : pastille `2026-2027` **toujours sur une seule ligne**
-  (`whitespace-nowrap shrink-0`). Cliquable pour le Directeur (vers la gestion des années), informative
-  pour les autres rôles.
-- **Assistant « Démarrage »** (Directeur et Secrétariat) : pastille avec pourcentage d'avancement du
-  paramétrage de l'établissement. **À 100 %, le bouton disparaît** de la barre, sans laisser d'espace
-  résiduel ; il réapparaît si une étape redevient « à faire » (par exemple après une réinitialisation
-  en mode test). Le pourcentage exclut les étapes « non applicables » (la grille tarifaire d'un
-  établissement public). L'assistant ne configure rien lui-même : il lit l'état réel et renvoie vers
-  les écrans existants.
-- **Sélecteur d'établissement** (groupe scolaire uniquement) et **salutation** selon l'heure complètent
-  la barre. La recherche globale n'est pas livrée ; le raccourci « Aide » et la déconnexion ne sont plus
-  dans la barre supérieure (Aide : menu latéral ; déconnexion : carte de profil du menu latéral).
+La barre est **blanche, sur une seule rangée de 64 px**. À gauche : le bouton de menu (mobile) puis la **navigation rapide**
+entre modules (Élèves, Inscription, Classes, Enseignants, Notes et bulletins, Caisse, Internat — selon rôle, formule et
+modules activés ; sous 1024 px, le bouton « Saut rapide »). À droite, dans l'ordre :
+- **Sélecteur d'établissement** (groupe scolaire uniquement).
+- **Badge « MODE TEST »** : badge orange **compact**, visible tant que l'établissement est en mode test. Au-dessus de
+  1650 px il ajoute « : Cliquez ici pour passer en Mode Réel » (Directeur, cliquable vers Paramètres › Paramètres système,
+  ancre `#mode-reel`) ou « : données d'essai uniquement » (autres rôles, non cliquable) ; en dessous, le libellé court
+  suffit (l'infobulle redit l'explication). En mode réel, il devient une pastille « Mode réel », masquée sous `sm`. Il
+  n'active rien : la bascule se confirme dans Paramètres (§26).
+- **Assistant « Démarrage »** (Directeur et Secrétariat) : pastille avec pourcentage d'avancement du paramétrage
+  (année scolaire, pédagogie, frais, enseignants, première inscription, SIMEN). Sous 1500 px elle se réduit à l'icône et au
+  pourcentage. **À 100 %, le bouton disparaît** de la barre ; il réapparaît si une étape redevient « à faire » (par exemple
+  après une réinitialisation en mode test). Le pourcentage exclut les étapes « non applicables ». L'assistant s'ouvre
+  seul à la première connexion, ne configure rien lui-même et renvoie vers les écrans existants.
+- **Salutation** selon l'heure (masquée sous `sm` et sous 1500 px).
+- **Bouton jaune « Comment faire ? »** (dès `lg`) : ouvre l'aide contextuelle de l'écran.
+
+L'**année scolaire active** et l'**horloge** ne figurent plus dans la barre (retirées par la refonte du 12/11/2026) : l'année
+active se lit sur le tableau de bord (« Exercice actif ») et dans Paramètres › Années scolaires. La recherche globale n'est
+pas livrée ; le raccourci « Aide » est dans le menu latéral et la déconnexion dans la carte de profil du menu latéral.
 
 ### Flux d'utilisation typique
 1. À la première connexion d'un Directeur ou d'un Secrétariat, l'assistant « Démarrage » s'ouvre une seule
@@ -261,8 +259,8 @@ son emploi du temps) ; écriture réservée à Directeur et Secrétariat (§19.2
 
 ### Flux d'utilisation typique
 1. Le Directeur ou le Secrétariat déclare les bâtiments, puis les salles de chacun.
-2. Ces salles deviennent sélectionnables dans l'Emploi du temps et, si l'Internat est activé, dans les
-   dortoirs.
+2. Ces salles deviennent sélectionnables dans l'Emploi du temps. Les dortoirs ne se déclarent plus ici :
+   « Dortoir » n'est plus proposé pour une nouvelle salle, ils se créent dans Internat › Pavillons (§7).
 3. Tout rôle de l'établissement peut ensuite consulter cette liste en lecture seule.
 
 ---
@@ -312,12 +310,18 @@ affectation en chambre — module désactivable par école, **désactivé par d�
 Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
 
 ### Fonctionnalités clés & règles métier
-- **Aucune entité « Lit » distincte** : l'hébergement réutilise les chambres du module Infrastructures
-  (`RoomType.Dortoir`) ; la capacité se compte au niveau de la chambre, jamais lit par lit.
+- **Pavillons › chambres › lits** : l'Internat tient sa propre cartographie (écran Internat, onglet
+  « Pavillons »). La capacité d'un pavillon ou d'une chambre est la **somme de ses lits**, jamais saisie ;
+  chaque pensionnaire occupe un lit précis, un lit peut être mis en maintenance, et un séjour sans lit est
+  « En attente de lit ». Les anciennes salles de type Dortoir restent lisibles mais aucune nouvelle ne se crée.
+- **Écran Internat, cinq onglets** : Occupation (cartes Internes, Demi-pensionnaires, En attente de lit,
+  Chambres complètes ; « Affecter un élève », « Changer / Libérer »), Pavillons, Pensionnaires (filtres
+  Pavillon, Chambre, Régime ; fiche, contact d'urgence, personnes habilitées, fiche médicale), Sorties et
+  Pointage.
 - **Le régime d'hébergement est porté par l'inscription, pas par l'élève** — portée annuelle : une
   réinscription reconfirme ou change le régime, jamais un report automatique d'une année sur l'autre.
-- Comptage de capacité simple : occupants actifs (inscription non annulée, année active) comparés à la
-  capacité de la chambre.
+- Capacité : lits occupés comparés aux lits de la chambre ; une chambre sans lit libre n'est plus proposée
+  à l'inscription ni à l'affectation.
 - **La pension n'est jamais retirée à la libération** d'un élève de l'Internat : sortir un élève
   (retour à Externe, changement de chambre) ne retranche pas la ligne de pension déjà facturée — toute
   correction suit la règle Finance habituelle (règle #4 d'`AGENTS.md`, correction tracée par
@@ -327,13 +331,14 @@ Directeur, Secrétariat, Surveillant (même trio que le module Convocations).
   indépendamment à l'inscription et à l'affectation de chambre.
 
 ### Flux d'utilisation typique
-1. Le Directeur active le module Internat dans Paramètres, puis déclare des dortoirs via
-   Infrastructures.
-2. À l'inscription d'un élève, la Secrétariat choisit son régime d'hébergement (section « Régime &
-   Hébergement » du formulaire) — une pension est ajoutée à son compte financier si Interne.
-3. Depuis `/internat`, la Secrétariat ou la Surveillance affecte, transfère ou libère une chambre via
-   la modale d'affectation rapide, avec recherche d'élève.
-4. Le tableau de bord par chambre reflète l'occupation en temps réel.
+1. Le Directeur active le module Internat dans Paramètres, puis crée ses pavillons, chambres et lits dans
+   Internat › Pavillons.
+2. À l'inscription d'un élève, le Secrétariat choisit son régime (section « Régime & Hébergement ») puis,
+   hors Externe, une chambre ayant un lit libre ; la case « Ajouter le frais de pension à la fiche
+   financière » ajoute la ligne de pension au montant dû.
+3. Depuis `/internat` › Occupation, le Secrétariat ou la Surveillance affecte, transfère ou libère un lit via
+   « Affecter un élève » et « Changer / Libérer », avec recherche d'élève.
+4. Le tableau d'occupation reflète les lits occupés en temps réel.
 
 ---
 
@@ -350,6 +355,12 @@ Directeur, Secrétariat, Enseignant.
 
 ### Fonctionnalités clés & règles métier
 - Chaque matière porte un coefficient, utilisé dans le calcul des moyennes (§8.3).
+- **Niveau et cycle.** Le niveau d'une matière (Crèche, Maternelle, Primaire, Collège, Lycée) la rattache aux
+  classes du même niveau. L'écran se filtre par **onglets de cycle** (Tous les cycles, Primaire, Collège, Lycée,
+  Préscolaire, Autres niveaux), chacun avec son nombre de matières. Une même matière (« Mathématiques ») existe
+  donc une fois par niveau, avec son propre coefficient.
+- **Onglets de l'écran** : Matières, Structure d'évaluation, Coefficients et Matières par classe (ces deux
+  derniers réservés au Directeur et au Secrétariat ; écriture des coefficients : Directeur seul).
 - **Structure d'évaluation modulable / grilles APC** (option désactivée par défaut, onglet dédié) :
   le Directeur configure lui-même la grille d'un niveau — **deux niveaux de hiérarchie au plus** (un
   domaine porte des activités), une troisième profondeur n'a aucune colonne où s'afficher sur le
@@ -446,9 +457,16 @@ Super Admin, Directeur, Secrétariat.
 Saisie des notes par matière et génération du bulletin de notes officiel.
 
 ### Utilisateurs cibles
-Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées).
+Directeur, Secrétariat, Enseignant. L'Enseignant **saisit** dans toute classe et matière listée ; l'affectation
+ne borne que la **correction** d'une note déjà enregistrée (fenêtre de correction + auteur ou affecté, 403 sinon).
 
 ### Fonctionnalités clés & règles métier
+- **Sélecteurs Classe › (Pôle) › Matière › Période.** La liste des matières se restreint au **niveau de la
+  classe choisie** (§8.9 du Cahier des charges) : sans cela, les « Mathématiques » du primaire, du collège et du
+  lycée seraient indiscernables. Sans classe choisie, toutes les matières sont listées avec leur niveau entre
+  parenthèses.
+- **Enregistrement cellule par cellule** à la perte de focus (Devoir 1, Devoir 2, Composition) : il n'y a pas
+  de bouton « Enregistrer » global.
 - **Format du bulletin fixé au gabarit exact** de `docs/design-references/bulletin-reference.png` —
   reproduction fidèle, pas d'interprétation créative (§8.1, règle #12 d'`AGENTS.md`). Format A5
   portrait, largeurs de colonnes ajustées automatiquement pour ne jamais déborder sur une seconde page.
@@ -463,7 +481,8 @@ Directeur, Secrétariat, Enseignant (borné à ses classes/matières assignées)
   cases vides comprises, colonnes de regroupement calculées automatiquement.
 
 ### Flux d'utilisation typique
-1. L'Enseignant saisit les notes de ses classes et matières assignées, ou les importe via Excel.
+1. L'Enseignant (ou le Secrétariat) choisit la classe, la matière de son niveau et la période, puis saisit les
+   notes — ou les importe via Excel.
 2. Les totaux et la moyenne se calculent automatiquement.
 3. Le Directeur ou le Secrétariat édite le bulletin au format officiel, prêt à l'impression ou à la
    remise en main propre.
@@ -618,8 +637,8 @@ Super Admin, Directeur, Secrétariat.
 - La colonne « Convoquer » n'apparaît qu'à l'intersection des deux permissions (lecture du rapport +
   droit sur les convocations) — le Secrétariat voit le rapport, mais pas le bouton, puisqu'il n'a pas
   accès au module Convocations.
-- Export des présences disponible depuis cet écran, l'un des exports par domaine qui couvre le besoin
-  de reporting en l'absence d'un export global (§11 API Paramètres).
+- Export des présences disponible depuis cet écran, l'un des exports par domaine (l'export global de toutes
+  les données se trouve dans Paramètres › Paramètres système, §26).
 
 ### Flux d'utilisation typique
 1. Le Directeur consulte le bilan d'assiduité sur la période de son choix.
@@ -790,6 +809,7 @@ Secrétariat, Directeur, Finance.
 - **Session de caisse obligatoire** : la journée d'encaissement s'ouvre par une session avec un fonds
   initial déclaré ; tant qu'aucune session n'est ouverte, la recherche d'élève et le formulaire
   d'encaissement restent masqués (§15.1).
+- **Échéancier personnalisé** (Directeur, Finance) : « Personnaliser l'échéancier », sous l'échéancier détaillé, remplace le calendrier de l'inscription (somme = montant dû exactement ; l'ancien plan reste consultable, annulé). Pour toute une classe : Frais scolaires › « Échelonner une classe » (§ Frais).
 - Encaissement, historique, **annulation avec motif** (Directeur et Finance pendant 48 h — droit de la Finance retirable par le
   Directeur dans Paramètres — puis **contre-passation** par le Directeur seul, écriture inverse datée du jour),
   remboursement, impression de reçu ; moyens de
@@ -1128,8 +1148,8 @@ Tous les rôles connectés.
 
 ### Fonctionnalités clés & règles métier
 - Contenu organisé par module, reflétant la navigation elle-même.
-- Les fonctionnalités hors périmètre V1 (portail Parents/Élèves, export global de données) y sont
-  documentées comme telles, jamais présentées comme disponibles.
+- Les fonctionnalités hors périmètre (portail Parents/Élèves) y sont documentées comme telles, jamais
+  présentées comme disponibles.
 
 ### Flux d'utilisation typique
 1. Un utilisateur bloqué sur un écran ouvre l'Aide.
@@ -1150,6 +1170,9 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   **sans série** se règlent uniquement en mode « Classe ». L'écran affiche les classes concernées, explique la
   priorité dans une fenêtre (« Comment sont appliqués les coefficients ? ») et avertit lorsqu'un réglage n'a
   aucun effet ou qu'une valeur est invalide (hors de 0 à 20).
+- **Saisie des notes filtrée par niveau** : après le choix de la classe, seules les matières de son niveau
+  sont proposées (synonymes reconnus : Élémentaire = Primaire, Moyen/CEM = Collège, Secondaire = Lycée ; casse
+  et accents ignorés). Sans correspondance, la liste complète reste affichée, niveau en suffixe.
 - **Pôle pédagogique** des matières (Français, Arabe, Sciences islamiques, Commun) et nom arabe ; saisie des
   notes en écriture de droite à gauche pour les matières arabes (Franco-Arabe).
 - **Liste des élèves d'une classe en PDF** : bouton « Imprimer la liste des élèves » ; colonnes Matricule,
@@ -1174,6 +1197,25 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   ouverte car inscriptions, frais et paie en dépendent).
 - Le lit actuel d'un élève est proposé dans « Affecter / Changer / Libérer ».
 
+### Paramètres : Exporter mes données (section 26)
+- **Paramètres › Paramètres système › « Exporter mes données »** (Directeur seul) : télécharge une archive `.zip` de **toutes les
+  données de l'établissement** — un fichier CSV par table (élèves, inscriptions, paiements, notes, enseignants, personnel,
+  présences, inventaire, etc.), un `manifest.json` et un `LISEZMOI.txt`. Le Directeur confirme par son **mot de passe** ; **3 exports
+  par heure** au plus ; chaque export est **journalisé**.
+- **Jamais dans l'archive** : mots de passe et jetons, éléments supprimés, photos et fichiers binaires (seules leurs adresses
+  figurent), données d'un autre établissement. Les CSV s'ouvrent dans Excel (Données › À partir d'un fichier texte, UTF-8,
+  séparateur point-virgule).
+
+### Coran (module Coran)
+- **Écran `/coran`** (Gestion Scolaire › Coran) : suivi de mémorisation (Juz, Hizb, sourate, statut En cours / Mémorisé /
+  Révisé, date et notes) et évaluations orales (erreurs de mémoire, erreurs de tajwid, hésitations, note finale), classe par
+  classe. Une ligne par élève avec sa dernière observation et un historique dépliable ; saisie et correction par fenêtre.
+- **Droits** : écriture Directeur et Enseignant, lecture + Secrétariat (comme les notes, sans garde par affectation). Le lien
+  n'apparaît que si le Directeur a activé le module Coran (Paramètres › Modules & fonctionnalités).
+- **Règles** : Juz, Hizb et sourate sont immuables en correction ; les bornes (Juz 1–30, Hizb 1–60, sourate 1–114) sont
+  contrôlées par le serveur ; un conflit de modification (`409`) est signalé sans écraser. Distinct de l'Internat (Halqa, Oustaz,
+  Suivi coranique, qui relèvent du module Internat). N'entre ni dans les moyennes ni dans les bulletins.
+
 ### Comptabilité : Caisse, Frais, Paie (sections 21 et 22)
 - **Annulation d'un paiement** (Directeur et Finance, 48 h, motif obligatoire, destination de l'argent) et
   **contre-passation** au-delà (Directeur seul) ; droit d'annulation de la Finance réglable ; export d'année
@@ -1183,6 +1225,15 @@ la procédure. Les sections 1 à 28 ci-dessus restent valables ; en cas de diver
   à l'inscription, mois réglé demandé à chaque encaissement). Le montant échu de la caisse couvre toutes les
   mensualités échues.
 - **Relance SMS** limitée aux échéances en retard, avec le montant en retard.
+- **Recouvrement** (`/recouvrement`, Directeur et Finance, pôle Comptabilité) : un lot de relance SMS **brouillon
+  par classe** est préparé chaque nuit dès que « Relances d'impayés » est activé (Paramètres › Notifications
+  SMS, avec un seuil de retard en jours). L'écran liste les lots par statut (À valider, Envoyés, Écartés, Tous),
+  permet de relire les destinataires (matricule, téléphone du tuteur, reliquat, jours de retard), de **recalculer**
+  les lots, d'**écarter** un lot ou de l'**envoyer** après confirmation. Un lot ne s'envoie qu'**une fois** ; un
+  tuteur sans numéro est écarté à l'envoi et signalé avant. Aucun SMS ne part sans geste humain.
+- **Décaissements** : dix catégories proposées (Salaires, Maintenance, Fournitures, Charges Fixes, Loyer et
+  charges, Eau et électricité, Télécoms et Internet, Carburant, Assurances et honoraires, Divers), saisies dans
+  Frais Scolaires › Décaissements ; la Trésorerie les consolide en lecture seule.
 - **Paie sans retenues légales**, choisie par contrat ; **fiches de paie** annulables, régénérables et
   payables (décaissement « Salaires ») ; personnel sans compte.
 

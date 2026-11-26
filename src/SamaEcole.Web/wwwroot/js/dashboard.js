@@ -183,7 +183,7 @@ document.addEventListener('alpine:init', () => {
                     fraction: fraction,
                     offset: currentOffset,
                     color: this.getCategoryColor(index),
-                    name: cat.category,
+                    name: window.disbursementCategoryLabel(cat.category),
                     amount: cat.amount
                 };
                 currentOffset -= fraction; // subtract because offset is inverted on SVG
