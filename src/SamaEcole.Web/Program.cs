@@ -434,6 +434,18 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
+app.Use(async (ctx, next) =>
+{
+    var host = ctx.Request.Host.Host;
+    if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+    {
+        var url = $"https://{host[4..]}{ctx.Request.Path}{ctx.Request.QueryString}";
+        ctx.Response.Redirect(url, permanent: true);
+        return;
+    }
+    await next();
+});
+
 // Canaux sortants non configurés : AVERTIT sans empêcher le démarrage (voir SmsServiceGuard pour la
 // justification de cette différence avec RlsGuard/EmailSenderGuard). Emis ici, et non dans
 // AddInfrastructure, parce que c'est le premier endroit où un ILogger existe — sans cet appel, les

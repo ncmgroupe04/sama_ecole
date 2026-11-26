@@ -74,7 +74,8 @@
 
  @* ?ref= pré-remplit et lance directement la recherche sur l'écran de suivi (JGK-I02,
  tracking.js#init) : le Directeur n'a pas à recopier la référence qu'il vient de recevoir. *@
- <a x-bind:href="'/suivi-demande?ref=' + encodeURIComponent(trackingReference)"
+ <a x-cloak x-show="trackingReference && trackingReference !== 'null' && trackingReference.trim() !== ''"
+  x-bind:href="'/suivi-demande?ref=' + encodeURIComponent(trackingReference)"
  class="mt-6 inline-block text-jgk-body font-medium text-primary hover:underline">
  Suivre l'état de ma demande
  </a>
