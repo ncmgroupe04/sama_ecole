@@ -10,9 +10,8 @@
  @* auth.js et api.js sont des scripts CLASSIQUES, et Alpine est différé : tout script non différé
  s'exécute avant tout script différé, quel que soit son emplacement. window.auth et window.api
  existent donc avant qu'Alpine ne s'initialise, et les écouteurs alpine:init sont enregistrés à
- temps (même ordre que _Layout.cshtml) — SubscriptionPending.cshtml (subscription-payment.js)
- dépend de window.api.post, injoignable sans ce script. *@
- @* Règles pures des cycles gérés : auth.js (store schoolConfig) les lit dès l'initialisation d'Alpine — à charger AVANT lui,
+ temps (même ordre que _Layout.cshtml). *@
+ @* Règles pures des cycles générés : auth.js (store schoolConfig) les lit dès l'initialisation d'Alpine — à charger AVANT lui,
  dans CHAQUE mise en page qui charge auth.js (garde : tests/js/managed-cycles-layouts.test.mjs). *@
  <script src="~/js/managed-cycles.js" asp-append-version="true"></script>
  <script src="~/js/auth.js" asp-append-version="true"></script>
@@ -21,14 +20,16 @@
 
  @* Alpine est servi par NOUS, pas par un CDN. C'est cette page qui reçoit les mots de passe de
  toutes les écoles : un script tiers, chargé depuis un domaine que nous ne contrôlons pas et
- en version flottante (« 3.x.x » : n'importe quelle 3.x future, jamais relue), pourrait les
+ en version flottante (≈ 3.x.x : n'importe quelle 3.x future, jamais reluée), pourrait les
  exfiltrer à la moindre compromission du CDN. Version figée, mise à jour par un commit. *@
  <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+
+ @await RenderSectionAsync("Head", required: false)
 </head>
 <body class="bg-stone-50 text-slate-900 font-sans antialiased min-h-screen overflow-x-hidden">
  @await Html.PartialAsync("_IconSprite")
  @RenderBody()
- <footer class="py-4 px-4 text-center text-xs text-slate-500">
+ <footer class="px-4 py-4 text-center text-xs text-slate-500">
  <nav aria-label="Informations légales" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
  <a href="/conditions-utilisation" class="hover:text-primary-700 hover:underline">Conditions d'utilisation</a>
  <a href="/politique-confidentialite" class="hover:text-primary-700 hover:underline">Confidentialité</a>
