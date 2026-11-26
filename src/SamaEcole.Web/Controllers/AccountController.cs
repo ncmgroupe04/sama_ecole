@@ -21,7 +21,13 @@ public class AccountController : Controller
     public IActionResult Register() => View();
 
     [HttpGet("/suivi-demande")]
-    public IActionResult Track() => View();
+    public IActionResult Track([FromQuery(Name = "ref")] string? reference)
+    {
+        if (string.IsNullOrWhiteSpace(reference) || reference == "null")
+            return NotFound();
+
+        return View();
+    }
 
     /// <summary>Saisie de l'adresse — POST /api/v1/auth/forgot-password (wwwroot/js/password-reset.js).</summary>
     [HttpGet("/mot-de-passe-oublie")]
