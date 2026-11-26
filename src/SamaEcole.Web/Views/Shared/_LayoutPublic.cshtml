@@ -1,19 +1,5 @@
 @*
     Gabarit des pages PUBLIQUES (vitrine /vitrine, catalogue /modules, annuaire /annuaire).
-    Distinct de _Layout.cshtml (application connectée) et de _AuthLayout.cshtml (login) : ces pages
-    sont anonymes, aucun garde d'accès (require-session.js) n'y est chargé.
-
-    Deux points à connaître avant d'y toucher :
-
-    1. AUCUN <script> INLINE. La CSP posée par SecurityHeadersMiddleware ne comporte pas
-       'unsafe-inline' pour les scripts : un bloc inline serait silencieusement ignoré par le
-       navigateur. Tout comportement passe par wwwroot/js/marketing.js. Le bloc JSON-LD ci-dessous
-       fait exception parce qu'il n'est jamais EXÉCUTÉ — le navigateur abandonne la préparation du
-       script avant même le contrôle CSP, son type n'étant pas un type JavaScript.
-
-    2. DEUX POINTS DE RUPTURE SEULEMENT. tailwind.config.js redéfinit `screens` hors de `extend` :
-       seuls `sm:` (600px) et `lg:` (1024px) existent. Écrire `md:` ou `xl:` ne produit AUCUNE règle
-       CSS — c'est précisément ce qui cassait la mise en page de l'ancienne vitrine.
 *@
 <!DOCTYPE html>
 <html lang="fr" class="scroll-smooth">
@@ -22,61 +8,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — Unikol</title>
 
-    @* Description indexable : chaque page publique pose la sienne, avec un repli parlant. *@
     <meta name="description" content="@(ViewData["Description"] as string ?? "Unikol centralise la gestion scolaire, administrative, financière et disciplinaire de votre établissement dans une seule plateforme. 14 modules, 5 profils d'accès, 100 % en ligne.")" />
     <meta name="theme-color" content="#2563EB" />
-    <link rel="canonical" href="@($"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}")" />
+    <link rel="canonical" href="@("https://unikol.net" + Context.Request.Path.Value)" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Unikol" />
     <meta property="og:title" content="@ViewData["Title"] — Unikol" />
     <meta property="og:description" content="@(ViewData["Description"] as string ?? "La plateforme centralisée de gestion des établissements scolaires.")" />
     <meta property="og:locale" content="fr_SN" />
-    @* Carte de partage : version sur fond blanc (jamais la transparente) — les aperçus la posent
-       sur des fonds imprévisibles. URL absolue exigée par Open Graph. *@
-    <meta property="og:image" content="@($"{Context.Request.Scheme}://{Context.Request.Host}/images/logo-unikol-solid.png")" />
+    <meta property="og:image" content="@($"https://unikol.net/images/logo-unikol-solid.png")" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:image" content="@($"{Context.Request.Scheme}://{Context.Request.Host}/images/logo-unikol-solid.png")" />
+    <meta name="twitter:image" content="@($"https://unikol.net/images/logo-unikol-solid.png")" />
 
-    <link rel="icon" type="image/png" href="~/images/logo-unikol-solid.png" />
+    <link rel="icon" type="image/png" href="~/images/logo-unikol.png" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    @* auth.js/api.js sont chargés même ici : l'Annuaire B2C (AnnuaireB2C.cshtml) consomme
-       GET /api/v1/public/schools via window.api, le client HTTP unique de l'app. La route est
-       [AllowAnonymous] côté serveur (PublicDirectoryController) — sans jeton, window.auth se
-       contente de ne poser aucun en-tête Authorization ; réécrire un fetch séparé pour cette
-       seule page dupliquerait la gestion d'erreurs déjà centralisée dans api.js. *@
-    @* Règles pures des cycles gérés : auth.js (store schoolConfig) les lit dès l'initialisation d'Alpine — à charger AVANT lui,
-    dans CHAQUE mise en page qui charge auth.js (garde : tests/js/managed-cycles-layouts.test.mjs). *@
     <script src="~/js/managed-cycles.js" asp-append-version="true"></script>
     <script src="~/js/auth.js" asp-append-version="true"></script>
     <script src="~/js/api.js" asp-append-version="true"></script>
     <script src="~/js/marketing.js" asp-append-version="true"></script>
     <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 
-    @* Données structurées : décrivent le PRODUIT, sans aucune donnée inventée (ni note moyenne,
-       ni nombre d'avis, ni prix — trois champs qu'un balisage SEO complaisant ajouterait à tort). *@
-    <script type="application/ld+json">
-    {
-      "@@context": "https://schema.org",
-      "@@type": "SoftwareApplication",
-      "name": "Unikol",
-      "applicationCategory": "BusinessApplication",
-      "applicationSubCategory": "Logiciel de gestion scolaire",
-      "operatingSystem": "Navigateur web",
-      "inLanguage": "fr",
-      "description": "Plateforme centralisée de gestion des établissements scolaires : scolarité, pédagogie, finances, ressources humaines, vie scolaire, examens officiels, patrimoine et pièces réglementaires.",
-      "featureList": "Inscriptions et réinscriptions, notes et bulletins PDF, frais scolaires et caisse, trésorerie, paie et déclarations fiscales, appel et discipline, examens CFEE/BFEM/BAC, inventaire, IEN et export Planète"
-    }
-    </script>
-
     @await RenderSectionAsync("Head", required: false)
 </head>
 <body class="bg-white text-slate-900 font-sans antialiased min-h-screen">
     @await Html.PartialAsync("_IconSprite")
-
-    @* Lien d'évitement — première tabulation d'un utilisateur au clavier ou au lecteur d'écran.
-       Il ne se matérialise qu'au focus (Volume 5 §8). *@
     <a href="#contenu" class="mkt-skip">Aller au contenu</a>
 
     @{
@@ -86,21 +43,13 @@
             : "text-slate-600 hover:text-primary-700";
     }
 
-    @* ══════════════════════════════════════════════════════════════════ EN-TÊTE (collant)
-       `mkt-header` gagne une ombre et un fond opaque au défilement — c'est marketing.js qui pose
-       l'attribut data-scrolled, aucun style calculé en JavaScript. *@
     <header x-data="marketingNav()" class="mkt-header" :data-scrolled="scrolled ? 'true' : null">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="h-16 flex items-center justify-between gap-4">
-
-                @* Lockup transparent : il porte déjà le mot « Unikol », d'où pas de libellé séparé.
-                   Fond de barre semi-transparent (bg-white/85 + backdrop-blur) → jamais la version
-                   sur fond blanc, qui y ferait un pavé. *@
                 <a href="/vitrine" class="flex items-center shrink-0" aria-label="Unikol — accueil">
                     <img src="~/images/logo-unikol.png" asp-append-version="true" alt="Unikol" class="h-11 w-auto" />
                 </a>
 
-                @* Navigation principale — masquée sous 1024px, remplacée par le tiroir plus bas. *@
                 <nav class="hidden lg:flex items-center gap-7 text-sm" aria-label="Navigation principale">
                     <a href="/vitrine#fonctionnalites" class="@NavClass("fonctionnalites") transition-colors">Fonctionnalités</a>
                     <a href="/modules" class="@NavClass("modules") transition-colors">Modules</a>
@@ -115,20 +64,13 @@
                     <a href="/inscription" class="mkt-btn mkt-btn-primary mkt-btn-sm">Demander une démo</a>
                 </div>
 
-                @* Bouton hamburger — visible sous 1024px uniquement. *@
-                <button type="button" class="lg:hidden mkt-icon-btn"
-                        x-on:click="toggle()"
-                        :aria-expanded="open ? 'true' : 'false'"
-                        aria-controls="mkt-mobile-nav"
-                        :aria-label="open ? 'Fermer le menu' : 'Ouvrir le menu'">
+                <button type="button" class="lg:hidden mkt-icon-btn" x-on:click="toggle()" :aria-expanded="open ? 'true' : 'false'" aria-controls="mkt-mobile-nav" :aria-label="open ? 'Fermer le menu' : 'Ouvrir le menu'">
                     <icon name="menu" class="w-6 h-6" x-show="!open" />
                     <icon name="x" class="w-6 h-6" x-show="open" x-cloak />
                 </button>
             </div>
         </div>
 
-        @* Tiroir mobile. Il reste dans le DOM (x-show, pas x-if) pour que la première ouverture
-           n'ait rien à construire, et se replie sur tout clic de lien via `close()`. *@
         <div id="mkt-mobile-nav" class="lg:hidden mkt-mobile-nav" :class="open ? 'is-open' : ''" :aria-hidden="open ? 'false' : 'true'">
             <div>
                 <nav class="px-4 sm:px-6 pb-5 pt-1 flex flex-col gap-1 border-t border-slate-100" aria-label="Navigation mobile">
@@ -145,86 +87,9 @@
         </div>
     </header>
 
-    @* overflow-x-clip (et non -hidden) : empêche tout débordement horizontal parasite des sections
-       décoratives (fonds en dégradé, cartes flottantes) sans faire de <main> un conteneur de
-       défilement — l'en-tête sticky, qui lui est extérieur, n'est pas affecté. *@
     <main id="contenu" class="overflow-x-clip">
         @RenderBody()
     </main>
-
-    @* ══════════════════════════════════════════════════════════════════ PIED DE PAGE *@
-    <footer class="bg-slate-50 border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10">
-
-                <div class="lg:col-span-2">
-                    <div class="flex items-center">
-                        <img src="~/images/logo-unikol.png" asp-append-version="true" alt="Unikol" class="h-16 w-auto" />
-                    </div>
-                    <p class="mt-4 text-sm leading-relaxed text-slate-600 max-w-sm">
-                        Une plateforme centralisée pour piloter votre établissement — scolarité, pédagogie,
-                        finances, ressources humaines, vie scolaire et pièces réglementaires.
-                    </p>
-                    @* Pas d'icône « téléphone » : le sprite Fluent embarqué (Views/Shared/_IconSprite.cshtml)
-                       n'en contient pas, et détourner « bell » pour un numéro d'appel est un faux
-                       repère. Le libellé se suffit. *@
-                    <div class="mt-5 flex flex-col gap-2 text-sm">
-                        <a href="@SamaEcole.Web.Content.MarketingCatalog.PhoneHref" class="inline-flex items-center gap-2 font-medium text-slate-700 hover:text-primary-700 transition-colors">
-                            @SamaEcole.Web.Content.MarketingCatalog.PhoneDisplay
-                        </a>
-                        <a href="@SamaEcole.Web.Content.MarketingCatalog.WhatsAppHref" target="_blank" rel="noopener"
-                           class="inline-flex items-center gap-2 text-slate-600 hover:text-green-700 transition-colors">
-                            <icon name="whatsapp" class="w-4 h-4 text-green-600" />
-                            Discuter sur WhatsApp
-                        </a>
-                    </div>
-                </div>
-
-                <div>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Produit</h2>
-                    <ul class="mt-4 space-y-2.5 text-sm">
-                        <li><a href="/vitrine#fonctionnalites" class="text-slate-600 hover:text-primary-700 transition-colors">Fonctionnalités</a></li>
-                        <li><a href="/modules" class="text-slate-600 hover:text-primary-700 transition-colors">Les 14 modules</a></li>
-                        <li><a href="/vitrine#profils" class="text-slate-600 hover:text-primary-700 transition-colors">Profils d'accès</a></li>
-                        <li><a href="/vitrine#securite" class="text-slate-600 hover:text-primary-700 transition-colors">Sécurité</a></li>
-                        <li><a href="/vitrine#tarifs" class="text-slate-600 hover:text-primary-700 transition-colors">Tarifs</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Établissements</h2>
-                    <ul class="mt-4 space-y-2.5 text-sm">
-                        <li><a href="/inscription" class="text-slate-600 hover:text-primary-700 transition-colors">Demander une démonstration</a></li>
-                        <li><a href="/suivi-demande" class="text-slate-600 hover:text-primary-700 transition-colors">Suivre ma demande</a></li>
-                        <li><a href="/login" class="text-slate-600 hover:text-primary-700 transition-colors">Se connecter</a></li>
-                        <li><a href="/vitrine#faq" class="text-slate-600 hover:text-primary-700 transition-colors">Questions fréquentes</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Familles</h2>
-                    <ul class="mt-4 space-y-2.5 text-sm">
-                        <li><a href="/annuaire" class="text-slate-600 hover:text-primary-700 transition-colors">Trouver une école</a></li>
-                        <li><a href="@SamaEcole.Web.Content.MarketingCatalog.WhatsAppHref" target="_blank" rel="noopener" class="text-slate-600 hover:text-primary-700 transition-colors">Nous écrire</a></li>
-                    </ul>
-                    @* Le Centre d'aide (/aide) est volontairement absent : c'est un écran INTERNE,
-                       accessible une fois connecté. L'annoncer ici enverrait un visiteur anonyme
-                       vers une page qu'il ne peut pas ouvrir. *@
-                </div>
-            </div>
-
-            <div class="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p class="text-xs text-slate-500">© @DateTime.Now.Year Unikol. Tous droits réservés.</p>
-                <nav aria-label="Informations légales" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                    <a href="/conditions-utilisation" class="hover:text-primary-700 hover:underline">Conditions d'utilisation</a>
-                    <a href="/politique-confidentialite" class="hover:text-primary-700 hover:underline">Confidentialité</a>
-                    <a href="/mentions-legales" class="hover:text-primary-700 hover:underline">Mentions légales</a>
-                    <a href="/cookies" class="hover:text-primary-700 hover:underline">Cookies</a>
-                </nav>
-                <p class="text-xs text-slate-500">Conçu au Sénégal pour les établissements scolaires sénégalais.</p>
-            </div>
-        </div>
-    </footer>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
