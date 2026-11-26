@@ -52,7 +52,16 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     {
         var headers = context.Response.Headers;
 
-        // Empêche le navigateur de « deviner » un type MIME (une réponse JSON reinterprétée en HTML
+        // Canonical host redirect: forwarded headers are processed earlier in Program.cs, and this
+        // middleware runs before the remaining application pipeline. Keep both path and query string.
+        if (string.Equals(context.Request.Host.Host, "www.unikol.net", StringComparison.OrdinalIgnoreCase))
+        {
+            var target = $"https://unikol.net{context.Request.Path}{context.Request.QueryString}";
+            context.Response.Redirect(target, permanent: true);
+            return;
+        }
+
+        // Empêche le navigateur de « deviner » un type MIME (une réponse JSON réinterprétée en HTML
         // deviendrait un vecteur XSS).
         headers["X-Content-Type-Options"] = "nosniff";
 
