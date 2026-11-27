@@ -731,6 +731,12 @@ Le détail fonctionnel par module reste dans la matrice du §15 de `Volume_7_Sec
 | GET | `/api/v1/subjects/{id:guid}/deletion-impact` | Directeur, Secretariat, Enseignant | module Pédagogie |
 | POST | `/api/v1/subjects/{id:guid}/unlink-dependencies` | Directeur, Secretariat, Enseignant | module Pédagogie |
 
+## SubscriptionStatus
+
+| Méthode | Route | Rôles | Condition |
+|---|---|---|---|
+| GET | `/api/v1/subscription-status` | Tout utilisateur authentifié |  |
+
 ## Subscriptions
 
 | Méthode | Route | Rôles | Condition |

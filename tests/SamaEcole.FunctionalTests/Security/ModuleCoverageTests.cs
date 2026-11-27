@@ -35,7 +35,7 @@ public class ModuleCoverageTests
         nameof(BuildingsController), nameof(RoomsController), nameof(InventoryController), nameof(UsersController),
         // « Exporter mes données » (Directeur) : archive de TOUTES les données de l'école, tous modules confondus — par nature transverse.
         nameof(ExportsController),
-        nameof(AuditLogsController), nameof(FeaturesController), nameof(OnboardingController), nameof(SubscriptionsController), nameof(TenantSubscriptionController),
+        nameof(AuditLogsController), nameof(FeaturesController), nameof(OnboardingController), nameof(SubscriptionsController), nameof(TenantSubscriptionController), nameof(SubscriptionStatusController),
         // Authentification, compte, inscription publique
         nameof(AuthController), nameof(AccountController), nameof(RegistrationRequestsController), nameof(PublicDirectoryController),
         // Plateforme (Super Admin) et paiements
