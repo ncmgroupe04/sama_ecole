@@ -1,5 +1,6 @@
 @{
  ViewData["Title"] = "Abonnement en attente de paiement";
+ ViewData["NoIndex"] = true;
  Layout = "_AuthLayout";
  var paymentMethodOptions = new List<SelectFieldOption> {
  new("WaveMerchant", "Wave — paiement direct (QR / lien)"), new("MobileMoney", "Mobile Money (Wave, Orange Money)"), new("BankTransfer", "Virement bancaire"), new("Card", "Carte bancaire")

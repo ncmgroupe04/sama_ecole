@@ -43,6 +43,7 @@ public class SubscriptionAwaitingPaymentMiddleware(RequestDelegate next)
     [
         "/api/v1/auth/",
         "/api/v1/subscriptions/",
+        "/api/v1/subscription-status",
 
         // Onboarding & Pricing SaaS : une école neuve est à la fois AwaitingPayment et PendingOnboarding.
         // Choisir son profil/sa tranche ne touche à aucune donnée métier : on l'ouvre pour que l'ordre
