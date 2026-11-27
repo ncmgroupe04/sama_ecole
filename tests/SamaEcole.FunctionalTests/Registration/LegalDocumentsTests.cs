@@ -146,4 +146,25 @@ public class LegalDocumentsTests(AuthApiFactory factory) : IClassFixture<AuthApi
         item.TermsVersion.Should().Be(LegalDocuments.CurrentVersion);
         item.TermsAcceptedAt.Should().NotBeNull().And.BeOnOrAfter(before);
     }
+
+    /// <summary>
+    /// L'inscription est une page publique qui doit rester indexable ; le noindex ne vaut que pour les
+    /// écrans privés (connexion, mot de passe oublié, réinitialisation, paiement en attente).
+    /// </summary>
+    [Fact]
+    public async Task Registration_Is_Indexable_But_Private_Auth_Pages_Are_Not()
+    {
+        using var client = Anonymous();
+
+        var registration = await DecodedAsync(await client.GetAsync("/inscription"));
+        registration.Should().NotContain("name=\"robots\" content=\"noindex\"");
+        registration.Should().Contain("rel=\"canonical\"");
+
+        foreach (var path in new[] { "/login", "/mot-de-passe-oublie", "/reinitialiser-mot-de-passe" })
+        {
+            var html = await DecodedAsync(await client.GetAsync(path));
+            html.Should().Contain("name=\"robots\" content=\"noindex\"", path);
+            html.Should().Contain("rel=\"canonical\"", path);
+        }
+    }
 }
