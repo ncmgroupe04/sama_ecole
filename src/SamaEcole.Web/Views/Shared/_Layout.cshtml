@@ -46,6 +46,7 @@
  @* Modale universelle « Mise à jour de votre abonnement » : même schéma (store Alpine + pont depuis window.api, sur les 409
     SUBSCRIPTION_CHANGE_REQUIRED). Script classique avant Alpine différé ; après api.js dont il dépend. *@
  <script src="~/js/subscription-change.js" asp-append-version="true"></script>
+<script src="~/js/subscription-expiry-banner.js" asp-append-version="true"></script>
  @* Modale universelle « Changer mon mot de passe » : même schéma (store Alpine), ouverte depuis
     la carte de profil de la barre latérale — après api.js, dont submit() dépend. *@
  <script src="~/js/change-password.js" asp-append-version="true"></script>
@@ -104,7 +105,17 @@
  navigue ici avec un jeton portant l'identité du Directeur de l'école ciblée — ce bandeau est
  l'unique indice visuel qu'il ne s'agit pas d'une connexion normale, et le seul moyen de revenir
  à sa propre session avant l'expiration du jeton (~15 min, non renouvelable). *@
- <div x-data="impersonationBanner()" x-show="isImpersonating" x-cloak
+ <div x-data="subscriptionExpiryBanner()" x-show="visible" x-cloak
+:class="showRed ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'"
+class="shrink-0 text-xs sm:text-sm font-medium px-5 py-2.5 flex items-center justify-center gap-3 text-center">
+<icon name="alert-circle" class="w-4 h-4 shrink-0" />
+<span x-text="message"></span>
+<button type="button" x-on:click="goPay()" class="underline hover:no-underline font-semibold">
+  Renouveler mon abonnement
+</button>
+</div>
+
+<div x-data="impersonationBanner()" x-show="isImpersonating" x-cloak
  class="shrink-0 bg-amber-400 text-amber-950 text-xs sm:text-sm font-medium px-5 py-2.5 flex items-center justify-center gap-3 text-center">
  <icon name="alert-circle" class="w-4 h-4 shrink-0" />
  <span>Session d'infiltration Super Admin — vous naviguez dans l'espace de cet établissement.</span>
